@@ -1,0 +1,38 @@
+[package]
+authors = ['imbue <https://github.com/ImbueNetwork>']
+edition = '2018'
+homepage = 'https://imbue.network'
+license = 'Apache 2.0'
+name = 'runtime-common'
+repository = 'https://github.com/ImbueNetwork/imbue-collator/'
+version = '2.0.0'
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+
+## Substrate FRAME Dependencies
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+## Substrate Primitive Dependencies
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+
+[dev-dependencies]
+hex-literal = "0.3.1"
+hex = "0.4.3"
+
+[build-dependencies]
+substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+
+[features]
+default = ['std']
+std = [
+	'frame-support/std',
+	'sp-core/std',
+	'sp-consensus-aura/std',
+	'sp-runtime/std',
+	'sp-std/std',
+]

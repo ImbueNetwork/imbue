@@ -1,0 +1,11 @@
+[profile.release]
+panic = 'unwind'
+split-debuginfo = "unpacked"
+
+
+[workspace]
+members = [
+    'node',
+	"runtime/development",
+	"runtime/common",
+]
