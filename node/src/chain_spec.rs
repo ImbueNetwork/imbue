@@ -1,6 +1,6 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use development_runtime::{AccountId, AuraId, Signature};
+use development_runtime::{AccountId, AuraId, Signature, CouncilConfig, TechnicalCommitteeConfig};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use std::str::FromStr;
 use sc_service::{ChainType, Properties};
@@ -199,7 +199,15 @@ fn development_genesis(
 		aura: development_runtime::AuraConfig {
 			authorities: initial_authorities,
 		},
-	
+		council: CouncilConfig {
+			phantom: Default::default(),
+			members: vec![], // TODO : Set members
+		},
+		technical_committee: TechnicalCommitteeConfig {
+			phantom: Default::default(),
+			members: vec![], // TODO : Set members
+		},
+		treasury: Default::default(),
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 	}

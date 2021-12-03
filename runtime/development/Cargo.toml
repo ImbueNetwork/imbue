@@ -45,11 +45,13 @@ pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polka
 pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
@@ -77,6 +79,7 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release
 
 # Local Dependencies
 runtime-common = { path = "../common", default-features = false }
+grants = { package = 'grants', path = '../../pallets/grants', default-features = false }
 
 
 [dev-dependencies]
@@ -96,6 +99,7 @@ runtime-benchmarks = [
 	'frame-system/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-collective/runtime-benchmarks',
+	'pallet-identity/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
 	'pallet-xcm/runtime-benchmarks',
 	'xcm-builder/runtime-benchmarks',

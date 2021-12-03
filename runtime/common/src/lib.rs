@@ -75,10 +75,31 @@ pub mod types {
 	pub type Salt = FixedArray<u8, 32>;
 }
 
+pub mod currency {
+	use super::types::Balance;
+
+	pub const MICRO_IMBU: Balance = 1_000_000_000_000; // 10−6 	0.000001
+	pub const MILLI_IMBU: Balance = 1_000 * MICRO_IMBU; // 10−3 	0.001
+	pub const CENTI_IMBU: Balance = 10 * MILLI_IMBU; // 10−2 	0.01
+	pub const IMBU: Balance = 100 * CENTI_IMBU;
+
+	pub const EXISTENTIAL_DEPOSIT: Balance = 1 * MICRO_IMBU;
+
+	/// Minimum vesting amount, in IMBU/PCHU
+	pub const MIN_VESTING: Balance = 10;
+
+	/// Additional fee charged when moving native tokens to target chains (in IMBUs).
+	pub const NATIVE_TOKEN_TRANSFER_FEE: Balance = 2000 * IMBU;
+
+	pub const fn deposit(items: u32, bytes: u32) -> Balance {
+		// map to 1/10 of what the kusama relay chain charges (v9020)
+		(items as Balance * 2_000 * CENTI_IMBU + (bytes as Balance) * 100 * MILLI_IMBU) / 10
+	}
+
+}
 
 /// Common constants for all runtimes
 pub mod constants {
-	use super::types::Balance;
 	use super::types::BlockNumber;
 	use frame_support::weights::{constants::WEIGHT_PER_SECOND, Weight};
 	use sp_runtime::Perbill;
@@ -91,7 +112,6 @@ pub mod constants {
 	/// Change this to adjust the block time.
 	pub const MILLISECS_PER_BLOCK: u64 = 12000;
 	pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-
 
 	// Time is measured by number of blocks.
 	pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
@@ -111,15 +131,7 @@ pub mod constants {
 	/// We allow for 0.5 seconds of compute with a 6 second average block time.
 	pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 
-	pub const MICRO_IMBU: Balance = 1_000_000_000_000; // 10−6 	0.000001
-	pub const MILLI_IMBU: Balance = 1_000 * MICRO_IMBU; // 10−3 	0.001
-	pub const CENTI_IMBU: Balance = 10 * MILLI_IMBU; // 10−2 	0.01
-	pub const IMBU: Balance = 100 * CENTI_IMBU;
 
-	/// Minimum vesting amount, in IMBU/PCHU
-	pub const MIN_VESTING: Balance = 10;
-
-	/// Additional fee charged when moving native tokens to target chains (in IMBUs).
-	pub const NATIVE_TOKEN_TRANSFER_FEE: Balance = 2000 * IMBU;
+	
 
 }

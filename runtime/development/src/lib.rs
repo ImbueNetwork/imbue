@@ -23,7 +23,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
-use sp_core::OpaqueMetadata;
+use sp_core::{u32_trait::{_1, _2, _3, _4, _5}, OpaqueMetadata, H160, H256, U256};
 // use sp_core::u32_trait::{_1, _2, _3, _4};
 
 use sp_runtime::{
@@ -31,7 +31,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Verify, Extrinsic as ExtrinsicT, ConvertInto},
 	transaction_validity::{ TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,Perbill,
+	ApplyExtrinsicResult,Perbill,Percent, Permill,
 };
 
 use sp_std::{marker::PhantomData, prelude::*};
@@ -60,7 +60,7 @@ use frame_system::{
 };
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
-// use pallet_collective::{EnsureMember, EnsureProportionAtLeast, EnsureProportionMoreThan};
+use pallet_collective::{EnsureMember, EnsureProportionAtLeast, EnsureProportionMoreThan};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use crate::sp_api_hidden_includes_IMPL_RUNTIME_APIS::sp_api::Encode;
 
@@ -86,8 +86,9 @@ use xcm_builder::{
 
 /// common types for the runtime.
 pub use runtime_common::*;
-pub use runtime_common::Index;
+use runtime_common::currency::*;
 
+pub use runtime_common::Index;
 
 pub type SessionHandlers = ();
 
@@ -200,7 +201,7 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: Balance = 1 * MICRO_IMBU;
+	pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
 	pub const TransferFee: Balance = 1 * MICRO_IMBU;
 	pub const CreationFee: Balance = 1 * MICRO_IMBU;
 	pub const TransactionByteFee: Balance = 1 * (MICRO_IMBU / 100);
@@ -507,6 +508,52 @@ impl pallet_scheduler::Config for Runtime {
 }
 
 
+
+parameter_types! {
+	/// The maximum amount of time (in blocks) for council members to vote on motions.
+	/// Motions may end in fewer blocks if enough votes are cast to determine the result.
+	pub const CouncilMotionDuration: BlockNumber = 3 * DAYS;
+	/// The maximum number of Proposlas that can be open in the council at once.
+	pub const CouncilMaxProposals: u32 = 100;
+	/// The maximum number of council members.
+	pub const CouncilMaxMembers: u32 = 100;
+
+	/// The maximum amount of time (in blocks) for technical committee members to vote on motions.
+	/// Motions may end in fewer blocks if enough votes are cast to determine the result.
+	pub const TechCommitteeMotionDuration: BlockNumber = 3 * DAYS;
+	/// The maximum number of Proposlas that can be open in the technical committee at once.
+	pub const TechCommitteeMaxProposals: u32 = 100;
+	/// The maximum number of technical committee members.
+	pub const TechCommitteeMaxMembers: u32 = 100;
+}
+
+type CouncilInstance = pallet_collective::Instance1;
+type TechCommitteeInstance = pallet_collective::Instance2;
+
+impl pallet_collective::Config<CouncilInstance> for Runtime {
+	type Origin = Origin;
+	type Event = Event;
+	type Proposal = Call;
+	type MotionDuration = CouncilMotionDuration;
+	type MaxProposals = CouncilMaxProposals;
+	type MaxMembers = CouncilMaxMembers;
+	type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_collective::Config<TechCommitteeInstance> for Runtime {
+	type Origin = Origin;
+	type Event = Event;
+	type Proposal = Call;
+	type MotionDuration = TechCommitteeMotionDuration;
+	type MaxProposals = TechCommitteeMaxProposals;
+	type MaxMembers = TechCommitteeMaxMembers;
+	type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+}
+
+
+
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime where
 	Call: From<LocalCall>,
 {
@@ -603,6 +650,103 @@ impl pallet_aura::Config for Runtime {
 	type MaxAuthorities = MaxAuthorities;
 }
 
+
+parameter_types! {
+	// Add one item in storage and take 258 bytes
+	pub const BasicDeposit: Balance = currency::deposit(1, 258);
+	// Not add any item to the storage but takes 66 bytes
+	pub const FieldDeposit: Balance = currency::deposit(0, 66);
+	// Add one item in storage and take 53 bytes
+	pub const SubAccountDeposit: Balance = currency::deposit(1, 53);
+	pub const MaxSubAccounts: u32 = 100;
+	pub const MaxAdditionalFields: u32 = 100;
+	pub const MaxRegistrars: u32 = 20;
+}
+
+type IdentityForceOrigin = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilInstance>,
+>;
+type IdentityRegistrarOrigin = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilInstance>,
+>;
+
+impl pallet_identity::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type BasicDeposit = BasicDeposit;
+	type FieldDeposit = FieldDeposit;
+	type SubAccountDeposit = SubAccountDeposit;
+	type MaxSubAccounts = MaxSubAccounts;
+	type MaxAdditionalFields = MaxAdditionalFields;
+	type MaxRegistrars = MaxRegistrars;
+	type Slashed = Treasury;
+	type ForceOrigin = IdentityForceOrigin;
+	type RegistrarOrigin = IdentityRegistrarOrigin;
+	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const GrantsPalletId: PalletId = PalletId(*b"imbgrant");
+	pub const MaxGrantsPerRound: u32 = 256;
+	pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
+}
+
+
+parameter_types! {
+	pub const ProposalBond: Permill = Permill::from_percent(5);
+	pub const ProposalBondMinimum: Balance = 2000 * CENTI_IMBU;
+	pub const SpendPeriod: BlockNumber = 6 * DAYS;
+	pub const TreasuryId: PalletId = PalletId(*b"py/trsry");
+	pub const MaxApprovals: u32 = 100;
+}
+
+type TreasuryApproveOrigin = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilInstance>,
+>;
+
+type TreasuryRejectOrigin = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilInstance>,
+>;
+
+impl pallet_treasury::Config for Runtime {
+	type PalletId = TreasuryId;
+	type Currency = Balances;
+	// At least three-fifths majority of the council is required (or root) to approve a proposal
+	type ApproveOrigin = TreasuryApproveOrigin;
+	// More than half of the council is required (or root) to reject a proposal
+	type RejectOrigin = TreasuryRejectOrigin;
+	type Event = Event;
+	// If spending proposal rejected, transfer proposer bond to treasury
+	type OnSlash = Treasury;
+	type ProposalBond = ProposalBond;
+	type ProposalBondMinimum = ProposalBondMinimum;
+	type SpendPeriod = SpendPeriod;
+	type Burn = ();
+	type BurnDestination = ();
+	type MaxApprovals = MaxApprovals;
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type SpendFunds = ();
+}
+
+
+
+impl grants::Config for Runtime {
+	type Event = Event;
+	type PalletId = GrantsPalletId;
+	type Currency = Balances;
+	type MaxGrantsPerRound = MaxGrantsPerRound;
+	type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
+	type WeightInfo = ();
+}
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -614,10 +758,12 @@ construct_runtime! {
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+		Treasury: pallet_treasury::{Pallet, Storage, Config, Event<T>, Call},
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
 
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		} = 20,
+		ParachainSystem: cumulus_pallet_parachain_system::{	Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,} = 20,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 21,
 
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
@@ -634,6 +780,9 @@ construct_runtime! {
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 51,
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 52,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 53,
+
+		// Imbue Pallets
+		ImbueGrantsPallet: grants::{Pallet, Call, Storage, Event<T>},
 	}
 }
 
