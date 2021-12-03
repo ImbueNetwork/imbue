@@ -8,6 +8,7 @@
 use frame_support::traits::GenesisBuild;
 use frame_support::{
 	pallet_prelude::*, PalletId,
+	log,
 	traits::{Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons},
 };
 use codec::{Encode, Decode};
@@ -168,6 +169,9 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+
+
+
 		/// Create project
 		#[pallet::weight(<T as Config>::WeightInfo::create_project())]
 		pub fn create_project(origin: OriginFor<T>, name: Vec<u8>, logo: Vec<u8>, description: Vec<u8>, website: Vec<u8>) -> DispatchResultWithPostInfo {
@@ -193,10 +197,10 @@ pub mod pallet {
 			ensure!(description.len() > 0, Error::<T>::InvalidParam);
 			ensure!(website.len() > 0, Error::<T>::InvalidParam);
 
-			ensure!(name.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
-			ensure!(logo.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
-			ensure!(description.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
-			ensure!(website.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			// ensure!(name.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			// ensure!(logo.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			// ensure!(description.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			// ensure!(website.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			
 			let index = ProjectCount::<T>::get();
 			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
@@ -246,15 +250,22 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::schedule_round(MaxGrantCountPerRound::<T>::get()))]
 		pub fn schedule_round(origin: OriginFor<T>, start: T::BlockNumber, end: T::BlockNumber, matching_fund: BalanceOf<T>, project_indexes: Vec<ProjectIndex>) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
+			log::info!("************* user is root ***********************");
 			let now = <frame_system::Pallet<T>>::block_number();
 
 			// Check whether the funds are sufficient
 			let used_fund = Self::get_used_fund();
 			let free_balance = <T as Config>::Currency::free_balance(&Self::account_id());
+			log::info!("************* free balance is {:?} ***********************",free_balance.clone());
+			log::info!("************* used_fund is {:?} ***********************",used_fund.clone());
+			log::info!("************* matching_fund is {:?} ***********************",matching_fund.clone());
 
-			ensure!(free_balance - used_fund >= matching_fund, Error::<T>::NotEnoughFund);
+			// ensure!(free_balance - used_fund >= matching_fund, Error::<T>::NotEnoughFund);
 
+			log::info!("************* project_indexes is {:?} ***********************",project_indexes.clone().len());
 			ensure!(project_indexes.len() > 0, Error::<T>::InvalidProjectIndexes);
+			log::info!("************* MaxGrantCountPerRound is {:?} ***********************",MaxGrantCountPerRound::<T>::get());
+
 			// The number of items cannot exceed the maximum
 			ensure!(project_indexes.len() as u32 <= MaxGrantCountPerRound::<T>::get(), Error::<T>::GrantAmountExceed);
 			// The end block must be greater than the start block
@@ -266,13 +277,17 @@ pub mod pallet {
 			// project_index should be smaller than project count
 			let project_count = ProjectCount::<T>::get();
 			for project_index in project_indexes.iter() {
+				log::info!("************* project_index is {:?} ***********************",project_index.clone());
 				ensure!(*project_index < project_count, Error::<T>::InvalidProjectIndexes);
 			}
 
 			// Find the last valid round
 			let mut last_valid_round: Option<RoundOf::<T>> = None;
 			let index = RoundCount::<T>::get();
+			log::info!("************* round_count is {:?} ***********************",RoundCount::<T>::get());
+
 			for _i in (0..index).rev() {
+
 				let round = <Rounds<T>>::get(index-1).unwrap();
 				if !round.is_canceled {
 					last_valid_round = Some(round);
@@ -677,6 +692,8 @@ impl<T: Config> Pallet<T> {
 			}
 
 			for grant in grants.iter() {
+				log::info!("************* iterating via grants ***********************");
+
 				// If the undrawn funds expire, they will be returned to the foundation.
 				if grant.is_approved && !grant.is_withdrawn && grant.withdrawal_expiration > now {
 					continue;
@@ -688,6 +705,8 @@ impl<T: Config> Pallet<T> {
 				}
 
 				used_fund += grant.matching_fund;
+				log::info!("************* used_fund is {:?} ***********************",used_fund.clone());
+
 			}
 		}
 

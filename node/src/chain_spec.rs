@@ -125,7 +125,7 @@ pub fn development_environment_config(id: ParaId,environment: &str) -> Developme
 		ChainType::Live,
 		move || {
 			development_genesis(
-				AccountId32::from_str("5Gn1igfpf4hP7iG1Gsm1AbwPBCpR8BmHK4b6i2VrGHQS1kAJ").unwrap(),
+				AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap(),
 				vec![
 					hex!["7c11cea2901e72fe525d7335e99d48bdf8dea2a983ac92fa3ab20508a438af73"]
 					.unchecked_into(),
@@ -149,26 +149,26 @@ pub fn development_environment_config(id: ParaId,environment: &str) -> Developme
 
 fn endowed_accounts() -> Vec<AccountId> {
 	vec![
-		AccountId32::from_str("5Gn1igfpf4hP7iG1Gsm1AbwPBCpR8BmHK4b6i2VrGHQS1kAJ").unwrap(),
+		AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap(),
 	]
 }
 
 
 fn endowed_accounts_local() -> Vec<AccountId> {
 	vec![
-		AccountId32::from_str("5Gn1igfpf4hP7iG1Gsm1AbwPBCpR8BmHK4b6i2VrGHQS1kAJ").unwrap(),
+		AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap(),
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
-		get_account_id_from_seed::<sr25519::Public>("Charlie"),
-		get_account_id_from_seed::<sr25519::Public>("Dave"),
-		get_account_id_from_seed::<sr25519::Public>("Eve"),
-		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		// get_account_id_from_seed::<sr25519::Public>("Dave"),
+		// get_account_id_from_seed::<sr25519::Public>("Eve"),
+		// get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+		// get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+		// get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 	]
 }
 
