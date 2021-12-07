@@ -50,7 +50,7 @@ pub trait WeightInfo {
 	fn cancel_round() -> Weight;
 	fn cancel() -> Weight;
 	fn set_withdrawal_expiration() -> Weight;
-	fn set_max_grant_count_per_round(s: u32, ) -> Weight;
+	fn set_max_proposal_count_per_round(s: u32, ) -> Weight;
 	fn set_is_identity_required() -> Weight;
 	fn contribute() -> Weight;
 	fn finalize_round() -> Weight;
@@ -92,7 +92,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		(1_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn set_max_grant_count_per_round(_s: u32, ) -> Weight {
+	fn set_max_proposal_count_per_round(_s: u32, ) -> Weight {
 		(1_240_000 as Weight)
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
@@ -155,7 +155,7 @@ impl WeightInfo for () {
 		(1_000_000 as Weight)
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
-	fn set_max_grant_count_per_round(_s: u32, ) -> Weight {
+	fn set_max_proposal_count_per_round(_s: u32, ) -> Weight {
 		(1_240_000 as Weight)
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}

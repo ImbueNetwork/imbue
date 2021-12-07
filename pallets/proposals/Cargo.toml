@@ -1,5 +1,5 @@
 [package]
-name = "grants"
+name = "proposals"
 authors = ['Imbue <https://github.com/ImbueNetwork>']
 description = "oracle for fetch data from datasource"
 version = '3.0.0'

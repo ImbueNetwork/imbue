@@ -690,19 +690,13 @@ impl pallet_identity::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GrantsPalletId: PalletId = PalletId(*b"imbgrant");
-	pub const MaxGrantsPerRound: u32 = 256;
+	pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
+	pub const MaxProposalsPerRound: u32 = 256;
 	pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
 }
 
 
-parameter_types! {
-	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 2000 * CENTI_IMBU;
-	pub const SpendPeriod: BlockNumber = 6 * DAYS;
-	pub const TreasuryId: PalletId = PalletId(*b"py/trsry");
-	pub const MaxApprovals: u32 = 100;
-}
+
 
 type TreasuryApproveOrigin = EnsureOneOf<
 	AccountId,
@@ -736,13 +730,19 @@ impl pallet_treasury::Config for Runtime {
 	type SpendFunds = ();
 }
 
+parameter_types! {
+	pub const ProposalBond: Permill = Permill::from_percent(5);
+	pub const ProposalBondMinimum: Balance = 2000 * CENTI_IMBU;
+	pub const SpendPeriod: BlockNumber = 6 * DAYS;
+	pub const TreasuryId: PalletId = PalletId(*b"py/trsry");
+	pub const MaxApprovals: u32 = 100;
+}
 
-
-impl grants::Config for Runtime {
+impl proposals::Config for Runtime {
 	type Event = Event;
-	type PalletId = GrantsPalletId;
+	type PalletId = ProposalsPalletId;
 	type Currency = Balances;
-	type MaxGrantsPerRound = MaxGrantsPerRound;
+	type MaxProposalsPerRound = MaxProposalsPerRound;
 	type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
 	type WeightInfo = ();
 }
@@ -782,7 +782,7 @@ construct_runtime! {
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 53,
 
 		// Imbue Pallets
-		ImbueGrantsPallet: grants::{Pallet, Call, Storage, Event<T>},
+		ImbueProposalsPallet: proposals::{Pallet, Call, Storage, Event<T>},
 	}
 }
 

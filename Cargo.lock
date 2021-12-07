@@ -1887,7 +1887,6 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
- "grants",
  "hex",
  "hex-literal 0.3.3",
  "log",
@@ -1910,6 +1909,7 @@ dependencies = [
  "parachains-common",
  "parity-scale-codec",
  "polkadot-parachain",
+ "proposals",
  "runtime-common",
  "scale-info",
  "serde",
@@ -2855,36 +2855,6 @@ dependencies = [
  "js-sys",
  "wasm-bindgen",
  "web-sys",
-]
-
-[[package]]
-name = "grants"
-version = "3.0.0"
-dependencies = [
- "cumulus-pallet-xcm",
- "cumulus-primitives-core",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex",
- "integer-sqrt",
- "lite-json",
- "pallet-balances",
- "pallet-identity",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-xcm",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-keystore",
- "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]
@@ -7622,6 +7592,36 @@ dependencies = [
  "memchr",
  "parking_lot 0.11.1",
  "thiserror",
+]
+
+[[package]]
+name = "proposals"
+version = "3.0.0"
+dependencies = [
+ "cumulus-pallet-xcm",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "integer-sqrt",
+ "lite-json",
+ "pallet-balances",
+ "pallet-identity",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]

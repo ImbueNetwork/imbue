@@ -6,7 +6,7 @@ split-debuginfo = "unpacked"
 [workspace]
 members = [
     'node',
-	"pallets/grants",
+	"pallets/proposals",
 	"runtime/development",
 	"runtime/common",
 ]

@@ -79,7 +79,7 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release
 
 # Local Dependencies
 runtime-common = { path = "../common", default-features = false }
-grants = { package = 'grants', path = '../../pallets/grants', default-features = false }
+proposals = { package = 'proposals', path = '../../pallets/proposals', default-features = false }
 
 
 [dev-dependencies]
