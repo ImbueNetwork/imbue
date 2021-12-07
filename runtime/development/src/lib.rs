@@ -782,7 +782,7 @@ construct_runtime! {
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 53,
 
 		// Imbue Pallets
-		ImbueProposalsPallet: proposals::{Pallet, Call, Storage, Event<T>},
+		ImbueProposals: proposals::{Pallet, Call, Storage, Event<T>},
 	}
 }
 

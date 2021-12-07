@@ -14,7 +14,7 @@ use frame_support::{
 use codec::{Encode, Decode};
 use sp_std::prelude::*;
 use integer_sqrt::IntegerSquareRoot;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{traits::{AccountIdConversion,Saturating},Perbill};
 pub use pallet::*;
 use scale_info::TypeInfo;
 
@@ -157,6 +157,7 @@ pub mod pallet {
 		ProposalAmountExceed,
 		WithdrawalExpirationExceed,
 		NotEnoughFund,
+		MilestonesTotalPercentageMustEqual100,
 		InvalidProjectIndexes,
 		ParamLimitExceed,
 	}
@@ -171,7 +172,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Create project
 		#[pallet::weight(<T as Config>::WeightInfo::create_project())]
-		pub fn create_project(origin: OriginFor<T>, name: Vec<u8>, logo: Vec<u8>, description: Vec<u8>, website: Vec<u8>) -> DispatchResultWithPostInfo {
+		pub fn create_project(origin: OriginFor<T>, name: Vec<u8>, logo: Vec<u8>, description: Vec<u8>, website: Vec<u8>, milestones: Vec<Milestone>, required_funds: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			// Check if identity is required
@@ -194,6 +195,16 @@ pub mod pallet {
 			ensure!(description.len() > 0, Error::<T>::InvalidParam);
 			ensure!(website.len() > 0, Error::<T>::InvalidParam);
 
+			let mut total_percentage = 0;
+
+			for milestone in milestones.iter() {
+				log::info!("*********************** percentage for this milestone is {:?} ***********************",milestone.percentage_to_unlock);
+				total_percentage += milestone.percentage_to_unlock;
+			}
+
+			ensure!(total_percentage == 100, Error::<T>::MilestonesTotalPercentageMustEqual100);
+
+			log::info!("*********************** total percentage required is {:?} ***********************",total_percentage);
 			// ensure!(name.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			// ensure!(logo.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			// ensure!(description.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
@@ -208,6 +219,8 @@ pub mod pallet {
 				logo: logo,
 				description: description,
 				website: website,
+				milestones: milestones,
+				required_funds: required_funds,
 				owner: who,
 				create_block_number: <frame_system::Pallet<T>>::block_number(),
 			};
@@ -641,9 +654,9 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Get all projects
-	pub fn get_projects() -> Vec<Project<AccountIdOf<T>, T::BlockNumber>> {
+	pub fn get_projects() -> Vec<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>> {
 		let len = ProjectCount::<T>::get();
-		let mut projects: Vec<Project<AccountIdOf<T>, T::BlockNumber>> = Vec::new();
+		let mut projects: Vec<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>> = Vec::new();
 		for i in 0..len {
 			let project = <Projects<T>>::get(i).unwrap();
 			projects.push(project);
@@ -652,8 +665,6 @@ impl<T: Config> Pallet<T> {
 	}
 
 
-
-	
 }
 
 pub type ProjectIndex = u32;
@@ -661,7 +672,7 @@ pub type RoundIndex = u32;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
-type ProjectOf<T> = Project<AccountIdOf<T>, <T as frame_system::Config>::BlockNumber>;
+type ProjectOf<T> = Project<AccountIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::BlockNumber>;
 type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<AccountIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::BlockNumber>;
 type ProposalOf<T> = Proposal<AccountIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::BlockNumber>;
@@ -723,13 +734,22 @@ pub struct Contribution<AccountId, Balance> {
 	value: Balance,
 }
 
+/// The contribution users made to a proposal project.
+#[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
+pub struct Milestone {
+	name: Vec<u8>,
+	percentage_to_unlock: u32,
+}
+
 /// Project struct
 #[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Project<AccountId, BlockNumber> {
+pub struct Project<AccountId, Balance, BlockNumber> {
 	name: Vec<u8>,
 	logo: Vec<u8>,
 	description: Vec<u8>,
 	website: Vec<u8>,
+	milestones: Vec<Milestone>,
+	required_funds: Balance,
 	/// The account that will receive the funds if the campaign is successful
 	owner: AccountId,
 	create_block_number: BlockNumber,
