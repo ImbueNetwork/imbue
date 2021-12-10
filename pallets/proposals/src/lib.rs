@@ -258,7 +258,7 @@ pub mod pallet {
 		/// Schedule a round
 		/// proposal_indexes: the proposals were selected for this round
 		#[pallet::weight(<T as Config>::WeightInfo::schedule_round(MaxProposalCountPerRound::<T>::get()))]
-		pub fn schedule_round(origin: OriginFor<T>, start: T::BlockNumber, end: T::BlockNumber, matching_fund: BalanceOf<T>, project_indexes: Vec<ProjectIndex>) -> DispatchResultWithPostInfo {
+		pub fn schedule_round(origin: OriginFor<T>, start: T::BlockNumber, end: T::BlockNumber, project_indexes: Vec<ProjectIndex>) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let now = <frame_system::Pallet<T>>::block_number();
 
@@ -300,7 +300,7 @@ pub mod pallet {
 
 			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
-			let round = RoundOf::<T>::new(start, end, matching_fund, project_indexes);
+			let round = RoundOf::<T>::new(start, end, project_indexes);
 
 			// Add proposal round to list
 			<Rounds<T>>::insert(index, Some(round));
@@ -351,39 +351,6 @@ pub mod pallet {
 
 			// Calculate proposal CLR
 			let proposals = &mut round.proposals;
-			
-			// Calculates project CLRs and total ClR
-			for i in 0..proposals.len() {
-				let proposal = &proposals[i];
-
-				if proposal.is_canceled {
-					proposal_clrs.push((0 as u32).into());
-					continue;
-				} 
-
-				let mut sqrt_sum: BalanceOf<T> = (0 as u32).into();
-				for contribution in proposal.contributions.iter() {
-					let contribution_value: BalanceOf<T> = contribution.value;
-					sqrt_sum += contribution_value.integer_sqrt();
-				}
-
-				let proposal_clr: BalanceOf<T> = sqrt_sum * sqrt_sum;
-				proposal_clrs.push(proposal_clr);
-				total_clr += proposal_clr;
-			}
-
-			// Calculate proposal matching fund
-			if total_clr != (0 as u32).into() {
-				for i in 0..proposals.len() {
-					let proposal = &mut proposals[i];
-	
-					if proposal.is_canceled {
-						continue;
-					} 
-	
-					proposal.matching_fund = round.matching_fund * proposal_clrs[i] / total_clr;
-				}
-			}
 
 			round.is_finalized = true;
 			<Rounds<T>>::insert(round_index, Some(round.clone()));
@@ -689,14 +656,14 @@ pub struct Round<AccountId, Balance, BlockNumber> {
 }
 
 impl<AccountId, Balance: From<u32>, BlockNumber: From<u32>> Round<AccountId, Balance, BlockNumber> {
-		fn new(start: BlockNumber, end: BlockNumber, matching_fund: Balance, project_indexes: Vec<ProjectIndex>) -> Round<AccountId, Balance, BlockNumber> { 
+		fn new(start: BlockNumber, end: BlockNumber, project_indexes: Vec<ProjectIndex>) -> Round<AccountId, Balance, BlockNumber> { 
 		let mut proposal_round  = Round {
 			start: start,
 			end: end,
-			matching_fund: matching_fund,
 			proposals: Vec::new(),
 			is_canceled: false,
 			is_finalized: false,
+			matching_fund: (0 as u32).into(),
 		};
 
 		// Fill in the proposals structure in advance
