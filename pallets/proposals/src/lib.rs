@@ -202,9 +202,8 @@ pub mod pallet {
 				total_percentage += milestone.percentage_to_unlock;
 			}
 
-			ensure!(total_percentage == 100, Error::<T>::MilestonesTotalPercentageMustEqual100);
+			// ensure!(total_percentage == 100, Error::<T>::MilestonesTotalPercentageMustEqual100);
 
-			log::info!("*********************** total percentage required is {:?} ***********************",total_percentage);
 			// ensure!(name.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			// ensure!(logo.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			// ensure!(description.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
@@ -631,6 +630,10 @@ impl<T: Config> Pallet<T> {
 		projects
 	}
 
+	pub fn get_project(project_key: u32) -> Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber> {
+		let project = <Projects<T>>::get(project_key).unwrap();
+		project
+	}
 
 }
 
@@ -668,6 +671,7 @@ impl<AccountId, Balance: From<u32>, BlockNumber: From<u32>> Round<AccountId, Bal
 
 		// Fill in the proposals structure in advance
 		for project_index in project_indexes {
+			// let project =  <Projects<T>>::get(project_index).unwrap();
 			proposal_round.proposals.push(Proposal {
 				project_index: project_index,
 				contributions: Vec::new(),
@@ -678,7 +682,6 @@ impl<AccountId, Balance: From<u32>, BlockNumber: From<u32>> Round<AccountId, Bal
 				matching_fund: (0 as u32).into(),
 			});
 		}
-
 		proposal_round
 	}
 }
