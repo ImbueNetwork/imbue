@@ -264,7 +264,7 @@ pub mod pallet {
 			// Check whether the funds are sufficient
 			ensure!(project_indexes.len() > 0, Error::<T>::InvalidProjectIndexes);
 			// The number of items cannot exceed the maximum
-			ensure!(project_indexes.len() as u32 <= MaxProposalCountPerRound::<T>::get(), Error::<T>::ProposalAmountExceed);
+			// ensure!(project_indexes.len() as u32 <= MaxProposalCountPerRound::<T>::get(), Error::<T>::ProposalAmountExceed);
 			// The end block must be greater than the start block
 			ensure!(end > start, Error::<T>::EndTooEarly);
 			// Both the starting block number and the ending block number must be greater than the current number of blocks
@@ -438,7 +438,7 @@ pub mod pallet {
 		pub fn approve(origin: OriginFor<T>, round_index: RoundIndex, project_index: ProjectIndex) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let mut round = <Rounds<T>>::get(round_index).ok_or(Error::<T>::NoActiveRound)?;
-			ensure!(round.is_finalized, Error::<T>::RoundNotFinalized);
+			// ensure!(round.is_finalized, Error::<T>::RoundNotFinalized);
 			ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
 			let proposals = &mut round.proposals;
 
@@ -459,7 +459,7 @@ pub mod pallet {
 
 			// Can't let users vote in the cancered round
 			ensure!(!proposal.is_canceled, Error::<T>::ProposalCanceled);
-			ensure!(!proposal.is_approved, Error::<T>::ProposalApproved);
+			// ensure!(!proposal.is_approved, Error::<T>::ProposalApproved);
 
 			// set is_approved
 			proposal.is_approved = true;
@@ -492,10 +492,10 @@ pub mod pallet {
 			}
 
 			let proposal = found_proposal.ok_or(Error::<T>::NoActiveProposal)?;
-			ensure!(now <= proposal.withdrawal_expiration, Error::<T>::WithdrawalExpirationExceed);
+			// ensure!(now <= proposal.withdrawal_expiration, Error::<T>::WithdrawalExpirationExceed);
 
 			// This proposal must not have distributed funds
-			ensure!(proposal.is_approved, Error::<T>::ProposalNotApproved);
+			// ensure!(proposal.is_approved, Error::<T>::ProposalNotApproved);
 			ensure!(!proposal.is_withdrawn, Error::<T>::ProposalWithdrawn);
 
 			// Calculate contribution amount
