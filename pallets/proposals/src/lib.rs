@@ -118,7 +118,7 @@ pub mod pallet {
 		RoundCreated(RoundIndex),
 		ContributeSucceed(T::AccountId, ProjectIndex, BalanceOf<T>, T::BlockNumber),
 		ProposalCanceled(RoundIndex, ProjectIndex),
-		ProposalWithdrawn(RoundIndex, ProjectIndex, BalanceOf<T>, BalanceOf<T>),
+		ProposalWithdrawn(RoundIndex, ProjectIndex, BalanceOf<T>),
 		ProposalApproved(RoundIndex, ProjectIndex),
 		RoundCanceled(RoundIndex),
 		FundSucceed(),
@@ -268,7 +268,7 @@ pub mod pallet {
 			// The end block must be greater than the start block
 			ensure!(end > start, Error::<T>::EndTooEarly);
 			// Both the starting block number and the ending block number must be greater than the current number of blocks
-			ensure!(start > now, Error::<T>::StartBlockNumberInvalid);
+			// ensure!(start > now, Error::<T>::StartBlockNumberInvalid);
 			ensure!(end > now, Error::<T>::EndBlockNumberInvalid);
 
 			// project_index should be smaller than project count
@@ -332,32 +332,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Finalize a round
-		#[pallet::weight(<T as Config>::WeightInfo::finalize_round())]
-		pub fn finalize_round(origin: OriginFor<T>, round_index: RoundIndex) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-			let now = <frame_system::Pallet<T>>::block_number();
-			let mut round = <Rounds<T>>::get(round_index).ok_or(Error::<T>::NoActiveRound)?;
-			
-			// This round cannot be cancelled or finalized
-			ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
-			ensure!(!round.is_finalized, Error::<T>::RoundFinalized);
-			// This round must be over
-			ensure!(now > round.end, Error::<T>::RoundNotEnded);
-
-			let mut proposal_clrs: Vec<BalanceOf<T>> = Vec::new();
-			let mut total_clr: BalanceOf<T> = (0 as u32).into();
-
-			// Calculate proposal CLR
-			let proposals = &mut round.proposals;
-
-			round.is_finalized = true;
-			<Rounds<T>>::insert(round_index, Some(round.clone()));
-
-			Self::deposit_event(Event::RoundFinalized(round_index));
-
-			Ok(().into())
-		}
 
 		/// Contribute a proposal
 		#[pallet::weight(<T as Config>::WeightInfo::contribute())]
@@ -438,7 +412,6 @@ pub mod pallet {
 		pub fn approve(origin: OriginFor<T>, round_index: RoundIndex, project_index: ProjectIndex) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let mut round = <Rounds<T>>::get(round_index).ok_or(Error::<T>::NoActiveRound)?;
-			// ensure!(round.is_finalized, Error::<T>::RoundNotFinalized);
 			ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
 			let proposals = &mut round.proposals;
 
@@ -505,16 +478,7 @@ pub mod pallet {
 				contribution_amount += contribution_value;
 			}
 
-			let matching_fund = proposal.matching_fund;
 
-			// Distribute CLR amount
-			// Return funds to caller without charging a transfer fee
-			let _ = <T as Config>::Currency::resolve_into_existing(&project.owner, <T as Config>::Currency::withdraw(
-				&Self::account_id(),
-				matching_fund,
-				WithdrawReasons::from(WithdrawReasons::TRANSFER),
-				ExistenceRequirement::AllowDeath,
-			)?);
 
 			// Distribute contribution amount
 			let _ = <T as Config>::Currency::resolve_into_existing(&project.owner, <T as Config>::Currency::withdraw(
@@ -531,7 +495,7 @@ pub mod pallet {
 
 			<Rounds<T>>::insert(round_index, Some(round.clone()));
 
-			Self::deposit_event(Event::ProposalWithdrawn(round_index, project_index, matching_fund, contribution_amount));
+			Self::deposit_event(Event::ProposalWithdrawn(round_index, project_index, contribution_amount));
 
 			Ok(().into())
 		}
@@ -544,9 +508,8 @@ pub mod pallet {
 
 			let mut round = <Rounds<T>>::get(round_index).ok_or(Error::<T>::NoActiveRound)?;
 
-			// This round cannot be cancelled or finalized
+			// This round cannot be cancelled
 			ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
-			ensure!(!round.is_finalized, Error::<T>::RoundFinalized);
 
 			let proposals = &mut round.proposals;
 
@@ -652,10 +615,8 @@ type ProposalOf<T> = Proposal<AccountIdOf<T>, BalanceOf<T>, <T as frame_system::
 pub struct Round<AccountId, Balance, BlockNumber> {
 	start: BlockNumber,
 	end: BlockNumber,
-	matching_fund: Balance,
 	proposals: Vec<Proposal<AccountId, Balance, BlockNumber>>,
 	is_canceled: bool,
-	is_finalized: bool,
 }
 
 impl<AccountId, Balance: From<u32>, BlockNumber: From<u32>> Round<AccountId, Balance, BlockNumber> {
@@ -665,8 +626,6 @@ impl<AccountId, Balance: From<u32>, BlockNumber: From<u32>> Round<AccountId, Bal
 			end: end,
 			proposals: Vec::new(),
 			is_canceled: false,
-			is_finalized: false,
-			matching_fund: (0 as u32).into(),
 		};
 
 		// Fill in the proposals structure in advance
@@ -679,7 +638,6 @@ impl<AccountId, Balance: From<u32>, BlockNumber: From<u32>> Round<AccountId, Bal
 				is_canceled: false,
 				is_withdrawn: false,
 				withdrawal_expiration: (0 as u32).into(),
-				matching_fund: (0 as u32).into(),
 			});
 		}
 		proposal_round
@@ -694,7 +652,6 @@ pub struct Proposal<AccountId, Balance, BlockNumber> {
 	is_canceled: bool,
 	is_withdrawn: bool,
 	withdrawal_expiration: BlockNumber,
-	matching_fund: Balance,
 }
 
 /// The contribution users made to a proposal project.
