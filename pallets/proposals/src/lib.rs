@@ -59,8 +59,13 @@ pub mod pallet {
 	pub type Projects<T> = StorageMap<_, Blake2_128Concat, ProjectIndex, Option<ProjectOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
-    #[pallet::getter(fn votes)]
-    pub(super) type Votes<T: Config> = StorageMap<_, Identity, (T::AccountId, ProjectIndex, MilestoneIndex), bool, ValueQuery>;
+    #[pallet::getter(fn user_votes)]
+    pub(super) type UserVotes<T: Config> = StorageMap<_, Identity, (T::AccountId, ProjectIndex, MilestoneIndex), bool, ValueQuery>;
+
+
+	#[pallet::storage]
+    #[pallet::getter(fn milestone_votes)]
+    pub(super) type MilestoneVotes<T: Config> = StorageMap<_, Identity, (ProjectIndex, MilestoneIndex), Vote<BalanceOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn project_count)]
@@ -295,7 +300,18 @@ pub mod pallet {
 
 			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
-			let round = RoundOf::<T>::new(start, end, project_index, milestone_indexes);
+			let round = RoundOf::<T>::new(start, end, project_index, milestone_indexes.clone());
+
+			for milestone_index in milestone_indexes {
+				// Initialise voting
+				let vote = Vote {
+					yay: (0 as u32).into(),
+					nay: (0 as u32).into(),
+					is_approved: false
+				};
+				let vote_lookup_key = (project_index, milestone_index);
+				<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
+			}
 
 			// Add proposal round to list
 			<Rounds<T>>::insert(index, Some(round));
@@ -363,12 +379,14 @@ pub mod pallet {
 			let proposal = found_proposal.ok_or(Error::<T>::NoActiveProposal)?;
 			ensure!(!proposal.is_canceled, Error::<T>::ProposalCanceled);
 			let mut existing_contributer = false;
+			let mut contribution_amount: BalanceOf<T>  = (0 as u32).into();
 
 			// Find previous contribution by account_id
 			// If you have contributed before, then add to that contribution. Otherwise join the list.
 			for contribution in proposal.contributions.iter_mut() {
 				if contribution.account_id == who {
 					existing_contributer = true;
+					contribution_amount = contribution.value;
 					break;
 				}
 			}
@@ -376,9 +394,31 @@ pub mod pallet {
 			ensure!(existing_contributer, Error::<T>::OnlyContributorsCanVote);
 			let vote_lookup_key = (who.clone(), project_index, milestone_index);
 
-			let vote_exists = Votes::<T>::contains_key(vote_lookup_key.clone());
+			let vote_exists = UserVotes::<T>::contains_key(vote_lookup_key.clone());
 			ensure!(!vote_exists, Error::<T>::VoteAlreadyExists);
-			<Votes<T>>::insert(vote_lookup_key,approve_milestone);
+			
+			<UserVotes<T>>::insert(vote_lookup_key,approve_milestone);
+
+			let current_vote = <MilestoneVotes<T>>::get((project_index, milestone_index));
+
+			if approve_milestone {
+				let updated_vote = Vote {
+					yay: current_vote.yay + contribution_amount,
+					nay: current_vote.nay,
+					is_approved: current_vote.is_approved
+				};
+				<MilestoneVotes<T>>::insert((project_index, milestone_index),updated_vote)
+
+			} else {
+				let updated_vote = Vote {
+					yay: current_vote.yay,
+					nay: current_vote.nay + contribution_amount,
+					is_approved: current_vote.is_approved
+				};
+				<MilestoneVotes<T>>::insert((project_index, milestone_index),updated_vote)
+			}
+
+
 			<Rounds<T>>::insert(round_index-1, Some(round));
 			Self::deposit_event(Event::VoteComplete(who, project_index, milestone_index, approve_milestone, now));
 
@@ -785,6 +825,14 @@ pub struct Milestone {
 	milestone_index: MilestoneIndex,
 	name: Vec<u8>,
 	percentage_to_unlock: u32,
+	is_approved: bool
+}
+
+/// The contribution users made to a proposal project.
+#[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
+pub struct Vote<Balance> {
+	yay: Balance,
+	nay: Balance,
 	is_approved: bool
 }
 
