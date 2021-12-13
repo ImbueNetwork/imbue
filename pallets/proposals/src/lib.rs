@@ -246,6 +246,7 @@ pub mod pallet {
 				website: website,
 				milestones: milestones,
 				required_funds: required_funds,
+				withdrawn_funds:(0 as u32).into(), 
 				owner: who,
 				create_block_number: <frame_system::Pallet<T>>::block_number(),
 			};
@@ -547,18 +548,7 @@ pub mod pallet {
 
 			<Rounds<T>>::insert(round_index, Some(round.clone()));
 
-
-			// let updated_project =  ProjectOf::<T> {
-			// 	account_id: who.clone(),
-			// 	value: value,
-			// }
-
-			// let mut updated_project: Option<&mut ProjectOf::<T>> = None;
-			// updated_project = Some(project);
-
-
-
-			// Create a proposal 
+			// Update project milestones
 			let update_project = ProjectOf::<T> {
 				name: project.name,
 				logo: project.logo,
@@ -566,16 +556,13 @@ pub mod pallet {
 				website: project.website,
 				milestones: milestones,
 				required_funds: project.required_funds,
+				withdrawn_funds: project.withdrawn_funds,
 				owner: project.owner,
 				create_block_number: project.create_block_number,
 			};
-
 			// Add proposal to list
 			<Projects<T>>::insert(project_index, Some(update_project));
-
-
 			Self::deposit_event(Event::ProposalApproved(round_index, project_index));
-			
 			Ok(().into())
 		}
 
@@ -606,22 +593,48 @@ pub mod pallet {
 			ensure!(!proposal.is_withdrawn, Error::<T>::ProposalWithdrawn);
 
 			// Calculate contribution amount
-			let mut contribution_amount: BalanceOf<T>  = (0 as u32).into();
+			let mut total_contribution_amount: BalanceOf<T>  = (0 as u32).into();
 			for contribution in proposal.contributions.iter() {
 				let contribution_value = contribution.value;
-				contribution_amount += contribution_value;
+				total_contribution_amount += contribution_value;
 			}
 
+			let mut unlocked_funds: BalanceOf<T>  = (0 as u32).into();
+			for milestone in project.milestones.clone() {
+				if milestone.is_approved {
+					let percentage_to_unlock:BalanceOf<T>  = (milestone.percentage_to_unlock/100).into();
+					unlocked_funds += percentage_to_unlock * total_contribution_amount
+				}
+			}
+
+
+
+			let available_funds: BalanceOf<T>  = unlocked_funds - project.withdrawn_funds;
+			ensure!(available_funds >  (0 as u32).into(), Error::<T>::InvalidParam);
 
 
 			// Distribute contribution amount
 			let _ = <T as Config>::Currency::resolve_into_existing(&project.owner, <T as Config>::Currency::withdraw(
 				&Self::project_account_id(project_index),
-				contribution_amount,
+				available_funds,
 				WithdrawReasons::from(WithdrawReasons::TRANSFER),
 				ExistenceRequirement::AllowDeath,
 			)?);
 
+			// Update project withdrawn funds
+			let update_project = ProjectOf::<T> {
+				name: project.name,
+				logo: project.logo,
+				description: project.description,
+				website: project.website,
+				milestones: project.milestones,
+				required_funds: project.required_funds,
+				withdrawn_funds: available_funds,
+				owner: project.owner,
+				create_block_number: project.create_block_number,
+			};
+			// Add proposal to list
+			<Projects<T>>::insert(project_index, Some(update_project));
 
 			// Set is_withdrawn
 			proposal.is_withdrawn = true;
@@ -629,7 +642,7 @@ pub mod pallet {
 
 			<Rounds<T>>::insert(round_index, Some(round.clone()));
 
-			Self::deposit_event(Event::ProposalWithdrawn(round_index, project_index, contribution_amount));
+			Self::deposit_event(Event::ProposalWithdrawn(round_index, project_index, available_funds));
 
 			Ok(().into())
 		}
@@ -845,6 +858,7 @@ pub struct Project<AccountId, Balance, BlockNumber> {
 	website: Vec<u8>,
 	milestones: Vec<Milestone>,
 	required_funds: Balance,
+	withdrawn_funds: Balance,
 	/// The account that will receive the funds if the campaign is successful
 	owner: AccountId,
 	create_block_number: BlockNumber,
