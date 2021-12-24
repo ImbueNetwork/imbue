@@ -227,7 +227,6 @@ pub mod pallet {
 
 			// Fill in the proposals structure in advance
 			for milestone in proposed_milestones {
-				// let project =  <Projects<T>>::get(project_index).unwrap();
 				milestones.push(Milestone {
 					project_index: project_index,
 					milestone_index:milestone_index,

@@ -1,0 +1,123 @@
+{
+	"relaychain": {
+			"bin": "../polkadot/target/release/polkadot",
+			"chain": "rococo-local",
+			"nodes": [
+					{
+							"name": "alice",
+							"wsPort": 9944,
+							"port": 30444,
+							"flags": [ "--unsafe-ws-external","--prometheus-external","--rpc-cors=all","--wasm-execution=Compiled","--rpc-external","--rpc-methods=Unsafe", "--rpc-port=9935"]
+					},
+					{
+							"name": "bob",
+							"wsPort": 9955,
+							"port": 30555,
+							"flags": [ "--unsafe-ws-external","--rpc-cors=all","--wasm-execution=Compiled", "--rpc-external","--rpc-methods=Unsafe", "--rpc-port=9936"]
+					},
+					{
+							"name": "charlie",
+							"wsPort": 9966,
+							"port": 30666,
+							"flags": [ "--unsafe-ws-external","--rpc-cors=all","--wasm-execution=Compiled", "--rpc-external","--rpc-methods=Unsafe", "--rpc-port=9937"]
+					},
+					{
+							"name": "dave",
+							"wsPort": 9977,
+							"port": 30777,
+							"flags": [ "--unsafe-ws-external","--rpc-cors=all","--wasm-execution=Compiled", "--rpc-external","--rpc-methods=Unsafe", "--rpc-port=9938"]
+					},
+					{
+							"name": "eve",
+							"wsPort": 9988,
+							"port": 30888,
+							"flags": [ "--unsafe-ws-external","--rpc-cors=all","--wasm-execution=Compiled", "--rpc-external","--rpc-methods=Unsafe", "--rpc-port=9939"]
+					},
+					{
+							"name": "ferdie",
+							"wsPort": 9999,
+							"port": 30999,
+							"flags": [ "--unsafe-ws-external","--rpc-cors=all","--wasm-execution=Compiled", "--rpc-external","--rpc-methods=Unsafe", "--rpc-port=9915"]
+					}
+			],
+			"genesis": {
+					"runtime": {
+							"runtime_genesis_config": {
+									"parachainsConfiguration": {
+											"config": {
+													"validation_upgrade_frequency": 1,
+													"validation_upgrade_delay": 1
+											}
+									}
+							}
+					}
+			}
+	},
+	"parachains": [
+			{
+					"bin": "../imbue/target/release/imbue-collator",
+					"id": "2010",
+					"balance": "1000000000000000000000",
+					"nodes": [
+							{
+									"wsPort": 9942,
+									"port": 31200,
+									"name": "alice",
+									"flags": ["--prometheus-external","--allow-private-ipv4","--prometheus-port=9610","--unsafe-ws-external","--rpc-port=9930","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+							},
+							{
+									"wsPort": 9903,
+									"port": 31201,
+									"name": "bob",
+									"flags": ["--prometheus-external","--allow-private-ipv4","--unsafe-ws-external","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+							},
+							{
+									"wsPort": 9904,
+									"port": 31202,
+									"name": "charlie",
+									"flags": ["--prometheus-external","--allow-private-ipv4","--unsafe-ws-external","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+							},
+							{
+									"wsPort": 9905,
+									"port": 31203,
+									"name": "dave",
+									"flags": ["--prometheus-external","--allow-private-ipv4","--unsafe-ws-external","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+							},
+							{
+									"wsPort": 9906,
+									"port": 31204,
+									"name": "eve",
+									"flags": ["--prometheus-external","--allow-private-ipv4","--unsafe-ws-external","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+							},
+							{
+									"wsPort": 9907,
+									"port": 31205,
+									"name": "ferdie",
+									"flags": ["--prometheus-external","--allow-private-ipv4","--unsafe-ws-external","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+							},
+							{
+									"wsPort": 9908,
+									"port": 31205,
+									"name": "alice",
+									"flags": ["--prometheus-external","--allow-private-ipv4","--unsafe-ws-external","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+							},
+							{
+									"wsPort": 9907,
+									"port": 31206,
+									"name": "bob",
+									"flags": ["--prometheus-external","--allow-private-ipv4","--unsafe-ws-external","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+							}
+					]
+			}
+	],
+	"simpleParachains": [
+	],
+	"hrmpChannels": [
+
+	],
+	"types": {"HrmpChannelId": {
+			"sender": "u32",
+			"receiver": "u32"
+	}},
+	"finalization": false
+}
