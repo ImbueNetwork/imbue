@@ -11,9 +11,12 @@ FROM parity/polkadot:latest AS polkadot
 
 FROM node:16
 ARG PROFILE=release
+ARG APT_PACKAGES
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update -y\
-    && apt-get install curl ca-certificates vim awscli -y
+RUN apt-get update
+RUN apt-get install -y\
+        gnupg2 ca-certificates\
+        ${APT_PACKAGES}
 
 RUN yarn global add polkadot-launch
 
