@@ -7,6 +7,7 @@ RUN cp target/${PROFILE}/imbue-collator /
 
 
 FROM parity/polkadot:latest AS polkadot
+FROM parity/subkey:latest AS subkey
 # to copy polkadot binaries only; no other directives required
 
 
@@ -22,6 +23,6 @@ RUN yarn global add polkadot-launch
 
 COPY --from=builder /imbue-collator /
 COPY --from=polkadot /polkadot /
-COPY --from=polkadot /subkey /
+COPY --from=subkey /subkey /
 
 EXPOSE 30330-30345 9933-9960 8080 3001
