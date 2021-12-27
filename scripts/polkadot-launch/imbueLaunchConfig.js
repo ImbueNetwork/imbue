@@ -89,7 +89,7 @@ const parachains = [
                 flags: [
                     `--prometheus-port=${parachainAlicePrometheusPort}`,
                     `--rpc-port=${parachainAliceRPCPort}`,
-                    ... parachainNodeFlags,
+                    ...parachainNodeFlags,
                 ]
             },
             ...[
