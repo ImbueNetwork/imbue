@@ -62,16 +62,16 @@ const relaychain = {
         }))
     ],
     genesis: {
-        runtime: {
-            runtime_genesis_config: {
-                parachainsConfiguration: {
-                    config: {
-                        validation_upgrade_frequency: 1,
-                        validation_upgrade_delay: 1
-                    }
-                }
-            }
-        }
+        // runtime: {
+        //     runtime_genesis_config: {
+        //         configuration: {
+        //             config: {
+        //                 validation_upgrade_frequency: 1,
+        //                 validation_upgrade_delay: 1
+        //             }
+        //         }
+        //     }
+        // }
     }
 };
 
