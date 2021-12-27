@@ -22,7 +22,7 @@ RUN apt-get install -y\
 RUN yarn global add polkadot-launch
 
 COPY --from=builder /imbue-collator /
-COPY --from=polkadot /polkadot /
-COPY --from=subkey /subkey /
+COPY --from=polkadot /usr/bin/polkadot /
+COPY --from=subkey /usr/local/bin/subkey /
 
 EXPOSE 30330-30345 9933-9960 8080 3001
