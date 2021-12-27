@@ -3,6 +3,7 @@ ARG PROFILE=release
 WORKDIR /imbue
 ADD . .
 RUN cargo build --${PROFILE}
+RUN cp target/${PROFILE}/imbue-collator /
 
 
 FROM parity/polkadot:latest AS polkadot
@@ -10,7 +11,6 @@ FROM parity/polkadot:latest AS polkadot
 
 
 FROM node:16
-ARG PROFILE=release
 ARG APT_PACKAGES
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update
@@ -20,7 +20,7 @@ RUN apt-get install -y\
 
 RUN yarn global add polkadot-launch
 
-COPY --from=builder /imbue/target/${PROFILE}/imbue-collator /
+COPY --from=builder /imbue-collator /
 COPY --from=polkadot /polkadot /
 COPY --from=polkadot /subkey /
 
