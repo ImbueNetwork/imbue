@@ -1,11 +1,11 @@
 let relaychainBasePort = 30300;
 let relaychainBaseRPCPort = 9900;
-let relaychainBaseWSPort = 9940;
+let relaychainBaseWSPort = 9924;
 
-const parachainAlicePrometheusPort = 9610;
-const parachainAliceRPCPort = 9930;
 let parachainBasePort = 30400;
-let parachainBaseWSPort = 9950;
+let parachainBaseRPCPort = 9930;
+let parachainBaseWSPort = 9944;
+const parachainAlicePrometheusPort = 9610;
 
 
 const commonFlags = [
@@ -45,20 +45,24 @@ const relaychain = {
             name: "alice",
             wsPort: relaychainBaseWSPort++,
             port: relaychainBasePort++,
+            rpcPort: relaychainBaseRPCPort++,
             flags: [
                 ...relaychainFlags,
                 "--prometheus-external",
-                `--rpc-port=${relaychainBaseRPCPort++}`,
             ]
         },
-        ...["bob", "charlie", "dave", "eve", "ferdie"].map((name, idx) => ({
+        ...[
+            "bob",
+            "charlie",
+            "dave",
+            // "eve",
+            // "ferdie"
+        ].map((name, idx) => ({
             name,
             wsPort: relaychainBaseWSPort + idx,
+            rpcPort: relaychainBaseRPCPort + idx,
             port: relaychainBasePort + idx,
-            flags: [
-                ...relaychainFlags,
-                `--rpc-port=${relaychainBaseRPCPort + idx}`
-            ]
+            flags: [...relaychainFlags]
         }))
     ],
     genesis: {
@@ -83,12 +87,12 @@ const parachains = [
         balance: "1000000000000000000000",
         nodes: [
             {
+                name: "alice",
                 wsPort: parachainBaseWSPort++,
                 port: parachainBasePort++,
-                name: "alice",
+                rpcPort: parachainBaseRPCPort++,
                 flags: [
                     `--prometheus-port=${parachainAlicePrometheusPort}`,
-                    `--rpc-port=${parachainAliceRPCPort}`,
                     ...parachainNodeFlags,
                 ]
             },
@@ -96,13 +100,14 @@ const parachains = [
                 "bob",
                 "charlie",
                 "dave",
-                "eve",
-                "ferdie",
-                "alice",
-                "bob"
+                // "eve",
+                // "ferdie",
+                // // "alice",
+                // // "bob"
             ].map((name, idx) => ({
                 name,
                 wsPort: parachainBaseWSPort + idx,
+                rpcPort: parachainBaseRPCPort + idx,
                 port: parachainBasePort + idx,
                 flags: parachainNodeFlags,
             }))
