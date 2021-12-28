@@ -80,45 +80,43 @@ const relaychain = {
     }
 };
 
-const parachains = [
-    {
-        // bin: "../imbue/target/release/imbue-collator",
-        bin: executable("imbue_collator"),
-        id: "2010",
-        balance: "1000000000000000000000",
-        nodes: [
-            {
-                name: "alice",
-                wsPort: parachainBaseWSPort++,
-                port: parachainBasePort++,
-                rpcPort: parachainBaseRPCPort++,
-                flags: [
-                    `--prometheus-port=${parachainAlicePrometheusPort}`,
-                    ...parachainNodeFlags,
-                ]
-            },
-            ...[
-                "bob",
-                "charlie",
-                "dave",
-                // "eve",
-                // "ferdie",
-                // // "alice",
-                // // "bob"
-            ].map((name, idx) => ({
-                name,
-                wsPort: parachainBaseWSPort + idx,
-                rpcPort: parachainBaseRPCPort + idx,
-                port: parachainBasePort + idx,
-                flags: parachainNodeFlags,
-            }))
-        ]
-    }
-];
+const imbue_collator = {
+    // bin: "../imbue/target/release/imbue-collator",
+    bin: executable("imbue_collator"),
+    id: "2010",
+    balance: "1000000000000000000000",
+    nodes: [
+        {
+            name: "alice",
+            wsPort: parachainBaseWSPort++,
+            port: parachainBasePort++,
+            rpcPort: parachainBaseRPCPort++,
+            flags: [
+                `--prometheus-port=${parachainAlicePrometheusPort}`,
+                ...parachainNodeFlags,
+            ]
+        },
+        ...[
+            "bob",
+            "charlie",
+            "dave",
+            // "eve",
+            // "ferdie",
+            // // "alice",
+            // // "bob"
+        ].map((name, idx) => ({
+            name,
+            wsPort: parachainBaseWSPort + idx,
+            rpcPort: parachainBaseRPCPort + idx,
+            port: parachainBasePort + idx,
+            flags: parachainNodeFlags,
+        }))
+    ]
+};
 
 module.exports = {
     relaychain,
-    parachains,
+    parachains: [imbue_collator],
     simpleParachains: [],
     hrmpChannels: [],
     types: {
