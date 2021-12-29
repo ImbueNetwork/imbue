@@ -1,3 +1,6 @@
+const basePathBase = process.env.POLKADOT_LAUNCH_BASE_PATH_BASE
+    || "/tmp/imbue-polkadot-launch";
+
 let relaychainBasePort = 30300;
 let relaychainBaseRPCPort = 9900;
 let relaychainBaseWSPort = 9914;
@@ -5,7 +8,6 @@ let relaychainBaseWSPort = 9914;
 let parachainBasePort = 30400;
 let parachainBaseRPCPort = 9930;
 let parachainBaseWSPort = 9944;
-
 const parachainAlicePrometheusPort = 9610;
 
 
@@ -15,10 +17,12 @@ const commonFlags = [
     "--rpc-external",
     "--rpc-methods=Unsafe",
 ];
+
 const relaychainFlags = [
     ...commonFlags,
     "--wasm-execution=Compiled",
 ];
+
 const parachainNodeFlags = [
     ...commonFlags,
     "--prometheus-external",
@@ -47,6 +51,7 @@ const relaychain = {
             wsPort: relaychainBaseWSPort++,
             port: relaychainBasePort++,
             rpcPort: relaychainBaseRPCPort++,
+            basePath: `${basePathBase}/alice-relaychain`,
             flags: [
                 ...relaychainFlags,
                 "--prometheus-external",
@@ -63,6 +68,7 @@ const relaychain = {
             wsPort: relaychainBaseWSPort + idx,
             rpcPort: relaychainBaseRPCPort + idx,
             port: relaychainBasePort + idx,
+            basePath: `${basePathBase}/${name}-${idx}-relaychain`,
             flags: [...relaychainFlags]
         }))
     ],
@@ -91,24 +97,26 @@ const imbue_collator = {
             wsPort: parachainBaseWSPort++,
             port: parachainBasePort++,
             rpcPort: parachainBaseRPCPort++,
+            basePath: `${basePathBase}/alice-imbue-collator`,
             flags: [
                 `--prometheus-port=${parachainAlicePrometheusPort}`,
                 ...parachainNodeFlags,
             ]
         },
         ...[
-            "bob",
+                // "bob",
             "charlie",
             "dave",
             // "eve",
             // "ferdie",
-            // // "alice",
-            // // "bob"
+                "alice",
+                "bob"
         ].map((name, idx) => ({
             name,
             wsPort: parachainBaseWSPort + idx,
             rpcPort: parachainBaseRPCPort + idx,
             port: parachainBasePort + idx,
+            basePath: `${basePathBase}/${name}-${idx}-imbue-collator`,
             flags: parachainNodeFlags,
         }))
     ]
