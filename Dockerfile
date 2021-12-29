@@ -6,7 +6,7 @@ RUN cargo build --${PROFILE}
 RUN cp target/${PROFILE}/imbue-collator /
 
 
-FROM parity/polkadot:v0.9.12 AS polkadot
+FROM parity/polkadot:v0.9.13 AS polkadot
 FROM parity/subkey:latest AS subkey
 # to copy polkadot binaries only; no other directives required
 
