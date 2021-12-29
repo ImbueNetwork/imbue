@@ -1,6 +1,6 @@
 {
 	"relaychain": {
-			"bin": "../polkadot/target/release/polkadot",
+			"bin": "/polkadot",
 			"chain": "rococo-local",
 			"nodes": [
 					{
@@ -55,7 +55,7 @@
 	},
 	"parachains": [
 			{
-					"bin": "../imbue/target/release/imbue-collator",
+					"bin": "/imbue-collator",
 					"id": "2010",
 					"balance": "1000000000000000000000",
 					"nodes": [
@@ -63,7 +63,7 @@
 									"wsPort": 9942,
 									"port": 31200,
 									"name": "alice",
-									"flags": ["--prometheus-external","--allow-private-ipv4","--prometheus-port=9610","--unsafe-ws-external","--rpc-port=9930","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+									"flags": ["--force-authoring","--prometheus-external","--allow-private-ipv4","--prometheus-port=9610","--unsafe-ws-external","--rpc-port=9930","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
 							},
 							{
 									"wsPort": 9903,

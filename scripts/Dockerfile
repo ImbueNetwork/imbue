@@ -1,20 +1,19 @@
-# build kylin-collator
-FROM kylinnetwork/polkadot:latest as builder
+FROM samelamin/polkadot:0.9.15 as builder
 
-LABEL maintainer="kylin-dev"
+LABEL maintainer="imbue-dev"
 ARG PROFILE=release
-ARG KYLIN_GIT_REPO="https://github.com/Kylin-Network/kylin-collator.git"
+ARG IMBUE_GIT_REPO="https://github.com/ImbueNetwork/imbue.git"
 ARG GIT_BRANCH="main"
 ARG GIT_CLONE_DEPTH="--depth 1"
 WORKDIR /builds/
 
-#Build kylin-collator
-RUN git clone --recursive ${KYLIN_GIT_REPO} ${GIT_CLONE_DEPTH}
+#Build imbue-collator
+RUN git clone --recursive ${IMBUE_GIT_REPO} ${GIT_CLONE_DEPTH}
 
-WORKDIR /builds/kylin-collator
+WORKDIR /builds/imbue
 RUN git checkout ${GIT_BRANCH}
 RUN cargo build --${PROFILE}
-RUN cp target/${PROFILE}/kylin-collator /kylin-collator
+RUN cp target/${PROFILE}/imbue-collator /imbue-collator
 
 FROM ubuntu
 ENV DEBIAN_FRONTEND noninteractive
@@ -32,13 +31,17 @@ RUN npm install npm@latest -g && \
     npm install n -g && \
     n stable
 
-ARG POLKADOT_LAUNCH_REPO="https://github.com/Kylin-Network/polkadot-launch.git"
+ARG POLKADOT_LAUNCH_REPO="https://github.com/ImbueNetwork/polkadot-launch.git"
 RUN git clone --recursive ${POLKADOT_LAUNCH_REPO} ${GIT_CLONE_DEPTH}
 WORKDIR /builds/polkadot-launch
-RUN yarn global add polkadot-launch
+RUN git checkout dcfb2295
+RUN yarn
+RUN yarn install
+RUN yarn global add polkadot-launch@1.9.0
+# RUN npm i polkadot-launch -g
 
 WORKDIR /
-COPY --from=builder /kylin-collator /
+COPY --from=builder /imbue-collator /
 COPY --from=builder /polkadot /
 COPY --from=builder /subkey /
 
