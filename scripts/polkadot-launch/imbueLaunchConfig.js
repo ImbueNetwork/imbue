@@ -83,7 +83,7 @@ const relaychain = {
 const imbue_collator = {
     // bin: "../imbue/target/release/imbue-collator",
     bin: executable("imbue_collator"),
-    id: "2010",
+    id: "2102",
     balance: "1000000000000000000000",
     nodes: [
         {

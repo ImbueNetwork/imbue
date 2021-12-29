@@ -34,7 +34,7 @@ use sp_runtime::{
 	ApplyExtrinsicResult,Perbill,Percent, Permill,
 };
 
-use sp_std::{marker::PhantomData, prelude::*};
+use sp_std::{marker::PhantomData, prelude::*, cmp::Ordering};
 
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -488,12 +488,22 @@ impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+	type PalletsOrigin = OriginCaller;
 }
 
 
 parameter_types! {
 	pub MaximumSchedulerWeight: Weight = NORMAL_DISPATCH_RATIO * RuntimeBlockWeights::get().max_block;
 	pub const MaxScheduledPerBlock: u32 = 50;
+}
+
+pub struct AlwaysPrivilege;
+impl<T: Sized> frame_support::traits::PrivilegeCmp<T>
+	for AlwaysPrivilege
+{
+	fn cmp_privilege(_: &T, _: &T) -> Option<Ordering> {
+		Some(Ordering::Equal)
+	}
 }
 
 impl pallet_scheduler::Config for Runtime {
@@ -505,6 +515,8 @@ impl pallet_scheduler::Config for Runtime {
 	type ScheduleOrigin = EnsureRoot<AccountId>;
 	type MaxScheduledPerBlock = MaxScheduledPerBlock;
 	type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
+	type OriginPrivilegeCmp = frame_support::traits::EqualPrivilegeOnly;
+	// type OriginPrivilegeCmp = AlwaysPrivilege;
 }
 
 
