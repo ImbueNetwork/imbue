@@ -1,3 +1,4 @@
+# samelamin/imbue:0.9.13 as builder
 FROM samelamin/polkadot:0.9.15 as builder
 
 LABEL maintainer="imbue-dev"
@@ -34,11 +35,9 @@ RUN npm install npm@latest -g && \
 ARG POLKADOT_LAUNCH_REPO="https://github.com/ImbueNetwork/polkadot-launch.git"
 RUN git clone --recursive ${POLKADOT_LAUNCH_REPO} ${GIT_CLONE_DEPTH}
 WORKDIR /builds/polkadot-launch
-RUN git checkout dcfb2295
 RUN yarn
 RUN yarn install
-RUN yarn global add polkadot-launch@1.9.0
-# RUN npm i polkadot-launch -g
+RUN yarn global add polkadot-launch
 
 WORKDIR /
 COPY --from=builder /imbue-collator /
