@@ -51,7 +51,7 @@
 									"wsPort": 9942,
 									"port": 31200,
 									"name": "alice",
-									"flags": ["--force-authoring","--prometheus-external","--allow-private-ipv4","--prometheus-port=9610","--unsafe-ws-external","--rpc-port=9930","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
+									"flags": ["--prometheus-external","--allow-private-ipv4","--prometheus-port=9610","--unsafe-ws-external","--rpc-port=9930","--rpc-cors=all", "--rpc-external","--rpc-methods=Unsafe", "--execution=wasm", "--" ,"--prometheus-external"]
 							},
 							{
 									"wsPort": 9903,

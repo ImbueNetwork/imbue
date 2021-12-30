@@ -7,9 +7,8 @@ let relaychainBaseWSPort = 9914;
 
 let parachainBasePort = 30400;
 let parachainBaseRPCPort = 9930;
-let parachainBaseWSPort = 9944;
+let parachainBaseWSPort = 9942;
 const parachainAlicePrometheusPort = 9610;
-
 
 const commonFlags = [
     "--unsafe-ws-external",
@@ -40,10 +39,8 @@ const executable = (name) => {
     }
     throw new Error(`Missing required envvar: ${envvar}`);
 }
-                           
 const relaychain = {
-    //"bin": "../polkadot/target/release/polkadot",
-    bin: executable("relaychain"),
+    "bin": "/polkadot",
     chain: "rococo-local",
     nodes: [
         {
@@ -61,8 +58,6 @@ const relaychain = {
             "bob",
             "charlie",
             "dave",
-            // "eve",
-            // "ferdie"
         ].map((name, idx) => ({
             name,
             wsPort: relaychainBaseWSPort + idx,
@@ -73,22 +68,11 @@ const relaychain = {
         }))
     ],
     genesis: {
-        // runtime: {
-        //     runtime_genesis_config: {
-        //         configuration: {
-        //             config: {
-        //                 validation_upgrade_frequency: 1,
-        //                 validation_upgrade_delay: 1
-        //             }
-        //         }
-        //     }
-        // }
     }
 };
 
 const imbue_collator = {
-    // bin: "../imbue/target/release/imbue-collator",
-    bin: executable("imbue_collator"),
+    bin: "/imbue-collator",
     id: "2102",
     balance: "1000000000000000000000",
     nodes: [
@@ -104,13 +88,10 @@ const imbue_collator = {
             ]
         },
         ...[
-                // "bob",
+            "alice",
+            "bob",
             "charlie",
-            "dave",
-            // "eve",
-            // "ferdie",
-                "alice",
-                "bob"
+            "dave"
         ].map((name, idx) => ({
             name,
             wsPort: parachainBaseWSPort + idx,
