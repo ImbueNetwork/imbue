@@ -69,7 +69,6 @@ fn shell_testnet_genesis(parachain_id: ParaId) -> shell_runtime::GenesisConfig {
 			code: shell_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
-				changes_trie_config: Default::default(),
 		},
 		parachain_info: shell_runtime::ParachainInfoConfig { parachain_id },
 		parachain_system: Default::default(),
@@ -183,7 +182,6 @@ fn development_genesis(
 			code: development_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
-				changes_trie_config: Default::default(),
 		},
 		balances: development_runtime::BalancesConfig {
 			balances: endowed_accounts
