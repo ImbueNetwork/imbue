@@ -1,9 +1,15 @@
 FROM paritytech/ci-linux:staging AS builder
-ARG PROFILE=release
-WORKDIR /imbue
-ADD . .
-RUN cargo build --${PROFILE}
-RUN cp target/${PROFILE}/imbue-collator /
+LABEL maintainer="imbue-dev"
+WORKDIR /builds/imbue
+
+ADD libs libs
+ADD node node
+ADD pallets pallets
+ADD runtime runtime
+ADD Cargo.* ./
+
+RUN cargo build --release
+RUN cp target/release/imbue-collator /
 
 
 FROM parity/polkadot:v0.9.13 AS polkadot
@@ -11,15 +17,9 @@ FROM parity/subkey:latest AS subkey
 # to copy polkadot binaries only; no other directives required
 
 
-FROM node:16
-ARG APT_PACKAGES
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update
-RUN apt-get install -y\
-        gnupg2 ca-certificates\
-        ${APT_PACKAGES}
+FROM alpine:latest
 
-RUN yarn global add polkadot-launch
+RUN apk update && apk add ca-certificates
 
 COPY --from=builder /imbue-collator /
 COPY --from=polkadot /usr/bin/polkadot /
