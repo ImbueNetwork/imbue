@@ -1,5 +1,4 @@
-const basePathBase = process.env.POLKADOT_LAUNCH_BASE_PATH_BASE
-    || "/tmp/imbue-polkadot-launch";
+const basePathBase = process.env.POLKADOT_LAUNCH_BASE_PATH_BASE || void 0;
 
 let relaychainBasePort = 30300;
 let relaychainBaseRPCPort = 9900;
@@ -31,14 +30,6 @@ const parachainNodeFlags = [
     "--prometheus-external",
 ];
 
-const executable = (name) => {
-    const envvar = `${name}_executable`.toUpperCase();
-    const exec = process.env[envvar];
-    if (exec) {
-        return exec;
-    }
-    throw new Error(`Missing required envvar: ${envvar}`);
-}
 const relaychain = {
     "bin": "/polkadot",
     chain: "rococo-local",
@@ -48,7 +39,7 @@ const relaychain = {
             wsPort: relaychainBaseWSPort++,
             port: relaychainBasePort++,
             rpcPort: relaychainBaseRPCPort++,
-            basePath: `${basePathBase}/alice-relaychain`,
+            basePath: basePathBase && `${basePathBase}/alice-relaychain`,
             flags: [
                 ...relaychainFlags,
                 "--prometheus-external",
@@ -63,7 +54,7 @@ const relaychain = {
             wsPort: relaychainBaseWSPort + idx,
             rpcPort: relaychainBaseRPCPort + idx,
             port: relaychainBasePort + idx,
-            basePath: `${basePathBase}/${name}-${idx}-relaychain`,
+            basePath: basePathBase && `${basePathBase}/${name}-${idx}-relaychain`,
             flags: [...relaychainFlags]
         }))
     ],
@@ -81,7 +72,7 @@ const imbue_collator = {
             wsPort: parachainBaseWSPort++,
             port: parachainBasePort++,
             rpcPort: parachainBaseRPCPort++,
-            basePath: `${basePathBase}/alice-imbue-collator`,
+            basePath: basePathBase && `${basePathBase}/alice-imbue-collator`,
             flags: [
                 `--prometheus-port=${parachainAlicePrometheusPort}`,
                 ...parachainNodeFlags,
@@ -97,7 +88,7 @@ const imbue_collator = {
             wsPort: parachainBaseWSPort + idx,
             rpcPort: parachainBaseRPCPort + idx,
             port: parachainBasePort + idx,
-            basePath: `${basePathBase}/${name}-${idx}-imbue-collator`,
+            basePath: basePathBase && `${basePathBase}/${name}-${idx}-imbue-collator`,
             flags: parachainNodeFlags,
         }))
     ]
