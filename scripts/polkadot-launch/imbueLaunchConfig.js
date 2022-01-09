@@ -32,7 +32,7 @@ const parachainNodeFlags = [
 
 const relaychain = {
     "bin": "/polkadot",
-    chain: "rococo-local",
+    chain: "westend-local",
     nodes: [
         {
             name: "alice",
@@ -66,9 +66,11 @@ const imbue_collator = {
     bin: "/imbue-collator",
     id: "2102",
     balance: "1000000000000000000000",
+    chain:"imbue-dev",
     nodes: [
         {
             name: "alice",
+            
             wsPort: parachainBaseWSPort++,
             port: parachainBasePort++,
             rpcPort: parachainBaseRPCPort++,
