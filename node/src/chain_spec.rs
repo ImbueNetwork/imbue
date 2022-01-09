@@ -126,10 +126,8 @@ pub fn development_environment_config(id: ParaId,environment: &str) -> Developme
 			development_genesis(
 				AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap(),
 				vec![
-					hex!["7c11cea2901e72fe525d7335e99d48bdf8dea2a983ac92fa3ab20508a438af73"]
-					.unchecked_into(),
-					hex!["287f278af79ef7f1b2a2b3d5a7c76a047e248232d13f0a5ec744789a96dc824d"]
-					.unchecked_into()
+					get_from_seed::<AuraId>("Alice"),
+					get_from_seed::<AuraId>("Bob"),
 				],
 				endowed_accounts(),
 				id.into(),
