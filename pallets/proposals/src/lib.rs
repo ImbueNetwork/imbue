@@ -142,7 +142,7 @@ pub mod pallet {
 		IdentityNeeded,
 		InvalidParam,
 		InvalidAccount,
-		InvalidProjectIndexes,
+		ProjectDoesNotExist,
 		MilestonesTotalPercentageMustEqual100,
 		NotEnoughFund,
 		/// Error names should be descriptive.
@@ -267,13 +267,11 @@ pub mod pallet {
 			let now = <frame_system::Pallet<T>>::block_number();
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
-			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
-			let project = Projects::<T>::get(project_key);
+			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
-			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
+			let project = Projects::<T>::get(project_key);
 			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorCanSubmitMilestone);
 			ensure!(project.approved_for_funding, Error::<T>::OnlyApprovedProjectsCanSubmitMilestones);
-
 
 			// set end to 30 mins for demo purposes
 			let end = now + 150u32.into();
@@ -317,7 +315,7 @@ pub mod pallet {
 
 			// project_key should be smaller than project count
 			let project_count = ProjectCount::<T>::get();
-			ensure!(project_key < project_count, Error::<T>::InvalidProjectIndexes);
+			ensure!(project_key < project_count, Error::<T>::ProjectDoesNotExist);
 
 			// Find the last valid round
 			let mut last_valid_round: Option<RoundOf::<T>> = None;
@@ -416,7 +414,7 @@ pub mod pallet {
 			let proposal = found_proposal.ok_or(Error::<T>::NoActiveProposal)?;
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
-			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
+			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 			let project = Projects::<T>::get(project_key);
 
 			ensure!(!proposal.is_canceled, Error::<T>::ProposalCanceled);
@@ -526,7 +524,7 @@ pub mod pallet {
 			}
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
-			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
+			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
 			let project = Projects::<T>::get(project_key);
 			// Update project withdrawn funds
@@ -591,7 +589,7 @@ pub mod pallet {
 			// ensure!(!proposal.is_approved, Error::<T>::ProposalApproved);
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
-			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
+			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
 			let project = Projects::<T>::get(project_key);
 
@@ -647,7 +645,7 @@ pub mod pallet {
 			// Only project initator can withdraw
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
-			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
+			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
 			let project = Projects::<T>::get(project_key);
 			ensure!(who == project.initiator, Error::<T>::InvalidAccount);
