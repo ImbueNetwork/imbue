@@ -1,5 +1,4 @@
 use cumulus_primitives_core::ParaId;
-use hex_literal::hex;
 use development_runtime::{AccountId, AuraId, Signature, CouncilConfig, TechnicalCommitteeConfig};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use std::str::FromStr;
@@ -7,7 +6,7 @@ use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 
-use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
+use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{AccountId32, traits::{IdentifyAccount, Verify}};
 
 
