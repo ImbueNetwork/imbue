@@ -183,6 +183,8 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+
+		/// Step 1 (INITATOR)
 		/// Create project
 		#[pallet::weight(<T as Config>::WeightInfo::create_project())]
 		pub fn create_project(origin: OriginFor<T>, name: Vec<u8>, logo: Vec<u8>, description: Vec<u8>, website: Vec<u8>, proposed_milestones: Vec<ProposedMilestone>, required_funds: BalanceOf<T>) -> DispatchResultWithPostInfo {
@@ -261,43 +263,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
-		pub fn submit_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-			let now = <frame_system::Pallet<T>>::block_number();
-
-			let project_exists = Projects::<T>::contains_key(project_key.clone());
-			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-
-			let project = Projects::<T>::get(project_key);
-			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorCanSubmitMilestone);
-			ensure!(project.approved_for_funding, Error::<T>::OnlyApprovedProjectsCanSubmitMilestones);
-
-			// set end to 30 mins for demo purposes
-			let end = now + 150u32.into();
-			let index = RoundCount::<T>::get();
-			let round = RoundOf::<T>::new(now, end, project_key, milestone_indexes.clone());
-			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
-
-			for milestone_index in milestone_indexes {
-				// Initialise voting
-				let vote = Vote {
-					yay: (0 as u32).into(),
-					nay: (0 as u32).into(),
-					is_approved: false
-				};
-				let vote_lookup_key = (project_key, milestone_index);
-				<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
-				Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_index));
-			}
-
-			// Add proposal round to list
-			<Rounds<T>>::insert(index, Some(round));
-			RoundCount::<T>::put(next_index);
-			Self::deposit_event(Event::RoundCreated(index));
-			Ok(().into())
-		}
-
+		/// Step 2 (ADMIN)
 		/// Schedule a round
 		/// proposal_indexes: the proposals were selected for this round
 		#[pallet::weight(<T as Config>::WeightInfo::schedule_round(MaxProposalCountPerRound::<T>::get()))]
@@ -358,6 +324,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Step 2.5 (ADMIN)
 		/// Cancel a round
 		/// This round must have not started yet
 		#[pallet::weight(<T as Config>::WeightInfo::cancel_round())]
@@ -380,92 +347,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Vote on a milestone
-		#[pallet::weight(<T as Config>::WeightInfo::contribute())]
-		pub fn vote_on_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_index: MilestoneIndex, approve_milestone: bool) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-
-			let project_count = ProjectCount::<T>::get();
-			ensure!(project_key < project_count, Error::<T>::InvalidParam);
-			let now = <frame_system::Pallet<T>>::block_number();
-			
-			// round list must be not none
-			let round_index = RoundCount::<T>::get();
-			ensure!(round_index > 0, Error::<T>::NoActiveRound);
-
-			// Find processing round
-			let mut processing_round: Option<RoundOf::<T>> = None;
-			for i in (0..round_index).rev() {
-				let round = <Rounds<T>>::get(i).unwrap();
-				if !round.is_canceled && round.start < now && round.end > now {
-					processing_round = Some(round);
-				}
-			}
-			let mut round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
-
-			// Find proposal by index
-			let mut found_proposal: Option<&mut ProposalOf::<T>> = None;
-			for proposal in round.proposals.iter_mut() {
-				if proposal.project_key == project_key {
-					found_proposal = Some(proposal);
-					break;
-				}
-			}
-			let proposal = found_proposal.ok_or(Error::<T>::NoActiveProposal)?;
-
-			let project_exists = Projects::<T>::contains_key(project_key.clone());
-			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-			let project = Projects::<T>::get(project_key);
-
-			ensure!(!proposal.is_canceled, Error::<T>::ProposalCanceled);
-			let mut existing_contributer = false;
-			let mut contribution_amount: BalanceOf<T>  = (0 as u32).into();
-
-			// Find previous contribution by account_id
-			// If you have contributed before, then add to that contribution. Otherwise join the list.
-			for contribution in project.contributions.clone().iter_mut() {
-				if contribution.account_id == who {
-					existing_contributer = true;
-					contribution_amount = contribution.value;
-					break;
-				}
-			}
-
-			ensure!(existing_contributer, Error::<T>::OnlyContributorsCanVote);
-			let vote_lookup_key = (who.clone(), project_key, milestone_index);
-
-			let vote_exists = UserVotes::<T>::contains_key(vote_lookup_key.clone());
-			ensure!(!vote_exists, Error::<T>::VoteAlreadyExists);
-			
-			<UserVotes<T>>::insert(vote_lookup_key,approve_milestone);
-
-			let current_vote = <MilestoneVotes<T>>::get((project_key, milestone_index));
-
-			if approve_milestone {
-				let updated_vote = Vote {
-					yay: current_vote.yay + contribution_amount,
-					nay: current_vote.nay,
-					is_approved: current_vote.is_approved
-				};
-				<MilestoneVotes<T>>::insert((project_key, milestone_index),updated_vote)
-
-			} else {
-				let updated_vote = Vote {
-					yay: current_vote.yay,
-					nay: current_vote.nay + contribution_amount,
-					is_approved: current_vote.is_approved
-				};
-				<MilestoneVotes<T>>::insert((project_key, milestone_index),updated_vote)
-			}
-
-
-			<Rounds<T>>::insert(round_index-1, Some(round));
-			Self::deposit_event(Event::VoteComplete(who, project_key, milestone_index, approve_milestone, now));
-
-			Ok(().into())
-		}
-
-		/// Contribute a proposal
+		/// Step 3 (FUNDER/CONTRIBUTER)
+		/// Contribute to a proposal
 		#[pallet::weight(<T as Config>::WeightInfo::contribute())]
 		pub fn contribute(origin: OriginFor<T>, project_key: ProjectIndex, value: BalanceOf<T>) -> DispatchResultWithPostInfo { 
 			let who = ensure_signed(origin)?;
@@ -560,8 +443,9 @@ pub mod pallet {
 			Ok(().into())
 		}
 		
-		/// Approve project
-		/// If the project is approve, the project initator can withdraw funds
+		/// Step 4 (ADMIN)
+		/// Approve project 
+		/// If the project is approve, the project initator can withdraw funds for approved milestones
 		#[pallet::weight(<T as Config>::WeightInfo::approve())]
 		pub fn approve(origin: OriginFor<T>, round_index: RoundIndex, project_key: ProjectIndex, milestone_indexes:  Vec<MilestoneIndex>) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
@@ -636,6 +520,131 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Step 5 (INITATOR)
+		#[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
+		pub fn submit_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let now = <frame_system::Pallet<T>>::block_number();
+
+			let project_exists = Projects::<T>::contains_key(project_key.clone());
+			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
+
+			let project = Projects::<T>::get(project_key);
+			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorCanSubmitMilestone);
+			ensure!(project.approved_for_funding, Error::<T>::OnlyApprovedProjectsCanSubmitMilestones);
+
+			// set end to 30 mins for demo purposes
+			let end = now + 150u32.into();
+			let index = RoundCount::<T>::get();
+			let round = RoundOf::<T>::new(now, end, project_key, milestone_indexes.clone());
+			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
+
+			for milestone_index in milestone_indexes {
+				// Initialise voting
+				let vote = Vote {
+					yay: (0 as u32).into(),
+					nay: (0 as u32).into(),
+					is_approved: false
+				};
+				let vote_lookup_key = (project_key, milestone_index);
+				<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
+				Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_index));
+			}
+
+			// Add proposal round to list
+			<Rounds<T>>::insert(index, Some(round));
+			RoundCount::<T>::put(next_index);
+			Self::deposit_event(Event::RoundCreated(index));
+			Ok(().into())
+		}
+
+		/// Step 6 (FUNDER/CONTRIBUTER)
+		/// Vote on a milestone 
+		#[pallet::weight(<T as Config>::WeightInfo::contribute())]
+		pub fn vote_on_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_index: MilestoneIndex, approve_milestone: bool) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			let project_count = ProjectCount::<T>::get();
+			ensure!(project_key < project_count, Error::<T>::InvalidParam);
+			let now = <frame_system::Pallet<T>>::block_number();
+			
+			// round list must be not none
+			let round_index = RoundCount::<T>::get();
+			ensure!(round_index > 0, Error::<T>::NoActiveRound);
+
+			// Find processing round
+			let mut processing_round: Option<RoundOf::<T>> = None;
+			for i in (0..round_index).rev() {
+				let round = <Rounds<T>>::get(i).unwrap();
+				if !round.is_canceled && round.start < now && round.end > now {
+					processing_round = Some(round);
+				}
+			}
+			let mut round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
+
+			// Find proposal by index
+			let mut found_proposal: Option<&mut ProposalOf::<T>> = None;
+			for proposal in round.proposals.iter_mut() {
+				if proposal.project_key == project_key {
+					found_proposal = Some(proposal);
+					break;
+				}
+			}
+			let proposal = found_proposal.ok_or(Error::<T>::NoActiveProposal)?;
+
+			let project_exists = Projects::<T>::contains_key(project_key.clone());
+			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
+			let project = Projects::<T>::get(project_key);
+
+			ensure!(!proposal.is_canceled, Error::<T>::ProposalCanceled);
+			let mut existing_contributer = false;
+			let mut contribution_amount: BalanceOf<T>  = (0 as u32).into();
+
+			// Find previous contribution by account_id
+			// If you have contributed before, then add to that contribution. Otherwise join the list.
+			for contribution in project.contributions.clone().iter_mut() {
+				if contribution.account_id == who {
+					existing_contributer = true;
+					contribution_amount = contribution.value;
+					break;
+				}
+			}
+
+			ensure!(existing_contributer, Error::<T>::OnlyContributorsCanVote);
+			let vote_lookup_key = (who.clone(), project_key, milestone_index);
+
+			let vote_exists = UserVotes::<T>::contains_key(vote_lookup_key.clone());
+			ensure!(!vote_exists, Error::<T>::VoteAlreadyExists);
+			
+			<UserVotes<T>>::insert(vote_lookup_key,approve_milestone);
+
+			let current_vote = <MilestoneVotes<T>>::get((project_key, milestone_index));
+
+			if approve_milestone {
+				let updated_vote = Vote {
+					yay: current_vote.yay + contribution_amount,
+					nay: current_vote.nay,
+					is_approved: current_vote.is_approved
+				};
+				<MilestoneVotes<T>>::insert((project_key, milestone_index),updated_vote)
+
+			} else {
+				let updated_vote = Vote {
+					yay: current_vote.yay,
+					nay: current_vote.nay + contribution_amount,
+					is_approved: current_vote.is_approved
+				};
+				<MilestoneVotes<T>>::insert((project_key, milestone_index),updated_vote)
+			}
+
+
+			<Rounds<T>>::insert(round_index-1, Some(round));
+			Self::deposit_event(Event::VoteComplete(who, project_key, milestone_index, approve_milestone, now));
+
+			Ok(().into())
+		}
+
+		/// Step 7 (INITATOR)
 		/// Withdraw
 		#[pallet::weight(<T as Config>::WeightInfo::withdraw())]
 		pub fn withdraw(origin: OriginFor<T>, round_index: RoundIndex, project_key: ProjectIndex) -> DispatchResultWithPostInfo {
