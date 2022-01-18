@@ -60,7 +60,6 @@ pub mod pallet {
     #[pallet::getter(fn user_votes)]
     pub(super) type UserVotes<T: Config> = StorageMap<_, Identity, (T::AccountId, ProjectIndex, MilestoneIndex), bool, ValueQuery>;
 
-
 	#[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
     pub(super) type MilestoneVotes<T: Config> = StorageMap<_, Identity, (ProjectIndex, MilestoneIndex), Vote<BalanceOf<T>>, ValueQuery>;
@@ -533,8 +532,8 @@ pub mod pallet {
 			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorCanSubmitMilestone);
 			ensure!(project.approved_for_funding, Error::<T>::OnlyApprovedProjectsCanSubmitMilestones);
 
-			// set end to 30 mins for demo purposes
-			let end = now + 150u32.into();
+			// set end to 5 mins for demo purposes
+			let end = now + 25u32.into();
 			let index = RoundCount::<T>::get();
 			let round = RoundOf::<T>::new(now, end, project_key, milestone_indexes.clone());
 			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
