@@ -125,6 +125,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		ProjectCreated(ProjectIndex),
 		RoundCreated(RoundIndex),
+		MilestoneSubmited(ProjectIndex, MilestoneIndex),
 		ContributeSucceed(T::AccountId, ProjectIndex, BalanceOf<T>, T::BlockNumber),
 		ProposalCanceled(RoundIndex, ProjectIndex),
 		ProposalWithdrawn(RoundIndex, ProjectIndex, BalanceOf<T>),
@@ -265,7 +266,6 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let now = <frame_system::Pallet<T>>::block_number();
 
-
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
 			let project = Projects::<T>::get(project_key);
@@ -289,6 +289,7 @@ pub mod pallet {
 				};
 				let vote_lookup_key = (project_key, milestone_index);
 				<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
+				Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_index));
 			}
 
 			// Add proposal round to list
@@ -349,14 +350,12 @@ pub mod pallet {
 				};
 				let vote_lookup_key = (project_key, milestone_index);
 				<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
+				Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_index));
 			}
 
 			// Add proposal round to list
 			<Rounds<T>>::insert(index, Some(round));
 			RoundCount::<T>::put(next_index);
-
-			Self::deposit_event(Event::RoundCreated(index));
-
 			Ok(().into())
 		}
 
@@ -705,7 +704,7 @@ pub mod pallet {
 			};
 			// Add proposal to list
 			<Projects<T>>::insert(project_key, updated_project);
-∂ç
+
 			// Set is_withdrawn
 			proposal.is_withdrawn = true;
 			proposal.withdrawal_expiration = now + <WithdrawalExpiration<T>>::get();
