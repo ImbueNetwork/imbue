@@ -8,13 +8,11 @@
 use frame_support::traits::GenesisBuild;
 use frame_support::{
 	pallet_prelude::*, PalletId,
-	log,
 	traits::{Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons},
 };
 use codec::{Encode, Decode};
 use sp_std::prelude::*;
-use integer_sqrt::IntegerSquareRoot;
-use sp_runtime::{traits::{AccountIdConversion,Saturating},Perbill};
+use sp_runtime::{traits::AccountIdConversion};
 pub use pallet::*;
 use scale_info::TypeInfo;
 
@@ -156,6 +154,7 @@ pub mod pallet {
 		Overflow,
 		OnlyContributorsCanVote,
 		OnlyInitiatorCanSubmitMilestone,
+		OnlyApprovedProjectsCanSubmitMilestones,
 		ProposalAmountExceed,
 		ProposalCanceled,
 		ProposalWithdrawn,
@@ -250,6 +249,7 @@ pub mod pallet {
 				withdrawn_funds:(0 as u32).into(), 
 				initiator: who,
 				create_block_number: <frame_system::Pallet<T>>::block_number(),
+				approved_for_funding: false
 			};
 
 			// Add proposal to list
@@ -272,6 +272,7 @@ pub mod pallet {
 
 			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
 			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorCanSubmitMilestone);
+			ensure!(project.approved_for_funding, Error::<T>::OnlyApprovedProjectsCanSubmitMilestones);
 
 
 			// set end to 30 mins for demo purposes
@@ -540,7 +541,9 @@ pub mod pallet {
 				withdrawn_funds: project.withdrawn_funds,
 				initiator: project.initiator,
 				create_block_number: project.create_block_number,
+				approved_for_funding: project.approved_for_funding,
 			};
+
 			// Add proposal to list
 			<Projects<T>>::insert(project_key, updated_project);
 
@@ -627,6 +630,7 @@ pub mod pallet {
 				withdrawn_funds: project.withdrawn_funds,
 				initiator: project.initiator,
 				create_block_number: project.create_block_number,
+				approved_for_funding: true
 			};
 			// Add proposal to list
 			<Projects<T>>::insert(project_key, updated_project);
@@ -701,6 +705,7 @@ pub mod pallet {
 				withdrawn_funds: available_funds,
 				initiator: project.initiator,
 				create_block_number: project.create_block_number,
+				approved_for_funding: project.approved_for_funding
 			};
 			// Add proposal to list
 			<Projects<T>>::insert(project_key, updated_project);
@@ -931,6 +936,7 @@ pub struct Project<AccountId, Balance, BlockNumber> {
 	/// The account that will receive the funds if the campaign is successful
 	initiator: AccountId,
 	create_block_number: BlockNumber,
+	approved_for_funding: bool,
 }
 
 #[cfg(feature = "std")]
