@@ -154,6 +154,7 @@ pub mod pallet {
 		///
 		Overflow,
 		OnlyContributorsCanVote,
+		OnlyInitiatorCanSubmitMilestone,
 		ProposalAmountExceed,
 		ProposalCanceled,
 		ProposalWithdrawn,
@@ -207,17 +208,16 @@ pub mod pallet {
 			ensure!(description.len() > 0, Error::<T>::InvalidParam);
 			ensure!(website.len() > 0, Error::<T>::InvalidParam);
 
-			// let mut total_percentage = 0;
-			// for milestone in milestones.iter() {
-			// 	log::info!("*********************** percentage for this milestone is {:?} ***********************",milestone.percentage_to_unlock);
-			// 	total_percentage += milestone.percentage_to_unlock;
-			// }
-			// ensure!(total_percentage == 100, Error::<T>::MilestonesTotalPercentageMustEqual100);
+			let mut total_percentage = 0;
+			for milestone in proposed_milestones.iter() {
+				total_percentage += milestone.percentage_to_unlock;
+			}
+			ensure!(total_percentage == 100, Error::<T>::MilestonesTotalPercentageMustEqual100);
 
-			// ensure!(name.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			ensure!(name.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			// ensure!(logo.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
-			// ensure!(description.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
-			// ensure!(website.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			ensure!(description.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			ensure!(website.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			
 			let project_key = ProjectCount::<T>::get();
 			let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
@@ -247,7 +247,7 @@ pub mod pallet {
 				contributions: Vec::new(),
 				required_funds: required_funds,
 				withdrawn_funds:(0 as u32).into(), 
-				owner: who,
+				initiator: who,
 				create_block_number: <frame_system::Pallet<T>>::block_number(),
 			};
 
@@ -257,6 +257,44 @@ pub mod pallet {
 
 			Self::deposit_event(Event::ProjectCreated(project_key));
 
+			Ok(().into())
+		}
+
+		#[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
+		pub fn submit_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let now = <frame_system::Pallet<T>>::block_number();
+
+
+			let project_exists = Projects::<T>::contains_key(project_key.clone());
+			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
+			let project = Projects::<T>::get(project_key);
+
+			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
+			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorCanSubmitMilestone);
+
+
+			// set end to 30 mins for demo purposes
+			let end = now + 150u32.into();
+			let index = RoundCount::<T>::get();
+			let round = RoundOf::<T>::new(now, end, project_key, milestone_indexes.clone());
+			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
+
+			for milestone_index in milestone_indexes {
+				// Initialise voting
+				let vote = Vote {
+					yay: (0 as u32).into(),
+					nay: (0 as u32).into(),
+					is_approved: false
+				};
+				let vote_lookup_key = (project_key, milestone_index);
+				<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
+			}
+
+			// Add proposal round to list
+			<Rounds<T>>::insert(index, Some(round));
+			RoundCount::<T>::put(next_index);
+			Self::deposit_event(Event::RoundCreated(index));
 			Ok(().into())
 		}
 
@@ -300,7 +338,6 @@ pub mod pallet {
 			}
 
 			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
-
 			let round = RoundOf::<T>::new(start, end, project_key, milestone_indexes.clone());
 
 			for milestone_index in milestone_indexes {
@@ -376,7 +413,6 @@ pub mod pallet {
 					break;
 				}
 			}
-
 			let proposal = found_proposal.ok_or(Error::<T>::NoActiveProposal)?;
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
@@ -503,7 +539,7 @@ pub mod pallet {
 				contributions:proposal.contributions.clone(),
 				required_funds: project.required_funds,
 				withdrawn_funds: project.withdrawn_funds,
-				owner: project.owner,
+				initiator: project.initiator,
 				create_block_number: project.create_block_number,
 			};
 			// Add proposal to list
@@ -525,7 +561,7 @@ pub mod pallet {
 		}
 		
 		/// Approve project
-		/// If the project is approve, the project owner can withdraw funds
+		/// If the project is approve, the project initator can withdraw funds
 		#[pallet::weight(<T as Config>::WeightInfo::approve())]
 		pub fn approve(origin: OriginFor<T>, round_index: RoundIndex, project_key: ProjectIndex, milestone_indexes:  Vec<MilestoneIndex>) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
@@ -590,7 +626,7 @@ pub mod pallet {
 				contributions: project.contributions,
 				required_funds: project.required_funds,
 				withdrawn_funds: project.withdrawn_funds,
-				owner: project.owner,
+				initiator: project.initiator,
 				create_block_number: project.create_block_number,
 			};
 			// Add proposal to list
@@ -605,13 +641,13 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let now = <frame_system::Pallet<T>>::block_number();
 
-			// Only project owner can withdraw
+			// Only project initator can withdraw
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::InvalidProjectIndexes);
 
 			let project = Projects::<T>::get(project_key);
-			ensure!(who == project.owner, Error::<T>::InvalidAccount);
+			ensure!(who == project.initiator, Error::<T>::InvalidAccount);
 
 			let mut round = <Rounds<T>>::get(round_index).ok_or(Error::<T>::NoActiveRound)?;
 			let mut found_proposal: Option<&mut ProposalOf::<T>> = None;
@@ -647,7 +683,7 @@ pub mod pallet {
 			ensure!(available_funds >  (0 as u32).into(), Error::<T>::InvalidParam);
 
 			// Distribute contribution amount
-			let _ = <T as Config>::Currency::resolve_into_existing(&project.owner, <T as Config>::Currency::withdraw(
+			let _ = <T as Config>::Currency::resolve_into_existing(&project.initiator, <T as Config>::Currency::withdraw(
 				&Self::project_account_id(project_key),
 				available_funds,
 				WithdrawReasons::from(WithdrawReasons::TRANSFER),
@@ -664,12 +700,12 @@ pub mod pallet {
 				contributions:project.contributions,
 				required_funds: project.required_funds,
 				withdrawn_funds: available_funds,
-				owner: project.owner,
+				initiator: project.initiator,
 				create_block_number: project.create_block_number,
 			};
 			// Add proposal to list
 			<Projects<T>>::insert(project_key, updated_project);
-
+∂ç
 			// Set is_withdrawn
 			proposal.is_withdrawn = true;
 			proposal.withdrawal_expiration = now + <WithdrawalExpiration<T>>::get();
@@ -682,7 +718,7 @@ pub mod pallet {
 		}
 
 		/// Cancel a problematic project
-		/// If the project is cancelled, users cannot donate to it, and project owner cannot withdraw funds.
+		/// If the project is cancelled, users cannot donate to it, and project initator cannot withdraw funds.
 		#[pallet::weight(<T as Config>::WeightInfo::cancel())]
 		pub fn cancel(origin: OriginFor<T>, round_index: RoundIndex, project_key: ProjectIndex) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
@@ -894,7 +930,7 @@ pub struct Project<AccountId, Balance, BlockNumber> {
 	required_funds: Balance,
 	withdrawn_funds: Balance,
 	/// The account that will receive the funds if the campaign is successful
-	owner: AccountId,
+	initiator: AccountId,
 	create_block_number: BlockNumber,
 }
 
