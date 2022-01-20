@@ -24,6 +24,8 @@ pub mod weights;
 pub use weights::*;
 
 const MAX_STRING_FIELD_LENGTH: usize = 256;
+// set end to 5 mins for demo purposes
+const MILESTONES_VOTING_WINDOW: u32 = 25u32;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -149,6 +151,7 @@ pub mod pallet {
 		Overflow,
 		OnlyContributorsCanVote,
 		OnlyInitiatorCanSubmitMilestone,
+		OnlyInitiatorOrAdminCanApproveMilestone,
 		OnlyApprovedProjectsCanSubmitMilestones,
 		ProposalAmountExceed,
 		ProposalCanceled,
@@ -162,11 +165,13 @@ pub mod pallet {
 		/// Errors should have helpful documentation associated with them.
 		StartBlockNumberTooSmall,
 		VoteAlreadyExists,
+		MilestoneVotingNotComplete,
 		WithdrawalExpirationExceed,
 	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
 	// These functions materialize as "extrinsics", which are often compared to transactions.
@@ -466,18 +471,22 @@ pub mod pallet {
 
 			let project = Projects::<T>::get(project_key);
 
-
 			let mut milestones = Vec::new();
-
 			// set is_approved
 			proposal.is_approved = true;
-
 			for mut milestone in project.milestones.into_iter() {
 				for index in milestone_indexes.clone().into_iter() {
 					if milestone.milestone_index == index {
-						let vote = <MilestoneVotes<T>>::get((project_key, index));
+						let vote_lookup_key = (project_key, index);
+						let vote = <MilestoneVotes<T>>::get(vote_lookup_key);
 						if vote.yay > vote.nay {
 							milestone.is_approved = true;
+							let updated_vote = Vote {
+								yay: vote.yay,
+								nay: vote.nay,
+								is_approved: true
+							};
+							<MilestoneVotes<T>>::insert(vote_lookup_key,updated_vote);
 						}
 					}
 				}
@@ -522,8 +531,7 @@ pub mod pallet {
 			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorCanSubmitMilestone);
 			ensure!(project.approved_for_funding, Error::<T>::OnlyApprovedProjectsCanSubmitMilestones);
 
-			// set end to 5 mins for demo purposes
-			let end = now + 25u32.into();
+			let end = now + MILESTONES_VOTING_WINDOW.into();
 			let index = RoundCount::<T>::get();
 			let round = RoundOf::<T>::new(now, end, project_key, milestone_indexes.clone());
 			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
@@ -634,6 +642,62 @@ pub mod pallet {
 		}
 
 		/// Step 7 (INITATOR)
+		#[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
+		pub fn finalise_milestone_voting(origin: OriginFor<T>, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			let project_exists = Projects::<T>::contains_key(project_key.clone());
+			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
+
+			let project = Projects::<T>::get(project_key);
+			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone);
+
+			let total_contribution_amount: BalanceOf<T> = Self::get_total_project_contributions(project_key);
+
+			let mut milestones = Vec::new();
+			// set is_approved
+			for mut milestone in project.milestones.into_iter() {
+				for index in milestone_indexes.clone().into_iter() {
+					if milestone.milestone_index == index {
+						let vote_lookup_key = (project_key, index);
+						let vote = <MilestoneVotes<T>>::get(vote_lookup_key);
+						let total_votes = vote.yay + vote.nay;
+						ensure!(total_votes == total_contribution_amount, Error::<T>::MilestoneVotingNotComplete);
+						if vote.yay > vote.nay {
+							milestone.is_approved = true;
+							let updated_vote = Vote {
+								yay: vote.yay,
+								nay: vote.nay,
+								is_approved: true
+							};
+							<MilestoneVotes<T>>::insert(vote_lookup_key,updated_vote);
+						}
+					}
+				}
+				milestones.push(milestone.clone());
+			}
+
+			// Update project milestones
+			let updated_project = Project {
+				name: project.name,
+				logo: project.logo,
+				description: project.description,
+				website: project.website,
+				milestones: milestones,
+				contributions: project.contributions,
+				required_funds: project.required_funds,
+				withdrawn_funds: project.withdrawn_funds,
+				initiator: project.initiator,
+				create_block_number: project.create_block_number,
+				approved_for_funding: project.approved_for_funding
+			};
+			// Add proposal to list
+			<Projects<T>>::insert(project_key, updated_project);
+
+			Ok(().into())
+		}
+
+		/// Step 8 (INITATOR)
 		/// Withdraw
 		#[pallet::weight(<T as Config>::WeightInfo::withdraw())]
 		pub fn withdraw(origin: OriginFor<T>, round_index: RoundIndex, project_key: ProjectIndex) -> DispatchResultWithPostInfo {
@@ -641,7 +705,6 @@ pub mod pallet {
 			let now = <frame_system::Pallet<T>>::block_number();
 
 			// Only project initator can withdraw
-
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
@@ -663,12 +726,7 @@ pub mod pallet {
 			// This proposal must not have distributed funds
 			ensure!(!proposal.is_withdrawn, Error::<T>::ProposalWithdrawn);
 
-			// Calculate contribution amount
-			let mut total_contribution_amount: BalanceOf<T>  = (0 as u32).into();
-			for contribution in project.contributions.iter() {
-				let contribution_value = contribution.value;
-				total_contribution_amount += contribution_value;
-			}
+			let total_contribution_amount: BalanceOf<T> = Self::get_total_project_contributions(project_key);
 
 			let mut unlocked_funds: BalanceOf<T>  = (0 as u32).into();
 			for milestone in project.milestones.clone() {
@@ -813,7 +871,17 @@ impl<T: Config> Pallet<T> {
 		let project = <Projects<T>>::get(project_key);
 		project
 	}
-
+	
+	pub fn get_total_project_contributions(project_key:u32) -> BalanceOf<T> {
+		let project = Projects::<T>::get(project_key);
+		// Calculate contribution amount
+		let mut total_contribution_amount: BalanceOf<T>  = (0 as u32).into();
+		for contribution in project.contributions.iter() {
+			let contribution_value = contribution.value;
+			total_contribution_amount += contribution_value;
+		}
+		return total_contribution_amount
+	}
 }
 
 pub type RoundIndex = u32;
@@ -844,22 +912,6 @@ impl<AccountId, Balance: From<u32>, BlockNumber: From<u32>> Round<AccountId, Bal
 				proposals: Vec::new(),
 				is_canceled: false,
 			};
-
-			// let project =  Self::get_project(project_key);
-
-			// let mut round_milestones = Vec::new();
-
-
-
-			// for milestone_index in milestone_indexes {
-			// 	for milestone in project.milestones {
-			// 		if milestone.milestone_index  == milestone_index {
-			// 			round_milestones.push(milestone)
-			// 		}
-			// 	}
-			// }
-				
-
 
 			proposal_round.proposals.push(Proposal {
 				project_key: project_key,
