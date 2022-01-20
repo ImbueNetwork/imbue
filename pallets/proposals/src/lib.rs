@@ -129,7 +129,6 @@ pub mod pallet {
 		ProposalApproved(RoundIndex, ProjectIndex),
 		RoundCanceled(RoundIndex),
 		FundSucceed(),
-		RoundFinalized(RoundIndex),
 		VoteComplete(T::AccountId, ProjectIndex, MilestoneIndex, bool, T::BlockNumber),
 	}
 
@@ -143,9 +142,6 @@ pub mod pallet {
 		InvalidAccount,
 		ProjectDoesNotExist,
 		MilestonesTotalPercentageMustEqual100,
-		NotEnoughFund,
-		/// Error names should be descriptive.
-		NoneValue,
 		NoActiveRound,
 		NoActiveProposal,
 		/// There was an overflow.
@@ -158,17 +154,12 @@ pub mod pallet {
 		ProposalCanceled,
 		ProposalWithdrawn,
 		ProposalApproved,
-		ProposalNotApproved,
 		ParamLimitExceed,
 		RoundStarted,
 		RoundNotEnded,
 		RoundNotProcessing,
 		RoundCanceled,
-		RoundFinalized,
-		RoundNotFinalized,
 		/// Errors should have helpful documentation associated with them.
-		StorageOverflow,
-		StartBlockNumberInvalid,
 		StartBlockNumberTooSmall,
 		VoteAlreadyExists,
 		WithdrawalExpirationExceed,
@@ -275,7 +266,6 @@ pub mod pallet {
 			// The end block must be greater than the start block
 			ensure!(end > start, Error::<T>::EndTooEarly);
 			// Both the starting block number and the ending block number must be greater than the current number of blocks
-			// ensure!(start > now, Error::<T>::StartBlockNumberInvalid);
 			ensure!(end > now, Error::<T>::EndBlockNumberInvalid);
 
 			// project_key should be smaller than project count
@@ -671,7 +661,6 @@ pub mod pallet {
 			// ensure!(now <= proposal.withdrawal_expiration, Error::<T>::WithdrawalExpirationExceed);
 
 			// This proposal must not have distributed funds
-			// ensure!(proposal.is_approved, Error::<T>::ProposalNotApproved);
 			ensure!(!proposal.is_withdrawn, Error::<T>::ProposalWithdrawn);
 
 			// Calculate contribution amount
