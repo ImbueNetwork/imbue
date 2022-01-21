@@ -262,7 +262,7 @@ pub mod pallet {
 		/// Schedule a round
 		/// proposal_indexes: the proposals were selected for this round
 		#[pallet::weight(<T as Config>::WeightInfo::schedule_round(MaxProposalCountPerRound::<T>::get()))]
-		pub fn schedule_round(origin: OriginFor<T>, start: T::BlockNumber, end: T::BlockNumber, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>) -> DispatchResultWithPostInfo {
+		pub fn schedule_round(origin: OriginFor<T>, start: T::BlockNumber, end: T::BlockNumber, project_key: ProjectIndex, milestone_index: MilestoneIndex) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let now = <frame_system::Pallet<T>>::block_number();
 
@@ -298,19 +298,19 @@ pub mod pallet {
 			}
 
 			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
-			let round = RoundOf::<T>::new(start, end, project_key, milestone_indexes.clone());
+			let round = RoundOf::<T>::new(start, end, project_key, vec![milestone_index.clone()]);
 
-			for milestone_index in milestone_indexes {
-				// Initialise voting
-				let vote = Vote {
-					yay: (0 as u32).into(),
-					nay: (0 as u32).into(),
-					is_approved: false
-				};
-				let vote_lookup_key = (project_key, milestone_index);
-				<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
-				Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_index));
-			}
+	
+			// Initialise voting
+			let vote = Vote {
+				yay: (0 as u32).into(),
+				nay: (0 as u32).into(),
+				is_approved: false
+			};
+			let vote_lookup_key = (project_key, milestone_index);
+			<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
+			Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_index));
+		
 
 			// Add proposal round to list
 			<Rounds<T>>::insert(index, Some(round));
@@ -522,7 +522,7 @@ pub mod pallet {
 
 		/// Step 5 (INITATOR)
 		#[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
-		pub fn submit_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>) -> DispatchResultWithPostInfo {
+		pub fn submit_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_index: MilestoneIndex) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let now = <frame_system::Pallet<T>>::block_number();
 
@@ -535,21 +535,17 @@ pub mod pallet {
 
 			let end = now + MILESTONES_VOTING_WINDOW.into();
 			let index = RoundCount::<T>::get();
-			let round = RoundOf::<T>::new(now, end, project_key, milestone_indexes.clone());
+			let round = RoundOf::<T>::new(now, end, project_key, vec![milestone_index.clone()]);
 			let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
-			for milestone_index in milestone_indexes {
-				// Initialise voting
-				let vote = Vote {
-					yay: (0 as u32).into(),
-					nay: (0 as u32).into(),
-					is_approved: false
-				};
-				let vote_lookup_key = (project_key, milestone_index);
-				<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
-				Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_index));
-			}
-
+			let vote = Vote {
+				yay: (0 as u32).into(),
+				nay: (0 as u32).into(),
+				is_approved: false
+			};
+			let vote_lookup_key = (project_key, milestone_index);
+			<MilestoneVotes<T>>::insert(vote_lookup_key,vote);
+			Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_index));
 			// Add proposal round to list
 			<Rounds<T>>::insert(index, Some(round));
 			RoundCount::<T>::put(next_index);
@@ -634,7 +630,7 @@ pub mod pallet {
 
 		/// Step 7 (INITATOR)
 		#[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
-		pub fn finalise_milestone_voting(origin: OriginFor<T>, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>) -> DispatchResultWithPostInfo {
+		pub fn finalise_milestone_voting(origin: OriginFor<T>, project_key: ProjectIndex, milestone_index: MilestoneIndex) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
@@ -648,21 +644,19 @@ pub mod pallet {
 			let mut milestones = Vec::new();
 			// set is_approved
 			for mut milestone in project.milestones.into_iter() {
-				for index in milestone_indexes.clone().into_iter() {
-					if milestone.milestone_index == index {
-						let vote_lookup_key = (project_key, index);
-						let vote = <MilestoneVotes<T>>::get(vote_lookup_key);
-						let total_votes = vote.yay + vote.nay;
-						ensure!(total_votes == total_contribution_amount, Error::<T>::MilestoneVotingNotComplete);
-						if vote.yay > vote.nay {
-							milestone.is_approved = true;
-							let updated_vote = Vote {
-								yay: vote.yay,
-								nay: vote.nay,
-								is_approved: true
-							};
-							<MilestoneVotes<T>>::insert(vote_lookup_key,updated_vote);
-						}
+				if milestone.milestone_index == milestone_index {
+					let vote_lookup_key = (project_key, milestone_index);
+					let vote = <MilestoneVotes<T>>::get(vote_lookup_key);
+					let total_votes = vote.yay + vote.nay;
+					ensure!(total_votes == total_contribution_amount, Error::<T>::MilestoneVotingNotComplete);
+					if vote.yay > vote.nay {
+						milestone.is_approved = true;
+						let updated_vote = Vote {
+							yay: vote.yay,
+							nay: vote.nay,
+							is_approved: true
+						};
+						<MilestoneVotes<T>>::insert(vote_lookup_key,updated_vote);
 					}
 				}
 				milestones.push(milestone.clone());
