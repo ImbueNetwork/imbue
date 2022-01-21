@@ -7,7 +7,7 @@
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 use frame_support::{
-	pallet_prelude::*, PalletId,
+	pallet_prelude::*, PalletId,log,
 	traits::{Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons},
 };
 use codec::{Encode, Decode};
@@ -451,8 +451,8 @@ pub mod pallet {
 
 			// The round must have ended
 			let now = <frame_system::Pallet<T>>::block_number();
-			// This round must be over
-			ensure!(round.end < now, Error::<T>::RoundNotEnded);
+
+
 
 			// Find proposal from list
 			let mut found_proposal: Option<&mut ProposalOf::<T>> = None;
@@ -472,7 +472,14 @@ pub mod pallet {
 			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
 			let project = Projects::<T>::get(project_key);
+			let total_contribution_amount: BalanceOf<T> = Self::get_total_project_contributions(project_key);
 
+			let funds_matched = total_contribution_amount >= project.required_funds;
+			if !funds_matched {
+				// If the funds have not been matched then check if the round must be over
+				ensure!(round.end < now, Error::<T>::RoundNotEnded);
+			}
+			
 			let mut milestones = Vec::new();
 			// set is_approved
 			proposal.is_approved = true;
