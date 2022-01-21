@@ -7,7 +7,7 @@
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 use frame_support::{
-	pallet_prelude::*, PalletId,log,
+	pallet_prelude::*, PalletId,
 	traits::{Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons},
 };
 use codec::{Encode, Decode};
@@ -133,6 +133,7 @@ pub mod pallet {
 		RoundCanceled(RoundIndex),
 		FundSucceed(),
 		VoteComplete(T::AccountId, ProjectIndex, MilestoneIndex, bool, T::BlockNumber),
+		MilestoneApproved(ProjectIndex, MilestoneIndex, T::BlockNumber)
 	}
 
 	// Errors inform users that something went wrong.
@@ -452,8 +453,6 @@ pub mod pallet {
 			// The round must have ended
 			let now = <frame_system::Pallet<T>>::block_number();
 
-
-
 			// Find proposal from list
 			let mut found_proposal: Option<&mut ProposalOf::<T>> = None;
 			for proposal in proposals.iter_mut() {
@@ -479,7 +478,7 @@ pub mod pallet {
 				// If the funds have not been matched then check if the round must be over
 				ensure!(round.end < now, Error::<T>::RoundNotEnded);
 			}
-			
+
 			let mut milestones = Vec::new();
 			// set is_approved
 			proposal.is_approved = true;
@@ -495,6 +494,7 @@ pub mod pallet {
 								nay: vote.nay,
 								is_approved: true
 							};
+							Self::deposit_event(Event::MilestoneApproved(project_key, index, now));
 							<MilestoneVotes<T>>::insert(vote_lookup_key,updated_vote);
 						}
 					}
@@ -663,6 +663,9 @@ pub mod pallet {
 							nay: vote.nay,
 							is_approved: true
 						};
+						let now = <frame_system::Pallet<T>>::block_number();
+						Self::deposit_event(Event::MilestoneApproved(project_key, milestone_index, now));
+
 						<MilestoneVotes<T>>::insert(vote_lookup_key,updated_vote);
 					}
 				}
