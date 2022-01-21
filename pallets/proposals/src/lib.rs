@@ -123,12 +123,13 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		ProjectCreated(ProjectIndex),
-		RoundCreated(RoundIndex),
+		FundingRoundCreated(RoundIndex),
+		VotingRoundCreated(RoundIndex),
 		MilestoneSubmited(ProjectIndex, MilestoneIndex),
 		ContributeSucceed(T::AccountId, ProjectIndex, BalanceOf<T>, T::BlockNumber),
-		ProposalCanceled(RoundIndex, ProjectIndex),
-		ProposalWithdrawn(RoundIndex, ProjectIndex, BalanceOf<T>),
-		ProposalApproved(RoundIndex, ProjectIndex),
+		ProjectCancelled(RoundIndex, ProjectIndex),
+		ProjectWithdrawn(RoundIndex, ProjectIndex, BalanceOf<T>),
+		ProjectApproved(RoundIndex, ProjectIndex),
 		RoundCanceled(RoundIndex),
 		FundSucceed(),
 		VoteComplete(T::AccountId, ProjectIndex, MilestoneIndex, bool, T::BlockNumber),
@@ -171,7 +172,6 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
-
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
 	// These functions materialize as "extrinsics", which are often compared to transactions.
@@ -314,7 +314,9 @@ pub mod pallet {
 
 			// Add proposal round to list
 			<Rounds<T>>::insert(index, Some(round));
+			Self::deposit_event(Event::FundingRoundCreated(index));
 			RoundCount::<T>::put(next_index);
+
 			Ok(().into())
 		}
 
@@ -514,7 +516,7 @@ pub mod pallet {
 			};
 			// Add proposal to list
 			<Projects<T>>::insert(project_key, updated_project);
-			Self::deposit_event(Event::ProposalApproved(round_index, project_key));
+			Self::deposit_event(Event::ProjectApproved(round_index, project_key));
 			Ok(().into())
 		}
 
@@ -551,7 +553,7 @@ pub mod pallet {
 			// Add proposal round to list
 			<Rounds<T>>::insert(index, Some(round));
 			RoundCount::<T>::put(next_index);
-			Self::deposit_event(Event::RoundCreated(index));
+			Self::deposit_event(Event::VotingRoundCreated(index));
 			Ok(().into())
 		}
 
@@ -577,23 +579,12 @@ pub mod pallet {
 					processing_round = Some(round);
 				}
 			}
-			let mut round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
-
-			// Find proposal by index
-			let mut found_proposal: Option<&mut ProposalOf::<T>> = None;
-			for proposal in round.proposals.iter_mut() {
-				if proposal.project_key == project_key {
-					found_proposal = Some(proposal);
-					break;
-				}
-			}
-			let proposal = found_proposal.ok_or(Error::<T>::NoActiveProposal)?;
+			let round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 			let project = Projects::<T>::get(project_key);
 
-			ensure!(!proposal.is_canceled, Error::<T>::ProposalCanceled);
 			let mut existing_contributer = false;
 			let mut contribution_amount: BalanceOf<T>  = (0 as u32).into();
 
@@ -702,7 +693,6 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::withdraw())]
 		pub fn withdraw(origin: OriginFor<T>, round_index: RoundIndex, project_key: ProjectIndex) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let now = <frame_system::Pallet<T>>::block_number();
 
 			// Only project initator can withdraw
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
@@ -710,22 +700,6 @@ pub mod pallet {
 
 			let project = Projects::<T>::get(project_key);
 			ensure!(who == project.initiator, Error::<T>::InvalidAccount);
-
-			let mut round = <Rounds<T>>::get(round_index).ok_or(Error::<T>::NoActiveRound)?;
-			let mut found_proposal: Option<&mut ProposalOf::<T>> = None;
-			for proposal in round.proposals.iter_mut() {
-				if proposal.project_key == project_key {
-					found_proposal = Some(proposal);
-					break;
-				}
-			}
-
-			let proposal = found_proposal.ok_or(Error::<T>::NoActiveProposal)?;
-			// ensure!(now <= proposal.withdrawal_expiration, Error::<T>::WithdrawalExpirationExceed);
-
-			// This proposal must not have distributed funds
-			ensure!(!proposal.is_withdrawn, Error::<T>::ProposalWithdrawn);
-
 			let total_contribution_amount: BalanceOf<T> = Self::get_total_project_contributions(project_key);
 
 			let mut unlocked_funds: BalanceOf<T>  = (0 as u32).into();
@@ -762,14 +736,7 @@ pub mod pallet {
 			};
 			// Add proposal to list
 			<Projects<T>>::insert(project_key, updated_project);
-
-			// Set is_withdrawn
-			proposal.is_withdrawn = true;
-			proposal.withdrawal_expiration = now + <WithdrawalExpiration<T>>::get();
-
-			<Rounds<T>>::insert(round_index, Some(round.clone()));
-
-			Self::deposit_event(Event::ProposalWithdrawn(round_index, project_key, available_funds));
+			Self::deposit_event(Event::ProjectWithdrawn(round_index, project_key, available_funds));
 
 			Ok(().into())
 		}
@@ -807,7 +774,7 @@ pub mod pallet {
 
 			Rounds::<T>::insert(round_index, Some(round));
 
-			Self::deposit_event(Event::ProposalCanceled(round_index, project_key));
+			Self::deposit_event(Event::ProjectCancelled(round_index, project_key));
 
 			Ok(().into())
 		}
