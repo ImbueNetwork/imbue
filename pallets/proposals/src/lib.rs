@@ -201,10 +201,10 @@ pub mod pallet {
 			}
 
 			// Validation
-			ensure!(name.len() > 0, Error::<T>::InvalidParam);
-			ensure!(logo.len() > 0, Error::<T>::InvalidParam);
-			ensure!(description.len() > 0, Error::<T>::InvalidParam);
-			ensure!(website.len() > 0, Error::<T>::InvalidParam);
+			// ensure!(name.len() > 0, Error::<T>::InvalidParam);
+			// ensure!(logo.len() > 0, Error::<T>::InvalidParam);
+			// ensure!(description.len() > 0, Error::<T>::InvalidParam);
+			// ensure!(website.len() > 0, Error::<T>::InvalidParam);
 
 			let mut total_percentage = 0;
 			for milestone in proposed_milestones.iter() {
@@ -212,10 +212,10 @@ pub mod pallet {
 			}
 			ensure!(total_percentage == 100, Error::<T>::MilestonesTotalPercentageMustEqual100);
 
-			ensure!(name.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			// ensure!(name.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			// ensure!(logo.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
-			ensure!(description.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
-			ensure!(website.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			// ensure!(description.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			// ensure!(website.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			
 			let project_key = ProjectCount::<T>::get();
 			let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
