@@ -23,8 +23,8 @@ mod benchmarking;
 pub mod weights;
 pub use weights::*;
 
-const MAX_STRING_FIELD_LENGTH: usize = 5000;
-const MAX_LOGO_FIELD_LENGTH: usize = 2 * 1 << 20;
+const MAX_DESC_FIELD_LENGTH: usize = 5000;
+const MAX_STRING_FIELD_LENGTH: usize = 256;
 // set end to 5 mins for demo purposes
 const MILESTONES_VOTING_WINDOW: u32 = 25u32;
 
@@ -214,8 +214,8 @@ pub mod pallet {
 			ensure!(total_percentage == 100, Error::<T>::MilestonesTotalPercentageMustEqual100);
 
 			ensure!(name.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
-			ensure!(logo.len() <= MAX_LOGO_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
-			ensure!(description.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			ensure!(logo.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
+			ensure!(description.len() <= MAX_DESC_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			ensure!(website.len() <= MAX_STRING_FIELD_LENGTH, Error::<T>::ParamLimitExceed);
 			
 			let project_key = ProjectCount::<T>::get();
