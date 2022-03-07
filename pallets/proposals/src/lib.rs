@@ -124,7 +124,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		ProjectCreated(ProjectIndex),
+		ProjectCreated(T::AccountId, Vec<u8>, ProjectIndex),
 		FundingRoundCreated(RoundIndex),
 		VotingRoundCreated(RoundIndex),
 		MilestoneSubmited(ProjectIndex, MilestoneIndex),
@@ -239,7 +239,7 @@ pub mod pallet {
  
 			// Create a proposal 
 			let project = Project {
-				name: name,
+				name: name.clone(),
 				logo: logo,
 				description: description,
 				website: website,
@@ -247,7 +247,7 @@ pub mod pallet {
 				contributions: Vec::new(),
 				required_funds: required_funds,
 				withdrawn_funds:(0 as u32).into(), 
-				initiator: who,
+				initiator: who.clone(),
 				create_block_number: <frame_system::Pallet<T>>::block_number(),
 				approved_for_funding: false
 			};
@@ -256,7 +256,7 @@ pub mod pallet {
 			<Projects<T>>::insert(project_key, project);
 			ProjectCount::<T>::put(next_project_key);
 
-			Self::deposit_event(Event::ProjectCreated(project_key));
+			Self::deposit_event(Event::ProjectCreated(who, name, project_key));
 
 			Ok(().into())
 		}
