@@ -23,7 +23,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
-use sp_core::{u32_trait::{_1, _2, _3, _5}, OpaqueMetadata};
+use sp_core::{u32_trait::{_1, _2, _3,_4}, OpaqueMetadata};
 
 use sp_runtime::{
 	generic::Era,
@@ -32,7 +32,7 @@ use sp_runtime::{
 	transaction_validity::{ TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,Perbill, Permill,
 };
-
+use pallet_collective::{EnsureProportionAtLeast};
 use sp_std::{marker::PhantomData, prelude::*, cmp::Ordering};
 
 #[cfg(feature = "std")]
@@ -46,7 +46,7 @@ mod weights;
 pub use frame_support::{
 	ensure,
 	construct_runtime, match_type, parameter_types,
-	traits::{Contains, Everything, IsInVec, Randomness},
+	traits::{Contains, Everything,EqualPrivilegeOnly, IsInVec, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -55,7 +55,7 @@ pub use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureOneOf, EnsureRoot
+	EnsureRoot
 };
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -71,13 +71,13 @@ use xcm_builder::{AsPrefixedGeneralIndex, ConvertedConcreteAssetId, FungiblesAda
 use xcm_executor::{Config,traits::{JustTry, ShouldExecute}, XcmExecutor};
 
 // XCM imports
-use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
+use pallet_xcm::{XcmPassthrough};
 use polkadot_parachain::primitives::Sibling;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, CurrencyAdapter,
 	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
-	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 	SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
@@ -106,6 +106,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
+	state_version: 0
 };
 
 /// The version information used to identify this runtime when compiled natively.
@@ -184,6 +185,7 @@ impl frame_system::Config for Runtime {
 	type BlockLength = RuntimeBlockLength;
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -247,7 +249,7 @@ parameter_types! {
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
-	type OnValidationData = ();
+	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type OutboundXcmpMessageSource = XcmpQueue;
 	type DmpMessageHandler = DmpQueue;
@@ -273,7 +275,7 @@ parameter_types! {
 /// `Transact` in order to determine the dispatch Origin.
 pub type LocationToAccountId = (
 	// The parent (Relay-chain) origin converts to the default `AccountId`.
-	ParentIsDefault<AccountId>,
+	ParentIsPreset<AccountId>,
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
@@ -447,11 +449,15 @@ impl cumulus_pallet_xcm::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
+/// XCMP Queue is responsible to handle XCM messages coming directly from sibling parachains.
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type ChannelInfo = ParachainSystem;
-	type VersionWrapper = ();
+	type VersionWrapper = PolkadotXcm;
+	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+	type ControllerOrigin = EnsureRoot<AccountId>;
+	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -493,6 +499,7 @@ impl pallet_utility::Config for Runtime {
 parameter_types! {
 	pub MaximumSchedulerWeight: Weight = NORMAL_DISPATCH_RATIO * RuntimeBlockWeights::get().max_block;
 	pub const MaxScheduledPerBlock: u32 = 50;
+	pub const NoPreimagePostponement: Option<u32> = Some(10);
 }
 
 pub struct AlwaysPrivilege;
@@ -504,6 +511,24 @@ impl<T: Sized> frame_support::traits::PrivilegeCmp<T>
 	}
 }
 
+
+parameter_types! {
+	pub const PreimageMaxSize: u32 = 4096 * 1024;
+	pub const PreimageBaseDeposit: Balance = deposit(2, 64);
+	pub const PreimageByteDeposit: Balance = deposit(0, 1);
+}
+
+impl pallet_preimage::Config for Runtime {
+	type WeightInfo = ();
+	type Event = Event;
+	type Currency = Balances;
+	type ManagerOrigin = EnsureRoot<AccountId>;
+	type MaxSize = PreimageMaxSize;
+	type BaseDeposit = PreimageBaseDeposit;
+	type ByteDeposit = PreimageByteDeposit;
+}
+
+
 impl pallet_scheduler::Config for Runtime {
 	type Event = Event;
 	type Origin = Origin;
@@ -512,9 +537,10 @@ impl pallet_scheduler::Config for Runtime {
 	type MaximumWeight = MaximumSchedulerWeight;
 	type ScheduleOrigin = EnsureRoot<AccountId>;
 	type MaxScheduledPerBlock = MaxScheduledPerBlock;
-	type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
-	type OriginPrivilegeCmp = frame_support::traits::EqualPrivilegeOnly;
-	// type OriginPrivilegeCmp = AlwaysPrivilege;
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
+	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Self>;
+	type PreimageProvider = Preimage;
+	type NoPreimagePostponement = NoPreimagePostponement;
 }
 
 
@@ -621,8 +647,21 @@ impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 	type Extrinsic = UncheckedExtrinsic;
 }
 
+/// The council
+type CouncilCollective = pallet_collective::Instance1;
+
+/// All council members must vote yes to create this origin.
+// type AllOfCouncil = EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
+
+type HalfOfCouncil = EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+/// A majority of the Unit body from Rococo over XCM is our required administration origin.
+pub type AdminOrigin = EnsureRootOr<HalfOfCouncil>;
+
+
+
 parameter_types! {
 	pub const AssetDeposit: Balance = 1 * IMBU;
+	pub const AssetAccountDeposit: Balance = 1 * IMBU;
 	pub const ApprovalDeposit: Balance = 100 * MILLI_IMBU;
 	pub const AssetsStringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = 1 * IMBU;
@@ -631,12 +670,7 @@ parameter_types! {
 	pub const MaxAuthorities: u32 = 100_000;
 }
 
-/// A majority of the Unit body from Rococo over XCM is our required administration origin.
-pub type AdminOrigin = EnsureOneOf<
-	AccountId,
-	EnsureRoot<AccountId>,
-	EnsureXcm<IsMajorityOfBody<RocLocation, UnitBody>>,
->;
+
 
 impl pallet_assets::Config for Runtime {
 	type Event = Event;
@@ -652,6 +686,7 @@ impl pallet_assets::Config for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type AssetAccountDeposit = AssetAccountDeposit;
 }
 
 impl pallet_aura::Config for Runtime {
@@ -673,17 +708,6 @@ parameter_types! {
 	pub const MaxRegistrars: u32 = 20;
 }
 
-type IdentityForceOrigin = EnsureOneOf<
-	AccountId,
-	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilInstance>,
->;
-type IdentityRegistrarOrigin = EnsureOneOf<
-	AccountId,
-	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilInstance>,
->;
-
 impl pallet_identity::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
@@ -694,8 +718,8 @@ impl pallet_identity::Config for Runtime {
 	type MaxAdditionalFields = MaxAdditionalFields;
 	type MaxRegistrars = MaxRegistrars;
 	type Slashed = Treasury;
-	type ForceOrigin = IdentityForceOrigin;
-	type RegistrarOrigin = IdentityRegistrarOrigin;
+	type ForceOrigin = EnsureRootOr<HalfOfCouncil>;
+	type RegistrarOrigin = EnsureRootOr<HalfOfCouncil>;
 	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
@@ -705,47 +729,55 @@ parameter_types! {
 	pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
 }
 
+parameter_types! {
+	// 5% of the proposal value need to be bonded. This will be returned
+	pub const ProposalBond: Permill = Permill::from_percent(5);
 
+	// Minimum amount to bond per proposal. This will be the least that gets bonded per proposal
+	// if the above yields to lower value
+	pub const ProposalBondMinimum: Balance = 100 * IMBU;
 
+	// Maximum amount to bond per proposal. This will be the most that gets bonded per proposal
+	pub const ProposalBondMaximum: Balance = 500 * IMBU;
 
-type TreasuryApproveOrigin = EnsureOneOf<
-	AccountId,
-	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilInstance>,
->;
+	// periods between treasury spends
+	pub const SpendPeriod: BlockNumber = 30 * DAYS;
 
-type TreasuryRejectOrigin = EnsureOneOf<
-	AccountId,
-	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilInstance>,
->;
+	// percentage of treasury we burn per Spend period if there is a surplus
+	// If the treasury is able to spend on all the approved proposals and didn't miss any
+	// then we burn % amount of remaining balance
+	// If the treasury couldn't spend on all the approved proposals, then we dont burn any
+	pub const Burn: Permill = Permill::from_percent(1);
+
+	// treasury pallet account id
+	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+
+	// Maximum number of approvals that can be in the spending queue
+	pub const MaxApprovals: u32 = 100;
+}
 
 impl pallet_treasury::Config for Runtime {
-	type PalletId = TreasuryId;
 	type Currency = Balances;
-	// At least three-fifths majority of the council is required (or root) to approve a proposal
-	type ApproveOrigin = TreasuryApproveOrigin;
-	// More than half of the council is required (or root) to reject a proposal
-	type RejectOrigin = TreasuryRejectOrigin;
+	// either democracy or 75% of council votes
+	type ApproveOrigin = EnsureRootOr<
+		pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
+	>;
+	// either democracy or more than 50% council votes
+	type RejectOrigin = EnsureRootOr<HalfOfCouncil>;
 	type Event = Event;
-	// If spending proposal rejected, transfer proposer bond to treasury
+	// slashed amount goes to treasury account
 	type OnSlash = Treasury;
 	type ProposalBond = ProposalBond;
 	type ProposalBondMinimum = ProposalBondMinimum;
+	type ProposalBondMaximum = ProposalBondMaximum;
 	type SpendPeriod = SpendPeriod;
-	type Burn = ();
+	type Burn = Burn;
+	type PalletId = TreasuryPalletId;
+	// we burn and dont handle the unbalance
 	type BurnDestination = ();
-	type MaxApprovals = MaxApprovals;
-	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Self>;
 	type SpendFunds = ();
-}
-
-parameter_types! {
-	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 2000 * CENTI_IMBU;
-	pub const SpendPeriod: BlockNumber = 6 * DAYS;
-	pub const TreasuryId: PalletId = PalletId(*b"py/trsry");
-	pub const MaxApprovals: u32 = 100;
+	type MaxApprovals = MaxApprovals;
 }
 
 impl proposals::Config for Runtime {
@@ -779,8 +811,9 @@ construct_runtime! {
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 31,
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 32,
-		Scheduler: pallet_scheduler::{Pallet, Storage, Config, Event<T>, Call} = 33,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>}  = 33,
 		Utility: pallet_utility::{Pallet, Call, Event} = 34,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 35,
 
 		Aura: pallet_aura::{Pallet, Config<T>},
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
@@ -820,7 +853,8 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPallets,
+	AllPalletsWithSystem,
+	(),
 >;
 
 impl_runtime_apis! {
@@ -924,8 +958,8 @@ impl_runtime_apis! {
 	}
 
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
-			ParachainSystem::collect_collation_info()
+		fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info(header)
 		}
 	}
 }
