@@ -53,19 +53,20 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::storage]
 	#[pallet::getter(fn projects)]
-	pub type Projects<T: Config> = StorageMap<_, Identity, ProjectIndex, Project<T::AccountId, BalanceOf<T>, T::BlockNumber>, ValueQuery>;
+	pub type Projects<T: Config> = StorageMap<_, Identity, ProjectIndex, Project<T::AccountId, BalanceOf<T>, T::BlockNumber>, OptionQuery>;
 
 	#[pallet::storage]
     #[pallet::getter(fn user_votes)]
-    pub(super) type UserVotes<T: Config> = StorageMap<_, Identity, (T::AccountId, ProjectIndex, MilestoneIndex), bool, ValueQuery>;
+    pub(super) type UserVotes<T: Config> = StorageMap<_, Identity, (T::AccountId, ProjectIndex, MilestoneIndex), bool, OptionQuery>;
 
 	#[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
-    pub(super) type MilestoneVotes<T: Config> = StorageMap<_, Identity, (ProjectIndex, MilestoneIndex), Vote<BalanceOf<T>>, ValueQuery>;
+    pub(super) type MilestoneVotes<T: Config> = StorageMap<_, Identity, (ProjectIndex, MilestoneIndex), Vote<BalanceOf<T>>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn project_count)]
@@ -407,7 +408,7 @@ pub mod pallet {
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
-			let project = Projects::<T>::get(project_key);
+			let project = <Projects<T>>::try_get(project_key).unwrap();
 			// Update project withdrawn funds
 			let updated_project = Project {
 				name: project.name,
@@ -471,7 +472,7 @@ pub mod pallet {
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
-			let project = Projects::<T>::get(project_key);
+			let project = <Projects<T>>::try_get(project_key).unwrap();
 			let total_contribution_amount: BalanceOf<T> = Self::get_total_project_contributions(project_key);
 
 			let funds_matched = total_contribution_amount >= project.required_funds;
@@ -487,7 +488,8 @@ pub mod pallet {
 				for index in milestone_indexes.clone().into_iter() {
 					if milestone.milestone_index == index {
 						let vote_lookup_key = (project_key, index);
-						let vote = <MilestoneVotes<T>>::get(vote_lookup_key);
+						
+						let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
 						if vote.yay > vote.nay {
 							milestone.is_approved = true;
 							let updated_vote = Vote {
@@ -537,7 +539,7 @@ pub mod pallet {
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
-			let project = Projects::<T>::get(project_key);
+			let project = <Projects<T>>::try_get(project_key).unwrap();
 			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorCanSubmitMilestone);
 			ensure!(project.approved_for_funding, Error::<T>::OnlyApprovedProjectsCanSubmitMilestones);
 
@@ -587,7 +589,7 @@ pub mod pallet {
 
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-			let project = Projects::<T>::get(project_key);
+			let project = <Projects<T>>::try_get(project_key).unwrap();
 
 			let mut existing_contributer = false;
 			let mut contribution_amount: BalanceOf<T>  = (0 as u32).into();
@@ -610,7 +612,7 @@ pub mod pallet {
 			
 			<UserVotes<T>>::insert(vote_lookup_key,approve_milestone);
 
-			let current_vote = <MilestoneVotes<T>>::get((project_key, milestone_index));
+			let current_vote = <MilestoneVotes<T>>::try_get((project_key, milestone_index)).unwrap();
 
 			if approve_milestone {
 				let updated_vote = Vote {
@@ -644,7 +646,7 @@ pub mod pallet {
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
-			let project = Projects::<T>::get(project_key);
+			let project = <Projects<T>>::try_get(project_key).unwrap();
 			ensure!(project.initiator == who, Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone);
 
 			let total_contribution_amount: BalanceOf<T> = Self::get_total_project_contributions(project_key);
@@ -654,7 +656,7 @@ pub mod pallet {
 			for mut milestone in project.milestones.into_iter() {
 				if milestone.milestone_index == milestone_index {
 					let vote_lookup_key = (project_key, milestone_index);
-					let vote = <MilestoneVotes<T>>::get(vote_lookup_key);
+					let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
 					let total_votes = vote.yay + vote.nay;
 					ensure!(total_votes == total_contribution_amount, Error::<T>::MilestoneVotingNotComplete);
 					if vote.yay > vote.nay {
@@ -703,7 +705,7 @@ pub mod pallet {
 			let project_exists = Projects::<T>::contains_key(project_key.clone());
 			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
 
-			let project = Projects::<T>::get(project_key);
+			let project = <Projects<T>>::try_get(project_key).unwrap();
 			ensure!(who == project.initiator, Error::<T>::InvalidAccount);
 			let total_contribution_amount: BalanceOf<T> = Self::get_total_project_contributions(project_key);
 
@@ -833,19 +835,19 @@ impl<T: Config> Pallet<T> {
 		let len = ProjectCount::<T>::get();
 		let mut projects: Vec<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>> = Vec::new();
 		for i in 0..len {
-			let project = <Projects<T>>::get(i);
+			let project = <Projects<T>>::get(i).unwrap();
 			projects.push(project);
 		}
 		projects
 	}
 
 	pub fn get_project(project_key: u32) -> Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber> {
-		let project = <Projects<T>>::get(project_key);
+		let project = <Projects<T>>::try_get(project_key).unwrap();
 		project
 	}
 	
 	pub fn get_total_project_contributions(project_key:u32) -> BalanceOf<T> {
-		let project = Projects::<T>::get(project_key);
+		let project = <Projects<T>>::try_get(project_key).unwrap();
 		// Calculate contribution amount
 		let mut total_contribution_amount: BalanceOf<T>  = (0 as u32).into();
 		for contribution in project.contributions.iter() {
@@ -868,7 +870,7 @@ type RoundOf<T> = Round<AccountIdOf<T>, BalanceOf<T>, <T as frame_system::Config
 type ProposalOf<T> = Proposal<AccountIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::BlockNumber>;
 
 /// Round struct
-#[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Round<AccountId, Balance, BlockNumber> {
 	start: BlockNumber,
 	end: BlockNumber,
@@ -898,7 +900,7 @@ impl<AccountId, Balance: From<u32>, BlockNumber: From<u32>> Round<AccountId, Bal
 	}
 }
 // Proposal in round
-#[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Proposal<AccountId, Balance, BlockNumber> {
 	project_key: ProjectIndex,
 	milestone_indexes: Vec<MilestoneIndex>,
@@ -910,21 +912,21 @@ pub struct Proposal<AccountId, Balance, BlockNumber> {
 }
 
 /// The contribution users made to a proposal project.
-#[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Contribution<AccountId, Balance> {
 	account_id: AccountId,
 	value: Balance,
 }
 
 /// The contribution users made to a proposal project.
-#[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct ProposedMilestone {
 	name: Vec<u8>,
 	percentage_to_unlock: u32,
 }
 
 /// The contribution users made to a proposal project.
-#[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Milestone {
 	project_key: ProjectIndex,
 	milestone_index: MilestoneIndex,
@@ -934,7 +936,7 @@ pub struct Milestone {
 }
 
 /// The contribution users made to a proposal project.
-#[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Vote<Balance> {
 	yay: Balance,
 	nay: Balance,
@@ -942,7 +944,7 @@ pub struct Vote<Balance> {
 }
 
 /// Project struct
-#[derive(Encode, Decode, Default, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber> {
 	name: Vec<u8>,
 	logo: Vec<u8>,
