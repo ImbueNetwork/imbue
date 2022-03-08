@@ -2,11 +2,11 @@ version: "3.2"
 services:
   launch:
       container_name: launch
-      image: samelamin/imbue:0.9.13
+      image: samelamin/imbue:0.9.17
       ports:
         - "30330-30345:30330-30345"
         - "9900-9960:9900-9960"
-      command: bash -c "cd polkadot-launch; rm -rf *.log; polkadot-launch imbueLaunchConfig.js"
+      command: bash -c "cp /polkadot-launch/imbueLaunchConfig.js /launch/; yarn start imbueLaunchConfig.js"
       volumes:
         - ./polkadot-launch/:/polkadot-launch/
   frontend:
