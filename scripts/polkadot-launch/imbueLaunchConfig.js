@@ -101,10 +101,7 @@ module.exports = {
     simpleParachains: [],
     hrmpChannels: [],
     types: {
-        HrmpChannelId: {
-            sender: "u32",
-            receiver: "u32"
-        }
+     
     },
     finalization: false
 };
