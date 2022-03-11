@@ -569,70 +569,70 @@ pub mod pallet {
 		pub fn vote_on_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_index: MilestoneIndex, approve_milestone: bool) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let project_count = ProjectCount::<T>::get();
-			ensure!(project_key < project_count, Error::<T>::InvalidParam);
+			// let project_count = ProjectCount::<T>::get();
+			// ensure!(project_key < project_count, Error::<T>::InvalidParam);
 			let now = <frame_system::Pallet<T>>::block_number();
 			
-			// round list must be not none
-			let round_index = RoundCount::<T>::get();
-			ensure!(round_index > 0, Error::<T>::NoActiveRound);
+			// // round list must be not none
+			// let round_index = RoundCount::<T>::get();
+			// ensure!(round_index > 0, Error::<T>::NoActiveRound);
 
-			// Find processing round
-			let mut processing_round: Option<RoundOf::<T>> = None;
-			for i in (0..round_index).rev() {
-				let round = <Rounds<T>>::get(i).unwrap();
-				if !round.is_canceled && round.start < now && round.end > now {
-					processing_round = Some(round);
-				}
-			}
-			let round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
+			// // Find processing round
+			// let mut processing_round: Option<RoundOf::<T>> = None;
+			// for i in (0..round_index).rev() {
+			// 	let round = <Rounds<T>>::get(i).unwrap();
+			// 	if !round.is_canceled && round.start < now && round.end > now {
+			// 		processing_round = Some(round);
+			// 	}
+			// }
+			// let round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
 
-			let project_exists = Projects::<T>::contains_key(project_key.clone());
-			ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-			let project = <Projects<T>>::try_get(project_key).unwrap();
+			// let project_exists = Projects::<T>::contains_key(project_key.clone());
+			// ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
+			// let project = <Projects<T>>::try_get(project_key).unwrap();
 
-			let mut existing_contributer = false;
-			let mut contribution_amount: BalanceOf<T>  = (0 as u32).into();
+			// let mut existing_contributer = false;
+			// let mut contribution_amount: BalanceOf<T>  = (0 as u32).into();
 
-			// Find previous contribution by account_id
-			// If you have contributed before, then add to that contribution. Otherwise join the list.
-			for contribution in project.contributions.clone().iter_mut() {
-				if contribution.account_id == who {
-					existing_contributer = true;
-					contribution_amount = contribution.value;
-					break;
-				}
-			}
+			// // Find previous contribution by account_id
+			// // If you have contributed before, then add to that contribution. Otherwise join the list.
+			// for contribution in project.contributions.clone().iter_mut() {
+			// 	if contribution.account_id == who {
+			// 		existing_contributer = true;
+			// 		contribution_amount = contribution.value;
+			// 		break;
+			// 	}
+			// }
 
-			ensure!(existing_contributer, Error::<T>::OnlyContributorsCanVote);
-			let vote_lookup_key = (who.clone(), project_key, milestone_index);
+			// ensure!(existing_contributer, Error::<T>::OnlyContributorsCanVote);
+			// let vote_lookup_key = (who.clone(), project_key, milestone_index);
 
-			let vote_exists = UserVotes::<T>::contains_key(vote_lookup_key.clone());
-			ensure!(!vote_exists, Error::<T>::VoteAlreadyExists);
+			// let vote_exists = UserVotes::<T>::contains_key(vote_lookup_key.clone());
+			// ensure!(!vote_exists, Error::<T>::VoteAlreadyExists);
 			
-			<UserVotes<T>>::insert(vote_lookup_key,approve_milestone);
+			// <UserVotes<T>>::insert(vote_lookup_key,approve_milestone);
 
-			let current_vote = <MilestoneVotes<T>>::try_get((project_key, milestone_index)).unwrap();
+			// let current_vote = <MilestoneVotes<T>>::try_get((project_key, milestone_index)).unwrap();
 
-			if approve_milestone {
-				let updated_vote = Vote {
-					yay: current_vote.yay + contribution_amount,
-					nay: current_vote.nay,
-					is_approved: current_vote.is_approved
-				};
-				<MilestoneVotes<T>>::insert((project_key, milestone_index),updated_vote)
+			// if approve_milestone {
+			// 	let updated_vote = Vote {
+			// 		yay: current_vote.yay + contribution_amount,
+			// 		nay: current_vote.nay,
+			// 		is_approved: current_vote.is_approved
+			// 	};
+			// 	<MilestoneVotes<T>>::insert((project_key, milestone_index),updated_vote)
 
-			} else {
-				let updated_vote = Vote {
-					yay: current_vote.yay,
-					nay: current_vote.nay + contribution_amount,
-					is_approved: current_vote.is_approved
-				};
-				<MilestoneVotes<T>>::insert((project_key, milestone_index),updated_vote)
-			}
+			// } else {
+			// 	let updated_vote = Vote {
+			// 		yay: current_vote.yay,
+			// 		nay: current_vote.nay + contribution_amount,
+			// 		is_approved: current_vote.is_approved
+			// 	};
+			// 	<MilestoneVotes<T>>::insert((project_key, milestone_index),updated_vote)
+			// }
 
 
-			<Rounds<T>>::insert(round_index-1, Some(round));
+			// <Rounds<T>>::insert(round_index-1, Some(round));
 			Self::deposit_event(Event::VoteComplete(who, project_key, milestone_index, approve_milestone, now));
 
 			Ok(().into())
