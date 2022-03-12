@@ -60,7 +60,7 @@ pub mod pallet {
     pub type Projects<T: Config> = StorageMap<
         _,
         Identity,
-        ProjectIndex,
+        ProjectKey,
         Project<T::AccountId, BalanceOf<T>, T::BlockNumber>,
         OptionQuery,
     >;
@@ -70,7 +70,7 @@ pub mod pallet {
     pub(super) type UserVotes<T: Config> = StorageMap<
         _,
         Identity,
-        (T::AccountId, ProjectIndex, MilestoneIndex, RoundIndex),
+        (T::AccountId, ProjectKey, MilestoneKey, RoundKey),
         bool,
         OptionQuery,
     >;
@@ -78,20 +78,19 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
     pub(super) type MilestoneVotes<T: Config> =
-        StorageMap<_, Identity, (ProjectIndex, MilestoneIndex), Vote<BalanceOf<T>>, OptionQuery>;
+        StorageMap<_, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn project_count)]
-    pub type ProjectCount<T> = StorageValue<_, ProjectIndex, ValueQuery>;
+    pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn rounds)]
-    pub type Rounds<T> =
-        StorageMap<_, Blake2_128Concat, RoundIndex, Option<RoundOf<T>>, ValueQuery>;
+    pub type Rounds<T> = StorageMap<_, Blake2_128Concat, RoundKey, Option<RoundOf<T>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn round_count)]
-    pub type RoundCount<T> = StorageValue<_, RoundIndex, ValueQuery>;
+    pub type RoundCount<T> = StorageValue<_, RoundKey, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn max_proposal_count_per_round)]
@@ -137,24 +136,18 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        ProjectCreated(T::AccountId, Vec<u8>, ProjectIndex),
-        FundingRoundCreated(RoundIndex),
-        VotingRoundCreated(RoundIndex),
-        MilestoneSubmited(ProjectIndex, MilestoneIndex),
-        ContributeSucceed(T::AccountId, ProjectIndex, BalanceOf<T>, T::BlockNumber),
-        ProjectCancelled(RoundIndex, ProjectIndex),
-        ProjectWithdrawn(RoundIndex, ProjectIndex, BalanceOf<T>),
-        ProjectApproved(RoundIndex, ProjectIndex),
-        RoundCanceled(RoundIndex),
+        ProjectCreated(T::AccountId, Vec<u8>, ProjectKey),
+        FundingRoundCreated(RoundKey),
+        VotingRoundCreated(RoundKey),
+        MilestoneSubmited(ProjectKey, MilestoneKey),
+        ContributeSucceed(T::AccountId, ProjectKey, BalanceOf<T>, T::BlockNumber),
+        ProjectCancelled(RoundKey, ProjectKey),
+        ProjectWithdrawn(RoundKey, ProjectKey, BalanceOf<T>),
+        ProjectApproved(RoundKey, ProjectKey),
+        RoundCanceled(RoundKey),
         FundSucceed(),
-        VoteComplete(
-            T::AccountId,
-            ProjectIndex,
-            MilestoneIndex,
-            bool,
-            T::BlockNumber,
-        ),
-        MilestoneApproved(ProjectIndex, MilestoneIndex, T::BlockNumber),
+        VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
+        MilestoneApproved(ProjectKey, MilestoneKey, T::BlockNumber),
     }
 
     // Errors inform users that something went wrong.
@@ -267,18 +260,18 @@ pub mod pallet {
             let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
             let mut milestones = Vec::new();
-            let mut milestone_index: u32 = 0;
+            let mut milestone_key: u32 = 0;
 
             // Fill in the proposals structure in advance
             for milestone in proposed_milestones {
                 milestones.push(Milestone {
                     project_key: project_key,
-                    milestone_index: milestone_index,
+                    milestone_key: milestone_key,
                     name: milestone.name,
                     percentage_to_unlock: milestone.percentage_to_unlock,
                     is_approved: false,
                 });
-                milestone_index = milestone_index.checked_add(1).ok_or(Error::<T>::Overflow)?;
+                milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
             }
 
             // Create a proposal
@@ -307,13 +300,13 @@ pub mod pallet {
 
         /// Step 2 (ADMIN)
         /// Schedule a round
-        /// proposal_indexes: the proposals were selected for this round
+        /// proposal_keys: the proposals were selected for this round
         #[pallet::weight(<T as Config>::WeightInfo::schedule_round(MaxProposalCountPerRound::<T>::get()))]
         pub fn schedule_round(
             origin: OriginFor<T>,
             start: T::BlockNumber,
             end: T::BlockNumber,
-            project_keys: Vec<ProjectIndex>,
+            project_keys: Vec<ProjectKey>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             let now = <frame_system::Pallet<T>>::block_number();
@@ -335,15 +328,15 @@ pub mod pallet {
             );
 
             // Find the last valid round
-            let index = RoundCount::<T>::get();
+            let key = RoundCount::<T>::get();
 
-            let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
+            let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
             let round = RoundOf::<T>::new(start, end, project_keys);
 
             // Add proposal round to list
-            <Rounds<T>>::insert(index, Some(round));
-            Self::deposit_event(Event::FundingRoundCreated(index));
-            RoundCount::<T>::put(next_index);
+            <Rounds<T>>::insert(key, Some(round));
+            Self::deposit_event(Event::FundingRoundCreated(key));
+            RoundCount::<T>::put(next_key);
 
             Ok(().into())
         }
@@ -354,12 +347,12 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::cancel_round())]
         pub fn cancel_round(
             origin: OriginFor<T>,
-            round_index: RoundIndex,
+            round_key: RoundKey,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             let now = <frame_system::Pallet<T>>::block_number();
             let count = RoundCount::<T>::get();
-            let mut round = <Rounds<T>>::get(round_index).ok_or(Error::<T>::NoActiveRound)?;
+            let mut round = <Rounds<T>>::get(round_key).ok_or(Error::<T>::NoActiveRound)?;
 
             // Ensure current round is not started
             ensure!(round.start > now, Error::<T>::RoundStarted);
@@ -367,7 +360,7 @@ pub mod pallet {
             ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
 
             round.is_canceled = true;
-            <Rounds<T>>::insert(round_index, Some(round.clone()));
+            <Rounds<T>>::insert(round_key, Some(round.clone()));
 
             Self::deposit_event(Event::RoundCanceled(count - 1));
 
@@ -379,7 +372,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
         pub fn contribute(
             origin: OriginFor<T>,
-            project_key: ProjectIndex,
+            project_key: ProjectKey,
             value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -389,12 +382,12 @@ pub mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
 
             // round list must be not none
-            let round_index = RoundCount::<T>::get();
-            ensure!(round_index > 0, Error::<T>::NoActiveRound);
+            let round_key = RoundCount::<T>::get();
+            ensure!(round_key > 0, Error::<T>::NoActiveRound);
 
             // Find processing round
             let mut processing_round: Option<RoundOf<T>> = None;
-            for i in (0..round_index).rev() {
+            for i in (0..round_key).rev() {
                 let round = <Rounds<T>>::get(i).unwrap();
                 if !round.is_canceled && round.start < now && round.end > now {
                     processing_round = Some(round);
@@ -403,7 +396,7 @@ pub mod pallet {
 
             let mut round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
 
-            // Find proposal by index
+            // Find proposal by key
             let mut project_exists_in_round = false;
             for current_project_key in round.project_keys.iter_mut() {
                 if current_project_key.clone() == project_key {
@@ -466,7 +459,7 @@ pub mod pallet {
                 ExistenceRequirement::AllowDeath,
             )?;
 
-            <Rounds<T>>::insert(round_index - 1, Some(round));
+            <Rounds<T>>::insert(round_key - 1, Some(round));
 
             Self::deposit_event(Event::ContributeSucceed(who, project_key, value, now));
 
@@ -479,18 +472,18 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
-            round_index: RoundIndex,
-            project_key: ProjectIndex,
-            milestone_indexes: Vec<MilestoneIndex>,
+            round_key: RoundKey,
+            project_key: ProjectKey,
+            milestone_keys: Vec<MilestoneKey>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
-            let mut round = <Rounds<T>>::get(round_index).ok_or(Error::<T>::NoActiveRound)?;
+            let mut round = <Rounds<T>>::get(round_key).ok_or(Error::<T>::NoActiveRound)?;
             ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
 
             // The round must have ended
             let now = <frame_system::Pallet<T>>::block_number();
 
-            // Find proposal by index
+            // Find proposal by key
             let mut project_exists_in_round = false;
             for current_project_key in round.project_keys.iter_mut() {
                 if current_project_key.clone() == project_key {
@@ -518,9 +511,9 @@ pub mod pallet {
             // set is_approved
             project.approved_for_funding = true;
             for mut milestone in project.milestones.into_iter() {
-                for index in milestone_indexes.clone().into_iter() {
-                    if milestone.milestone_index == index {
-                        let vote_lookup_key = (project_key, index);
+                for key in milestone_keys.clone().into_iter() {
+                    if milestone.milestone_key == key {
+                        let vote_lookup_key = (project_key, key);
 
                         let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
                         if vote.yay > vote.nay {
@@ -530,7 +523,7 @@ pub mod pallet {
                                 nay: vote.nay,
                                 is_approved: true,
                             };
-                            Self::deposit_event(Event::MilestoneApproved(project_key, index, now));
+                            Self::deposit_event(Event::MilestoneApproved(project_key, key, now));
                             <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                         }
                     }
@@ -538,7 +531,7 @@ pub mod pallet {
                 milestones.push(milestone.clone());
             }
 
-            <Rounds<T>>::insert(round_index, Some(round.clone()));
+            <Rounds<T>>::insert(round_key, Some(round.clone()));
 
             // Update project milestones
             let updated_project = Project {
@@ -556,7 +549,7 @@ pub mod pallet {
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
-            Self::deposit_event(Event::ProjectApproved(round_index, project_key));
+            Self::deposit_event(Event::ProjectApproved(round_key, project_key));
             Ok(().into())
         }
 
@@ -564,8 +557,8 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
-            project_key: ProjectIndex,
-            milestone_index: MilestoneIndex,
+            project_key: ProjectKey,
+            milestone_key: MilestoneKey,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let now = <frame_system::Pallet<T>>::block_number();
@@ -584,22 +577,22 @@ pub mod pallet {
             );
 
             let end = now + MILESTONES_VOTING_WINDOW.into();
-            let index = RoundCount::<T>::get();
+            let key = RoundCount::<T>::get();
             let round = RoundOf::<T>::new(now, end, vec![project_key]);
-            let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
+            let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
             let vote = Vote {
                 yay: (0 as u32).into(),
                 nay: (0 as u32).into(),
                 is_approved: false,
             };
-            let vote_lookup_key = (project_key, milestone_index);
+            let vote_lookup_key = (project_key, milestone_key);
             <MilestoneVotes<T>>::insert(vote_lookup_key, vote);
-            Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_index));
+            Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_key));
             // Add proposal round to list
-            <Rounds<T>>::insert(index, Some(round));
-            RoundCount::<T>::put(next_index);
-            Self::deposit_event(Event::VotingRoundCreated(index));
+            <Rounds<T>>::insert(key, Some(round));
+            RoundCount::<T>::put(next_key);
+            Self::deposit_event(Event::VotingRoundCreated(key));
             Ok(().into())
         }
 
@@ -608,8 +601,8 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
         pub fn vote_on_milestone(
             origin: OriginFor<T>,
-            project_key: ProjectIndex,
-            milestone_index: MilestoneIndex,
+            project_key: ProjectKey,
+            milestone_key: MilestoneKey,
             approve_milestone: bool,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -619,8 +612,8 @@ pub mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
 
             // round list must be not none
-            let round_index = RoundCount::<T>::get();
-            ensure!(round_index > 0, Error::<T>::NoActiveRound);
+            let round_key = RoundCount::<T>::get();
+            ensure!(round_key > 0, Error::<T>::NoActiveRound);
 
             let project_exists = Projects::<T>::contains_key(project_key.clone());
             ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
@@ -628,8 +621,8 @@ pub mod pallet {
 
             // Find processing round
             let mut processing_round: Option<RoundOf<T>> = None;
-			let mut processing_round_index = 0;
-            for i in (0..round_index).rev() {
+            let mut processing_round_key = 0;
+            for i in (0..round_key).rev() {
                 let round = <Rounds<T>>::get(i).unwrap();
                 if !round.is_canceled
                     && round.start < now
@@ -637,34 +630,38 @@ pub mod pallet {
                     && round.project_keys.contains(&project_key)
                 {
                     processing_round = Some(round);
-					processing_round_index = i;
+                    processing_round_key = i;
                 }
             }
             let round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
 
-            let mut existing_contributer = false;
+            let mut existing_contributor = false;
             let mut contribution_amount: BalanceOf<T> = (0 as u32).into();
 
             // Find previous contribution by account_id
             // If you have contributed before, then add to that contribution. Otherwise join the list.
             for contribution in project.contributions.clone().iter_mut() {
                 if contribution.account_id == who {
-                    existing_contributer = true;
+                    existing_contributor = true;
                     contribution_amount = contribution.value;
                     break;
                 }
             }
 
-            ensure!(existing_contributer, Error::<T>::OnlyContributorsCanVote);
-            let vote_lookup_key = (who.clone(), project_key, milestone_index, processing_round_index);
+            ensure!(existing_contributor, Error::<T>::OnlyContributorsCanVote);
+            let vote_lookup_key = (
+                who.clone(),
+                project_key,
+                milestone_key,
+                processing_round_key,
+            );
 
             let vote_exists = UserVotes::<T>::contains_key(vote_lookup_key.clone());
             ensure!(!vote_exists, Error::<T>::VoteAlreadyExists);
 
             <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
 
-            let current_vote =
-                <MilestoneVotes<T>>::try_get((project_key, milestone_index)).unwrap();
+            let current_vote = <MilestoneVotes<T>>::try_get((project_key, milestone_key)).unwrap();
 
             if approve_milestone {
                 let updated_vote = Vote {
@@ -672,21 +669,21 @@ pub mod pallet {
                     nay: current_vote.nay,
                     is_approved: current_vote.is_approved,
                 };
-                <MilestoneVotes<T>>::insert((project_key, milestone_index), updated_vote)
+                <MilestoneVotes<T>>::insert((project_key, milestone_key), updated_vote)
             } else {
                 let updated_vote = Vote {
                     yay: current_vote.yay,
                     nay: current_vote.nay + contribution_amount,
                     is_approved: current_vote.is_approved,
                 };
-                <MilestoneVotes<T>>::insert((project_key, milestone_index), updated_vote)
+                <MilestoneVotes<T>>::insert((project_key, milestone_key), updated_vote)
             }
 
-            <Rounds<T>>::insert(round_index - 1, Some(round));
+            <Rounds<T>>::insert(round_key - 1, Some(round));
             Self::deposit_event(Event::VoteComplete(
                 who,
                 project_key,
-                milestone_index,
+                milestone_key,
                 approve_milestone,
                 now,
             ));
@@ -698,8 +695,8 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn finalise_milestone_voting(
             origin: OriginFor<T>,
-            project_key: ProjectIndex,
-            milestone_index: MilestoneIndex,
+            project_key: ProjectKey,
+            milestone_key: MilestoneKey,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -718,8 +715,8 @@ pub mod pallet {
             let mut milestones = Vec::new();
             // set is_approved
             for mut milestone in project.milestones.into_iter() {
-                if milestone.milestone_index == milestone_index {
-                    let vote_lookup_key = (project_key, milestone_index);
+                if milestone.milestone_key == milestone_key {
+                    let vote_lookup_key = (project_key, milestone_key);
                     let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
                     let total_votes = vote.yay + vote.nay;
                     ensure!(
@@ -736,7 +733,7 @@ pub mod pallet {
                         let now = <frame_system::Pallet<T>>::block_number();
                         Self::deposit_event(Event::MilestoneApproved(
                             project_key,
-                            milestone_index,
+                            milestone_key,
                             now,
                         ));
 
@@ -771,8 +768,8 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
-            round_index: RoundIndex,
-            project_key: ProjectIndex,
+            round_key: RoundKey,
+            project_key: ProjectKey,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -828,7 +825,7 @@ pub mod pallet {
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
             Self::deposit_event(Event::ProjectWithdrawn(
-                round_index,
+                round_key,
                 project_key,
                 available_funds,
             ));
@@ -892,8 +889,8 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_account()
     }
 
-    pub fn project_account_id(index: ProjectIndex) -> T::AccountId {
-        T::PalletId::get().into_sub_account(index)
+    pub fn project_account_id(key: ProjectKey) -> T::AccountId {
+        T::PalletId::get().into_sub_account(key)
     }
 
     /// Get all projects
@@ -924,9 +921,9 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-pub type RoundIndex = u32;
-pub type ProjectIndex = u32;
-pub type MilestoneIndex = u32;
+pub type RoundKey = u32;
+pub type ProjectKey = u32;
+pub type MilestoneKey = u32;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
@@ -938,7 +935,7 @@ type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 pub struct Round<BlockNumber> {
     start: BlockNumber,
     end: BlockNumber,
-    project_keys: Vec<ProjectIndex>,
+    project_keys: Vec<ProjectKey>,
     is_canceled: bool,
 }
 
@@ -946,7 +943,7 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
     fn new(
         start: BlockNumber,
         end: BlockNumber,
-        project_keys: Vec<ProjectIndex>,
+        project_keys: Vec<ProjectKey>,
     ) -> Round<BlockNumber> {
         let proposal_round = Round {
             start: start,
@@ -961,7 +958,7 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
 // Proposal in round
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Proposal<AccountId, Balance, BlockNumber> {
-    project_key: ProjectIndex,
+    project_key: ProjectKey,
     contributions: Vec<Contribution<AccountId, Balance>>,
     is_approved: bool,
     is_canceled: bool,
@@ -986,8 +983,8 @@ pub struct ProposedMilestone {
 /// The contribution users made to a proposal project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Milestone {
-    project_key: ProjectIndex,
-    milestone_index: MilestoneIndex,
+    project_key: ProjectKey,
+    milestone_key: MilestoneKey,
     name: Vec<u8>,
     percentage_to_unlock: u32,
     is_approved: bool,
