@@ -367,7 +367,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Step 3 (FUNDER/CONTRIBUTER)
+        /// Step 3 (CONTRIBUTOR/FUNDER)
         /// Contribute to a proposal
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
         pub fn contribute(
@@ -596,7 +596,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Step 6 (FUNDER/CONTRIBUTER)
+        /// Step 6 (CONTRIBUTOR/FUNDER)
         /// Vote on a milestone
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
         pub fn vote_on_milestone(
@@ -620,8 +620,8 @@ pub mod pallet {
             let project = <Projects<T>>::try_get(project_key).unwrap();
 
             // Find processing round
-            let mut processing_round: Option<RoundOf<T>> = None;
-            let mut processing_round_key = 0;
+            let mut latest_round: Option<RoundOf<T>> = None;
+            let mut latest_round_key = 0;
             for i in (0..round_key).rev() {
                 let round = <Rounds<T>>::get(i).unwrap();
                 if !round.is_canceled
@@ -629,11 +629,12 @@ pub mod pallet {
                     && round.end > now
                     && round.project_keys.contains(&project_key)
                 {
-                    processing_round = Some(round);
-                    processing_round_key = i;
+                    latest_round = Some(round);
+                    latest_round_key = i;
+                    break;
                 }
             }
-            let round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
+            let round = latest_round.ok_or(Error::<T>::RoundNotProcessing)?;
 
             let mut existing_contributor = false;
             let mut contribution_amount: BalanceOf<T> = (0 as u32).into();
@@ -649,12 +650,7 @@ pub mod pallet {
             }
 
             ensure!(existing_contributor, Error::<T>::OnlyContributorsCanVote);
-            let vote_lookup_key = (
-                who.clone(),
-                project_key,
-                milestone_key,
-                processing_round_key,
-            );
+            let vote_lookup_key = (who.clone(), project_key, milestone_key, latest_round_key);
 
             let vote_exists = UserVotes::<T>::contains_key(vote_lookup_key.clone());
             ensure!(!vote_exists, Error::<T>::VoteAlreadyExists);
