@@ -139,10 +139,10 @@ pub mod pallet {
         ProjectCreated(T::AccountId, Vec<u8>, ProjectKey),
         FundingRoundCreated(RoundKey),
         VotingRoundCreated(RoundKey),
-        MilestoneSubmited(ProjectKey, MilestoneKey),
+        MilestoneSubmitted(ProjectKey, MilestoneKey),
         ContributeSucceed(T::AccountId, ProjectKey, BalanceOf<T>, T::BlockNumber),
         ProjectCancelled(RoundKey, ProjectKey),
-        ProjectWithdrawn(RoundKey, ProjectKey, BalanceOf<T>),
+        ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>),
         ProjectApproved(RoundKey, ProjectKey),
         RoundCanceled(RoundKey),
         FundSucceed(),
@@ -588,7 +588,7 @@ pub mod pallet {
             };
             let vote_lookup_key = (project_key, milestone_key);
             <MilestoneVotes<T>>::insert(vote_lookup_key, vote);
-            Self::deposit_event(Event::MilestoneSubmited(project_key, milestone_key));
+            Self::deposit_event(Event::MilestoneSubmitted(project_key, milestone_key));
             // Add proposal round to list
             <Rounds<T>>::insert(key, Some(round));
             RoundCount::<T>::put(next_key);
@@ -764,7 +764,6 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
-            round_key: RoundKey,
             project_key: ProjectKey,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -820,8 +819,8 @@ pub mod pallet {
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
-            Self::deposit_event(Event::ProjectWithdrawn(
-                round_key,
+            Self::deposit_event(Event::ProjectFundsWithdrawn(
+                who,
                 project_key,
                 available_funds,
             ));
