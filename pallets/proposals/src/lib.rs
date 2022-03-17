@@ -472,25 +472,28 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
-            round_key: RoundKey,
             project_key: ProjectKey,
             milestone_keys: Vec<MilestoneKey>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
-            let mut round = <Rounds<T>>::get(round_key).ok_or(Error::<T>::NoActiveRound)?;
-            ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
-
-            // The round must have ended
-            let now = <frame_system::Pallet<T>>::block_number();
-
-            // Find proposal by key
+            let round_key = RoundCount::<T>::get();
+            // Find processing round
+            let mut latest_round: Option<RoundOf<T>> = None;
             let mut project_exists_in_round = false;
-            for current_project_key in round.project_keys.iter_mut() {
-                if current_project_key.clone() == project_key {
+            for i in (0..round_key).rev() {
+                let current_round = <Rounds<T>>::get(i).unwrap();
+                if !current_round.is_canceled && current_round.project_keys.contains(&project_key) {
+                    latest_round = Some(current_round);
                     project_exists_in_round = true;
                     break;
                 }
             }
+
+            let round = latest_round.ok_or(Error::<T>::NoActiveRound)?;
+            ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
+
+            // The round must have ended
+            let now = <frame_system::Pallet<T>>::block_number();
 
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
 
@@ -515,16 +518,23 @@ pub mod pallet {
                     if milestone.milestone_key == key {
                         let vote_lookup_key = (project_key, key);
 
-                        let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
-                        if vote.yay > vote.nay {
-                            milestone.is_approved = true;
-                            let updated_vote = Vote {
-                                yay: vote.yay,
-                                nay: vote.nay,
-                                is_approved: true,
-                            };
-                            Self::deposit_event(Event::MilestoneApproved(project_key, key, now));
-                            <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
+                        let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
+                        if votes_exist {
+                            let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
+                            if vote.yay > vote.nay {
+                                milestone.is_approved = true;
+                                let updated_vote = Vote {
+                                    yay: vote.yay,
+                                    nay: vote.nay,
+                                    is_approved: true,
+                                };
+                                Self::deposit_event(Event::MilestoneApproved(
+                                    project_key,
+                                    key,
+                                    now,
+                                ));
+                                <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
+                            }
                         }
                     }
                 }
