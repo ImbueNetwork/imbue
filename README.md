@@ -1,12 +1,15 @@
+<a href="https://github.com/w3f/Grants-Program/pull/703"><img src="https://github.com/ImbueNetwork/website-assets/blob/main/Web3%20Foundation%20Grants%20Badge/PNG/web3%20foundation_grants_badge_black.png?raw=true" alt="imbue-web3-open-grant" /></a>
+Imbue Network is a decentralised crowdfunding DAO built on top of the Polkadot blockchain platform. It is an idea incubator open to the entire world that allows anyone, from any walk of life and for any kind of endeavour, to submit and vote on Ideas worth funding from the communities that believe in them the most.
+
 # Imbue Collator
 
 This documentation will cover the below explanation
 1) Launching the network: Will explain how you can launch the network locally using the docker configuration with as simple as one step
-2) Going through our proposal pallet(our core pallet), explaining the usage step by step
+2) Going through our proposal pallet (our core pallet), explaining the usage step by step
 
 ## 1) Launching the network locally - Using Docker (Automated)
 
-The default compose file automatically launches a local network containing multiple relaychain validators (polkadot nodes) and collators (Imbue collators) which you can interact with using the polkadotjs Additionally, docker can be used to launch a collator to supported testnets.
+The default compose file automatically launches a local network containing multiple relaychain validators (polkadot nodes) and collators (Imbue collators) which you can interact with using the [browser-based polkadotjs wallet](https://polkadot.js.org/apps/#/explorer). Additionally, docker can be used to launch a collator to supported testnets.
 Follow these steps to prepare a local development environment :hammer_and_wrench:
 
 ### Setup
@@ -27,7 +30,7 @@ Launch a local network using docker compose:
 docker-compose -f scripts/docker-compose.yml up -d
 ```
 
-The `scripts` directory contains compose file which is used to launch the network using a single command. Launching with docker ensures parachains are registered to the relaychain automatically and will begin authoring blocks shortly after launch.  
+The `scripts` directory contains the docker-compose file which is used to launch the network using a single command. Launching with docker ensures parachains are registered to the relaychain automatically and will begin authoring blocks shortly after launch.  
 
 To ensure your network is functioning properly:  
 1) Confirm docker containers are running
@@ -129,10 +132,10 @@ cd imbue-collator
 
 ### Interacting with your network
 
-To connect to your local network's user interface, visit [polkadot.js](http://localhost:3001/#/explorer) on port 3001. Interacting with your network is detailed [below](#submit-data-request)
+To connect to your local network's user interface, visit [polkadot.js](http://localhost:3001/#/explorer) on port 3001. Interacting with your network is detailed [below](#proposal-pallet-interaction)
 
 
-**NOTE:** If you launched your network using docker or polkadot-launch, your parachains should be automatically registered to the relaychain and you can skip the below two steps and can continue [here](#submit-data-request).
+**NOTE:** If you launched your network using docker or polkadot-launch, your parachains should be automatically registered to the relaychain and you can skip the below two steps and can continue [here](#proposal-pallet-interaction).
    
 #### Validate the parachain is registered
 
@@ -147,10 +150,10 @@ To connect to your local network's user interface, visit [polkadot.js](http://lo
 
 ## Proposal Pallet interaction
 
-Our proposal pallet consists of our core logic and facilitates the implementation through extrinsics(extrinsics can be thought of functions that can be called from outside, in this case from the frontend). 
+Our proposal pallet consists of our core logic and facilitates the implementation through extrinsics (extrinsics can be thought of functions that can be called from outside, in this case from the frontend). 
 
-The crowdfunding of a project basically comprises of 6 steps from the submission of the proposal to withdrawing of the fund. Alternatively, the individual or team can decide to withdraw their projects propsal as well. 
-The flow of creating a proposal and get funded is shown below step by step using the screenshots. You can follow along the same either using polkadotjs apps or the frontend(localhost:3001) that comes with our docker compose
+The crowdfunding of a project basically comprises of 6 steps from the submission of the proposal to withdrawing of the fund. Alternatively, the individual or team can decide to withdraw their projects proposal as well. 
+The flow of creating a proposal and getting funded is shown below step by step using screenshots. You can follow along the same either using polkadotjs apps or the frontend (localhost:3001) that comes with our docker compose
 
 1) Creating a project: The first step is to create the project, i.e. submitting the proposal, the given signature of the extrinsic is shown below. From the UI select the pallet which is our imbueProposals pallet and then select the function below.
 

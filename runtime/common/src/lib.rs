@@ -23,8 +23,12 @@ pub use types::*;
 
 /// Common types for all runtimes
 pub mod types {
+	use frame_support::traits::EnsureOneOf;
+	use frame_system::EnsureRoot;
 	use sp_runtime::traits::{BlakeTwo256, IdentifyAccount, Verify};
 	use sp_std::vec::Vec;
+
+	pub type EnsureRootOr<O> = EnsureOneOf<EnsureRoot<AccountId>, O>;
 
 	/// An index to a block.
 	pub type BlockNumber = u32;
@@ -130,8 +134,4 @@ pub mod constants {
 
 	/// We allow for 0.5 seconds of compute with a 6 second average block time.
 	pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
-
-
-	
-
 }

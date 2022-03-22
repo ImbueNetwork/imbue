@@ -12,20 +12,21 @@ WORKDIR /builds/imbue
 RUN cargo build --${PROFILE}
 RUN cp target/${PROFILE}/imbue-collator /
 
-FROM parity/polkadot:v0.9.13 AS polkadot
+FROM parity/polkadot:v0.9.17 AS polkadot
 FROM parity/subkey:latest AS subkey
 # to copy polkadot binaries only; no other directives required
 
-FROM node:16-slim
+FROM node:17.6.0-slim
 ARG APT_PACKAGES
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update
 RUN apt-get install -y\
-        gnupg2 ca-certificates\
+        gnupg2 ca-certificates git \
         ${APT_PACKAGES}
 
-
-RUN yarn global add polkadot-launch
+RUN git clone https://github.com/paritytech/polkadot-launch launch
+WORKDIR /launch
+RUN yarn
 
 COPY --from=builder /imbue-collator /
 COPY --from=polkadot /usr/bin/polkadot /

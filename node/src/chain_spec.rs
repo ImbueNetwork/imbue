@@ -1,5 +1,4 @@
 use cumulus_primitives_core::ParaId;
-use hex_literal::hex;
 use development_runtime::{AccountId, AuraId, Signature, CouncilConfig, TechnicalCommitteeConfig};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use std::str::FromStr;
@@ -7,7 +6,7 @@ use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 
-use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
+use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{AccountId32, traits::{IdentifyAccount, Verify}};
 
 
@@ -84,6 +83,7 @@ pub fn get_shell_chain_spec(id: ParaId) -> ShellChainSpec {
 		vec![],
 		None,
 		Some("imbue"),
+		None,
 		Some(imbue_properties()),
 		Extensions { relay_chain: "westend".into(), para_id: id.into() },
 
@@ -111,6 +111,7 @@ pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentCha
 		Vec::new(),
 		None,
 		Some("imbue"),
+		None,
 		Some(imbue_properties()),
 		Default::default()
 	)
@@ -139,6 +140,7 @@ pub fn development_environment_config(id: ParaId,environment: &str) -> Developme
 				.expect("Polkadot telemetry url is valid; qed"),
 		),
 		Some("imbue"),
+		None,
 		Some(imbue_properties()),
 		Default::default()
 	)
@@ -188,8 +190,8 @@ fn development_genesis(
 				.map(|k| (k, 10 << 60))
 				.collect(),
 		},
-		sudo: development_runtime::SudoConfig { key: root_key },
-		scheduler: development_runtime::SchedulerConfig {},
+		sudo: development_runtime::SudoConfig { key: Some(root_key) },
+		// scheduler: development_runtime::SchedulerConfig {},
 		vesting: Default::default(),
 		parachain_info: development_runtime::ParachainInfoConfig { parachain_id: id },
 		aura: development_runtime::AuraConfig {
