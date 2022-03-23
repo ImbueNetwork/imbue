@@ -17,6 +17,12 @@ use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::prelude::*;
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
@@ -140,11 +146,11 @@ pub mod pallet {
         FundingRoundCreated(RoundKey),
         VotingRoundCreated(RoundKey),
         MilestoneSubmitted(ProjectKey, MilestoneKey),
-        ContributeSucceed(T::AccountId, ProjectKey, BalanceOf<T>, T::BlockNumber),
+        ContributeSucceeded(T::AccountId, ProjectKey, BalanceOf<T>, T::BlockNumber),
         ProjectCancelled(RoundKey, ProjectKey),
         ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>),
         ProjectApproved(RoundKey, ProjectKey),
-        RoundCanceled(RoundKey),
+        RoundCancelled(RoundKey),
         FundSucceed(),
         VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
         MilestoneApproved(ProjectKey, MilestoneKey, T::BlockNumber),
@@ -159,6 +165,10 @@ pub mod pallet {
         InvalidParam,
         InvalidAccount,
         ProjectDoesNotExist,
+        ProjectNameIsMandatory,
+        LogoIsMandatory,
+        ProjectDescriptionIsMandatory,
+        WebsiteURLIsMandatory,
         MilestonesTotalPercentageMustEqual100,
         NoActiveRound,
         NoActiveProposal,
@@ -225,10 +235,10 @@ pub mod pallet {
             }
 
             // Validation
-            ensure!(name.len() > 0, Error::<T>::InvalidParam);
-            ensure!(logo.len() > 0, Error::<T>::InvalidParam);
-            ensure!(description.len() > 0, Error::<T>::InvalidParam);
-            ensure!(website.len() > 0, Error::<T>::InvalidParam);
+            ensure!(name.len() > 0, Error::<T>::ProjectNameIsMandatory);
+            ensure!(logo.len() > 0, Error::<T>::LogoIsMandatory);
+            ensure!(description.len() > 0, Error::<T>::ProjectDescriptionIsMandatory);
+            ensure!(website.len() > 0, Error::<T>::WebsiteURLIsMandatory);
 
             let mut total_percentage = 0;
             for milestone in proposed_milestones.iter() {
@@ -362,7 +372,7 @@ pub mod pallet {
             round.is_canceled = true;
             <Rounds<T>>::insert(round_key, Some(round.clone()));
 
-            Self::deposit_event(Event::RoundCanceled(count - 1));
+            Self::deposit_event(Event::RoundCancelled(count - 1));
 
             Ok(().into())
         }
@@ -461,7 +471,7 @@ pub mod pallet {
 
             <Rounds<T>>::insert(round_key - 1, Some(round));
 
-            Self::deposit_event(Event::ContributeSucceed(who, project_key, value, now));
+            Self::deposit_event(Event::ContributeSucceeded(who, project_key, value, now));
 
             Ok(().into())
         }
