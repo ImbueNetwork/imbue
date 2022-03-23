@@ -26,9 +26,6 @@ pub type DevelopmentChainSpec = sc_service::GenericChainSpec<development_runtime
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
-/// Specialized `ChainSpec` for the shell parachain runtime.
-pub type ShellChainSpec = sc_service::GenericChainSpec<shell_runtime::GenesisConfig, Extensions>;
-
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Helper function to generate a crypto pair from seed
@@ -77,35 +74,6 @@ pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pa
 /// This function's return type must always match the session keys of the chain in tuple format.
 pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
 	get_public_from_seed::<AuraId>(seed)
-}
-
-
-fn shell_testnet_genesis(parachain_id: ParaId) -> shell_runtime::GenesisConfig {
-	shell_runtime::GenesisConfig {
-		system: shell_runtime::SystemConfig {
-			code: shell_runtime::WASM_BINARY
-				.expect("WASM binary was not build, please build it!")
-				.to_vec(),
-		},
-		parachain_info: shell_runtime::ParachainInfoConfig { parachain_id },
-		parachain_system: Default::default(),
-	}
-}
-
-pub fn get_shell_chain_spec(id: ParaId) -> ShellChainSpec {
-	ShellChainSpec::from_genesis(
-		"Shell Local Testnet",
-		"shell_local_testnet",
-		ChainType::Local,
-		move || shell_testnet_genesis(id.into()),
-		vec![],
-		None,
-		Some("imbue"),
-		None,
-		Some(imbue_properties()),
-		Extensions { relay_chain: "westend".into(), para_id: id.into() },
-
-	)
 }
 
 pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentChainSpec {
