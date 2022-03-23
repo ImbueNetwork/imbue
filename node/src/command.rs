@@ -18,7 +18,7 @@ use crate::{
 	chain_spec,
 	cli::{Cli, RelayChainCli, Subcommand},
 	service::{
-		new_partial,DevelopmentRuntimeExecutor, ShellRuntimeExecutor,
+		new_partial,DevelopmentRuntimeExecutor,
 	},
 };
 use codec::Encode;
@@ -40,7 +40,6 @@ const DEFAULT_PARA_ID: u32 = 2102;
 
 enum ChainIdentity {
 	Development,
-	Shell,
 }
 
 trait IdentifyChain {
@@ -49,11 +48,7 @@ trait IdentifyChain {
 
 impl IdentifyChain for dyn sc_service::ChainSpec {
 	fn identify(&self) -> ChainIdentity {
-		if self.id().starts_with("shell") {
-			ChainIdentity::Shell
-		} else {
-			ChainIdentity::Development
-		}
+		ChainIdentity::Development
 	}
 }
 
@@ -74,16 +69,12 @@ fn load_spec(
 		"imbue-dev" => Box::new(chain_spec::development_environment_config(para_id,"rococo-dev")),
 		"imbue-rococo" => Box::new(chain_spec::development_environment_config(para_id,"rococo")),
 		"imbue-chachacha" => Box::new(chain_spec::development_environment_config(para_id,"chachacha")),
-		"shell" => Box::new(chain_spec::get_shell_chain_spec(para_id)),
 
 		path => {
 			let chain_spec = chain_spec::DevelopmentChainSpec::from_json_file(path.into())?;
 			match chain_spec.identify() {
 				ChainIdentity::Development => {
 					Box::new(chain_spec::DevelopmentChainSpec::from_json_file(path.into())?)
-				}
-				ChainIdentity::Shell => {
-					Box::new(chain_spec::ShellChainSpec::from_json_file(path.into())?)
 				}
 			}
 		}
@@ -128,7 +119,6 @@ impl SubstrateCli for Cli {
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
 		match spec.identify() {
 			ChainIdentity::Development => &development_runtime::VERSION,
-			ChainIdentity::Shell => &shell_runtime::VERSION,
 		}
 	}
 }
@@ -192,16 +182,6 @@ macro_rules! construct_async_run {
 					let $components = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
 						&$config,
 						crate::service::build_development_import_queue,
-					)?;
-					let task_manager = $components.task_manager;
-					{ $( $code )* }.map(|v| (v, task_manager))
-				})
-			}
-			ChainIdentity::Shell => {
-				runner.async_run(|$config| {
-					let $components = new_partial::<shell_runtime::RuntimeApi, ShellRuntimeExecutor, _>(
-						&$config,
-						crate::service::build_shell_import_queue,
 					)?;
 					let task_manager = $components.task_manager;
 					{ $( $code )* }.map(|v| (v, task_manager))
@@ -324,9 +304,6 @@ pub fn run() -> Result<()> {
 					ChainIdentity::Development => runner.sync_run(|config| {
 						cmd.run::<development_runtime::Block, DevelopmentRuntimeExecutor>(config)
 					}),
-					ChainIdentity::Shell => runner.sync_run(|config| {
-						cmd.run::<shell_runtime::Block, ShellRuntimeExecutor>(config)
-					}),
 				}
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
@@ -394,12 +371,6 @@ pub fn run() -> Result<()> {
 				match config.chain_spec.identify() {
 					ChainIdentity::Development => {
 						crate::service::start_development_node(config, polkadot_config, id)
-							.await
-							.map(|r| r.0)
-							.map_err(Into::into)
-					}
-					ChainIdentity::Shell => {
-						crate::service::start_shell_node(config, polkadot_config, id)
 							.await
 							.map(|r| r.0)
 							.map_err(Into::into)
