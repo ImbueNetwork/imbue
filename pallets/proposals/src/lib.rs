@@ -274,6 +274,10 @@ pub mod pallet {
 
             // Fill in the proposals structure in advance
             for milestone in proposed_milestones {
+                ensure!(
+                    milestone.name.len() <= MAX_STRING_FIELD_LENGTH,
+                    Error::<T>::ParamLimitExceed
+                );
                 milestones.push(Milestone {
                     project_key: project_key,
                     milestone_key: milestone_key,
@@ -416,10 +420,8 @@ pub mod pallet {
             }
 
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
-
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-            let mut project = <Projects<T>>::try_get(project_key).unwrap();
+            let mut project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
             // Find previous contribution by account_id
             // If you have contributed before, then add to that contribution. Otherwise join the list.
@@ -507,10 +509,8 @@ pub mod pallet {
 
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
 
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-
-            let mut project = <Projects<T>>::try_get(project_key).unwrap();
+            let mut project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             let total_contribution_amount: BalanceOf<T> =
                 Self::get_total_project_contributions(project_key);
 
@@ -527,7 +527,6 @@ pub mod pallet {
                 for key in milestone_keys.clone().into_iter() {
                     if milestone.milestone_key == key {
                         let vote_lookup_key = (project_key, key);
-
                         let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
                         if votes_exist {
                             let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
@@ -582,11 +581,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let now = <frame_system::Pallet<T>>::block_number();
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-
-            let project = <Projects<T>>::try_get(project_key).unwrap();
             ensure!(
                 project.initiator == who,
                 Error::<T>::OnlyInitiatorCanSubmitMilestone
@@ -634,10 +631,8 @@ pub mod pallet {
             // round list must be not none
             let round_key = RoundCount::<T>::get();
             ensure!(round_key > 0, Error::<T>::NoActiveRound);
-
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-            let project = <Projects<T>>::try_get(project_key).unwrap();
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
             // Find processing round
             let mut latest_round: Option<RoundOf<T>> = None;
@@ -715,11 +710,8 @@ pub mod pallet {
             milestone_key: MilestoneKey,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-
-            let project = <Projects<T>>::try_get(project_key).unwrap();
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             ensure!(
                 project.initiator == who,
                 Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone
@@ -787,12 +779,8 @@ pub mod pallet {
             project_key: ProjectKey,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-
-            // Only project initator can withdraw
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-
-            let project = <Projects<T>>::try_get(project_key).unwrap();
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             ensure!(who == project.initiator, Error::<T>::InvalidAccount);
             let total_contribution_amount: BalanceOf<T> =
                 Self::get_total_project_contributions(project_key);
