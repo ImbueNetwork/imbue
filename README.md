@@ -7,7 +7,7 @@ This documentation will cover the below explanation
 1) Launching the network: Will explain how you can launch the network locally using the docker configuration with as simple as one step
 2) Going through our proposal pallet (our core pallet), explaining the usage step by step
 
-## 1) Launching the network locally
+## 1) Launching the network locally - Using Docker (Automated)
 
 The default compose file automatically launches a local network containing multiple relaychain validators (polkadot nodes) and collators (Imbue collators) which you can interact with using the [browser-based polkadotjs wallet](https://polkadot.js.org/apps/#/explorer). Additionally, docker can be used to launch a collator to supported testnets.
 Follow these steps to prepare a local development environment :hammer_and_wrench:
@@ -51,6 +51,84 @@ docker logs launch
 docker logs frontend
 ```
 - If successful, ```Accepting connections at http://localhost:3001``` will be displayed in the terminal.
+
+
+## 2) Launching the network locally from source - Manually
+You can manually launch a relaychain and parachain then register the parachain directly from the source code
+
+### Prerequisite for both approaches
+
+- First, setup your [Rust development environment](https://substrate.dev/docs/en/knowledgebase/getting-started). Then,
+
+- Checkout the imbue and polkadot repositories and build the respective binaries:
+
+  - imbue
+
+    ```bash
+    git clone --recursive https://github.com/ImbueNetwork/imbue.git
+    cd imbue
+    git submodule update --recursive --remote
+
+    cargo build --release
+    ```
+
+  - polkadot
+
+    ```bash
+    git clone https://github.com/paritytech/polkadot.git
+
+    cd polkadot
+    cargo build --release
+    
+    
+    If the prerequisites have been completed and we have our binaries as shown [above](#prerequisite-for-both-approaches), follow the steps below to launch the network.
+#### Create local chain spec
+
+```bash
+# Generate westend-local spec file
+./target/release/polkadot build-spec --chain westend-local --raw --disable-default-bootnode > westend-local.json
+```
+
+#### Start relay chain validators
+
+```bash
+# Start Alice
+./target/release/polkadot --alice --validator --base-path cumulus_relay/alice --chain rococo-local.json --port 30444 --ws-port 9944
+
+# Start Bob
+./target/release/polkadot --bob --validator --base-path cumulus_relay/bob --chain rococo-local.json --port 30555 --ws-port 9955
+
+# Start Charlie
+./target/release/polkadot --charlie --validator --base-path cumulus_relay/bob --chain rococo-local.json --port 30666 --ws-port 9966
+
+# Start Dave
+./target/release/polkadot --dave --validator --base-path cumulus_relay/bob --chain rococo-local.json --port 30777 --ws-port 9977
+```
+#### Create genesis & WASM files
+
+```bash
+cd imbue-collator
+
+# Genesis
+./target/release/imbue-collator export-genesis-state --parachain-id 2000 > para-2000-genesis-local
+
+# WASM
+./target/release/imbue-collator export-genesis-wasm > para-wasm-local
+```
+
+#### Start a collator
+
+```bash
+# Customize the --chain flag for the path to your 'rococo-local.json' file
+./target/release/kylin-collator --alice --collator --force-authoring --parachain-id 2000 --base-path cumulus_relay/kylin-collator --port 40333 --ws-port 8844 -- --execution wasm --chain <path to 'rococo-local.json' file> --port 30343 --ws-port 9942
+
+./target/release/kylin-collator --alice --collator --force-authoring --parachain-id 2013 --base-path cumulus_relay/kylin-collator --port 40334 --ws-port 8845 -- --execution wasm --chain <path to 'rococo-local.json' file> --port 30344 --ws-port 9943
+
+```
+
+- You should see your collator running and peering with the already running relay chain validators.  
+- Your parachain will not begin authoring blocks until you have registered it on the relay chain.
+
 
 ### Interacting with your network
 
