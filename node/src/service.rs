@@ -14,29 +14,28 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
+use cumulus_client_cli::CollatorOptions;
 use crate::rpc;
 use cumulus_client_consensus_aura::{
 	AuraConsensus, BuildAuraConsensusParams, SlotProportion,
 };
 use cumulus_client_consensus_common::{
-	 ParachainCandidate, ParachainConsensus,
+	 ParachainConsensus,
 };
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::{
-	relay_chain::v1::{Hash as PHash, PersistedValidationData},
 	ParaId,
 };
-use cumulus_relay_chain_interface::RelayChainInterface;
+use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
+use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
 use polkadot_service::NativeExecutionDispatch;
-
-use cumulus_relay_chain_local::build_relay_chain_interface;
+use cumulus_relay_chain_rpc_interface::RelayChainRPCInterface;
 
 pub use parachains_common::{AccountId, Balance, Block, Hash, Header, Index as Nonce};
 
-use futures::lock::Mutex;
 use sc_client_api::ExecutorProvider;
 use sc_consensus::{
 	import_queue::{ Verifier as VerifierT},
@@ -47,7 +46,7 @@ use sc_network::NetworkService;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::{ApiExt, ConstructRuntimeApi};
-use sp_consensus::{CacheKeyId, SlotData};
+use sp_consensus::{CacheKeyId};
 use sp_consensus_aura::{sr25519::AuthorityId as AuraId, AuraApi};
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::{
@@ -56,7 +55,7 @@ use sp_runtime::{
 };
 use std::{sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
-
+use polkadot_service::CollatorPair;
 /// Native executor instance.
 pub struct DevelopmentRuntimeExecutor;
 
@@ -190,6 +189,26 @@ where
 	Ok(params)
 }
 
+
+async fn build_relay_chain_interface(
+	polkadot_config: Configuration,
+	parachain_config: &Configuration,
+	telemetry_worker_handle: Option<TelemetryWorkerHandle>,
+	task_manager: &mut TaskManager,
+	collator_options: CollatorOptions,
+) -> RelayChainResult<(Arc<(dyn RelayChainInterface + 'static)>, Option<CollatorPair>)> {
+	match collator_options.relay_chain_rpc_url {
+		Some(relay_chain_url) =>
+			Ok((Arc::new(RelayChainRPCInterface::new(relay_chain_url).await?) as Arc<_>, None)),
+		None => build_inprocess_relay_chain(
+			polkadot_config,
+			parachain_config,
+			telemetry_worker_handle,
+			task_manager,
+		),
+	}
+}
+
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
@@ -197,6 +216,7 @@ where
 async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	collator_options: CollatorOptions,
 	id: ParaId,
 	_rpc_ext_builder: RB,
 	build_import_queue: BIQ,
@@ -270,12 +290,18 @@ where
 	let backend = params.backend.clone();
 	let mut task_manager = params.task_manager;
 
-	let (relay_chain_interface, collator_key) =
-		build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
-			.map_err(|e| match e {
-				polkadot_service::Error::Sub(x) => x,
-				s => format!("{}", s).into(),
-			})?;
+	let (relay_chain_interface, collator_key) = build_relay_chain_interface(
+		polkadot_config,
+		&parachain_config,
+		telemetry_worker_handle,
+		&mut task_manager,
+		collator_options.clone(),
+	)
+	.await
+	.map_err(|e| match e {
+		RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
+		s => s.to_string().into(),
+	})?;
 
 	let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
 
@@ -355,7 +381,6 @@ where
 		)?;
 
 		let spawner = task_manager.spawn_handle();
-
 		let params = StartCollatorParams {
 			para_id: id,
 			block_status: client.clone(),
@@ -366,7 +391,7 @@ where
 			spawner,
 			parachain_consensus,
 			import_queue,
-			collator_key,
+			collator_key: collator_key.expect("Command line arguments do not allow this. qed"),
 			relay_chain_slot_duration,
 		};
 
@@ -378,8 +403,9 @@ where
 			task_manager: &mut task_manager,
 			para_id: id,
 			relay_chain_interface,
-			import_queue,
 			relay_chain_slot_duration,
+			import_queue,
+			collator_options
 		};
 
 		start_full_node(params)?;
@@ -427,15 +453,15 @@ pub fn build_development_import_queue(
 		block_import: client.clone(),
 		client: client.clone(),
 		create_inherent_data_providers: move |_, _| async move {
-			let time = sp_timestamp::InherentDataProvider::from_system_time();
+			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
 			let slot =
-				sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
-					*time,
-					slot_duration.slot_duration(),
-				);
+			sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+				*timestamp,
+				slot_duration,
+			);
 
-			Ok((time, slot))
+		Ok((timestamp, slot))
 		},
 		registry: config.prometheus_registry().clone(),
 		can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
@@ -449,6 +475,7 @@ pub fn build_development_import_queue(
 pub async fn start_development_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	collator_options: CollatorOptions,
 	id: ParaId,
 ) -> sc_service::error::Result<(
 	TaskManager,
@@ -463,6 +490,7 @@ pub async fn start_development_node(
 	start_node_impl::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _, _, _>(
 		parachain_config,
 		polkadot_config,
+		collator_options,
 		id,
 		|_| Ok(Default::default()),
 		build_development_import_queue,
@@ -506,20 +534,19 @@ pub async fn start_development_node(
 							&validation_data,
 							id,
 						).await;
-						let time = sp_timestamp::InherentDataProvider::from_system_time();
-
+						let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 						let slot =
-						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
-							*time,
-							slot_duration.slot_duration(),
-						);
+					sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+						*timestamp,
+						slot_duration,
+					);
 
 						let parachain_inherent = parachain_inherent.ok_or_else(|| {
 							Box::<dyn std::error::Error + Send + Sync>::from(
 								"Failed to create parachain inherent",
 							)
 						})?;
-						Ok((time, slot, parachain_inherent))
+						Ok((timestamp, slot, parachain_inherent))
 					}
 				},
 				block_import: client.clone(),
@@ -554,56 +581,6 @@ impl<R> BuildOnAccess<R> {
 				}
 				Self::Initialized(ref mut r) => return r,
 			}
-		}
-	}
-}
-struct WaitForAuraConsensus<Client> {
-	client: Arc<Client>,
-	aura_consensus: Arc<Mutex<BuildOnAccess<Box<dyn ParachainConsensus<Block>>>>>,
-	relay_chain_consensus: Arc<Mutex<Box<dyn ParachainConsensus<Block>>>>,
-}
-
-impl<Client> Clone for WaitForAuraConsensus<Client> {
-	fn clone(&self) -> Self {
-		Self {
-			client: self.client.clone(),
-			aura_consensus: self.aura_consensus.clone(),
-			relay_chain_consensus: self.relay_chain_consensus.clone(),
-		}
-	}
-}
-
-#[async_trait::async_trait]
-impl<Client> ParachainConsensus<Block> for WaitForAuraConsensus<Client>
-where
-	Client: sp_api::ProvideRuntimeApi<Block> + Send + Sync,
-	Client::Api: AuraApi<Block, AuraId>,
-{
-	async fn produce_candidate(
-		&mut self,
-		parent: &Header,
-		relay_parent: PHash,
-		validation_data: &PersistedValidationData,
-	) -> Option<ParachainCandidate<Block>> {
-		let block_id = BlockId::hash(parent.hash());
-		if self
-			.client
-			.runtime_api()
-			.has_api::<dyn AuraApi<Block, AuraId>>(&block_id)
-			.unwrap_or(false)
-		{
-			self.aura_consensus
-				.lock()
-				.await
-				.get_mut()
-				.produce_candidate(parent, relay_parent, validation_data)
-				.await
-		} else {
-			self.relay_chain_consensus
-				.lock()
-				.await
-				.produce_candidate(parent, relay_parent, validation_data)
-				.await
 		}
 	}
 }
