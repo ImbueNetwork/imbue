@@ -16,6 +16,7 @@
 
 use crate::chain_spec;
 use clap::Parser;
+use sc_cli;
 use std::path::PathBuf;
 
 /// Sub-commands supported by the collator.
@@ -53,6 +54,10 @@ pub enum Subcommand {
 	/// The custom benchmark subcommmand benchmarking runtime pallets.
 	#[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
 	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+
+	/// Try some testing command against a specified runtime state.
+	/// #[cfg(feature = "try-runtime")]
+	TryRuntime(try_runtime_cli::TryRuntimeCmd),
 }
 
 
