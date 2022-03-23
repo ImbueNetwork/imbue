@@ -69,7 +69,8 @@ fn load_spec(
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
 		// Rococo
-		"" | "local"   => Box::new(chain_spec::development_local_config(para_id,"rococo-local")),
+		"dev"    => Box::new(chain_spec::development_local_config(para_id,"rococo-local")),
+		""  | "local"   => Box::new(chain_spec::development_local_config(para_id,"rococo-local")),
 		"imbue-dev" => Box::new(chain_spec::development_environment_config(para_id,"rococo-dev")),
 		"imbue-rococo" => Box::new(chain_spec::development_environment_config(para_id,"rococo")),
 		"imbue-chachacha" => Box::new(chain_spec::development_environment_config(para_id,"chachacha")),
@@ -333,7 +334,23 @@ pub fn run() -> Result<()> {
 					.into())
 			}
 		}
+		Some(Subcommand::TryRuntime(cmd)) => {
+			if cfg!(feature = "try-runtime") {
+				let runner = cli.create_runner(cmd)?;
 
+				// grab the task manager.
+				let registry = &runner.config().prometheus_config.as_ref().map(|cfg| &cfg.registry);
+				let task_manager =
+					sc_service::TaskManager::new(runner.config().tokio_handle.clone(), *registry)
+						.map_err(|e| format!("Error: {:?}", e))?;
+
+				runner.async_run(|config| {
+					Ok((cmd.run::<development_runtime::Block, DevelopmentRuntimeExecutor>(config), task_manager))
+				})
+			} else {
+				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
+			}
+		},
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 
