@@ -13,7 +13,6 @@ use sp_core::{sr25519::Signature, Pair, Public, H256};
 use sp_std::str;
 use sp_std::vec::Vec;
 
-
 use sp_runtime::{
     testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
@@ -237,4 +236,3 @@ impl ExtBuilder {
         ext
     }
 }
-
