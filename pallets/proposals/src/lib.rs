@@ -23,8 +23,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+// #[cfg(feature = "runtime-benchmarks")]
+// mod benchmarking;
 
 pub mod weights;
 pub use weights::*;
@@ -237,7 +237,10 @@ pub mod pallet {
             // Validation
             ensure!(name.len() > 0, Error::<T>::ProjectNameIsMandatory);
             ensure!(logo.len() > 0, Error::<T>::LogoIsMandatory);
-            ensure!(description.len() > 0, Error::<T>::ProjectDescriptionIsMandatory);
+            ensure!(
+                description.len() > 0,
+                Error::<T>::ProjectDescriptionIsMandatory
+            );
             ensure!(website.len() > 0, Error::<T>::WebsiteURLIsMandatory);
 
             let mut total_percentage = 0;
