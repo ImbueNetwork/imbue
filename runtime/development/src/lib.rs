@@ -209,9 +209,9 @@ impl pallet_timestamp::Config for Runtime {
 
 parameter_types! {
     pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
-    pub const TransferFee: Balance = 1 * MICRO_IMBU;
-    pub const CreationFee: Balance = 1 * MICRO_IMBU;
-    pub const TransactionByteFee: Balance = 1 * (MICRO_IMBU / 100);
+    pub const TransferFee: Balance = MICRO_IMBU;
+    pub const CreationFee: Balance = MICRO_IMBU;
+    pub const TransactionByteFee: Balance = MICRO_IMBU / 100;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 }
@@ -660,11 +660,11 @@ pub type AdminOrigin =
     EnsureOneOf<EnsureRoot<AccountId>, EnsureXcm<IsMajorityOfBody<RocLocation, UnitBody>>>;
 
 parameter_types! {
-    pub const AssetDeposit: Balance = 1 * IMBU;
-    pub const AssetAccountDeposit: Balance = 1 * IMBU;
+    pub const AssetDeposit: Balance = IMBU;
+    pub const AssetAccountDeposit: Balance = IMBU;
     pub const ApprovalDeposit: Balance = 100 * MILLI_IMBU;
     pub const AssetsStringLimit: u32 = 50;
-    pub const MetadataDepositBase: Balance = 1 * IMBU;
+    pub const MetadataDepositBase: Balance = IMBU;
     pub const MetadataDepositPerByte: Balance = 10 * MILLI_IMBU;
     pub const UnitBody: BodyId = BodyId::Unit;
     pub const MaxAuthorities: u32 = 100_000;
@@ -1041,7 +1041,7 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
             .create_inherent_data()
             .expect("Could not create the timestamp inherent data");
 
-        inherent_data.check_extrinsics(&block)
+        inherent_data.check_extrinsics(block)
     }
 }
 
