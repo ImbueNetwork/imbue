@@ -167,7 +167,7 @@ impl SubstrateCli for RelayChainCli {
     }
 
     fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-        polkadot_cli::Cli::from_iter([RelayChainCli::executable_name().to_string()].iter())
+        polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter())
             .load_spec(id)
     }
 
@@ -238,7 +238,7 @@ pub fn run() -> Result<()> {
             runner.sync_run(|config| {
                 let polkadot_cli = RelayChainCli::new(
                     &config,
-                    [RelayChainCli::executable_name().to_string()]
+                    [RelayChainCli::executable_name()]
                         .iter()
                         .chain(cli.relaychain_args.iter()),
                 );
@@ -264,7 +264,7 @@ pub fn run() -> Result<()> {
                 &params.chain.clone().unwrap_or_default(),
                 params.parachain_id.unwrap_or(10001).into(),
             )?;
-            let state_version = Cli::native_runtime_version(&chain_spec).state_version();
+            let state_version = Cli::native_runtime_version(chain_spec).state_version();
 
             let block: crate::service::Block = generate_genesis_block(
                 &load_spec(
@@ -358,7 +358,7 @@ pub fn run() -> Result<()> {
 
                 let polkadot_cli = RelayChainCli::new(
                     &config,
-                    [RelayChainCli::executable_name().to_string()]
+                    [RelayChainCli::executable_name()]
                         .iter()
                         .chain(cli.relaychain_args.iter()),
                 );

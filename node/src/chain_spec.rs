@@ -88,14 +88,12 @@ pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentCha
         move || {
             development_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
-                vec![
-                    (
-                        get_account_id_from_seed::<sr25519::Public>("Alice"),
-                        get_collator_keys_from_seed("Alice"),
-                    )
-                ],
+                vec![(
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_collator_keys_from_seed("Alice"),
+                )],
                 endowed_accounts_local(),
-                id.into(),
+                id,
             )
         },
         Vec::new(),
@@ -127,7 +125,7 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
                     ),
                 ],
                 endowed_accounts(),
-                id.into(),
+                id,
             )
         },
         Vec::new(),

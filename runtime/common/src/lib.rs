@@ -84,7 +84,7 @@ pub mod currency {
     pub const CENTI_IMBU: Balance = 10 * MILLI_IMBU; // 10−2 	0.01
     pub const IMBU: Balance = 100 * CENTI_IMBU;
 
-    pub const EXISTENTIAL_DEPOSIT: Balance = 1 * MICRO_IMBU;
+    pub const EXISTENTIAL_DEPOSIT: Balance = MICRO_IMBU;
 
     /// Minimum vesting amount, in IMBU/PCHU
     pub const MIN_VESTING: Balance = 10;
