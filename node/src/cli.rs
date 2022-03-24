@@ -16,7 +16,6 @@
 
 use crate::chain_spec;
 use clap::Parser;
-use sc_cli;
 use std::path::PathBuf;
 
 /// Sub-commands supported by the collator.
