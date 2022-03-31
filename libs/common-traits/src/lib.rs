@@ -12,7 +12,6 @@
 // GNU General Public License for more details.
 
 // Ensure we're `no_std` when compiling for WebAssembly.
-#![cfg_attr(not(feature = "std"), no_std)]
 
 //! # A common trait for centrifuge
 //!
@@ -25,6 +24,7 @@
 // Ensure we're `no_std` when compiling for WebAssembly.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+
 use frame_support::dispatch::{Codec, DispatchResultWithPostInfo};
 use frame_support::Parameter;
 use sp_runtime::traits::{
@@ -34,7 +34,7 @@ use sp_runtime::traits::{
 use sp_std::fmt::Debug;
 use sp_std::hash::Hash;
 use sp_std::str::FromStr;
-
+use sp_std::vec::Vec;
 /// A trait used for loosely coupling the claim pallet with a reward mechanism.
 ///
 /// ## Overview
@@ -93,4 +93,16 @@ pub trait Reward {
 /// A trait used to convert a type to BigEndian format
 pub trait BigEndian<T> {
 	fn to_big_endian(&self) -> T;
+}
+
+
+
+/// A trait that Assets or Tokens can implement so that pallets
+/// can easily use the trait `InspectMetadata` with them.
+pub trait TokenMetadata {
+	fn name(&self) -> Vec<u8>;
+
+	fn symbol(&self) -> Vec<u8>;
+
+	fn decimals(&self) -> u8;
 }

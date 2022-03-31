@@ -9,22 +9,21 @@ use codec::{Decode, Encode};
 use frame_support::traits::GenesisBuild;
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency, ExistenceRequirement, ReservableCurrency, WithdrawReasons},
     PalletId,
 };
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::prelude::*;
-
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use sp_std::vec;
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
-
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+// #[cfg(feature = "runtime-benchmarks")]
+// mod benchmarking;
 
 pub mod weights;
 pub use weights::*;
@@ -47,7 +46,7 @@ pub mod pallet {
 
         type PalletId: Get<PalletId>;
 
-        type Currency: ReservableCurrency<Self::AccountId>;
+        type Currency: MultiReservableCurrency<Self::AccountId>;
 
         type MaxProposalsPerRound: Get<u32>;
 
@@ -67,7 +66,7 @@ pub mod pallet {
         _,
         Identity,
         ProjectKey,
-        Project<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+        Project<T::AccountId, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>,
         OptionQuery,
     >;
 
@@ -214,6 +213,7 @@ pub mod pallet {
             website: Vec<u8>,
             proposed_milestones: Vec<ProposedMilestone>,
             required_funds: BalanceOf<T>,
+            currency_id: CurrencyIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -235,10 +235,13 @@ pub mod pallet {
             }
 
             // Validation
-            ensure!(name.len() > 0, Error::<T>::ProjectNameIsMandatory);
-            ensure!(logo.len() > 0, Error::<T>::LogoIsMandatory);
-            ensure!(description.len() > 0, Error::<T>::ProjectDescriptionIsMandatory);
-            ensure!(website.len() > 0, Error::<T>::WebsiteURLIsMandatory);
+            ensure!(!name.is_empty(), Error::<T>::ProjectNameIsMandatory);
+            ensure!(!logo.is_empty(), Error::<T>::LogoIsMandatory);
+            ensure!(
+                !description.is_empty(),
+                Error::<T>::ProjectDescriptionIsMandatory
+            );
+            ensure!(!website.is_empty(), Error::<T>::WebsiteURLIsMandatory);
 
             let mut total_percentage = 0;
             for milestone in proposed_milestones.iter() {
@@ -274,9 +277,13 @@ pub mod pallet {
 
             // Fill in the proposals structure in advance
             for milestone in proposed_milestones {
+                ensure!(
+                    milestone.name.len() <= MAX_STRING_FIELD_LENGTH,
+                    Error::<T>::ParamLimitExceed
+                );
                 milestones.push(Milestone {
-                    project_key: project_key,
-                    milestone_key: milestone_key,
+                    project_key,
+                    milestone_key,
                     name: milestone.name,
                     percentage_to_unlock: milestone.percentage_to_unlock,
                     is_approved: false,
@@ -287,13 +294,14 @@ pub mod pallet {
             // Create a proposal
             let project = Project {
                 name: name.clone(),
-                logo: logo,
-                description: description,
-                website: website,
-                milestones: milestones,
+                logo,
+                description,
+                website,
+                milestones,
                 contributions: Vec::new(),
-                required_funds: required_funds,
-                withdrawn_funds: (0 as u32).into(),
+                required_funds,
+                currency_id,
+                withdrawn_funds: (0_u32).into(),
                 initiator: who.clone(),
                 create_block_number: <frame_system::Pallet<T>>::block_number(),
                 approved_for_funding: false,
@@ -370,7 +378,7 @@ pub mod pallet {
             ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
 
             round.is_canceled = true;
-            <Rounds<T>>::insert(round_key, Some(round.clone()));
+            <Rounds<T>>::insert(round_key, Some(round));
 
             Self::deposit_event(Event::RoundCancelled(count - 1));
 
@@ -383,10 +391,11 @@ pub mod pallet {
         pub fn contribute(
             origin: OriginFor<T>,
             project_key: ProjectKey,
+            currency_id: CurrencyIdOf<T>,
             value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(value > (0 as u32).into(), Error::<T>::InvalidParam);
+            ensure!(value > (0_u32).into(), Error::<T>::InvalidParam);
             let project_count = ProjectCount::<T>::get();
             ensure!(project_key < project_count, Error::<T>::InvalidParam);
             let now = <frame_system::Pallet<T>>::block_number();
@@ -409,17 +418,15 @@ pub mod pallet {
             // Find proposal by key
             let mut project_exists_in_round = false;
             for current_project_key in round.project_keys.iter_mut() {
-                if current_project_key.clone() == project_key {
+                if current_project_key == &project_key {
                     project_exists_in_round = true;
                     break;
                 }
             }
 
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
-
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-            let mut project = <Projects<T>>::try_get(project_key).unwrap();
+            let mut project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
             // Find previous contribution by account_id
             // If you have contributed before, then add to that contribution. Otherwise join the list.
@@ -438,7 +445,7 @@ pub mod pallet {
                 None => {
                     project.contributions.push(ContributionOf::<T> {
                         account_id: who.clone(),
-                        value: value,
+                        value,
                     });
                 }
             }
@@ -452,6 +459,7 @@ pub mod pallet {
                 milestones: project.milestones,
                 contributions: project.contributions.clone(),
                 required_funds: project.required_funds,
+                currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
@@ -463,10 +471,10 @@ pub mod pallet {
 
             // Transfer contribute to proposal account
             <T as Config>::Currency::transfer(
+                currency_id,
                 &who,
                 &Self::project_account_id(project_key),
                 value,
-                ExistenceRequirement::AllowDeath,
             )?;
 
             <Rounds<T>>::insert(round_key - 1, Some(round));
@@ -507,10 +515,8 @@ pub mod pallet {
 
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
 
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-
-            let mut project = <Projects<T>>::try_get(project_key).unwrap();
+            let mut project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             let total_contribution_amount: BalanceOf<T> =
                 Self::get_total_project_contributions(project_key);
 
@@ -527,7 +533,6 @@ pub mod pallet {
                 for key in milestone_keys.clone().into_iter() {
                     if milestone.milestone_key == key {
                         let vote_lookup_key = (project_key, key);
-
                         let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
                         if votes_exist {
                             let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
@@ -551,7 +556,7 @@ pub mod pallet {
                 milestones.push(milestone.clone());
             }
 
-            <Rounds<T>>::insert(round_key, Some(round.clone()));
+            <Rounds<T>>::insert(round_key, Some(round));
 
             // Update project milestones
             let updated_project = Project {
@@ -559,9 +564,10 @@ pub mod pallet {
                 logo: project.logo,
                 description: project.description,
                 website: project.website,
-                milestones: milestones,
+                milestones,
                 contributions: project.contributions,
                 required_funds: project.required_funds,
+                currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
@@ -582,11 +588,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let now = <frame_system::Pallet<T>>::block_number();
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-
-            let project = <Projects<T>>::try_get(project_key).unwrap();
             ensure!(
                 project.initiator == who,
                 Error::<T>::OnlyInitiatorCanSubmitMilestone
@@ -602,8 +606,8 @@ pub mod pallet {
             let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
             let vote = Vote {
-                yay: (0 as u32).into(),
-                nay: (0 as u32).into(),
+                yay: (0_u32).into(),
+                nay: (0_u32).into(),
                 is_approved: false,
             };
             let vote_lookup_key = (project_key, milestone_key);
@@ -634,10 +638,8 @@ pub mod pallet {
             // round list must be not none
             let round_key = RoundCount::<T>::get();
             ensure!(round_key > 0, Error::<T>::NoActiveRound);
-
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-            let project = <Projects<T>>::try_get(project_key).unwrap();
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
             // Find processing round
             let mut latest_round: Option<RoundOf<T>> = None;
@@ -657,11 +659,11 @@ pub mod pallet {
             let round = latest_round.ok_or(Error::<T>::RoundNotProcessing)?;
 
             let mut existing_contributor = false;
-            let mut contribution_amount: BalanceOf<T> = (0 as u32).into();
+            let mut contribution_amount: BalanceOf<T> = (0_u32).into();
 
             // Find previous contribution by account_id
             // If you have contributed before, then add to that contribution. Otherwise join the list.
-            for contribution in project.contributions.clone().iter_mut() {
+            for contribution in project.contributions.iter() {
                 if contribution.account_id == who {
                     existing_contributor = true;
                     contribution_amount = contribution.value;
@@ -715,11 +717,8 @@ pub mod pallet {
             milestone_key: MilestoneKey,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
-
-            let project = <Projects<T>>::try_get(project_key).unwrap();
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             ensure!(
                 project.initiator == who,
                 Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone
@@ -765,9 +764,10 @@ pub mod pallet {
                 logo: project.logo,
                 description: project.description,
                 website: project.website,
-                milestones: milestones,
+                milestones,
                 contributions: project.contributions,
                 required_funds: project.required_funds,
+                currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
@@ -779,74 +779,67 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Step 8 (INITATOR)
-        /// Withdraw
-        #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
-        pub fn withdraw(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-        ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
+        // /// Step 8 (INITATOR)
+        // /// Withdraw
+        // #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+        // pub fn withdraw(
+        //     origin: OriginFor<T>,
+        //     project_key: ProjectKey,
+        // ) -> DispatchResultWithPostInfo {
+        //     let who = ensure_signed(origin)?;
+        //     let project =
+        //         Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        //     ensure!(who == project.initiator, Error::<T>::InvalidAccount);
+        //     let total_contribution_amount: BalanceOf<T> =
+        //         Self::get_total_project_contributions(project_key);
 
-            // Only project initator can withdraw
-            let project_exists = Projects::<T>::contains_key(project_key.clone());
-            ensure!(project_exists, Error::<T>::ProjectDoesNotExist);
+        //     let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
+        //     for milestone in project.milestones.clone() {
+        //         if milestone.is_approved {
+        //             unlocked_funds += (total_contribution_amount
+        //                 * milestone.percentage_to_unlock.into())
+        //                 / 100u32.into();
+        //         }
+        //     }
 
-            let project = <Projects<T>>::try_get(project_key).unwrap();
-            ensure!(who == project.initiator, Error::<T>::InvalidAccount);
-            let total_contribution_amount: BalanceOf<T> =
-                Self::get_total_project_contributions(project_key);
+        //     let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
+        //     ensure!(available_funds > (0_u32).into(), Error::<T>::InvalidParam);
 
-            let mut unlocked_funds: BalanceOf<T> = (0 as u32).into();
-            for milestone in project.milestones.clone() {
-                if milestone.is_approved {
-                    unlocked_funds += (total_contribution_amount
-                        * milestone.percentage_to_unlock.into())
-                        / 100u32.into();
-                }
-            }
+        //     // Distribute contribution amount
+        //     let _ = <T as Config>::Currency::resolve_into_existing(
+        //         &project.initiator,
+        //         <T as Config>::Currency::withdraw(
+        //             &Self::project_account_id(project_key),
+        //             available_funds,
+        //             WithdrawReasons::TRANSFER,
+        //             ExistenceRequirement::AllowDeath,
+        //         )?,
+        //     );
 
-            let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
-            ensure!(
-                available_funds > (0 as u32).into(),
-                Error::<T>::InvalidParam
-            );
+        //     // Update project withdrawn funds
+        //     let updated_project = Project {
+        //         name: project.name,
+        //         logo: project.logo,
+        //         description: project.description,
+        //         website: project.website,
+        //         milestones: project.milestones,
+        //         contributions: project.contributions,
+        //         required_funds: project.required_funds,
+        //         withdrawn_funds: available_funds,
+        //         initiator: project.initiator,
+        //         create_block_number: project.create_block_number,
+        //         approved_for_funding: project.approved_for_funding,
+        //     };
+        //     // Add proposal to list
+        //     <Projects<T>>::insert(project_key, updated_project);
+        //     Self::deposit_event(Event::ProjectFundsWithdrawn(
+        //         who,
+        //         project_key,
+        //         available_funds,
+        //     ));
 
-            // Distribute contribution amount
-            let _ = <T as Config>::Currency::resolve_into_existing(
-                &project.initiator,
-                <T as Config>::Currency::withdraw(
-                    &Self::project_account_id(project_key),
-                    available_funds,
-                    WithdrawReasons::from(WithdrawReasons::TRANSFER),
-                    ExistenceRequirement::AllowDeath,
-                )?,
-            );
-
-            // Update project withdrawn funds
-            let updated_project = Project {
-                name: project.name,
-                logo: project.logo,
-                description: project.description,
-                website: project.website,
-                milestones: project.milestones,
-                contributions: project.contributions,
-                required_funds: project.required_funds,
-                withdrawn_funds: available_funds,
-                initiator: project.initiator,
-                create_block_number: project.create_block_number,
-                approved_for_funding: project.approved_for_funding,
-            };
-            // Add proposal to list
-            <Projects<T>>::insert(project_key, updated_project);
-            Self::deposit_event(Event::ProjectFundsWithdrawn(
-                who,
-                project_key,
-                available_funds,
-            ));
-
-            Ok(().into())
-        }
+        //     Ok(().into())
+        // }
 
         /// Set max proposal count per round
         #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
@@ -873,7 +866,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             ensure!(
-                withdrawal_expiration > (0 as u32).into(),
+                withdrawal_expiration > (0_u32).into(),
                 Error::<T>::InvalidParam
             );
             <WithdrawalExpiration<T>>::put(withdrawal_expiration);
@@ -909,9 +902,9 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Get all projects
-    pub fn get_projects() -> Vec<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>> {
+    pub fn get_projects() -> Vec<Project<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>> {
         let len = ProjectCount::<T>::get();
-        let mut projects: Vec<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>> = Vec::new();
+        let mut projects: Vec<Project<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>> = Vec::new();
         for i in 0..len {
             let project = <Projects<T>>::get(i).unwrap();
             projects.push(project);
@@ -919,20 +912,19 @@ impl<T: Config> Pallet<T> {
         projects
     }
 
-    pub fn get_project(project_key: u32) -> Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber> {
-        let project = <Projects<T>>::try_get(project_key).unwrap();
-        project
+    pub fn get_project(project_key: u32) -> Project<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber> {
+        <Projects<T>>::try_get(project_key).unwrap()
     }
 
     pub fn get_total_project_contributions(project_key: u32) -> BalanceOf<T> {
         let project = <Projects<T>>::try_get(project_key).unwrap();
         // Calculate contribution amount
-        let mut total_contribution_amount: BalanceOf<T> = (0 as u32).into();
+        let mut total_contribution_amount: BalanceOf<T> = (0_u32).into();
         for contribution in project.contributions.iter() {
             let contribution_value = contribution.value;
             total_contribution_amount += contribution_value;
         }
-        return total_contribution_amount;
+        total_contribution_amount
     }
 }
 
@@ -941,7 +933,11 @@ pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+// type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+pub type BalanceOf<T> = <<T as Config>::Currency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+type CurrencyIdOf<T> =
+	<<T as Config>::Currency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+
 type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 
@@ -960,14 +956,12 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
         end: BlockNumber,
         project_keys: Vec<ProjectKey>,
     ) -> Round<BlockNumber> {
-        let proposal_round = Round {
-            start: start,
-            end: end,
-            project_keys: project_keys,
+        Round {
+            start,
+            end,
+            project_keys,
             is_canceled: false,
-        };
-
-        proposal_round
+        }
     }
 }
 // Proposal in round
@@ -1015,13 +1009,14 @@ pub struct Vote<Balance> {
 
 /// Project struct
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Project<AccountId, Balance, BlockNumber> {
+pub struct Project<AccountId, CurrencyId, Balance, BlockNumber> {
     name: Vec<u8>,
     logo: Vec<u8>,
     description: Vec<u8>,
     website: Vec<u8>,
     milestones: Vec<Milestone>,
     contributions: Vec<Contribution<AccountId, Balance>>,
+    currency_id: CurrencyId,
     required_funds: Balance,
     withdrawn_funds: Balance,
     /// The account that will receive the funds if the campaign is successful

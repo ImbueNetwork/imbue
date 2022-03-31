@@ -33,7 +33,6 @@ use cumulus_relay_chain_interface::RelayChainInterface;
 use polkadot_service::NativeExecutionDispatch;
 
 use cumulus_relay_chain_local::build_relay_chain_interface;
-
 pub use parachains_common::{AccountId, Balance, Block, Hash, Header, Index as Nonce};
 
 use futures::lock::Mutex;

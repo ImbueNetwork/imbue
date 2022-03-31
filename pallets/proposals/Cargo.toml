@@ -39,8 +39,17 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false }
+
+
+# Local Dependencies
+common-traits = { path = "../../libs/common-traits", default-features = false }
+common-types = { path = "../../libs/common-types", default-features = false }
+
 
 [dev-dependencies]
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false }
 serde = { version = "1.0.101" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
@@ -72,4 +81,5 @@ std = [
 	"pallet-xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
+	"common-types/std",
 ]
