@@ -7958,6 +7958,7 @@ dependencies = [
  "pallet-balances",
  "pallet-identity",
  "pallet-timestamp",
+ "pallet-transaction-payment",
  "pallet-xcm",
  "parity-scale-codec",
  "scale-info",

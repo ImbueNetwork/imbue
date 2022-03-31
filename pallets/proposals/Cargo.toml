@@ -44,6 +44,7 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "relea
 sp-core = { default-features = false, version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.18" }
 sp-io = { default-features = false, version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.18" }
 sp-runtime = { default-features = false, version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.18" }
+pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 
 [features]
 default = ['std']
