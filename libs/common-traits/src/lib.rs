@@ -11,6 +11,7 @@
 // Ensure we're `no_std` when compiling for WebAssembly.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+
 use frame_support::dispatch::{Codec, DispatchResultWithPostInfo};
 use frame_support::Parameter;
 use sp_runtime::traits::{
@@ -89,4 +90,16 @@ pub trait TokenMetadata {
     fn symbol(&self) -> Vec<u8>;
 
     fn decimals(&self) -> u8;
+}
+
+
+
+/// A trait that Assets or Tokens can implement so that pallets
+/// can easily use the trait `InspectMetadata` with them.
+pub trait TokenMetadata {
+	fn name(&self) -> Vec<u8>;
+
+	fn symbol(&self) -> Vec<u8>;
+
+	fn decimals(&self) -> u8;
 }

@@ -20,10 +20,10 @@ use orml_traits::MultiCurrency;
 use common_types::CurrencyId;
 use crate::setup::{
 	development_account, karura_account, ksm_amount, kusd_amount, native_amount, sibling_account,
-	ALICE, BOB, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
+	usd_amount, ALICE, BOB, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
 };
 use development_runtime::{
-	Balances, KUsdPerSecond, KsmPerSecond, NativePerSecond, Origin, OrmlTokens,
+	Balances, KUsdPerSecond, KsmPerSecond, NativePerSecond, Origin, OrmlTokens, UsdPerSecond,
 	XTokens,
 };
 use common_runtime::Balance;
@@ -81,6 +81,162 @@ fn transfer_native_to_sibling() {
 		assert_eq!(
 			Balances::free_balance(&BOB.into()),
 			bob_initial_balance + transfer_amount - native_fee(),
+		);
+	});
+}
+
+#[test]
+fn transfer_usd_to_sibling() {
+	TestNet::reset();
+
+	let alice_initial_balance = usd_amount(10);
+	let bob_initial_balance = usd_amount(10);
+	let transfer_amount = usd_amount(7);
+
+	Development::execute_with(|| {
+		assert_ok!(OrmlTokens::deposit(
+			CurrencyId::Usd,
+			&ALICE.into(),
+			alice_initial_balance
+		));
+
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &sibling_account()),
+			0
+		);
+	});
+
+	Sibling::execute_with(|| {
+		assert_ok!(OrmlTokens::deposit(
+			CurrencyId::Usd,
+			&BOB.into(),
+			bob_initial_balance
+		));
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &BOB.into()),
+			bob_initial_balance,
+		);
+	});
+
+	Development::execute_with(|| {
+		assert_ok!(XTokens::transfer(
+			Origin::signed(ALICE.into()),
+			CurrencyId::Usd,
+			transfer_amount,
+			Box::new(
+				MultiLocation::new(
+					1,
+					X2(
+						Parachain(PARA_ID_SIBLING),
+						Junction::AccountId32 {
+							network: NetworkId::Any,
+							id: BOB.into(),
+						}
+					)
+				)
+				.into()
+			),
+			8_000_000_000,
+		));
+
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &ALICE.into()),
+			alice_initial_balance - transfer_amount
+		);
+
+		// Verify that the amount transferred is now part of the sibling account here
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &sibling_account()),
+			transfer_amount
+		);
+	});
+
+	Sibling::execute_with(|| {
+		// Verify that BOB now has initial balance + amount transferred - fee
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &BOB.into()),
+			bob_initial_balance + transfer_amount - usd_fee()
+		);
+	});
+}
+
+#[test]
+fn transfer_usd_to_development() {
+	TestNet::reset();
+
+	let alice_initial_balance = usd_amount(10);
+	let bob_initial_balance = usd_amount(10);
+	let transfer_amount = usd_amount(7);
+
+	Sibling::execute_with(|| {
+		assert_ok!(OrmlTokens::deposit(
+			CurrencyId::Usd,
+			&ALICE.into(),
+			alice_initial_balance
+		));
+
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &development_account()),
+			0
+		);
+	});
+
+	Development::execute_with(|| {
+		assert_ok!(OrmlTokens::deposit(
+			CurrencyId::Usd,
+			&BOB.into(),
+			bob_initial_balance
+		));
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &BOB.into()),
+			bob_initial_balance,
+		);
+
+		assert_ok!(OrmlTokens::deposit(
+			CurrencyId::Usd,
+			&sibling_account().into(),
+			bob_initial_balance
+		));
+	});
+
+	Sibling::execute_with(|| {
+		assert_ok!(XTokens::transfer(
+			Origin::signed(ALICE.into()),
+			CurrencyId::Usd,
+			transfer_amount,
+			Box::new(
+				MultiLocation::new(
+					1,
+					X2(
+						Parachain(PARA_ID_DEVELOPMENT),
+						Junction::AccountId32 {
+							network: NetworkId::Any,
+							id: BOB.into(),
+						}
+					)
+				)
+				.into()
+			),
+			8_000_000_000,
+		));
+
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &ALICE.into()),
+			alice_initial_balance - transfer_amount
+		);
+
+		// Verify that the amount transferred is now part of the development account here
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &development_account()),
+			transfer_amount
+		);
+	});
+
+	Development::execute_with(|| {
+		// Verify that BOB now has initial balance + amount transferred - fee
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::Usd, &BOB.into()),
+			bob_initial_balance + transfer_amount - usd_fee()
 		);
 	});
 }
@@ -233,7 +389,7 @@ fn currency_id_convert_imbu() {
 
 	let imbu_location: MultiLocation = MultiLocation::new(
 		1,
-		X2(Parachain(2102), GeneralKey(CurrencyId::Native.encode())),
+		X2(Parachain(2088), GeneralKey(CurrencyId::Native.encode())),
 	);
 
 	assert_eq!(
@@ -257,21 +413,35 @@ fn currency_id_convert_imbu() {
 // The fee associated with transferring Native tokens
 fn native_fee() -> Balance {
 	let (_asset, fee) = NativePerSecond::get();
+	// We divide the fee to align its unit and multiply by 4 as that seems to be the unit of
+	// time the transfers take.
 	// NOTE: it is possible that in different machines this value may differ. We shall see.
-	fee.div_euclid(10_000) * 8
+	fee.div_euclid(10_000) * 4
 }
 
+// The fee associated with transferring Native tokens
+fn usd_fee() -> Balance {
+	let (_asset, fee) = UsdPerSecond::get();
+	// We divide the fee to align its unit and multiply by 4 as that seems to be the unit of
+	// time the transfers take.
+	// NOTE: it is possible that in different machines this value may differ. We shall see.
+	fee.div_euclid(10_000) * 4
+}
 
 // The fee associated with transferring KUSD tokens
 fn kusd_fee() -> Balance {
 	let (_asset, fee) = KUsdPerSecond::get();
+	// We divide the fee to align its unit and multiply by 4 as that seems to be the unit of
+	// time the transfers take.
 	// NOTE: it is possible that in different machines this value may differ. We shall see.
-	fee.div_euclid(10_000) * 8
+	fee.div_euclid(10_000) * 4
 }
 
 // The fee associated with transferring KSM tokens
 fn ksm_fee() -> Balance {
 	let (_asset, fee) = KsmPerSecond::get();
+	// We divide the fee to align its unit and multiply by 4 as that seems to be the unit of
+	// time the transfers take.
 	// NOTE: it is possible that in different machines this value may differ. We shall see.
-	fee.div_euclid(10_000) * 8
+	fee.div_euclid(10_000) * 4
 }

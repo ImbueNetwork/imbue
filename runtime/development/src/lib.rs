@@ -53,8 +53,8 @@ mod weights;
 pub use frame_support::{
     construct_runtime, ensure, match_type, parameter_types,
     traits::{
-        fungibles, Contains,  Currency as PalletCurrency, EnsureOneOf, EqualPrivilegeOnly, Everything, Get, IsInVec, Nothing,
-        OnUnbalanced, Imbalance, Randomness,
+        fungibles, Contains, EnsureOneOf, EqualPrivilegeOnly, Everything, Get, IsInVec, Nothing,
+        Randomness,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -73,10 +73,7 @@ use orml_xcm_support::{
 };
 
 use crate::sp_api_hidden_includes_IMPL_RUNTIME_APIS::sp_api::Encode;
-pub use common_runtime::{
-    fee::WeightToFee,
-    xcm_fees::{ksm_per_second, native_per_second},
-};
+pub use common_runtime::xcm_fees::{ksm_per_second, native_per_second};
 pub use common_types::CurrencyId;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -84,7 +81,10 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
 
-use xcm_executor::XcmExecutor;
+use xcm_executor::{
+    traits::{ShouldExecute},
+    XcmExecutor,
+};
 
 // XCM imports
 pub use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
@@ -219,27 +219,11 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
-
-type NegativeImbalance = <Balances as PalletCurrency<AccountId>>::NegativeImbalance;
-
-pub struct DealWithFees;
-impl OnUnbalanced<NegativeImbalance> for DealWithFees {
-    fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
-        if let Some(mut fees) = fees_then_tips.next() {
-            if let Some(tips) = fees_then_tips.next() {
-                tips.merge_into(&mut fees);
-            }
-            // for fees and tips, 100% to treasury
-            Treasury::on_unbalanced(fees);
-        }
-    }
-}
-
 parameter_types! {
     pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
-    pub const NativeTokenTransferFee: u128 = NATIVE_TOKEN_TRANSFER_FEE;
+    pub const TransferFee: u128 = NATIVE_TOKEN_TRANSFER_FEE;
     pub const CreationFee: Balance = 1 * MICRO_IMBU;
-    pub const TransactionByteFee: Balance = MICRO_IMBU * 10;
+    pub const TransactionByteFee: Balance = 1 * (MICRO_IMBU / 100);
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 }
@@ -248,11 +232,11 @@ impl pallet_balances::Config for Runtime {
     /// The type for recording an account's balance.
     type Balance = Balance;
     /// Handler for the unbalanced reduction when removing a dust account.
-    type DustRemoval = Treasury;
+    type DustRemoval = ();
     /// The overarching event type.
     type Event = Event;
     /// The minimum amount required to keep an account open.
-    type ExistentialDeposit = NativeTokenTransferFee;
+    type ExistentialDeposit = ExistentialDeposit;
     /// The means of storing the balances of an account.
     type AccountStore = System;
     type WeightInfo = weights::pallet_balances::SubstrateWeight<Self>;
@@ -268,7 +252,7 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
-    type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
+    type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees<Runtime>>;
     type TransactionByteFee = TransactionByteFee;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type WeightToFee = WeightToFee;
@@ -360,7 +344,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
     // One XCM operation is 100_000_000 weight - almost certainly a conservative estimate.
-    pub UnitWeightCost: Weight = 200_000_000;
+    pub UnitWeightCost: Weight = 100_000_000;
     // One ROC buys 1 second of weight.
     pub const WeightPrice: (MultiLocation, u128) = (MultiLocation::parent(), IMBU);
     pub const MaxInstructions: u32 = 100;
@@ -386,7 +370,7 @@ impl TakeRevenue for ToTreasury {
             fun: Fungible(_amount),
         } = revenue
         {
-            // TODO(sam): implement this
+            // TODO(nuno): implement this
         }
     }
 }
@@ -397,18 +381,42 @@ parameter_types! {
     pub NativePerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(2102), GeneralKey(CurrencyId::Native.encode())),
+            X2(Parachain(2088), GeneralKey(CurrencyId::Native.encode())),
         ).into(),
         native_per_second(),
     );
 
     pub KUsdPerSecond: (AssetId, u128) = (
+        KUSDAssetId::get(),
+        // KUSD:KSM = 400:1
+        ksm_per_second() * 400
+    );
+    pub KUSDAssetId: AssetId = MultiLocation::new(
+        1,
+        X2(
+            Parachain(parachains::karura::ID),
+            GeneralKey(parachains::karura::KUSD_KEY.to_vec())
+        )
+    ).into();
+
+    // TODO(nuno): consider removing this placeholder 'usd' token
+    pub UsdPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KUSD_KEY.to_vec()))
+            X2(Parachain(2088), GeneralKey(CurrencyId::Usd.encode())),
         ).into(),
-        // kUSD:KSM = 400:1
-        ksm_per_second() * 400
+        //TODO(nuno): we need to fine tune this value later on
+        200_000
+    );
+
+    /// We support this Trader for testing purposes when we spawn a sibling clone development
+    /// parachain with id 3000.
+    pub UsdPerSecondSibling: (AssetId, u128) = (
+        MultiLocation::new(
+            1,
+            X2(Parachain(3000), GeneralKey(CurrencyId::Usd.encode())),
+        ).into(),
+        200_000
     );
 }
 
@@ -419,8 +427,11 @@ pub type Trader = (
     FixedRateOfFungible<KsmPerSecond, ToTreasury>,
     FixedRateOfFungible<NativePerSecond, ToTreasury>,
     FixedRateOfFungible<KUsdPerSecond, ToTreasury>,
+    FixedRateOfFungible<UsdPerSecond, ToTreasury>,
+    FixedRateOfFungible<UsdPerSecondSibling, ToTreasury>,
 );
 
+/// Barrier is a filter-like option controlling what messages are allows to be executed.
 pub type Barrier = (
     TakeWeightCredit,
     AllowTopLevelPaidExecutionFrom<Everything>,
@@ -441,36 +452,45 @@ pub type ImbueAssetTransactor = MultiCurrencyAdapter<
     DepositToAlternative<TreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
+pub struct AllowAnyPaidExecutionFrom<T>(PhantomData<T>);
+impl<T: Contains<MultiLocation>> ShouldExecute for AllowAnyPaidExecutionFrom<T> {
+    fn should_execute<Call>(
+        origin: &MultiLocation,
+        _message: &mut Xcm<Call>,
+        _max_weight: Weight,
+        _weight_credit: &mut Weight,
+    ) -> Result<(), ()> {
+        ensure!(T::contains(origin), ());
+        Ok(())
+    }
+}
+parameter_types! {
+    pub StatemintLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(1000)));
+}
+
 parameter_types! {
     //TODO(Sam): we may need to fine tune this value later on
     pub const BaseXcmWeight: Weight = 100_000_000;
     pub const MaxAssetsForTransfer: usize = 2;
 }
 
-pub type XcmOriginToCallOrigin = (
-    SovereignSignedViaLocation<LocationToAccountId, Origin>,
-    RelayChainAsNative<RelayChainOrigin, Origin>,
-    SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
-    SignedAccountId32AsNative<RelayNetwork, Origin>,
-    XcmPassthrough<Origin>,
-);
-
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
-    type AssetClaims = PolkadotXcm;
-    type AssetTransactor = ImbueAssetTransactor;
-    type AssetTrap = PolkadotXcm;
-    type Barrier = Barrier;
     type Call = Call;
+    type XcmSender = XcmRouter;
+    // How to withdraw and deposit an asset.
+    type AssetTransactor = ImbueAssetTransactor;
+    type OriginConverter = XcmOriginToTransactDispatchOrigin;
     type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
     type IsTeleporter = ();
     type LocationInverter = LocationInverter<Ancestry>;
-    type OriginConverter = XcmOriginToTransactDispatchOrigin;
-    type ResponseHandler = PolkadotXcm;
-    type SubscriptionService = PolkadotXcm;
-    type Trader = Trader;
+    type Barrier = Barrier;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-    type XcmSender = XcmRouter;
+    type Trader = Trader;
+    type ResponseHandler = PolkadotXcm;
+    type AssetTrap = PolkadotXcm;
+    type AssetClaims = PolkadotXcm;
+    type SubscriptionService = PolkadotXcm;
 }
 
 parameter_types! {
@@ -499,7 +519,7 @@ impl pallet_xcm::Config for Runtime {
     type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type XcmExecuteFilter = Nothing;
     type XcmExecutor = XcmExecutor<XcmConfig>;
-    type XcmTeleportFilter = Nothing;
+    type XcmTeleportFilter = Everything;
     type XcmReserveTransferFilter = Everything;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
     type LocationInverter = LocationInverter<Ancestry>;
@@ -606,26 +626,6 @@ impl pallet_scheduler::Config for Runtime {
     type NoPreimagePostponement = NoPreimagePostponement;
 }
 
-
-parameter_types! {
-	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
-	pub DepositBase: Balance = deposit(1, 88);
-	// Additional storage item size of 32 bytes.
-	pub DepositFactor: Balance = deposit(0, 32);
-	pub const MaxSignatories: u16 = 100;
-}
-
-impl pallet_multisig::Config for Runtime {
-	type Call = Call;
-	type Currency = Balances;
-	type DepositBase = DepositBase;
-	type DepositFactor = DepositFactor;
-	type Event = Event;
-	type MaxSignatories = MaxSignatories;
-	type WeightInfo = ();
-}
-
-
 parameter_types! {
     /// The maximum amount of time (in blocks) for council members to vote on motions.
     /// Motions may end in fewer blocks if enough votes are cast to determine the result.
@@ -644,10 +644,10 @@ parameter_types! {
     pub const TechCommitteeMaxMembers: u32 = 100;
 }
 
-type CouncilCollective = pallet_collective::Instance1;
-type TechnicalCollective = pallet_collective::Instance2;
+type CouncilInstance = pallet_collective::Instance1;
+type TechCommitteeInstance = pallet_collective::Instance2;
 
-impl pallet_collective::Config<CouncilCollective> for Runtime {
+impl pallet_collective::Config<CouncilInstance> for Runtime {
     type Origin = Origin;
     type Event = Event;
     type Proposal = Call;
@@ -658,7 +658,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_collective::Config<TechnicalCollective> for Runtime {
+impl pallet_collective::Config<TechCommitteeInstance> for Runtime {
     type Origin = Origin;
     type Event = Event;
     type Proposal = Call;
@@ -668,90 +668,6 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
-
-
-impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
-	type AddOrigin = MoreThanHalfCouncil;
-	type Event = Event;
-	type MaxMembers = CouncilMaxMembers;
-	type MembershipChanged = Council;
-	type MembershipInitialized = Council;
-	type PrimeOrigin = MoreThanHalfCouncil;
-	type RemoveOrigin = MoreThanHalfCouncil;
-	type ResetOrigin = MoreThanHalfCouncil;
-	type SwapOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
-}
-
-impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
-	type AddOrigin = MoreThanHalfCouncil;
-	type Event = Event;
-	type MaxMembers = TechCommitteeMaxMembers;
-	type MembershipChanged = TechnicalCommittee;
-	type MembershipInitialized = TechnicalCommittee;
-	type PrimeOrigin = MoreThanHalfCouncil;
-	type RemoveOrigin = MoreThanHalfCouncil;
-	type ResetOrigin = MoreThanHalfCouncil;
-	type SwapOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
-	pub const VotingPeriod: BlockNumber = 7 * DAYS;
-	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
-	pub MinimumDeposit: Balance = 100 * dollar(CurrencyId::Native);
-	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
-	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
-	pub const InstantAllowed: bool = true;
-	pub const MaxVotes: u32 = 100;
-	pub const MaxProposals: u32 = 100;
-}
-
-impl pallet_democracy::Config for Runtime {
-	type BlacklistOrigin = EnsureRoot<AccountId>;
-	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
-	// Root must agree.
-	type CancelProposalOrigin = HalfOfCouncil;
-
-	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-	type CancellationOrigin = HalfOfCouncil;
-	type CooloffPeriod = CooloffPeriod;
-	type Currency = Balances;
-	type EnactmentPeriod = EnactmentPeriod;
-	type Event = Event;
-	/// A unanimous council can have the next scheduled referendum be a straight default-carries
-	/// (NTB) vote.
-	type ExternalDefaultOrigin = HalfOfCouncil;
-	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
-	type ExternalMajorityOrigin = HalfOfCouncil;
-	/// A straight majority of the council can decide what their next motion is.
-	type ExternalOrigin = HalfOfCouncil;
-	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
-	/// be tabled immediately and with a shorter voting/enactment period.
-	type FastTrackOrigin = HalfOfCouncil;
-	type FastTrackVotingPeriod = FastTrackVotingPeriod;
-	type InstantAllowed = InstantAllowed;
-	type InstantOrigin = HalfOfCouncil;
-	type LaunchPeriod = LaunchPeriod;
-	type MaxProposals = MaxProposals;
-	type MaxVotes = MaxVotes;
-	type MinimumDeposit = MinimumDeposit;
-	type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
-	type PalletsOrigin = OriginCaller;
-	type PreimageByteDeposit = PreimageByteDeposit;
-	type Proposal = Call;
-	type Scheduler = Scheduler;
-	type Slash = Treasury;
-	// Any single technical committee member may veto a coming council proposal, however they can
-	// only do it once and it lasts only for the cool-off period.
-	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
-	type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
-	type VotingPeriod = VotingPeriod;
-	type WeightInfo = ();
-}
-
-
 
 parameter_types! {
     pub const UncleGenerations: BlockNumber = 5;
@@ -849,7 +765,8 @@ where
     type Extrinsic = UncheckedExtrinsic;
 }
 
-
+/// The council
+type CouncilCollective = pallet_collective::Instance1;
 
 /// All council members must vote yes to create this origin.
 // type AllOfCouncil = EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
@@ -857,12 +774,6 @@ where
 type HalfOfCouncil = EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
 /// A majority of the Unit body from Rococo over XCM is our required administration origin.
 pub type AdminOrigin = EnsureRootOr<HalfOfCouncil>;
-pub type MoreThanHalfCouncil = EnsureRootOr<HalfOfCouncil>;
-
-// pub type MoreThanHalfCouncil = EnsureOneOf<
-// 	EnsureRoot<AccountId>,
-// 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
-// >;
 
 // Parameterize collator selection pallet
 parameter_types! {
@@ -1056,7 +967,7 @@ impl pallet_treasury::Config for Runtime {
 impl proposals::Config for Runtime {
     type Event = Event;
     type PalletId = ProposalsPalletId;
-    type MultiCurrency = Currencies;
+    type Currency = Currencies;
     type MaxProposalsPerRound = MaxProposalsPerRound;
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
     type WeightInfo = ();
@@ -1076,17 +987,10 @@ construct_runtime! {
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
-        Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>},
-
-        CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
-
 
         CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>},
         Authorship: pallet_authorship::{Pallet, Call, Storage},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-
-        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} ,
 
         ParachainSystem: cumulus_pallet_parachain_system::{	Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,} = 20,
         ParachainInfo: parachain_info::{Pallet, Storage, Config} = 21,
@@ -1143,21 +1047,6 @@ pub type Executive = frame_executive::Executive<
     AllPalletsWithSystem,
     (),
 >;
-
-#[cfg(feature = "runtime-benchmarks")]
-#[macro_use]
-extern crate frame_benchmarking;
-
-#[cfg(feature = "runtime-benchmarks")]
-mod benches {
-    define_benchmarks!(
-        [frame_benchmarking, BaselineBench::<Runtime>]
-        [frame_system, SystemBench::<Runtime>]
-        [pallet_balances, Balances]
-        [pallet_timestamp, Timestamp]
-        [proposals, ImbueProposals]
-    );
-}
 
 impl_runtime_apis! {
     impl sp_api::Core<Block> for Runtime {
@@ -1264,61 +1153,6 @@ impl_runtime_apis! {
             ParachainSystem::collect_collation_info(header)
         }
     }
-
-
-    #[cfg(feature = "runtime-benchmarks")]
-    impl frame_benchmarking::Benchmark<Block> for Runtime {
-        fn benchmark_metadata(extra: bool) -> (
-            Vec<frame_benchmarking::BenchmarkList>,
-            Vec<frame_support::traits::StorageInfo>,
-        ) {
-            use frame_benchmarking::{baseline, Benchmarking, BenchmarkList};
-            use frame_support::traits::StorageInfoTrait;
-            use frame_system_benchmarking::Pallet as SystemBench;
-            use baseline::Pallet as BaselineBench;
-
-            let mut list = Vec::<BenchmarkList>::new();
-            list_benchmarks!(list, extra);
-
-            let storage_info = AllPalletsWithSystem::storage_info();
-
-            return (list, storage_info)
-        }
-
-        fn dispatch_benchmark(
-            config: frame_benchmarking::BenchmarkConfig
-        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
-
-            use frame_system_benchmarking::Pallet as SystemBench;
-            use baseline::Pallet as BaselineBench;
-
-            impl frame_system_benchmarking::Config for Runtime {}
-            impl baseline::Config for Runtime {}
-
-            let whitelist: Vec<TrackedStorageKey> = vec![
-                // Block Number
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
-                // Total Issuance
-                hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
-                // Execution Phase
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
-                // Event Count
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
-                // System Events
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
-            ];
-
-            let mut batches = Vec::<BenchmarkBatch>::new();
-            let params = (&config, &whitelist);
-            add_benchmarks!(params, batches);
-
-            Ok(batches)
-        }
-    }
-
-
-
 }
 
 struct CheckInherents;
@@ -1372,8 +1206,9 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
             } => {
                 match para_id {
                     // Local testing para ids
-                    2102 | 3000 => match key[..] {
+                    2088 | 3000 => match key[..] {
                         [0] => Some(CurrencyId::Native),
+                        [1] => Some(CurrencyId::Usd),
                         _ => None,
                     },
 
