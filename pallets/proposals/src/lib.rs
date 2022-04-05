@@ -141,16 +141,15 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        ProjectCreated(T::AccountId, Vec<u8>, ProjectKey),
+        ProjectCreated(T::AccountId, Vec<u8>, ProjectKey, BalanceOf<T>, CurrencyIdOf<T>),
         FundingRoundCreated(RoundKey),
         VotingRoundCreated(RoundKey),
         MilestoneSubmitted(ProjectKey, MilestoneKey),
-        ContributeSucceeded(T::AccountId, ProjectKey, BalanceOf<T>, T::BlockNumber),
+        ContributeSucceeded(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyIdOf<T>, T::BlockNumber),
         ProjectCancelled(RoundKey, ProjectKey),
-        ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>),
+        ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyIdOf<T>),
         ProjectApproved(RoundKey, ProjectKey),
         RoundCancelled(RoundKey),
-        FundSucceed(),
         VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
         MilestoneApproved(ProjectKey, MilestoneKey, T::BlockNumber),
     }
@@ -311,7 +310,7 @@ pub mod pallet {
             <Projects<T>>::insert(project_key, project);
             ProjectCount::<T>::put(next_project_key);
 
-            Self::deposit_event(Event::ProjectCreated(who, name, project_key));
+            Self::deposit_event(Event::ProjectCreated(who, name, project_key, required_funds, currency_id ));
 
             Ok(().into())
         }
@@ -479,7 +478,7 @@ pub mod pallet {
 
             <Rounds<T>>::insert(round_key - 1, Some(round));
 
-            Self::deposit_event(Event::ContributeSucceeded(who, project_key, value, now));
+            Self::deposit_event(Event::ContributeSucceeded(who, project_key, value, currency_id, now));
 
             Ok(().into())
         }
@@ -779,67 +778,65 @@ pub mod pallet {
             Ok(().into())
         }
 
-        // /// Step 8 (INITATOR)
-        // /// Withdraw
-        // #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
-        // pub fn withdraw(
-        //     origin: OriginFor<T>,
-        //     project_key: ProjectKey,
-        // ) -> DispatchResultWithPostInfo {
-        //     let who = ensure_signed(origin)?;
-        //     let project =
-        //         Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        //     ensure!(who == project.initiator, Error::<T>::InvalidAccount);
-        //     let total_contribution_amount: BalanceOf<T> =
-        //         Self::get_total_project_contributions(project_key);
+        /// Step 8 (INITATOR)
+        /// Withdraw
+        #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+        pub fn withdraw(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            ensure!(who == project.initiator, Error::<T>::InvalidAccount);
+            let total_contribution_amount: BalanceOf<T> =
+                Self::get_total_project_contributions(project_key);
 
-        //     let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
-        //     for milestone in project.milestones.clone() {
-        //         if milestone.is_approved {
-        //             unlocked_funds += (total_contribution_amount
-        //                 * milestone.percentage_to_unlock.into())
-        //                 / 100u32.into();
-        //         }
-        //     }
+            let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
+            for milestone in project.milestones.clone() {
+                if milestone.is_approved {
+                    unlocked_funds += (total_contribution_amount
+                        * milestone.percentage_to_unlock.into())
+                        / 100u32.into();
+                }
+            }
 
-        //     let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
-        //     ensure!(available_funds > (0_u32).into(), Error::<T>::InvalidParam);
+            let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
+            ensure!(available_funds > (0_u32).into(), Error::<T>::InvalidParam);
 
-        //     // Distribute contribution amount
-        //     let _ = <T as Config>::Currency::resolve_into_existing(
-        //         &project.initiator,
-        //         <T as Config>::Currency::withdraw(
-        //             &Self::project_account_id(project_key),
-        //             available_funds,
-        //             WithdrawReasons::TRANSFER,
-        //             ExistenceRequirement::AllowDeath,
-        //         )?,
-        //     );
+            // Distribute contribution amount
+            <T as Config>::Currency::withdraw(
+                    project.currency_id,
+                    &Self::project_account_id(project_key),
+                    available_funds,
+                )?;
 
-        //     // Update project withdrawn funds
-        //     let updated_project = Project {
-        //         name: project.name,
-        //         logo: project.logo,
-        //         description: project.description,
-        //         website: project.website,
-        //         milestones: project.milestones,
-        //         contributions: project.contributions,
-        //         required_funds: project.required_funds,
-        //         withdrawn_funds: available_funds,
-        //         initiator: project.initiator,
-        //         create_block_number: project.create_block_number,
-        //         approved_for_funding: project.approved_for_funding,
-        //     };
-        //     // Add proposal to list
-        //     <Projects<T>>::insert(project_key, updated_project);
-        //     Self::deposit_event(Event::ProjectFundsWithdrawn(
-        //         who,
-        //         project_key,
-        //         available_funds,
-        //     ));
+            // Update project withdrawn funds
+            let updated_project = Project {
+                name: project.name,
+                logo: project.logo,
+                description: project.description,
+                website: project.website,
+                milestones: project.milestones,
+                contributions: project.contributions,
+                required_funds: project.required_funds,
+                currency_id: project.currency_id,
+                withdrawn_funds: available_funds,
+                initiator: project.initiator,
+                create_block_number: project.create_block_number,
+                approved_for_funding: project.approved_for_funding,
+            };
+            // Add proposal to list
+            <Projects<T>>::insert(project_key, updated_project);
+            Self::deposit_event(Event::ProjectFundsWithdrawn(
+                who,
+                project_key,
+                available_funds,
+                project.currency_id
+            ));
 
-        //     Ok(().into())
-        // }
+            Ok(().into())
+        }
 
         /// Set max proposal count per round
         #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
