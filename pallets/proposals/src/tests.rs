@@ -337,7 +337,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
         //contribute success event
         let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events().pop()
             .expect("Expected at least one EventRecord to be found").event;
-        assert_eq!(exp_contributedtoproject_event, mock::Event::from(proposals::Event::ContributeSucceeded(alice, project_key, contribution_amount, 4)));
+        assert_eq!(exp_contributedtoproject_event, mock::Event::from(proposals::Event::ContributeSucceeded(alice, project_key, contribution_amount,CurrencyId::Native, 4)));
     });
 }
 
@@ -661,11 +661,11 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
                         0));
 
 
-        // assert_ok!(<proposals::Pallet<Test>>::withdraw(Origin::signed(alice), project_index));
+        assert_ok!(<proposals::Pallet<Test>>::withdraw(Origin::signed(alice), project_index));
 
-        // let latest_event = <frame_system::Pallet<Test>>::events().pop()
-        //     .expect("Expected at least one EventRecord to be found").event;
-        // assert_eq!(latest_event, mock::Event::from(proposals::Event::ProjectFundsWithdrawn(alice, 0, 100)));
+        let latest_event = <frame_system::Pallet<Test>>::events().pop()
+            .expect("Expected at least one EventRecord to be found").event;
+        assert_eq!(latest_event, mock::Event::from(proposals::Event::ProjectFundsWithdrawn(alice, 0, 100, CurrencyId::Native)));
     });
 }
 
@@ -682,13 +682,13 @@ fn test_withdraw_from_non_initiator_account() {
 
         let project_index = 0;
 
-        // assert_noop!(Proposals::withdraw(Origin::signed(bob), project_index), DispatchErrorWithPostInfo {
-        //     post_info: PostDispatchInfo {
-        //         actual_weight: None,
-        //         pays_fee: Pays::Yes,
-        //     },
-        //     error: Error::<Test>::InvalidAccount.into(),
-        // });
+        assert_noop!(Proposals::withdraw(Origin::signed(bob), project_index), DispatchErrorWithPostInfo {
+            post_info: PostDispatchInfo {
+                actual_weight: None,
+                pays_fee: Pays::Yes,
+            },
+            error: Error::<Test>::InvalidAccount.into(),
+        });
     });
 }
 
