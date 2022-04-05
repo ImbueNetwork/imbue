@@ -204,7 +204,7 @@ parameter_types! {
 impl proposals::Config for Test {
     type Event = Event;
     type PalletId = ProposalsPalletId;
-    type Currency = Currencies;
+    type MultiCurrency = Currencies;
     type WeightInfo = ();
     type MaxProposalsPerRound = ConstU32<4>;
     // Adding 2 weeks as th expiration time
@@ -270,4 +270,9 @@ impl ExtBuilder {
         ext.execute_with(|| System::set_block_number(1));
         ext
     }
+}
+
+// Build genesis storage according to the mock runtime.
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
