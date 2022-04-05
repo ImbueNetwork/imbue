@@ -16,27 +16,23 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
-
-pub use constants::*;
-pub use types::*;
-pub use impls::*;
 pub use common_traits::TokenMetadata;
+pub use constants::*;
+pub use impls::*;
+pub use types::*;
 mod impls;
-
-
 
 /// Common types for all runtimes
 pub mod types {
     use frame_support::traits::EnsureOneOf;
     use frame_system::EnsureRoot;
 
-    use sp_runtime::traits::{BlakeTwo256, IdentifyAccount, Verify};
-    use sp_std::vec::Vec;
     use scale_info::TypeInfo;
     #[cfg(feature = "std")]
-	use serde::{Deserialize, Serialize};
-    use sp_core::{U256};
+    use serde::{Deserialize, Serialize};
+    use sp_core::U256;
+    use sp_runtime::traits::{BlakeTwo256, IdentifyAccount, Verify};
+    use sp_std::vec::Vec;
     pub type EnsureRootOr<O> = EnsureOneOf<EnsureRoot<AccountId>, O>;
     pub use common_types::CurrencyId;
 
@@ -92,24 +88,23 @@ pub mod types {
 
     pub struct TokenId(pub U256);
 
-    	/// A representation of InstanceId for Uniques.
-	#[derive(
-		codec::Encode,
-		codec::Decode,
-		Default,
-		Copy,
-		Clone,
-		PartialEq,
-		Eq,
-		codec::CompactAs,
-		Debug,
-		codec::MaxEncodedLen,
-		TypeInfo,
-	)]
-	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-	pub struct InstanceId(pub u128);
+    /// A representation of InstanceId for Uniques.
+    #[derive(
+        codec::Encode,
+        codec::Decode,
+        Default,
+        Copy,
+        Clone,
+        PartialEq,
+        Eq,
+        codec::CompactAs,
+        Debug,
+        codec::MaxEncodedLen,
+        TypeInfo,
+    )]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+    pub struct InstanceId(pub u128);
 }
-
 
 pub mod currency {
     use super::types::Balance;
@@ -168,49 +163,49 @@ pub mod constants {
 }
 
 pub mod parachains {
-	pub mod karura {
-		pub const ID: u32 = 2000;
-		pub const KUSD_KEY: &[u8] = &[0, 129];
-	}
+    pub mod karura {
+        pub const ID: u32 = 2000;
+        pub const KUSD_KEY: &[u8] = &[0, 129];
+    }
 }
 
 pub mod xcm_fees {
-    pub use common_types::CurrencyId;
     pub use common_traits::TokenMetadata;
+    pub use common_types::CurrencyId;
 
-	use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND};
+    use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND};
 
-	use super::types::Balance;
-	use super::currency::CENTI_IMBU as CENTI_CURRENCY;
+    use super::currency::CENTI_IMBU as CENTI_CURRENCY;
+    use super::types::Balance;
 
-	pub fn base_tx_in_air() -> Balance {
-		CENTI_CURRENCY / 10
-	}
+    pub fn base_tx_in_air() -> Balance {
+        CENTI_CURRENCY / 10
+    }
 
-	// The fee cost per second for transferring the native token in cents.
-	pub fn native_per_second() -> Balance {
-		base_tx_per_second(CurrencyId::Native)
-	}
+    // The fee cost per second for transferring the native token in cents.
+    pub fn native_per_second() -> Balance {
+        base_tx_per_second(CurrencyId::Native)
+    }
 
-	pub fn ksm_per_second() -> Balance {
-		base_tx_per_second(CurrencyId::KSM) / 50
-	}
+    pub fn ksm_per_second() -> Balance {
+        base_tx_per_second(CurrencyId::KSM) / 50
+    }
 
-	fn base_tx_per_second(currency: CurrencyId) -> Balance {
-		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
-		let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
-		base_tx_per_second * base_tx(currency)
-	}
+    fn base_tx_per_second(currency: CurrencyId) -> Balance {
+        let base_weight = Balance::from(ExtrinsicBaseWeight::get());
+        let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+        base_tx_per_second * base_tx(currency)
+    }
 
-	fn base_tx(currency: CurrencyId) -> Balance {
-		cent(currency) / 10
-	}
+    fn base_tx(currency: CurrencyId) -> Balance {
+        cent(currency) / 10
+    }
 
-	pub fn dollar(currency_id: CurrencyId) -> Balance {
-		10u128.saturating_pow(currency_id.decimals().into())
-	}
+    pub fn dollar(currency_id: CurrencyId) -> Balance {
+        10u128.saturating_pow(currency_id.decimals().into())
+    }
 
-	pub fn cent(currency_id: CurrencyId) -> Balance {
-		dollar(currency_id) / 100
-	}
+    pub fn cent(currency_id: CurrencyId) -> Balance {
+        dollar(currency_id) / 100
+    }
 }

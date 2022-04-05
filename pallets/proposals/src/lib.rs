@@ -7,15 +7,12 @@ use codec::{Decode, Encode};
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
-use frame_support::{
-    pallet_prelude::*,
-    PalletId,
-};
+use frame_support::{pallet_prelude::*, PalletId};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::prelude::*;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_std::vec;
 #[cfg(test)]
 mod mock;
@@ -141,11 +138,23 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        ProjectCreated(T::AccountId, Vec<u8>, ProjectKey, BalanceOf<T>, CurrencyIdOf<T>),
+        ProjectCreated(
+            T::AccountId,
+            Vec<u8>,
+            ProjectKey,
+            BalanceOf<T>,
+            CurrencyIdOf<T>,
+        ),
         FundingRoundCreated(RoundKey),
         VotingRoundCreated(RoundKey),
         MilestoneSubmitted(ProjectKey, MilestoneKey),
-        ContributeSucceeded(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyIdOf<T>, T::BlockNumber),
+        ContributeSucceeded(
+            T::AccountId,
+            ProjectKey,
+            BalanceOf<T>,
+            CurrencyIdOf<T>,
+            T::BlockNumber,
+        ),
         ProjectCancelled(RoundKey, ProjectKey),
         ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyIdOf<T>),
         ProjectApproved(RoundKey, ProjectKey),
@@ -310,7 +319,13 @@ pub mod pallet {
             <Projects<T>>::insert(project_key, project);
             ProjectCount::<T>::put(next_project_key);
 
-            Self::deposit_event(Event::ProjectCreated(who, name, project_key, required_funds, currency_id ));
+            Self::deposit_event(Event::ProjectCreated(
+                who,
+                name,
+                project_key,
+                required_funds,
+                currency_id,
+            ));
 
             Ok(().into())
         }
@@ -478,7 +493,13 @@ pub mod pallet {
 
             <Rounds<T>>::insert(round_key - 1, Some(round));
 
-            Self::deposit_event(Event::ContributeSucceeded(who, project_key, value, currency_id, now));
+            Self::deposit_event(Event::ContributeSucceeded(
+                who,
+                project_key,
+                value,
+                currency_id,
+                now,
+            ));
 
             Ok(().into())
         }
@@ -806,10 +827,10 @@ pub mod pallet {
 
             // Distribute contribution amount
             <T as Config>::Currency::withdraw(
-                    project.currency_id,
-                    &Self::project_account_id(project_key),
-                    available_funds,
-                )?;
+                project.currency_id,
+                &Self::project_account_id(project_key),
+                available_funds,
+            )?;
 
             // Update project withdrawn funds
             let updated_project = Project {
@@ -832,7 +853,7 @@ pub mod pallet {
                 who,
                 project_key,
                 available_funds,
-                project.currency_id
+                project.currency_id,
             ));
 
             Ok(().into())
@@ -899,9 +920,12 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Get all projects
-    pub fn get_projects() -> Vec<Project<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>> {
+    pub fn get_projects(
+    ) -> Vec<Project<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>> {
         let len = ProjectCount::<T>::get();
-        let mut projects: Vec<Project<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>> = Vec::new();
+        let mut projects: Vec<
+            Project<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber>,
+        > = Vec::new();
         for i in 0..len {
             let project = <Projects<T>>::get(i).unwrap();
             projects.push(project);
@@ -909,7 +933,9 @@ impl<T: Config> Pallet<T> {
         projects
     }
 
-    pub fn get_project(project_key: u32) -> Project<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber> {
+    pub fn get_project(
+        project_key: u32,
+    ) -> Project<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber> {
         <Projects<T>>::try_get(project_key).unwrap()
     }
 
@@ -931,9 +957,10 @@ pub type MilestoneKey = u32;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 // type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
-pub type BalanceOf<T> = <<T as Config>::Currency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+pub type BalanceOf<T> =
+    <<T as Config>::Currency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 type CurrencyIdOf<T> =
-	<<T as Config>::Currency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+    <<T as Config>::Currency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 
 type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
