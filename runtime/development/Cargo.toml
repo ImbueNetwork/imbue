@@ -34,10 +34,8 @@ sp-version = { git = "https://github.com/paritytech/substrate", branch = "polkad
 
 ## Substrate FRAME Dependencies
 frame-executive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
-frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, optional = true }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 
 ## Substrate Pallet Dependencies
@@ -89,6 +87,11 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 
+# Used for runtime benchmarking
+frame-benchmarking = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", optional = true }
+frame-system-benchmarking = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.17", optional = true }
+hex-literal = { version = "0.3.4", optional = true }
+
 
 # Local Dependencies
 common-runtime = { path = "../common", default-features = false }
@@ -106,20 +109,7 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", bran
 
 [features]
 default = ['std']
-runtime-benchmarks = [
-	'sp-runtime/runtime-benchmarks',
-	'frame-benchmarking',
-	'frame-support/runtime-benchmarks',
-	'frame-system-benchmarking',
-	'frame-system/runtime-benchmarks',
-	'pallet-balances/runtime-benchmarks',
-	'pallet-collective/runtime-benchmarks',
-	'pallet-identity/runtime-benchmarks',
-	'pallet-timestamp/runtime-benchmarks',
-	'pallet-xcm/runtime-benchmarks',
-	'xcm-builder/runtime-benchmarks',
-	'xcm/runtime-benchmarks',
-]
+
 std = [
 	'codec/std',
 	'scale-info/std',
@@ -171,6 +161,23 @@ std = [
 	'cumulus-primitives-utility/std',
 	'common-traits/std',
 	'common-types/std',
+]
+
+runtime-benchmarks = [
+	'sp-runtime/runtime-benchmarks',
+	'frame-benchmarking',
+	'frame-support/runtime-benchmarks',
+	"hex-literal",
+	'frame-system-benchmarking',
+	'frame-system/runtime-benchmarks',
+	'proposals/runtime-benchmarks',
+	'pallet-balances/runtime-benchmarks',
+	'pallet-collective/runtime-benchmarks',
+	'pallet-identity/runtime-benchmarks',
+	'pallet-timestamp/runtime-benchmarks',
+	'pallet-xcm/runtime-benchmarks',
+	'xcm-builder/runtime-benchmarks',
+	'xcm/runtime-benchmarks',
 ]
 
 # A feature that should be enabled when the runtime should be build for on-chain
