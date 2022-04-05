@@ -1,4 +1,3 @@
-
 use super::*;
 use crate as proposals;
 use frame_support::{
@@ -14,12 +13,10 @@ use sp_core::{sr25519::Signature, Pair, Public, H256};
 use sp_std::str;
 use sp_std::vec::Vec;
 
-
 use sp_runtime::{
     testing::{Header, TestXt},
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
 };
-
 
 use common_types::CurrencyId;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -43,21 +40,19 @@ where
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
+    pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
 }
-
 
 pub type AdaptedBasicCurrency =
-	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+    orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
 impl orml_currencies::Config for Test {
-	type Event = Event;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type MultiCurrency = Tokens;
-	type NativeCurrency = AdaptedBasicCurrency;
-	type WeightInfo = ();
+    type Event = Event;
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = AdaptedBasicCurrency;
+    type WeightInfo = ();
 }
-
 
 frame_support::construct_runtime!(
     pub enum Test where
@@ -77,17 +72,15 @@ frame_support::construct_runtime!(
 );
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		1
-	};
+    pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+        1
+    };
 }
-
 
 parameter_types! {
-	pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
-	pub MaxLocks: u32 = 2;
+    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+    pub MaxLocks: u32 = 2;
 }
-
 
 impl orml_tokens::Config for Test {
     type Event = Event;
@@ -176,15 +169,15 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-	type AccountStore = System;
-	type Balance = u64;
-	type DustRemoval = ();
-	type Event = Event;
-	type ExistentialDeposit = ExistentialDeposit;
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
-	type WeightInfo = ();
+    type AccountStore = System;
+    type Balance = u64;
+    type DustRemoval = ();
+    type Event = Event;
+    type ExistentialDeposit = ExistentialDeposit;
+    type MaxLocks = ();
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
+    type WeightInfo = ();
 }
 /*pub struct DoNothingRouter;
 impl SendXcm for DoNothingRouter {
@@ -278,4 +271,3 @@ impl ExtBuilder {
         ext
     }
 }
-

@@ -81,10 +81,7 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
 
-use xcm_executor::{
-    traits::{ShouldExecute},
-    XcmExecutor,
-};
+use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 // XCM imports
 pub use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
