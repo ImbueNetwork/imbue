@@ -964,7 +964,7 @@ impl pallet_treasury::Config for Runtime {
 impl proposals::Config for Runtime {
     type Event = Event;
     type PalletId = ProposalsPalletId;
-    type Currency = Currencies;
+    type MultiCurrency = Currencies;
     type MaxProposalsPerRound = MaxProposalsPerRound;
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
     type WeightInfo = ();
@@ -1044,6 +1044,22 @@ pub type Executive = frame_executive::Executive<
     AllPalletsWithSystem,
     (),
 >;
+
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+	define_benchmarks!(
+		[frame_benchmarking, BaselineBench::<Runtime>]
+		[frame_system, SystemBench::<Runtime>]
+		[pallet_balances, Balances]
+		[pallet_timestamp, Timestamp]
+		[proposals, ImbueProposals]
+	);
+}
+
 
 impl_runtime_apis! {
     impl sp_api::Core<Block> for Runtime {
@@ -1150,6 +1166,61 @@ impl_runtime_apis! {
             ParachainSystem::collect_collation_info(header)
         }
     }
+
+
+    #[cfg(feature = "runtime-benchmarks")]
+	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn benchmark_metadata(extra: bool) -> (
+			Vec<frame_benchmarking::BenchmarkList>,
+			Vec<frame_support::traits::StorageInfo>,
+		) {
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkList};
+			use frame_support::traits::StorageInfoTrait;
+			use frame_system_benchmarking::Pallet as SystemBench;
+			use baseline::Pallet as BaselineBench;
+
+			let mut list = Vec::<BenchmarkList>::new();
+			list_benchmarks!(list, extra);
+
+			let storage_info = AllPalletsWithSystem::storage_info();
+
+			return (list, storage_info)
+		}
+
+		fn dispatch_benchmark(
+			config: frame_benchmarking::BenchmarkConfig
+		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
+
+			use frame_system_benchmarking::Pallet as SystemBench;
+			use baseline::Pallet as BaselineBench;
+
+			impl frame_system_benchmarking::Config for Runtime {}
+			impl baseline::Config for Runtime {}
+
+			let whitelist: Vec<TrackedStorageKey> = vec![
+				// Block Number
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
+				// Total Issuance
+				hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
+				// Execution Phase
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
+				// Event Count
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
+				// System Events
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
+			];
+
+			let mut batches = Vec::<BenchmarkBatch>::new();
+			let params = (&config, &whitelist);
+			add_benchmarks!(params, batches);
+
+			Ok(batches)
+		}
+	}
+
+
+
 }
 
 struct CheckInherents;
