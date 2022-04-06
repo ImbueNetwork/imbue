@@ -22,6 +22,12 @@ git clone --recursive https://github.com/ImbueNetwork/imbue.git
 cd imbue
 ```
 
+#### Run the tests
+
+```bash
+cargo test
+```
+
 ### Run
 
 Launch a local network using docker compose:
@@ -82,6 +88,8 @@ You can manually launch a relaychain and parachain then register the parachain d
     
     
     If the prerequisites have been completed and we have our binaries as shown [above](#prerequisite-for-both-approaches), follow the steps below to launch the network.
+
+
 #### Create local chain spec
 
 ```bash
@@ -238,3 +246,6 @@ please find the screenshot attached for the extrinsic call
   
   please find the screenshot attached for the extrinsic call
    ![approve a project ](./assets/imgs/approve_project.png)
+
+
+
