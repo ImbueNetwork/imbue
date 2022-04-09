@@ -1274,7 +1274,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
             } => {
                 match para_id {
                     // Local testing para ids
-                    2088 | 3000 => match key[..] {
+                    2102 | 2103 => match key[..] {
                         [0] => Some(CurrencyId::Native),
                         [1] => Some(CurrencyId::Usd),
                         _ => None,

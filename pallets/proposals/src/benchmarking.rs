@@ -2,19 +2,33 @@
 use super::*;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::{EventRecord, RawOrigin};
+<<<<<<< HEAD
 //use crate::Pallet as Proposals;
 //use frame_support::{
 //    assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo,
 //};
+=======
+use crate::Pallet as Proposals;
+use frame_support::{
+    assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo,
+};
+>>>>>>> c25d9a2411217eae8f41114d20ee85c320a94423
 use sp_std::str;
 use sp_std::vec::Vec;
 use common_types::CurrencyId;
 
+<<<<<<< HEAD
 
 benchmarks! {
     //where_clause { where
 	//	T::AccountId: AsRef<[u8]>,
 	//}
+=======
+benchmarks! {
+    where_clause { where
+		T::AccountId: AsRef<[u8]>,
+	}
+>>>>>>> c25d9a2411217eae8f41114d20ee85c320a94423
 
     create_project {
         let a in 1 .. 100;
@@ -35,6 +49,7 @@ benchmarks! {
     verify {
         assert_last_event::<T>(Event::ProjectCreated(caller,project_name.clone(),0, required_funds, currency_id).into());
     }
+<<<<<<< HEAD
 
     
     schedule_round {
@@ -48,6 +63,8 @@ benchmarks! {
     }
     
 
+=======
+>>>>>>> c25d9a2411217eae8f41114d20ee85c320a94423
 }
 
 impl_benchmark_test_suite!(
