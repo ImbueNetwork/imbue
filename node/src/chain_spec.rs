@@ -1,12 +1,12 @@
 use cumulus_primitives_core::ParaId;
 use development_runtime::{AccountId, AuraId, CouncilConfig, Signature, TechnicalCommitteeConfig};
-use runtime_common::currency::EXISTENTIAL_DEPOSIT;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+use development_runtime::currency::IMBU;
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
@@ -25,8 +25,8 @@ pub fn imbue_properties() -> Properties {
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type DevelopmentChainSpec = sc_service::GenericChainSpec<development_runtime::GenesisConfig>;
 
-/// The default XCM version to set in genesis config.
-const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+/// Specialized `ChainSpec` for the shell parachain runtime.
+pub type ShellChainSpec = sc_service::GenericChainSpec<shell_runtime::GenesisConfig, Extensions>;
 
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
@@ -78,6 +78,36 @@ pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
     get_public_from_seed::<AuraId>(seed)
 }
 
+fn shell_testnet_genesis(parachain_id: ParaId) -> shell_runtime::GenesisConfig {
+    shell_runtime::GenesisConfig {
+        system: shell_runtime::SystemConfig {
+            code: shell_runtime::WASM_BINARY
+                .expect("WASM binary was not build, please build it!")
+                .to_vec(),
+        },
+        parachain_info: shell_runtime::ParachainInfoConfig { parachain_id },
+        parachain_system: Default::default(),
+    }
+}
+
+pub fn get_shell_chain_spec(id: ParaId) -> ShellChainSpec {
+    ShellChainSpec::from_genesis(
+        "Shell Local Testnet",
+        "shell_local_testnet",
+        ChainType::Local,
+        move || shell_testnet_genesis(id.into()),
+        vec![],
+        None,
+        Some("imbue"),
+        None,
+        Some(imbue_properties()),
+        Extensions {
+            relay_chain: "westend".into(),
+            para_id: id.into(),
+        },
+    )
+}
+
 pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentChainSpec {
     DevelopmentChainSpec::from_genesis(
         // Name
@@ -93,6 +123,7 @@ pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentCha
                     get_collator_keys_from_seed("Alice"),
                 )],
                 endowed_accounts_local(),
+                Some(10_000_000 * IMBU),
                 id,
             )
         },
@@ -125,6 +156,7 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
                     ),
                 ],
                 endowed_accounts(),
+                Some(10_000_000 * IMBU),
                 id,
             )
         },
@@ -162,49 +194,78 @@ fn endowed_accounts_local() -> Vec<AccountId> {
     ]
 }
 
+pub fn get_dev_session_keys(keys: development_runtime::AuraId) -> development_runtime::SessionKeys {
+    development_runtime::SessionKeys { aura: keys }
+}
+
 fn development_genesis(
     root_key: AccountId,
-    invulnerables: Vec<(AccountId, AuraId)>,
+    initial_authorities: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
+    total_issuance: Option<development_runtime::Balance>,
     id: ParaId,
 ) -> development_runtime::GenesisConfig {
+    let num_endowed_accounts = endowed_accounts.len();
+
+    let (balances, token_balances) = match total_issuance {
+        Some(total_issuance) => {
+            let balance_per_endowed = total_issuance
+                .checked_div(num_endowed_accounts as development_runtime::Balance)
+                .unwrap_or(0 as development_runtime::Balance);
+            (
+                endowed_accounts
+                    .iter()
+                    .cloned()
+                    .map(|k| (k, balance_per_endowed))
+                    .collect(),
+                endowed_accounts
+                    .iter()
+                    .cloned()
+                    .map(|k| (k, common_runtime::CurrencyId::Native, balance_per_endowed))
+                    .collect(),
+            )
+        }
+        None => (vec![], vec![]),
+    };
+
     development_runtime::GenesisConfig {
         system: development_runtime::SystemConfig {
             code: development_runtime::WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
         },
-        balances: development_runtime::BalancesConfig {
-            balances: endowed_accounts
-                .iter()
-                .cloned()
-                .map(|k| (k, 10 << 60))
-                .collect(),
-        },
+        balances: development_runtime::BalancesConfig { balances: balances },
         sudo: development_runtime::SudoConfig {
             key: Some(root_key),
         },
-        // scheduler: development_runtime::SchedulerConfig {},
-        vesting: Default::default(),
-        parachain_info: development_runtime::ParachainInfoConfig { parachain_id: id },
+        orml_tokens: development_runtime::OrmlTokensConfig {
+            balances: token_balances,
+        },
         collator_selection: development_runtime::CollatorSelectionConfig {
-            invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-            candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
+            invulnerables: initial_authorities
+                .iter()
+                .cloned()
+                .map(|(acc, _)| acc)
+                .collect(),
+            candidacy_bond: 1 * IMBU,
             ..Default::default()
         },
         session: development_runtime::SessionConfig {
-            keys: invulnerables
-                .into_iter()
+            keys: initial_authorities
+                .iter()
+                .cloned()
                 .map(|(acc, aura)| {
                     (
-                        acc.clone(),                 // account id
-                        acc,                         // validator id
-                        template_session_keys(aura), // session keys
+                        acc.clone(),                // account id
+                        acc,                        // validator id
+                        get_dev_session_keys(aura), // session keys
                     )
                 })
                 .collect(),
         },
-
+        // scheduler: development_runtime::SchedulerConfig {},
+        vesting: Default::default(),
+        parachain_info: development_runtime::ParachainInfoConfig { parachain_id: id },
         aura: development_runtime::AuraConfig {
             authorities: Default::default(),
         },
@@ -219,12 +280,5 @@ fn development_genesis(
         treasury: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
-        polkadot_xcm: development_runtime::PolkadotXcmConfig {
-            safe_xcm_version: Some(SAFE_XCM_VERSION),
-        },
     }
-}
-
-pub fn template_session_keys(keys: AuraId) -> development_runtime::SessionKeys {
-    development_runtime::SessionKeys { aura: keys }
 }
