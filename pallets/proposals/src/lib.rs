@@ -1,30 +1,27 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
+use common_types::CurrencyId;
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
-use frame_support::{
-    pallet_prelude::*,
-    traits::{Currency, ExistenceRequirement, ReservableCurrency, WithdrawReasons},
-    PalletId,
-};
+use frame_support::{pallet_prelude::*, PalletId};
+use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::prelude::*;
-
+use sp_std::vec;
 #[cfg(test)]
 mod mock;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 mod tests;
-
-// #[cfg(feature = "runtime-benchmarks")]
-// mod benchmarking;
 
 pub mod weights;
 pub use weights::*;
@@ -47,7 +44,7 @@ pub mod pallet {
 
         type PalletId: Get<PalletId>;
 
-        type Currency: ReservableCurrency<Self::AccountId>;
+        type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
         type MaxProposalsPerRound: Get<u32>;
 
@@ -142,16 +139,27 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        ProjectCreated(T::AccountId, Vec<u8>, ProjectKey),
+        ProjectCreated(
+            T::AccountId,
+            Vec<u8>,
+            ProjectKey,
+            BalanceOf<T>,
+            common_types::CurrencyId,
+        ),
         FundingRoundCreated(RoundKey),
         VotingRoundCreated(RoundKey),
         MilestoneSubmitted(ProjectKey, MilestoneKey),
-        ContributeSucceeded(T::AccountId, ProjectKey, BalanceOf<T>, T::BlockNumber),
+        ContributeSucceeded(
+            T::AccountId,
+            ProjectKey,
+            BalanceOf<T>,
+            common_types::CurrencyId,
+            T::BlockNumber,
+        ),
         ProjectCancelled(RoundKey, ProjectKey),
-        ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>),
+        ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyId),
         ProjectApproved(RoundKey, ProjectKey),
         RoundCancelled(RoundKey),
-        FundSucceed(),
         VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
         MilestoneApproved(ProjectKey, MilestoneKey, T::BlockNumber),
     }
@@ -214,6 +222,7 @@ pub mod pallet {
             website: Vec<u8>,
             proposed_milestones: Vec<ProposedMilestone>,
             required_funds: BalanceOf<T>,
+            currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -300,6 +309,7 @@ pub mod pallet {
                 milestones,
                 contributions: Vec::new(),
                 required_funds,
+                currency_id,
                 withdrawn_funds: (0_u32).into(),
                 initiator: who.clone(),
                 create_block_number: <frame_system::Pallet<T>>::block_number(),
@@ -310,7 +320,13 @@ pub mod pallet {
             <Projects<T>>::insert(project_key, project);
             ProjectCount::<T>::put(next_project_key);
 
-            Self::deposit_event(Event::ProjectCreated(who, name, project_key));
+            Self::deposit_event(Event::ProjectCreated(
+                who,
+                name,
+                project_key,
+                required_funds,
+                currency_id,
+            ));
 
             Ok(().into())
         }
@@ -390,6 +406,7 @@ pub mod pallet {
         pub fn contribute(
             origin: OriginFor<T>,
             project_key: ProjectKey,
+            currency_id: common_types::CurrencyId,
             value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -457,6 +474,7 @@ pub mod pallet {
                 milestones: project.milestones,
                 contributions: project.contributions.clone(),
                 required_funds: project.required_funds,
+                currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
@@ -467,16 +485,22 @@ pub mod pallet {
             <Projects<T>>::insert(project_key, updated_project);
 
             // Transfer contribute to proposal account
-            <T as Config>::Currency::transfer(
+            T::MultiCurrency::transfer(
+                currency_id,
                 &who,
                 &Self::project_account_id(project_key),
                 value,
-                ExistenceRequirement::AllowDeath,
             )?;
 
             <Rounds<T>>::insert(round_key - 1, Some(round));
 
-            Self::deposit_event(Event::ContributeSucceeded(who, project_key, value, now));
+            Self::deposit_event(Event::ContributeSucceeded(
+                who,
+                project_key,
+                value,
+                currency_id,
+                now,
+            ));
 
             Ok(().into())
         }
@@ -564,6 +588,7 @@ pub mod pallet {
                 milestones,
                 contributions: project.contributions,
                 required_funds: project.required_funds,
+                currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
@@ -763,6 +788,7 @@ pub mod pallet {
                 milestones,
                 contributions: project.contributions,
                 required_funds: project.required_funds,
+                currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
@@ -800,16 +826,13 @@ pub mod pallet {
             let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
             ensure!(available_funds > (0_u32).into(), Error::<T>::InvalidParam);
 
-            // Distribute contribution amount
-            let _ = <T as Config>::Currency::resolve_into_existing(
+
+            T::MultiCurrency::transfer(
+                project.currency_id,
+                &Self::project_account_id(project_key),
                 &project.initiator,
-                <T as Config>::Currency::withdraw(
-                    &Self::project_account_id(project_key),
-                    available_funds,
-                    WithdrawReasons::TRANSFER,
-                    ExistenceRequirement::AllowDeath,
-                )?,
-            );
+                available_funds,
+            )?;
 
             // Update project withdrawn funds
             let updated_project = Project {
@@ -820,6 +843,7 @@ pub mod pallet {
                 milestones: project.milestones,
                 contributions: project.contributions,
                 required_funds: project.required_funds,
+                currency_id: project.currency_id,
                 withdrawn_funds: available_funds,
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
@@ -831,6 +855,7 @@ pub mod pallet {
                 who,
                 project_key,
                 available_funds,
+                project.currency_id,
             ));
 
             Ok(().into())
@@ -928,7 +953,9 @@ pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+// type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
 type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 
@@ -1007,6 +1034,7 @@ pub struct Project<AccountId, Balance, BlockNumber> {
     website: Vec<u8>,
     milestones: Vec<Milestone>,
     contributions: Vec<Contribution<AccountId, Balance>>,
+    currency_id: common_types::CurrencyId,
     required_funds: Balance,
     withdrawn_funds: Balance,
     /// The account that will receive the funds if the campaign is successful
