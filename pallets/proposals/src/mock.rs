@@ -2,7 +2,7 @@ use super::*;
 use crate as proposals;
 use frame_support::{
     ord_parameter_types, parameter_types,
-    traits::ConstU32,
+    traits::{ConstU32, Nothing},
     weights::{IdentityFee, Weight},
     PalletId,
 };
@@ -18,8 +18,13 @@ use sp_runtime::{
     traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
 };
 
+use common_types::CurrencyId;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+pub type BlockNumber = u32;
+pub type Amount = i128;
+pub type Balance = u64;
 
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
     TPublic::Pair::from_string(&format!("//{}", seed), None)
@@ -34,6 +39,21 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
+parameter_types! {
+    pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
+}
+
+pub type AdaptedBasicCurrency =
+    orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Test {
+    type Event = Event;
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = AdaptedBasicCurrency;
+    type WeightInfo = ();
+}
+
 frame_support::construct_runtime!(
     pub enum Test where
         Block = Block,
@@ -43,11 +63,36 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Proposals: proposals::{Pallet, Call, Storage, Event<T>},
+        Tokens: orml_tokens::{Pallet, Storage, Event<T>},
+        Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
+
+orml_traits::parameter_type_with_key! {
+    pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+        1
+    };
+}
+
+parameter_types! {
+    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+    pub MaxLocks: u32 = 2;
+}
+
+impl orml_tokens::Config for Test {
+    type Event = Event;
+    type Balance = Balance;
+    type Amount = i128;
+    type CurrencyId = common_types::CurrencyId;
+    type WeightInfo = ();
+    type ExistentialDeposits = ExistentialDeposits;
+    type OnDust = orml_tokens::TransferDust<Test, DustAccount>;
+    type MaxLocks = MaxLocks;
+    type DustRemovalWhitelist = Nothing;
+}
 
 parameter_types! {
     pub const TransactionByteFee: u64 = 1;
@@ -85,7 +130,8 @@ impl frame_system::Config for Test {
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u64>;
+    type AccountData = pallet_balances::AccountData<Balance>;
+
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
@@ -123,15 +169,15 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-    type Balance = u64;
-    type Event = Event;
-    type DustRemoval = ();
-    type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
-    type WeightInfo = ();
+    type Balance = u64;
+    type DustRemoval = ();
+    type Event = Event;
+    type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
-    type MaxReserves = MaxReserves;
+    type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
+    type WeightInfo = ();
 }
 /*pub struct DoNothingRouter;
 impl SendXcm for DoNothingRouter {
@@ -158,7 +204,7 @@ parameter_types! {
 impl proposals::Config for Test {
     type Event = Event;
     type PalletId = ProposalsPalletId;
-    type Currency = Balances;
+    type MultiCurrency = Currencies;
     type WeightInfo = ();
     type MaxProposalsPerRound = ConstU32<4>;
     // Adding 2 weeks as th expiration time
@@ -213,17 +259,6 @@ parameter_types! {
 }
 
 pub struct ExtBuilder;
-//{
-// balances: Vec<(AccountId, u64)>,
-//}
-
-// impl Default for ExtBuilder {
-//     fn default() -> Self {
-//         Self {
-//             balances: vec![(ALICE, 1000), (BOB, 1000)],
-//         }
-//     }
-// }
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {

@@ -1,0 +1,42 @@
+[package]
+name = "common-types"
+authors = ['imbue <https://github.com/ImbueNetwork>']
+description = 'Common types for Imbue runtime'
+edition = '2018'
+homepage = 'https://imbue.network'
+license = "LGPL-3.0"
+repository = 'https://github.com/ImbueNetwork/imbue'
+version = '0.1.0'
+resolver = "2"
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+codec = { package = 'parity-scale-codec', version = '2.0.0', features = ['derive'] , default-features = false }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+bitflags = "1.3"
+serde = { version = "1.0.119" }
+
+# substrate dependencies
+sp-std = { git = "https://github.com/paritytech/substrate",  default-features = false , branch = "polkadot-v0.9.17" }
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.17" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.17" }
+
+# local dependencies
+common-traits = { path = '../common-traits', default-features = false }
+
+[dev-dependencies]
+frame-support = { git = "https://github.com/paritytech/substrate",  default-features = true , branch = "polkadot-v0.9.17" }
+
+[features]
+default = ['std']
+std = [
+    'codec/std',
+    'sp-std/std',
+    'frame-support/std',
+    'common-traits/std',
+    'sp-runtime/std'
+]
+
+
