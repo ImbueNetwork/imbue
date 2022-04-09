@@ -15,16 +15,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate as proposals;
+use crate::mock::*;
+use crate::*;
+use common_types::CurrencyId;
 use frame_support::{
     assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo,
 };
 use sp_core::sr25519;
 use sp_std::str;
 use sp_std::vec::Vec;
-
-use crate as proposals;
-use crate::mock::*;
-use crate::*;
 
 #[test]
 fn create_a_test_project() {
@@ -48,6 +48,7 @@ fn create_a_test_project() {
             }],
             //funds required
             1000000u64,
+            CurrencyId::Native
         ).unwrap();
     });
 }
@@ -73,7 +74,8 @@ fn create_a_test_project_with_less_than_100_percent() {
                 name: Vec::new(), percentage_to_unlock: 99
             }],
             //funds required
-            1000000u64
+            1000000u64,
+            CurrencyId::Native
         ),DispatchErrorWithPostInfo {
             post_info: PostDispatchInfo {
                 actual_weight: None,
@@ -106,7 +108,8 @@ fn create_a_test_project_with_no_name() {
                 name: Vec::new(), percentage_to_unlock: 99
             }],
             //funds required
-            1000000u64
+            1000000u64,
+            CurrencyId::Native
         ),DispatchErrorWithPostInfo {
             post_info: PostDispatchInfo {
                 actual_weight: None,
@@ -139,7 +142,8 @@ fn create_a_test_project_with_no_data() {
                     percentage_to_unlock: 99
                 }],
                 //funds required
-                1000000u64
+                1000000u64,
+                CurrencyId::Native
             ),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
@@ -326,14 +330,18 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         let additional_amount = 10_000;
-        let _ = <pallet_balances::Pallet<Test> as Currency<AccountId>>::deposit_creating(
-            &alice,
-            additional_amount,
-        );
+
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
 
         run_to_block(4);
         //contribute extrinsic
-        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
+        Proposals::contribute(
+            Origin::signed(alice),
+            project_key,
+            CurrencyId::Native,
+            contribution_amount,
+        )
+        .unwrap();
 
         //contribute success event
         let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
@@ -346,6 +354,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
                 alice,
                 project_key,
                 contribution_amount,
+                CurrencyId::Native,
                 4
             ))
         );
@@ -376,14 +385,17 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         let additional_amount = 1000000;
-        let _ = <pallet_balances::Pallet<Test> as Currency<AccountId>>::deposit_creating(
-            &alice,
-            additional_amount,
-        );
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
 
         run_to_block(4);
         //contribute extrinsic
-        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
+        Proposals::contribute(
+            Origin::signed(alice),
+            project_key,
+            CurrencyId::Native,
+            contribution_amount,
+        )
+        .unwrap();
 
         //approve project
         Proposals::approve(Origin::root(), 0, milestone_keys).unwrap();
@@ -425,14 +437,17 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         let additional_amount = 1000000;
-        let _ = <pallet_balances::Pallet<Test> as Currency<AccountId>>::deposit_creating(
-            &alice,
-            additional_amount,
-        );
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
 
         run_to_block(4);
         //contribute extrinsic
-        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
+        Proposals::contribute(
+            Origin::signed(alice),
+            project_key,
+            CurrencyId::Native,
+            contribution_amount,
+        )
+        .unwrap();
 
         assert_noop!(
             //approve project
@@ -473,6 +488,7 @@ fn test_submit_milestone() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
+            CurrencyId::Native,
             value
         ));
 
@@ -529,6 +545,7 @@ fn test_submit_milestone_without_approval() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
+            CurrencyId::Native,
             value
         ));
 
@@ -575,6 +592,7 @@ fn test_voting_on_a_milestone() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
+            CurrencyId::Native,
             value
         ));
 
@@ -635,11 +653,12 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
             project_keys
         ));
 
-        let value = 100u64;
+        let required_funds = 100u64;
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
-            value
+            CurrencyId::Native,
+            required_funds
         ));
 
         let mut milestone_index: Vec<MilestoneKey> = Vec::new();
@@ -678,13 +697,19 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
             project_index
         ));
 
+        assert_eq!(Balances::free_balance(&alice), additional_amount + required_funds);
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
             .expect("Expected at least one EventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(alice, 0, 100))
+            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
+                alice,
+                0,
+                100,
+                CurrencyId::Native
+            ))
         );
     });
 }
@@ -755,6 +780,7 @@ fn submit_multiple_milestones() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
+            CurrencyId::Native,
             value
         ));
 
@@ -833,7 +859,8 @@ fn create_project(alice: AccountId) {
             percentage_to_unlock: 100
         }],
         //funds required
-        1000000u64
+        1000000u64,
+        CurrencyId::Native
     ));
 }
 
@@ -865,19 +892,15 @@ fn create_project_multiple_milestones(
         //milestone
         proposed_milestones,
         //funds required
-        1000000u64
+        1000000u64,
+        CurrencyId::Native
     ));
 }
 
 fn deposit_initial_balance(alice: &AccountId, bob: &AccountId, additional_amount: u64) {
-    let _ = <pallet_balances::Pallet<Test> as Currency<AccountId>>::deposit_creating(
-        &alice,
-        additional_amount,
-    );
-    let _ = <pallet_balances::Pallet<Test> as Currency<AccountId>>::deposit_creating(
-        &bob,
-        additional_amount,
-    );
+    let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
+
+    let _ = Currencies::deposit(CurrencyId::Native, &bob, additional_amount);
 }
 
 fn run_to_block(n: u64) {

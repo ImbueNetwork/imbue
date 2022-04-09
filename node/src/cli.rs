@@ -53,9 +53,6 @@ pub enum Subcommand {
     /// The custom benchmark subcommmand benchmarking runtime pallets.
     #[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
-
-    /// Try some testing command against a specified runtime state.
-    TryRuntime(try_runtime_cli::TryRuntimeCmd),
 }
 
 /// Command for exporting the genesis state of the parachain
@@ -107,11 +104,30 @@ pub struct Cli {
     pub subcommand: Option<Subcommand>,
 
     #[structopt(flatten)]
-    pub run: cumulus_client_cli::RunCmd,
+    pub run: RunCmd,
 
     /// Relaychain arguments
     #[structopt(raw = true)]
     pub relaychain_args: Vec<String>,
+}
+
+
+#[derive(Debug, Parser)]
+pub struct RunCmd {
+    #[clap(flatten)]
+	pub base: cumulus_client_cli::RunCmd,
+
+    /// Id of the parachain this collator collates for.
+	#[clap(long)]
+	pub parachain_id: Option<u32>,
+}
+
+impl std::ops::Deref for RunCmd {
+	type Target = cumulus_client_cli::RunCmd;
+
+	fn deref(&self) -> &Self::Target {
+		&self.base
+	}
 }
 
 #[derive(Debug)]
