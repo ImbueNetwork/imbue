@@ -19,7 +19,7 @@ benchmarks! {
 		T::AccountId: AsRef<[u8]>,
 	}
 
-    create_project {
+    create_project{
         let a in 1 .. 100;
         let caller: T::AccountId = whitelisted_caller();
         let project_name: Vec<u8> = str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec();
@@ -38,13 +38,10 @@ benchmarks! {
     verify {
         assert_last_event::<T>(Event::ProjectCreated(caller,project_name.clone(),0, required_funds, currency_id).into());
     }
-
     
-    schedule_round {
+    schedule_round{
         //let start_block = frame_system::Pallet::<T>::block_number();
-        //let end_block = start_block;
-
-        let start_block = frame_system::Pallet::<T>::block_number();
+        let start_block: T::BlockNumber = 10u32.into();
         let end_block: T::BlockNumber = 100u32.into();
 
         let project_key: Vec<ProjectKey> = vec![0];
