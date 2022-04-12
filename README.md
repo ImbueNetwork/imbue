@@ -115,22 +115,22 @@ You can manually launch a relaychain and parachain then register the parachain d
 #### Create genesis & WASM files
 
 ```bash
-cd imbue-collator
+cd imbue
 
 # Genesis
-./target/release/imbue-collator export-genesis-state --parachain-id 2000 > para-2000-genesis-local
+./target/release/imbue export-genesis-state --parachain-id 2000 > para-2000-genesis-local
 
 # WASM
-./target/release/imbue-collator export-genesis-wasm > para-wasm-local
+./target/release/imbue export-genesis-wasm > para-wasm-local
 ```
 
 #### Start a collator
 
 ```bash
 # Customize the --chain flag for the path to your 'rococo-local.json' file
-./target/release/kylin-collator --alice --collator --force-authoring --parachain-id 2000 --base-path cumulus_relay/kylin-collator --port 40333 --ws-port 8844 -- --execution wasm --chain <path to 'rococo-local.json' file> --port 30343 --ws-port 9942
+./target/release/imbue --alice --collator --force-authoring --parachain-id 2000 --base-path cumulus_relay/imbue --port 40333 --ws-port 8844 -- --execution wasm --chain <path to 'rococo-local.json' file> --port 30343 --ws-port 9942
 
-./target/release/kylin-collator --alice --collator --force-authoring --parachain-id 2013 --base-path cumulus_relay/kylin-collator --port 40334 --ws-port 8845 -- --execution wasm --chain <path to 'rococo-local.json' file> --port 30344 --ws-port 9943
+./target/release/imbue --alice --collator --force-authoring --parachain-id 2013 --base-path cumulus_relay/imbue --port 40334 --ws-port 8845 -- --execution wasm --chain <path to 'rococo-local.json' file> --port 30344 --ws-port 9943
 
 ```
 

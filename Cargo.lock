@@ -3201,7 +3201,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "imbue-collator"
+name = "imbue"
 version = "2.0.0"
 dependencies = [
  "assert_cmd",

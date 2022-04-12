@@ -5,7 +5,7 @@
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("development-local"), DB CACHE: 1024
 
 // Executed Command:
-// ./target/release/imbue-collator
+// ./target/release/imbue
 // benchmark
 // --chain=development-local
 // --steps=50

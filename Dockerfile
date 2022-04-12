@@ -6,11 +6,11 @@ ARG GIT_BRANCH="main"
 ARG GIT_CLONE_DEPTH="--depth 1"
 
 # WORKDIR /builds
-#Build imbue-collator
+#Build imbue collator
 RUN git clone --recursive ${IMBUE_GIT_REPO} ${GIT_CLONE_DEPTH}
 WORKDIR /builds/imbue
 RUN cargo build --${PROFILE}
-RUN cp target/${PROFILE}/imbue-collator /
+RUN cp target/${PROFILE}/imbue /
 
 FROM parity/polkadot:v0.9.17 AS polkadot
 FROM parity/subkey:latest AS subkey
@@ -28,7 +28,7 @@ RUN git clone https://github.com/paritytech/polkadot-launch launch
 WORKDIR /launch
 RUN yarn
 
-COPY --from=builder /imbue-collator /
+COPY --from=builder /imbue /
 COPY --from=polkadot /usr/bin/polkadot /
 COPY --from=subkey /usr/local/bin/subkey /
 
