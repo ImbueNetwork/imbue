@@ -5,15 +5,15 @@ description = ''
 edition = '2018'
 homepage = 'https://imbue.network'
 license = 'Apache 2.0'
-name = 'imbue-collator'
-repository = 'https://github.com/ImbueNetwork/imbue-collator/'
+name = 'imbue'
+repository = 'https://github.com/ImbueNetwork/imbue/'
 version = '2.0.0'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
 [[bin]]
-name = 'imbue-collator'
+name = 'imbue'
 
 [features]
 default = []

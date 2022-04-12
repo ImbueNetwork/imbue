@@ -4,7 +4,7 @@ edition = '2018'
 homepage = 'https://imbue.network'
 license = 'Apache 2.0'
 name = 'common-runtime'
-repository = 'https://github.com/ImbueNetwork/imbue-collator/'
+repository = 'https://github.com/ImbueNetwork/imbue/'
 version = '2.0.0'
 
 [package.metadata.docs.rs]

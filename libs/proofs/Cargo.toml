@@ -4,7 +4,7 @@ authors = ['imbue <https://github.com/ImbueNetwork>']
 edition = '2018'
 homepage = 'https://imbue.network'
 license = "LGPL-3.0"
-repository = 'https://github.com/ImbueNetwork/imbue-collator'
+repository = 'https://github.com/ImbueNetwork/imbue'
 version = '0.1.0'
 resolver = "2"
 
