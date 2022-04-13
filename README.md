@@ -184,7 +184,11 @@ The flow of creating a proposal and getting funded is shown below step by step u
 please find the screenshot attached for the extrinsic call
    ![create project ](./assets/imgs/create_project.png)
   
-2) Scheduling the round: Once the proposal for the project is submitted, the next step is to schedule the round for milestones.From the UI select the our imbueProposals pallet and then select the function below.
+2) (SUDO) Scheduling the round: Once the proposal for the project is submitted, the next step is to schedule the round for milestones.
+
+From the UI select the our imbueProposals pallet and then select the function below.
+
+Please note this is a Sudo call so you need to use an account with Sudo access. In the testnet this is the `Alice` account
 
     ```javascript
     schedule_round(origin: OriginFor<T>, start: T::BlockNumber, end: T::BlockNumber, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>)
