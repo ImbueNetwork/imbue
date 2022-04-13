@@ -1,6 +1,8 @@
 <a href="https://github.com/w3f/Grants-Program/pull/703"><img src="https://github.com/ImbueNetwork/website-assets/blob/main/Web3%20Foundation%20Grants%20Badge/PNG/web3%20foundation_grants_badge_black.png?raw=true" alt="imbue-web3-open-grant" /></a>
 Imbue Network is a decentralised crowdfunding DAO built on top of the Polkadot blockchain platform. It is an idea incubator open to the entire world that allows anyone, from any walk of life and for any kind of endeavour, to submit and vote on Ideas worth funding from the communities that believe in them the most.
 
+[![xcm-docs](https://img.shields.io/badge/xcm-docs-green)](https://github.com/ImbueNetwork/imbue/blob/add_kusd_transfer_documentation/assets/docs/README_XCM.md)
+
 # Imbue Collator
 
 This documentation will cover the below explanation
@@ -246,6 +248,3 @@ please find the screenshot attached for the extrinsic call
   
   please find the screenshot attached for the extrinsic call
    ![approve a project ](./assets/imgs/approve_project.png)
-
-
-
