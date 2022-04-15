@@ -406,7 +406,6 @@ pub mod pallet {
         pub fn contribute(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            currency_id: common_types::CurrencyId,
             value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -442,6 +441,26 @@ pub mod pallet {
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
             let mut project =
                 Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
+
+
+            // Transfer contribute to proposal account
+            T::MultiCurrency::transfer(
+                project.currency_id,
+                &who,
+                &Self::project_account_id(project_key),
+                value,
+            )?;
+
+            <Rounds<T>>::insert(round_key - 1, Some(round));
+
+            Self::deposit_event(Event::ContributeSucceeded(
+                who.clone(),
+                project_key,
+                value,
+                project.currency_id,
+                now,
+            ));
 
             // Find previous contribution by account_id
             // If you have contributed before, then add to that contribution. Otherwise join the list.
@@ -484,23 +503,6 @@ pub mod pallet {
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
 
-            // Transfer contribute to proposal account
-            T::MultiCurrency::transfer(
-                currency_id,
-                &who,
-                &Self::project_account_id(project_key),
-                value,
-            )?;
-
-            <Rounds<T>>::insert(round_key - 1, Some(round));
-
-            Self::deposit_event(Event::ContributeSucceeded(
-                who,
-                project_key,
-                value,
-                currency_id,
-                now,
-            ));
 
             Ok(().into())
         }

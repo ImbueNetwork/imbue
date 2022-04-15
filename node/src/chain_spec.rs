@@ -144,7 +144,7 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
         ChainType::Live,
         move || {
             development_genesis(
-                AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap(),
+                AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
                 vec![
                     (
                         get_account_id_from_seed::<sr25519::Public>("Alice"),
