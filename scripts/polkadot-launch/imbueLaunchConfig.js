@@ -49,6 +49,8 @@ const relaychain = {
             "bob",
             "charlie",
             "dave",
+            "eve",
+            "ferdie",
         ].map((name, idx) => ({
             name,
             wsPort: relaychainBaseWSPort + idx,
@@ -62,7 +64,7 @@ const relaychain = {
     }
 };
 
-const imbue_collator = {
+const imbue = {
     bin: "/imbue",
     id: "2102",
     balance: "1000000000000000000000",
@@ -83,7 +85,9 @@ const imbue_collator = {
             "alice",
             "bob",
             "charlie",
-            "dave"
+            "dave",
+            "eve",
+            "ferdie",
         ].map((name, idx) => ({
             name,
             wsPort: parachainBaseWSPort + idx,
