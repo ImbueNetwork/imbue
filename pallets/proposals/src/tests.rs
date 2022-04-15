@@ -410,7 +410,6 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
         Proposals::contribute(
             Origin::signed(alice),
             project_key,
-            CurrencyId::Native,
             contribution_amount,
         )
         .unwrap();
@@ -464,7 +463,6 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
         Proposals::contribute(
             Origin::signed(alice),
             project_key,
-            CurrencyId::Native,
             contribution_amount,
         )
         .unwrap();
@@ -516,7 +514,6 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
         Proposals::contribute(
             Origin::signed(alice),
             project_key,
-            CurrencyId::Native,
             contribution_amount,
         )
         .unwrap();
@@ -560,7 +557,6 @@ fn test_submit_milestone() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
-            CurrencyId::Native,
             value
         ));
 
@@ -617,7 +613,6 @@ fn test_submit_milestone_without_approval() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
-            CurrencyId::Native,
             value
         ));
 
@@ -664,7 +659,6 @@ fn test_voting_on_a_milestone() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
-            CurrencyId::Native,
             value
         ));
 
@@ -755,8 +749,6 @@ fn test_voting_on_a_canceled_round() {
     });
 }
 
-
-
 #[test]
 //negative test case where the project creator tries to finalize milestone without getting the vote on that milestone
 fn test_finalize_a_milestone_without_voting() {
@@ -800,7 +792,6 @@ fn test_finalize_a_milestone_without_voting() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
-            CurrencyId::Native,
             value
         ));
 
@@ -867,7 +858,6 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
     let required_funds = 1000000u64;
 
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
-    let mut proposed_milestones1: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
         name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
@@ -885,7 +875,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
     proposed_milestones.push(milestone3);
-    proposed_milestones1 = proposed_milestones.clone();
+    let proposed_milestones1 = proposed_milestones.clone();
 
     ExtBuilder.build().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
@@ -906,14 +896,12 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
-            CurrencyId::Native,
             value
         ));
 
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(charlie),
             project_index,
-            CurrencyId::Native,
             value
         ));
 
@@ -943,12 +931,12 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         run_to_block(5);
         //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob),project_index, 0, true,);
-        Proposals::vote_on_milestone(Origin::signed(bob),project_index, 1, true,);
+        Proposals::vote_on_milestone(Origin::signed(bob),project_index, 0, true,).ok();
+        Proposals::vote_on_milestone(Origin::signed(bob),project_index, 1, true,).ok();
 
         //Charlie voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 0, true,);
-        Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 1, true,);
+        Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 0, true,).ok();
+        Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 1, true,).ok();
 
         assert_ok!(Proposals::finalise_milestone_voting(
             Origin::signed(alice),
@@ -968,7 +956,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         ));
 
         //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let mut total_percentage_to_withdraw:u32 = proposed_milestones1.get(0).unwrap().percentage_to_unlock +  proposed_milestones1.get(1).unwrap().percentage_to_unlock;
+        let total_percentage_to_withdraw:u32 = proposed_milestones1.get(0).unwrap().percentage_to_unlock +  proposed_milestones1.get(1).unwrap().percentage_to_unlock;
 
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
@@ -1016,7 +1004,6 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
-            CurrencyId::Native,
             required_funds
         ));
 
@@ -1139,7 +1126,6 @@ fn submit_multiple_milestones() {
         assert_ok!(<proposals::Pallet<Test>>::contribute(
             Origin::signed(bob),
             project_index,
-            CurrencyId::Native,
             value
         ));
 
