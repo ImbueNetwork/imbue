@@ -57,7 +57,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         //Setting the start block to be greater than 0 which is the current block. 
         //This condition is checked to ensure the round being cancelled has not started yet.
-        let start_block: T::BlockNumber = 1u32.into();
+        let start_block: T::BlockNumber = 2u32.into();
         let end_block: T::BlockNumber = 10u32.into();
         let project_key: Vec<ProjectKey> = vec![0];
         
