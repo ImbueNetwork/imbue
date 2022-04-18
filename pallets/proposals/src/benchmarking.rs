@@ -13,12 +13,6 @@ use frame_support::{
 };
 use sp_std::str;
 use sp_std::vec::Vec;
-<<<<<<< HEAD
-use common_types::CurrencyId;
-  
-const CONTRIBUTION: u32 = 400;
-=======
->>>>>>> 5840e0bf3834731fd4271fd32ef649e41adc1617
 
 benchmarks! {
     where_clause { where
@@ -52,9 +46,6 @@ benchmarks! {
 
         let caller: T::AccountId = whitelisted_caller();
 
-        let a in 1 .. 100;
-        let caller: T::AccountId = whitelisted_caller();
-        let project_name: Vec<u8> = str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec();
         let project_logo: Vec<u8> = str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec();
         let project_description: Vec<u8> = str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec();
         let website: Vec<u8> = str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec();
@@ -71,31 +62,11 @@ benchmarks! {
         let project_key: Vec<ProjectKey> = vec![0];
 
 <<<<<<< HEAD
-    }: _(RawOrigin::Root, start_block, end_block, project_key)
     verify {
         assert_last_event::<T>(Event::FundingRoundCreated(0).into());
-    }
-
-    cancel_round {
-        
-        let caller: T::AccountId = whitelisted_caller();
-        //Setting the start block to be greater than 0 which is the current block. 
-        //This condition is checked to ensure the round being cancelled has not started yet.
-        let start_block: T::BlockNumber = 1u32.into();
-        let end_block: T::BlockNumber = 10u32.into();
-        let project_key: Vec<ProjectKey> = vec![0];
-        
-        create_project_common::<T>(CONTRIBUTION);
-        Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
-=======
-        let end_block: T::BlockNumber = 10u32.into();
-        let project_key: Vec<ProjectKey> = vec![0];
-        Proposals::<T>::create_project(RawOrigin::Signed(caller.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id)?;
->>>>>>> 5840e0bf3834731fd4271fd32ef649e41adc1617
 
     }: _(RawOrigin::Root, 0)
     verify {
-       // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
     }
 
 
