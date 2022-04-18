@@ -108,5 +108,17 @@ fn create_project_common<T: Config>(projectKey: u32){
         Proposals::<T>::create_project(RawOrigin::Signed(caller.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id);
 }
 
+fn run_to_block(n: u64) {
+    while <T as frame_system::Config::Pallet>::block_number() < n {
+        if frame_system::Pallet::block_number() > 1 {
+            Proposals::on_finalize(frame_system::Pallet::block_number());
+            frame_system::Pallet::on_finalize(frame_system::Pallet::block_number());
+        }
+        frame_system::Pallet::set_block_number(frame_system::Pallet::block_number() + 1);
+        frame_system::Pallet::on_initialize(frame_system::Pallet::block_number());
+        Proposals::on_initialize(frame_system::Pallet::block_number());
+    }
+}
+
 
 impl_benchmark_test_suite!(Proposals, crate::mock::new_test_ext(), crate::mock::Test);
