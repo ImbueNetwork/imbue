@@ -13,6 +13,9 @@ use frame_support::{
 };
 use sp_std::str;
 use sp_std::vec::Vec;
+use common_types::CurrencyId;
+  
+const CONTRIBUTION: u32 = 400;
 
 benchmarks! {
     where_clause { where
@@ -40,33 +43,31 @@ benchmarks! {
     }
 
     schedule_round {
-<<<<<<< HEAD
         create_project_common::<T>(CONTRIBUTION);
-=======
-
-        let caller: T::AccountId = whitelisted_caller();
-
-        let project_logo: Vec<u8> = str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec();
-        let project_description: Vec<u8> = str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec();
-        let website: Vec<u8> = str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec();
-        let milestones: Vec<ProposedMilestone> = vec![ProposedMilestone {
-            name: Vec::new(),
-            percentage_to_unlock: 100,
-        }];
-
-        let required_funds: BalanceOf<T> = 100u32.into();
-        let currency_id = CurrencyId::Native;
->>>>>>> 5840e0bf3834731fd4271fd32ef649e41adc1617
         let start_block: T::BlockNumber = 0u32.into();
         let end_block: T::BlockNumber = 10u32.into();
         let project_key: Vec<ProjectKey> = vec![0];
 
-<<<<<<< HEAD
+    }: _(RawOrigin::Root, start_block, end_block, project_key)
     verify {
         assert_last_event::<T>(Event::FundingRoundCreated(0).into());
+    }
+
+    cancel_round {
+        
+        let caller: T::AccountId = whitelisted_caller();
+        //Setting the start block to be greater than 0 which is the current block. 
+        //This condition is checked to ensure the round being cancelled has not started yet.
+        let start_block: T::BlockNumber = 1u32.into();
+        let end_block: T::BlockNumber = 10u32.into();
+        let project_key: Vec<ProjectKey> = vec![0];
+        
+        create_project_common::<T>(CONTRIBUTION);
+        Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
 
     }: _(RawOrigin::Root, 0)
     verify {
+       // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
     }
 
 
@@ -89,7 +90,6 @@ where
     assert_eq!(event, &system_event);
 }
 
-<<<<<<< HEAD
 fn create_project_common<T: Config>(projectKey: u32){
         let caller: T::AccountId = whitelisted_caller();
         let project_name: Vec<u8> = str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec();
@@ -111,6 +111,3 @@ fn create_project_common<T: Config>(projectKey: u32){
 
 
 impl_benchmark_test_suite!(Proposals, crate::mock::new_test_ext(), crate::mock::Test);
-=======
-impl_benchmark_test_suite!(Proposals, crate::mock::new_test_ext(), crate::mock::Test);
->>>>>>> 5840e0bf3834731fd4271fd32ef649e41adc1617
