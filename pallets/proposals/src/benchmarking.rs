@@ -13,8 +13,7 @@ use frame_support::{
 };
 use sp_std::str;
 use sp_std::vec::Vec;
-use common_types::CurrencyId;
-  
+ 
 const CONTRIBUTION: u32 = 400;
 
 benchmarks! {
