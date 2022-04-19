@@ -15,6 +15,7 @@ use sp_std::str;
 use sp_std::vec::Vec;
 use sp_runtime::traits::UniqueSaturatedFrom;
 
+
 const CONTRIBUTION: u32 = 400;
 
 benchmarks! {
@@ -63,7 +64,9 @@ benchmarks! {
         let end_block: T::BlockNumber = 10u32.into();
         let project_key: Vec<ProjectKey> = vec![0];
         
+        //create project
         create_project_common::<T>(CONTRIBUTION);
+        //schedule round
         Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
 
     }: _(RawOrigin::Root, 0)
@@ -82,11 +85,43 @@ benchmarks! {
         let project_key: Vec<ProjectKey> = vec![0];
         let currency_id = CurrencyId::Native;
         let contribution_amount: BalanceOf<T> = BalanceOf::<T>::unique_saturated_from(1_000_000_000_000 as u128);
+        let progress_block_number: <T as frame_system::Config>::BlockNumber = 3u32.into();
         
+        //create project
         create_project_common::<T>(CONTRIBUTION);
+        //schedule round
         Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
+        //progress the blocks
+        run_to_block::<T>(progress_block_number);
 
-    }: _(RawOrigin::Signed(caller.clone().into()), 0, currency_id, contribution_amount)
+    }: _(RawOrigin::Signed(alice.clone()), 0, currency_id, contribution_amount)
+    verify {
+       // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
+    }
+
+    approve {        
+        let caller: T::AccountId = whitelisted_caller();
+        //Setting the start block to be greater than 0 which is the current block. 
+        //This condition is checked to ensure the round being cancelled has not started yet.
+        //Benchmark seems to be starting at block 1, hence setting starting block to 2
+        let start_block: T::BlockNumber = 2u32.into();
+        let end_block: T::BlockNumber = 10u32.into();
+        let project_key: Vec<ProjectKey> = vec![0];
+        let currency_id = CurrencyId::Native;
+        let contribution_amount: BalanceOf<T> = BalanceOf::<T>::unique_saturated_from(1_000_000_000_000 as u128);
+        let milestone_keys: Vec<MilestoneKey> = vec![0];
+        let progress_block_number: <T as frame_system::Config>::BlockNumber = 3u32.into();
+        
+        //create project
+        create_project_common::<T>(CONTRIBUTION);
+        //schedule round
+        Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
+        //progress the blocks
+        run_to_block::<T>(progress_block_number);
+        //contribute
+        Proposals::<T>::contribute(RawOrigin::Signed(caller.clone()).into(), 0, currency_id, contribution_amount)?;
+
+    }: _(RawOrigin::Root, 0, milestone_keys)
     verify {
        // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
     }
