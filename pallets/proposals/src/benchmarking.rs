@@ -13,7 +13,8 @@ use frame_support::{
 };
 use sp_std::str;
 use sp_std::vec::Vec;
- 
+use sp_runtime::traits::UniqueSaturatedFrom;
+
 const CONTRIBUTION: u32 = 400;
 
 benchmarks! {
@@ -79,12 +80,13 @@ benchmarks! {
         let start_block: T::BlockNumber = 2u32.into();
         let end_block: T::BlockNumber = 10u32.into();
         let project_key: Vec<ProjectKey> = vec![0];
-        let contribution_amount = 100000u64;
+        let currency_id = CurrencyId::Native;
+        let contribution_amount: BalanceOf<T> = BalanceOf::<T>::unique_saturated_from(1_000_000_000_000 as u128);
         
         create_project_common::<T>(CONTRIBUTION);
         Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
 
-    }: _(RawOrigin::Signed(caller.clone()).into(), 0, Native, contribution_amount) 
+    }: _(RawOrigin::Signed(caller.clone().into()), 0, currency_id, contribution_amount)
     verify {
        // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
     }
