@@ -57,6 +57,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         //Setting the start block to be greater than 0 which is the current block. 
         //This condition is checked to ensure the round being cancelled has not started yet.
+        //Benchmark seems to be starting at block 1, hence setting starting block to 2
         let start_block: T::BlockNumber = 2u32.into();
         let end_block: T::BlockNumber = 10u32.into();
         let project_key: Vec<ProjectKey> = vec![0];
@@ -65,6 +66,25 @@ benchmarks! {
         Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
 
     }: _(RawOrigin::Root, 0)
+    verify {
+       // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
+    }
+
+    contribute {
+        
+        let caller: T::AccountId = whitelisted_caller();
+        //Setting the start block to be greater than 0 which is the current block. 
+        //This condition is checked to ensure the round being cancelled has not started yet.
+        //Benchmark seems to be starting at block 1, hence setting starting block to 2
+        let start_block: T::BlockNumber = 2u32.into();
+        let end_block: T::BlockNumber = 10u32.into();
+        let project_key: Vec<ProjectKey> = vec![0];
+        let contribution_amount = 100000u64;
+        
+        create_project_common::<T>(CONTRIBUTION);
+        Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
+
+    }: _(RawOrigin::Signed(caller.clone()).into(), 0, Native, contribution_amount) 
     verify {
        // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
     }
