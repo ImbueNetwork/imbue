@@ -19,6 +19,9 @@ serde = { version = "1.0.101", default-features=false}
 lite-json = {version="0.1.3", default-features=false, defaults=["no_std"]}
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 integer-sqrt = { version = '0.1.5', default-features = false }
+#added additional dependencies for benchmark
+rand = { version = "0.8.5", features = ["std_rng"], default-features = false }
+
 
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
@@ -40,6 +43,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false }
+pallet-session = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 
 
 # Local Dependencies

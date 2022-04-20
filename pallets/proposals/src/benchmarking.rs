@@ -1,22 +1,24 @@
 #![cfg(feature = "runtime-benchmarks")]
 use super::*;
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::{EventRecord, RawOrigin};
-
-//System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 
 use crate::Pallet as Proposals;
 use codec::Encode;
 use common_types::CurrencyId;
 use frame_support::{
     assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo,
+    traits::{Currency, EnsureOrigin, Get},
 };
 use sp_std::str;
 use sp_std::vec::Vec;
 use sp_runtime::traits::UniqueSaturatedFrom;
+use pallet_session::{self as session, SessionManager};
+use sp_std::prelude::*;
 
 
 const CONTRIBUTION: u32 = 400;
+const SEED: u32 = 0;
 
 benchmarks! {
     where_clause { where
@@ -77,6 +79,9 @@ benchmarks! {
     contribute {
         
         let caller: T::AccountId = whitelisted_caller();
+        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 1000);
+
+        
         //Setting the start block to be greater than 0 which is the current block. 
         //This condition is checked to ensure the round being cancelled has not started yet.
         //Benchmark seems to be starting at block 1, hence setting starting block to 2
@@ -98,7 +103,7 @@ benchmarks! {
     verify {
        // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
     }
-
+/*
     approve {        
         let caller: T::AccountId = whitelisted_caller();
         //Setting the start block to be greater than 0 which is the current block. 
@@ -125,6 +130,8 @@ benchmarks! {
     verify {
        // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
     }
+
+    */
 
 
 }
@@ -167,6 +174,34 @@ fn create_project_common<T: Config>(projectKey: u32){
 
 fn run_to_block<T: Config>(new_block: <T as frame_system::Config>::BlockNumber) {
     frame_system::Pallet::<T>::set_block_number(new_block);
+}
+
+fn create_funded_user<T: Config>(
+	string: &'static str,
+	n: u32,
+	balance_factor: u32,
+) -> T::AccountId {
+	let user = account(string, n, SEED);
+	let balance = T::Currency::minimum_balance() * balance_factor.into();
+	let _ = T::Currency::make_free_balance_be(&user, balance);
+	user
+}
+
+fn keys<T: Config + session::Config>(c: u32) -> <T as session::Config>::Keys {
+	use rand::{RngCore, SeedableRng};
+
+	let keys = {
+		let mut keys = [0u8; 128];
+
+		if c > 0 {
+			let mut rng = rand::rngs::StdRng::seed_from_u64(c as u64);
+			rng.fill_bytes(&mut keys);
+		}
+
+		keys
+	};
+
+	Decode::decode(&mut &keys[..]).unwrap()
 }
 
 impl_benchmark_test_suite!(Proposals, crate::mock::new_test_ext(), crate::mock::Test);
