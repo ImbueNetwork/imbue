@@ -25,19 +25,23 @@ use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for proposals.
-pub trait WeightInfo {	fn create_project(a: u32, ) -> Weight;	fn schedule_round() -> Weight;	fn cancel_round() -> Weight;	fn contribute() -> Weight;}
+pub trait WeightInfo {	fn create_project() -> Weight;	fn schedule_round() -> Weight;	fn cancel_round() -> Weight;	fn contribute() -> Weight;	fn approve() -> Weight;	fn submit_milestone() -> Weight;}
 
 /// Weights for proposals using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {	fn create_project(_a: u32, ) -> Weight {
-		(399_068_000 as Weight)			.saturating_add(T::DbWeight::get().reads(2 as Weight))			.saturating_add(T::DbWeight::get().writes(2 as Weight))	}	fn schedule_round() -> Weight {
-		(396_928_000 as Weight)			.saturating_add(T::DbWeight::get().reads(2 as Weight))			.saturating_add(T::DbWeight::get().writes(2 as Weight))	}	fn cancel_round() -> Weight {
-		(402_713_000 as Weight)			.saturating_add(T::DbWeight::get().reads(2 as Weight))			.saturating_add(T::DbWeight::get().writes(1 as Weight))	}	fn contribute() -> Weight {
-		(1_183_200_000 as Weight)			.saturating_add(T::DbWeight::get().reads(6 as Weight))			.saturating_add(T::DbWeight::get().writes(4 as Weight))	}}
+impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {	fn create_project() -> Weight {
+		(1_141_651_000 as Weight)			.saturating_add(T::DbWeight::get().reads(2 as Weight))			.saturating_add(T::DbWeight::get().writes(2 as Weight))	}	fn schedule_round() -> Weight {
+		(867_675_000 as Weight)			.saturating_add(T::DbWeight::get().reads(2 as Weight))			.saturating_add(T::DbWeight::get().writes(2 as Weight))	}	fn cancel_round() -> Weight {
+		(592_577_000 as Weight)			.saturating_add(T::DbWeight::get().reads(2 as Weight))			.saturating_add(T::DbWeight::get().writes(1 as Weight))	}	fn contribute() -> Weight {
+		(1_890_250_000 as Weight)			.saturating_add(T::DbWeight::get().reads(6 as Weight))			.saturating_add(T::DbWeight::get().writes(4 as Weight))	}	fn approve() -> Weight {
+		(933_153_000 as Weight)			.saturating_add(T::DbWeight::get().reads(4 as Weight))			.saturating_add(T::DbWeight::get().writes(2 as Weight))	}	fn submit_milestone() -> Weight {
+		(852_584_000 as Weight)			.saturating_add(T::DbWeight::get().reads(2 as Weight))			.saturating_add(T::DbWeight::get().writes(3 as Weight))	}}
 
 // For backwards compatibility and tests
-impl WeightInfo for () {	fn create_project(_a: u32, ) -> Weight {
-		(399_068_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(2 as Weight))			.saturating_add(RocksDbWeight::get().writes(2 as Weight))	}	fn schedule_round() -> Weight {
-		(396_928_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(2 as Weight))			.saturating_add(RocksDbWeight::get().writes(2 as Weight))	}	fn cancel_round() -> Weight {
-		(402_713_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(2 as Weight))			.saturating_add(RocksDbWeight::get().writes(1 as Weight))	}	fn contribute() -> Weight {
-		(1_183_200_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(6 as Weight))			.saturating_add(RocksDbWeight::get().writes(4 as Weight))	}}
+impl WeightInfo for () {	fn create_project() -> Weight {
+		(1_141_651_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(2 as Weight))			.saturating_add(RocksDbWeight::get().writes(2 as Weight))	}	fn schedule_round() -> Weight {
+		(867_675_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(2 as Weight))			.saturating_add(RocksDbWeight::get().writes(2 as Weight))	}	fn cancel_round() -> Weight {
+		(592_577_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(2 as Weight))			.saturating_add(RocksDbWeight::get().writes(1 as Weight))	}	fn contribute() -> Weight {
+		(1_890_250_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(6 as Weight))			.saturating_add(RocksDbWeight::get().writes(4 as Weight))	}	fn approve() -> Weight {
+		(933_153_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(4 as Weight))			.saturating_add(RocksDbWeight::get().writes(2 as Weight))	}	fn submit_milestone() -> Weight {
+		(852_584_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(2 as Weight))			.saturating_add(RocksDbWeight::get().writes(3 as Weight))	}}

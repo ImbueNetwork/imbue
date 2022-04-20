@@ -4,17 +4,13 @@ use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whiteli
 use frame_system::{EventRecord, RawOrigin};
 
 use crate::Pallet as Proposals;
-use codec::Encode;
 use common_types::CurrencyId;
 use frame_support::{
-    assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo,
     traits::{Currency, EnsureOrigin, Get},
 };
 use sp_std::str;
 use sp_std::vec::Vec;
 use sp_runtime::traits::UniqueSaturatedFrom;
-use pallet_session::{self as session, SessionManager};
-use sp_std::prelude::*;
 
 
 const CONTRIBUTION: u32 = 400;
@@ -26,7 +22,7 @@ benchmarks! {
     }
 
     create_project{
-        let a in 1 .. 100;
+        //let a in 1 .. 100;
         let caller: T::AccountId = whitelisted_caller();
         let project_name: Vec<u8> = str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec();
         let project_logo: Vec<u8> = str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec();
@@ -78,7 +74,7 @@ benchmarks! {
 
     contribute {
         
-        let caller: T::AccountId = whitelisted_caller();
+        //create a funded user for contribution
         let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 1000);
 
         
@@ -103,9 +99,11 @@ benchmarks! {
     verify {
        // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
     }
-/*
+
     approve {        
-        let caller: T::AccountId = whitelisted_caller();
+        //create a funded user for contribution
+        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 1000);
+
         //Setting the start block to be greater than 0 which is the current block. 
         //This condition is checked to ensure the round being cancelled has not started yet.
         //Benchmark seems to be starting at block 1, hence setting starting block to 2
@@ -124,15 +122,103 @@ benchmarks! {
         //progress the blocks
         run_to_block::<T>(progress_block_number);
         //contribute
-        Proposals::<T>::contribute(RawOrigin::Signed(caller.clone()).into(), 0, currency_id, contribution_amount)?;
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, currency_id, contribution_amount)?;
 
     }: _(RawOrigin::Root, 0, milestone_keys)
     verify {
        // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
     }
+/*
+    submit_milestone { 
+        let caller: T::AccountId = whitelisted_caller(); 
+        //create a user as initiator
+        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
+        //create a funded user for contribution
+        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 1000);
 
+
+        //for project creation
+        let project_name: Vec<u8> = str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec();
+        let project_logo: Vec<u8> = str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec();
+        let project_description: Vec<u8> = str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec();
+        let website: Vec<u8> = str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec();
+        let milestones: Vec<ProposedMilestone> = vec![ProposedMilestone {
+            name: Vec::new(),
+            percentage_to_unlock: 100,
+        }];
+
+        let required_funds: BalanceOf<T> = 100u32.into();
+
+        //Setting the start block to be greater than 0 which is the current block. 
+        //This condition is checked to ensure the round being cancelled has not started yet.
+        //Benchmark seems to be starting at block 1, hence setting starting block to 2
+        let start_block: T::BlockNumber = 2u32.into();
+        let end_block: T::BlockNumber = 10u32.into();
+        let project_key: Vec<ProjectKey> = vec![0];
+        let currency_id = CurrencyId::Native;
+        let contribution_amount: BalanceOf<T> = BalanceOf::<T>::unique_saturated_from(1_000_000_000_000 as u128);
+        let milestone_keys: Vec<MilestoneKey> = vec![0];
+        let progress_block_number: <T as frame_system::Config>::BlockNumber = 3u32.into();
+        
+        //create project
+        //create_project_common::<T>(CONTRIBUTION);
+        Proposals::<T>::create_project(RawOrigin::Signed(caller.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id)?;
+        //schedule round
+        Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
+        //progress the blocks
+        run_to_block::<T>(progress_block_number);
+        //contribute
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, currency_id, contribution_amount)?;
+        //Approve
+        Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
+
+        //project key - 2nd argument as u32 instead of vec
+        //Milestone key - 3rd argument as u32
+    }: _(RawOrigin::Signed(caller.clone()), 0, 0)
+    verify {
+       // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
+    }
     */
+/*
+    vote_on_milestone { 
+        let caller: T::AccountId = whitelisted_caller();       
+        //create a funded user for contribution
+        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 1000);
 
+        //Setting the start block to be greater than 0 which is the current block. 
+        //This condition is checked to ensure the round being cancelled has not started yet.
+        //Benchmark seems to be starting at block 1, hence setting starting block to 2
+        let start_block: T::BlockNumber = 2u32.into();
+        let end_block: T::BlockNumber = 10u32.into();
+        let project_key: Vec<ProjectKey> = vec![0];
+        let currency_id = CurrencyId::Native;
+        let contribution_amount: BalanceOf<T> = BalanceOf::<T>::unique_saturated_from(1_000_000_000_000 as u128);
+        let milestone_keys: Vec<MilestoneKey> = vec![0];
+        let progress_block_number: <T as frame_system::Config>::BlockNumber = 3u32.into();
+        
+        //create project
+        create_project_common::<T>(CONTRIBUTION);
+        //schedule round
+        Proposals::<T>::schedule_round(RawOrigin::Root.into(), start_block, end_block, project_key)?;
+        //progress the blocks
+        run_to_block::<T>(progress_block_number);
+        //contribute
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, currency_id, contribution_amount)?;
+        //Approve
+        Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
+        //Submit Milestone
+        //project key - 2nd argument as u32 instead of vec
+        //Milestone key - 3rd argument as u32
+        Proposals::<T>::submit_milestone(RawOrigin::Signed(alice.clone()).into(), 0, 0)?;
+
+        //project key - 2nd argument as u32 instead of vec
+        //Milestone key - 3rd argument as u32
+        //approval bool set to true - approved - 4th argument
+    }: _(RawOrigin::Signed(caller.clone()), 0, 0, true)
+    verify {
+       // assert_last_event::<T>(Event::FundingRoundCreated(0).into());
+    }
+*/
 
 }
 
@@ -187,21 +273,5 @@ fn create_funded_user<T: Config>(
 	user
 }
 
-fn keys<T: Config + session::Config>(c: u32) -> <T as session::Config>::Keys {
-	use rand::{RngCore, SeedableRng};
-
-	let keys = {
-		let mut keys = [0u8; 128];
-
-		if c > 0 {
-			let mut rng = rand::rngs::StdRng::seed_from_u64(c as u64);
-			rng.fill_bytes(&mut keys);
-		}
-
-		keys
-	};
-
-	Decode::decode(&mut &keys[..]).unwrap()
-}
 
 impl_benchmark_test_suite!(Proposals, crate::mock::new_test_ext(), crate::mock::Test);
