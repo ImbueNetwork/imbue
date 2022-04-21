@@ -82,12 +82,7 @@ const imbue = {
             ]
         },
         ...[
-            "alice",
             "bob",
-            "charlie",
-            "dave",
-            "eve",
-            "ferdie",
         ].map((name, idx) => ({
             name,
             wsPort: parachainBaseWSPort + idx,
