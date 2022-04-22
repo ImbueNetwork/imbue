@@ -171,6 +171,7 @@ pub mod pallet {
         EndTooEarly,
         IdentityNeeded,
         InvalidParam,
+        NoAvailableFundsToWithdraw,
         InvalidAccount,
         ProjectDoesNotExist,
         ProjectNameIsMandatory,
@@ -826,7 +827,7 @@ pub mod pallet {
             }
 
             let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
-            ensure!(available_funds > (0_u32).into(), Error::<T>::InvalidParam);
+            ensure!(available_funds > (0_u32).into(), Error::<T>::NoAvailableFundsToWithdraw);
 
 
             T::MultiCurrency::transfer(
