@@ -1,5 +1,5 @@
 use cumulus_primitives_core::ParaId;
-use development_runtime::{AccountId, AuraId, CouncilConfig, Signature, TechnicalCommitteeConfig};
+use development_runtime::{AccountId, AuraId, CouncilConfig, Signature, CouncilMembershipConfig, DemocracyConfig, TechnicalMembershipConfig, TechnicalCommitteeConfig};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
@@ -91,6 +91,8 @@ pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentCha
                 )],
                 endowed_accounts_local(),
                 Some(10_000_000 * IMBU),
+                council_members(),
+                tech_committee_members(),
                 id,
             )
         },
@@ -124,6 +126,8 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
                 ],
                 endowed_accounts(),
                 Some(10_000_000 * IMBU),
+                council_members(),
+                tech_committee_members(),
                 id,
             )
         },
@@ -141,6 +145,18 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
 
 fn endowed_accounts() -> Vec<AccountId> {
     vec![AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap()]
+}
+
+fn council_members() -> Vec<AccountId> {
+    vec![AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap(),
+    get_account_id_from_seed::<sr25519::Public>("Alice"),
+    get_account_id_from_seed::<sr25519::Public>("Bob")]
+}
+
+fn tech_committee_members() -> Vec<AccountId> {
+    vec![AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap(),
+    get_account_id_from_seed::<sr25519::Public>("Alice"),
+    get_account_id_from_seed::<sr25519::Public>("Bob")]
 }
 
 fn endowed_accounts_local() -> Vec<AccountId> {
@@ -170,6 +186,8 @@ fn development_genesis(
     initial_authorities: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
     total_issuance: Option<development_runtime::Balance>,
+    council_membership: Vec<AccountId>,
+    technical_committee_membership: Vec<AccountId>,
     id: ParaId,
 ) -> development_runtime::GenesisConfig {
     let num_endowed_accounts = endowed_accounts.len();
@@ -217,6 +235,14 @@ fn development_genesis(
             candidacy_bond: 1 * IMBU,
             ..Default::default()
         },
+        council_membership: CouncilMembershipConfig {
+			members: council_membership,
+			phantom: Default::default(),
+		},
+        technical_membership: TechnicalMembershipConfig {
+			members: technical_committee_membership,
+			phantom: Default::default(),
+		},
         session: development_runtime::SessionConfig {
             keys: initial_authorities
                 .iter()
@@ -244,6 +270,7 @@ fn development_genesis(
             phantom: Default::default(),
             members: vec![], // TODO : Set members
         },
+        democracy: DemocracyConfig::default(),
         treasury: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
