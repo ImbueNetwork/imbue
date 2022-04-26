@@ -37,8 +37,7 @@ impl TokenMetadata for CurrencyId {
 
     fn decimals(&self) -> u8 {
         match self {
-            CurrencyId::Native => 18,
-            CurrencyId::KUSD | CurrencyId::KSM => 12,
+            CurrencyId::Native => 12, CurrencyId::KUSD | CurrencyId::KSM => 12,
         }
     }
 }
