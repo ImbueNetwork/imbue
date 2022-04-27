@@ -12,7 +12,10 @@ use frame_support::{pallet_prelude::*, PalletId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{
+    traits::{AccountIdConversion},
+    Perbill,
+};
 use sp_std::prelude::*;
 use sp_std::vec;
 #[cfg(test)]
@@ -30,6 +33,7 @@ const MAX_DESC_FIELD_LENGTH: usize = 5000;
 const MAX_STRING_FIELD_LENGTH: usize = 256;
 // set end to 5 mins for demo purposes
 const MILESTONES_VOTING_WINDOW: u32 = 25u32;
+//const MILESTONE_VOTING_THRESHOLD: f64 = 0.75;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -550,6 +554,9 @@ pub mod pallet {
                 ensure!(round.end < now, Error::<T>::RoundNotEnded);
             }
 
+            let milestone_voting_threshold: Perbill = Self::vote_threshold_percent();
+            let milestone_voting_threshold_amount: BalanceOf<T> = milestone_voting_threshold * total_contribution_amount;
+
             let mut milestones = Vec::new();
             // set is_approved
             project.approved_for_funding = true;
@@ -560,7 +567,7 @@ pub mod pallet {
                         let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
                         if votes_exist {
                             let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
-                            if vote.yay > vote.nay {
+                            if vote.yay > vote.nay && vote.yay + vote.nay > total_contribution_amount{
                                 milestone.is_approved = true;
                                 let updated_vote = Vote {
                                     yay: vote.yay,
@@ -949,6 +956,10 @@ impl<T: Config> Pallet<T> {
         }
         total_contribution_amount
     }
+
+    pub fn vote_threshold_percent() -> Perbill {
+		Perbill::from_percent(75)
+	}
 }
 
 pub type RoundKey = u32;
