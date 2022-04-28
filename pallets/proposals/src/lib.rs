@@ -401,6 +401,20 @@ pub mod pallet {
             Ok(().into())
         }
 
+
+
+        /// Step 3 (CONTRIBUTOR/FUNDER)
+        /// Contribute to a proposal
+        #[pallet::weight(<T as Config>::WeightInfo::contribute())]
+        pub fn test(
+            origin: OriginFor<T>,
+            whitelist_spot: Whitelist<AccountIdOf<T>, BalanceOf<T>>,
+        ) -> DispatchResultWithPostInfo {
+            Ok(().into())
+        }
+
+
+
         /// Step 3 (CONTRIBUTOR/FUNDER)
         /// Contribute to a proposal
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
@@ -1044,6 +1058,13 @@ pub struct Project<AccountId, Balance, BlockNumber> {
     initiator: AccountId,
     create_block_number: BlockNumber,
     approved_for_funding: bool,
+}
+
+/// White struct
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+pub struct Whitelist<AccountId, Balance> {
+    who: AccountId,
+    max_cap: Balance,
 }
 
 #[cfg(feature = "std")]
