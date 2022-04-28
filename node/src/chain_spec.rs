@@ -1,5 +1,5 @@
 use cumulus_primitives_core::ParaId;
-use development_runtime::{AccountId, AuraId, CouncilConfig, Signature, TechnicalCommitteeConfig};
+use development_runtime::{AccountId, AuraId, CouncilConfig, Signature, CouncilMembershipConfig, DemocracyConfig, TechnicalMembershipConfig, TechnicalCommitteeConfig};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
@@ -90,7 +90,9 @@ pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentCha
                     get_collator_keys_from_seed("Alice"),
                 )],
                 endowed_accounts_local(),
-                Some(10_000_000 * IMBU),
+                Some(250_000_000 * IMBU),
+                council_members(),
+                tech_committee_members(),
                 id,
             )
         },
@@ -123,7 +125,9 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
                     ),
                 ],
                 endowed_accounts(),
-                Some(10_000_000 * IMBU),
+                Some(250_000_000 * IMBU),
+                council_members(),
+                tech_committee_members(),
                 id,
             )
         },
@@ -140,24 +144,28 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
 }
 
 fn endowed_accounts() -> Vec<AccountId> {
-    vec![AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap()]
+    vec![AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap()]
+}
+
+fn council_members() -> Vec<AccountId> {
+    vec![AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
+    AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
+    AccountId32::from_str("5FsLoiGenakVKDwE7YHe58KLrENj2QZ6zxLLbeUCWKVagMAQ").unwrap(),
+    AccountId32::from_str("5EexofvmRpHVFYFehejL7yF3LW1RGZmNR9wAx5fcYXgRUnYp").unwrap()]
+}
+
+fn tech_committee_members() -> Vec<AccountId> {
+    vec![AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
+    AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
+    AccountId32::from_str("5FsLoiGenakVKDwE7YHe58KLrENj2QZ6zxLLbeUCWKVagMAQ").unwrap(),
+    AccountId32::from_str("5EexofvmRpHVFYFehejL7yF3LW1RGZmNR9wAx5fcYXgRUnYp").unwrap()]
 }
 
 fn endowed_accounts_local() -> Vec<AccountId> {
     vec![
-        AccountId32::from_str("5F4pGsCKn3AM8CXqiVzpZepZkMBFbiM4qdgCMcg2Pj3yjCNM").unwrap(),
+        AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         get_account_id_from_seed::<sr25519::Public>("Bob"),
-        // get_account_id_from_seed::<sr25519::Public>("Charlie"),
-        // get_account_id_from_seed::<sr25519::Public>("Dave"),
-        // get_account_id_from_seed::<sr25519::Public>("Eve"),
-        // get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-        // get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-        // get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-        // get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-        // get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-        // get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-        // get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
     ]
 }
 
@@ -170,6 +178,8 @@ fn development_genesis(
     initial_authorities: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
     total_issuance: Option<development_runtime::Balance>,
+    council_membership: Vec<AccountId>,
+    technical_committee_membership: Vec<AccountId>,
     id: ParaId,
 ) -> development_runtime::GenesisConfig {
     let num_endowed_accounts = endowed_accounts.len();
@@ -217,6 +227,14 @@ fn development_genesis(
             candidacy_bond: 1 * IMBU,
             ..Default::default()
         },
+        council_membership: CouncilMembershipConfig {
+			members: council_membership,
+			phantom: Default::default(),
+		},
+        technical_membership: TechnicalMembershipConfig {
+			members: technical_committee_membership,
+			phantom: Default::default(),
+		},
         session: development_runtime::SessionConfig {
             keys: initial_authorities
                 .iter()
@@ -244,6 +262,7 @@ fn development_genesis(
             phantom: Default::default(),
             members: vec![], // TODO : Set members
         },
+        democracy: DemocracyConfig::default(),
         treasury: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
