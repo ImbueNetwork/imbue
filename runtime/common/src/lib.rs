@@ -18,9 +18,7 @@
 
 pub use common_traits::TokenMetadata;
 pub use constants::*;
-pub use impls::*;
 pub use types::*;
-mod impls;
 
 /// Common types for all runtimes
 pub mod types {
@@ -34,6 +32,7 @@ pub mod types {
     use sp_runtime::traits::{BlakeTwo256, IdentifyAccount, Verify};
     use sp_std::vec::Vec;
     pub type EnsureRootOr<O> = EnsureOneOf<EnsureRoot<AccountId>, O>;
+
     pub use common_types::CurrencyId;
 
     /// An index to a block.
@@ -109,28 +108,36 @@ pub mod types {
 pub mod currency {
     use super::types::Balance;
 
-    pub const MICRO_IMBU: Balance = 1_000_000_000_000; // 10−6 	0.000001
-    pub const MILLI_IMBU: Balance = 1_000 * MICRO_IMBU; // 10−3 	0.001
-    pub const CENTI_IMBU: Balance = 10 * MILLI_IMBU; // 10−2 	0.01
-    pub const IMBU: Balance = 100 * CENTI_IMBU;
+    pub const IMBU: Balance = 1_000_000_000_000;
+    pub const DOLLARS: Balance = IMBU;
+    pub const CENTS: Balance = DOLLARS / 100;
+	pub const RELAY_CENTS: Balance = DOLLARS / 10_000;
+    pub const MILLI_IMBU: Balance = CENTS / 10;
+    pub const MICRO_IMBU: Balance = MILLI_IMBU / 1000;
+	pub const MILLI_CENTS: Balance = CENTS / 1000;
+
 
     pub const EXISTENTIAL_DEPOSIT: Balance = MICRO_IMBU;
 
-    /// Minimum vesting amount, in IMBU/PCHU
+    /// Minimum vesting amount, in IMBU
     pub const MIN_VESTING: Balance = 10;
 
     /// Additional fee charged when moving native tokens to target chains (in IMBUs).
-    pub const NATIVE_TOKEN_TRANSFER_FEE: Balance = 2000 * IMBU;
+    pub const NATIVE_TOKEN_TRANSFER_FEE: Balance = 10 * CENTS;	
 
     pub const fn deposit(items: u32, bytes: u32) -> Balance {
         // map to 1/10 of what the kusama relay chain charges (v9020)
-        items as Balance * 15 * CENTI_IMBU + (bytes as Balance) * 6 * CENTI_IMBU
+        items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
     }
 }
 
 /// Common constants for all runtimes
 pub mod constants {
+    use super::currency::CENTS as CENTI_CURRENCY;
+    use super::types::Balance;
     use super::types::BlockNumber;
+    use common_traits::TokenMetadata;
+    use common_types::CurrencyId;
     use frame_support::weights::{constants::WEIGHT_PER_SECOND, Weight};
     use sp_runtime::Perbill;
 
@@ -160,6 +167,30 @@ pub mod constants {
 
     /// We allow for 0.5 seconds of compute with a 6 second average block time.
     pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+
+    pub fn base_tx(currency: CurrencyId) -> Balance {
+        cent(currency) / 10
+    }
+
+    pub fn dollar(currency_id: CurrencyId) -> Balance {
+        10u128.saturating_pow(currency_id.decimals().into())
+    }
+
+    pub fn cent(currency_id: CurrencyId) -> Balance {
+        dollar(currency_id) / 100
+    }
+
+    pub fn millicent(currency_id: CurrencyId) -> Balance {
+        cent(currency_id) / 1000
+    }
+    
+    pub fn microcent(currency_id: CurrencyId) -> Balance {
+        millicent(currency_id) / 1000
+    }
+
+    pub fn base_tx_in_imbu() -> Balance {
+        CENTI_CURRENCY / 10
+    }
 }
 
 pub mod parachains {
@@ -170,17 +201,11 @@ pub mod parachains {
 }
 
 pub mod xcm_fees {
+    use super::constants::base_tx;
+    use super::types::Balance;
     pub use common_traits::TokenMetadata;
     pub use common_types::CurrencyId;
-
     use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND};
-
-    use super::currency::CENTI_IMBU as CENTI_CURRENCY;
-    use super::types::Balance;
-
-    pub fn base_tx_in_air() -> Balance {
-        CENTI_CURRENCY / 10
-    }
 
     // The fee cost per second for transferring the native token in cents.
     pub fn native_per_second() -> Balance {
@@ -196,16 +221,45 @@ pub mod xcm_fees {
         let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
         base_tx_per_second * base_tx(currency)
     }
+}
 
-    fn base_tx(currency: CurrencyId) -> Balance {
-        cent(currency) / 10
+/// Fee-related
+pub mod fee {
+    use super::constants::base_tx_in_imbu;
+    use super::types::{Balance};
+    use frame_support::{
+        weights::{
+            constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+            WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
+        },
+    };
+    use smallvec::smallvec;
+    use sp_runtime::Perbill;
+
+
+    pub struct WeightToFee;
+    impl WeightToFeePolynomial for WeightToFee {
+        type Balance = Balance;
+        fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+            // in Karura, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+            let p = super::currency::RELAY_CENTS;
+            let q = Balance::from(ExtrinsicBaseWeight::get());
+            smallvec![WeightToFeeCoefficient {
+                degree: 1,
+                negative: false,
+                coeff_frac: Perbill::from_rational(p % q, q),
+                coeff_integer: p / q,
+            }]
+        }
     }
 
-    pub fn dollar(currency_id: CurrencyId) -> Balance {
-        10u128.saturating_pow(currency_id.decimals().into())
+    pub fn kar_per_second() -> u128 {
+        let base_weight = Balance::from(ExtrinsicBaseWeight::get());
+        let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+        base_tx_per_second * base_tx_in_imbu()
     }
 
-    pub fn cent(currency_id: CurrencyId) -> Balance {
-        dollar(currency_id) / 100
+    pub fn ksm_per_second() -> u128 {
+        kar_per_second() / 50
     }
 }

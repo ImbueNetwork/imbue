@@ -4,7 +4,7 @@ edition = '2018'
 homepage = 'https://imbue.network'
 license = 'Apache 2.0'
 name = 'development-runtime'
-repository = 'https://github.com/ImbueNetwork/imbue-collator/'
+repository = 'https://github.com/ImbueNetwork/imbue/'
 version = '2.0.0'
 
 [package.metadata.docs.rs]
@@ -45,7 +45,10 @@ pallet-authorship = { git = "https://github.com/paritytech/substrate",  default-
 
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 pallet-preimage = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.17" }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }

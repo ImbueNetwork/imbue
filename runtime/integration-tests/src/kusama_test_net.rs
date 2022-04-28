@@ -74,7 +74,7 @@ decl_test_network! {
             // fails with: "error: arbitrary expressions aren't allowed in patterns"
 
             // Be sure to use `PARA_ID_DEVELOPMENT`
-            (2088, Development),
+            (2102, Development),
             // Be sure to use `PARA_ID_SIBLING`
             (3000, Sibling),
             // Be sure to use `PARA_ID_KARURA`

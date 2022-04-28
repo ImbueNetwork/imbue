@@ -95,7 +95,7 @@ benchmarks! {
         //progress the blocks
         run_to_block::<T>(progress_block_number);
 
-    }: _(RawOrigin::Signed(alice.clone()), 0, currency_id, contribution_amount)
+    }: _(RawOrigin::Signed(alice.clone()), 0, contribution_amount)
     verify {
         //assert_last_event::<T>(Event::ContributeSucceeded(alice,0,contribution_amount,currency_id,progress_block_number).into());
     }
@@ -122,7 +122,7 @@ benchmarks! {
         //progress the blocks
         run_to_block::<T>(progress_block_number);
         //contribute
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, currency_id, contribution_amount)?;
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         
         //2nd argument - project key
     }: _(RawOrigin::Root, 0, milestone_keys)
@@ -154,7 +154,7 @@ benchmarks! {
         //progress the blocks
         run_to_block::<T>(progress_block_number);
         //contribute
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, currency_id, contribution_amount)?;
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         //Approve
         Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
 
@@ -190,7 +190,7 @@ benchmarks! {
         //progress the blocks - to a block after the round start block for the project
         run_to_block::<T>(progress_block_number_contribute);
         //contribute
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, currency_id, contribution_amount)?;
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         //Approve
         Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
         //Submit Milestone
@@ -234,7 +234,7 @@ benchmarks! {
         //progress the blocks - to a block after the round start block for the project
         run_to_block::<T>(progress_block_number_contribute);
         //contribute
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, currency_id, contribution_amount)?;
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         //Approve
         Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
         //Submit Milestone
@@ -283,7 +283,7 @@ benchmarks! {
         //progress the blocks - to a block after the round start block for the project
         run_to_block::<T>(progress_block_number_contribute);
         //contribute
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, currency_id, contribution_amount)?;
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         //Approve
         Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
         //Submit Milestone
@@ -328,7 +328,7 @@ where
     assert_eq!(event, &system_event);
 }
 
-fn create_project_common<T: Config>(contribution: u32){
+fn create_project_common<T: Config>(contribution: u32) {
         let _caller: T::AccountId = whitelisted_caller();
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
         let project_name: Vec<u8> = str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec();
@@ -345,7 +345,8 @@ fn create_project_common<T: Config>(contribution: u32){
         
         let _start_block: T::BlockNumber = 0u32.into();
 
-        Proposals::<T>::create_project(RawOrigin::Signed(bob.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id);
+        let _ =Proposals::<T>::create_project(RawOrigin::Signed(bob.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id);
+        
 }
 
 fn run_to_block<T: Config>(new_block: <T as frame_system::Config>::BlockNumber) {

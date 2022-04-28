@@ -12,11 +12,8 @@ use sp_std::vec::Vec;
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
     Native,
-    Usd,
-
     // Karura KSM
     KSM,
-
     // Karura Dollar
     KUSD,
 }
@@ -25,7 +22,6 @@ impl TokenMetadata for CurrencyId {
     fn name(&self) -> Vec<u8> {
         match self {
             CurrencyId::Native => b"Native currency".to_vec(),
-            CurrencyId::Usd => b"USD stable coin".to_vec(),
             CurrencyId::KUSD => b"Karura Dollar".to_vec(),
             CurrencyId::KSM => b"Kusama".to_vec(),
         }
@@ -34,7 +30,6 @@ impl TokenMetadata for CurrencyId {
     fn symbol(&self) -> Vec<u8> {
         match self {
             CurrencyId::Native => b"IMBU".to_vec(),
-            CurrencyId::Usd => b"USD".to_vec(),
             CurrencyId::KUSD => b"KUSD".to_vec(),
             CurrencyId::KSM => b"KSM".to_vec(),
         }
@@ -42,8 +37,7 @@ impl TokenMetadata for CurrencyId {
 
     fn decimals(&self) -> u8 {
         match self {
-            CurrencyId::Native => 18,
-            CurrencyId::Usd | CurrencyId::KUSD | CurrencyId::KSM => 12,
+            CurrencyId::Native => 12, CurrencyId::KUSD | CurrencyId::KSM => 12,
         }
     }
 }

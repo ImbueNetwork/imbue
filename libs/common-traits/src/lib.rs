@@ -1,21 +1,8 @@
-// Copyright 2021 Centrifuge GmbH (centrifuge.io).
-// This file is part of Centrifuge chain project.
-
-// Centrifuge is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version (see http://www.gnu.org/licenses).
-
-// Centrifuge is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
 // Ensure we're `no_std` when compiling for WebAssembly.
 
-//! # A common trait for centrifuge
+//! # A common trait for imbue
 //!
-//! This crate provides some common traits used by centrifuge.
+//! This crate provides some common traits used imbue.
 //! # Reward trait
 //! The trait does assume, that any call of reward has been
 //! checked for validity. I.e. there are not validation checks

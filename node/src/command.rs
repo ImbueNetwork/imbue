@@ -17,7 +17,7 @@
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    service::{new_partial, DevelopmentRuntimeExecutor, ShellRuntimeExecutor},
+    service::{new_partial, DevelopmentRuntimeExecutor},
 };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
@@ -38,7 +38,6 @@ const DEFAULT_PARA_ID: u32 = 2102;
 
 enum ChainIdentity {
     Development,
-    Shell,
 }
 
 trait IdentifyChain {
@@ -47,11 +46,7 @@ trait IdentifyChain {
 
 impl IdentifyChain for dyn sc_service::ChainSpec {
     fn identify(&self) -> ChainIdentity {
-        if self.id().starts_with("shell") {
-            ChainIdentity::Shell
-        } else {
-            ChainIdentity::Development
-        }
+        ChainIdentity::Development
     }
 }
 
@@ -82,7 +77,6 @@ fn load_spec(
             para_id,
             "chachacha",
         )),
-        "shell" => Box::new(chain_spec::get_shell_chain_spec(para_id)),
 
         path => {
             let chain_spec = chain_spec::DevelopmentChainSpec::from_json_file(path.into())?;
@@ -90,9 +84,6 @@ fn load_spec(
                 ChainIdentity::Development => Box::new(
                     chain_spec::DevelopmentChainSpec::from_json_file(path.into())?,
                 ),
-                ChainIdentity::Shell => {
-                    Box::new(chain_spec::ShellChainSpec::from_json_file(path.into())?)
-                }
             }
         }
     })
@@ -122,7 +113,7 @@ impl SubstrateCli for Cli {
     }
 
     fn support_url() -> String {
-        "https://github.com/ImbueNetwork/imbue-collator/issues/new".into()
+        "https://github.com/ImbueNetwork/imbue/issues/new".into()
     }
 
     fn copyright_start_year() -> i32 {
@@ -130,13 +121,12 @@ impl SubstrateCli for Cli {
     }
 
     fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-        load_spec(id, DEFAULT_PARA_ID.into())
+        load_spec(id, self.run.parachain_id.unwrap_or(DEFAULT_PARA_ID).into())
     }
 
     fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
         match spec.identify() {
             ChainIdentity::Development => &development_runtime::VERSION,
-            ChainIdentity::Shell => &shell_runtime::VERSION,
         }
     }
 }
@@ -165,7 +155,7 @@ impl SubstrateCli for RelayChainCli {
     }
 
     fn support_url() -> String {
-        "https://github.com/ImbueNetwork/imbue-collator/issues/new".into()
+        "https://github.com/ImbueNetwork/imbue/issues/new".into()
     }
 
     fn copyright_start_year() -> i32 {
@@ -200,16 +190,6 @@ macro_rules! construct_async_run {
 					let $components = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
 						&$config,
 						crate::service::build_development_import_queue,
-					)?;
-					let task_manager = $components.task_manager;
-					{ $( $code )* }.map(|v| (v, task_manager))
-				})
-			}
-			ChainIdentity::Shell => {
-				runner.async_run(|$config| {
-					let $components = new_partial::<shell_runtime::RuntimeApi, ShellRuntimeExecutor, _>(
-						&$config,
-						crate::service::build_shell_import_queue,
 					)?;
 					let task_manager = $components.task_manager;
 					{ $( $code )* }.map(|v| (v, task_manager))
@@ -338,11 +318,10 @@ pub fn run() -> Result<()> {
         }
 
         None => {
-            let runner = cli.create_runner(&cli.run.normalize())?;
+            let runner = cli.create_runner(&(*cli.run).normalize())?;
 
             runner.run_node_until_exit(|config| async move {
-                let para_id =
-                    chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
+
 
                 let polkadot_cli = RelayChainCli::new(
                     &config,
@@ -351,7 +330,12 @@ pub fn run() -> Result<()> {
                         .chain(cli.relaychain_args.iter()),
                 );
 
-                let id = ParaId::from(para_id.unwrap_or(DEFAULT_PARA_ID));
+
+                let extension = chain_spec::Extensions::try_get(&*config.chain_spec);
+				let para_id = extension.map(|e| e.para_id);
+
+                let id = ParaId::from(cli.run.parachain_id.clone().or(para_id).unwrap_or(DEFAULT_PARA_ID));
+
 
                 let parachain_account =
                     AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
@@ -381,12 +365,6 @@ pub fn run() -> Result<()> {
                 match config.chain_spec.identify() {
                     ChainIdentity::Development => {
                         crate::service::start_development_node(config, polkadot_config, id)
-                            .await
-                            .map(|r| r.0)
-                            .map_err(Into::into)
-                    }
-                    ChainIdentity::Shell => {
-                        crate::service::start_shell_node(config, polkadot_config, id)
                             .await
                             .map(|r| r.0)
                             .map_err(Into::into)

@@ -5,15 +5,15 @@ description = ''
 edition = '2018'
 homepage = 'https://imbue.network'
 license = 'Apache 2.0'
-name = 'imbue-collator'
-repository = 'https://github.com/ImbueNetwork/imbue-collator/'
+name = 'imbue'
+repository = 'https://github.com/ImbueNetwork/imbue/'
 version = '2.0.0'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
 [[bin]]
-name = 'imbue-collator'
+name = 'imbue'
 
 [features]
 default = []
@@ -39,7 +39,6 @@ clap = { version = "3.1", features = [ "derive" ] }
 # Parachain runtimes
 development-runtime = { path = '../runtime/development' }
 common-runtime = { path = '../runtime/common' }
-shell-runtime  = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.17" }
 
 # Substrate dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
