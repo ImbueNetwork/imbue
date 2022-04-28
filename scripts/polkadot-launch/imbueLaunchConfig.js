@@ -67,6 +67,7 @@ const relaychain = {
 const imbue = {
     bin: "/imbue",
     id: "2102",
+    chain: "imbue-dev",
     balance: "1000000000000000000000",
     nodes: [
         {
