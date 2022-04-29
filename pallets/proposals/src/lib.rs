@@ -328,6 +328,7 @@ pub mod pallet {
                 initiator: who.clone(),
                 create_block_number: <frame_system::Pallet<T>>::block_number(),
                 approved_for_funding: false,
+                funding_threshold_met: false,
             };
 
             // Add proposal to list
@@ -414,10 +415,37 @@ pub mod pallet {
             let key = RoundCount::<T>::get();
 
             let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
-            let round = RoundOf::<T>::new(start, end, project_keys);
+            let round = RoundOf::<T>::new(start, end, project_keys.clone());
 
             // Add proposal round to list
             <Rounds<T>>::insert(key, Some(round));
+
+            for project_key in project_keys.clone().into_iter() {
+                let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
+                // Update project withdrawn funds
+                let updated_project = Project {
+                    name: project.name,
+                    logo: project.logo,
+                    description: project.description,
+                    website: project.website,
+                    milestones: project.milestones,
+                    contributions: project.contributions.clone(),
+                    required_funds: project.required_funds,
+                    currency_id: project.currency_id,
+                    withdrawn_funds: project.withdrawn_funds,
+                    initiator: project.initiator,
+                    create_block_number: project.create_block_number,
+                    approved_for_funding: project.approved_for_funding,
+                    funding_threshold_met: true,
+                };
+
+                // Add proposal to list
+                <Projects<T>>::insert(project_key, updated_project);
+
+
+            }
+
             Self::deposit_event(Event::FundingRoundCreated(key));
             RoundCount::<T>::put(next_key);
 
@@ -477,12 +505,12 @@ pub mod pallet {
                 }
             }
 
-            let mut round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
+            let round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
 
             // Find proposal by key
             let mut project_exists_in_round = false;
-            for current_project_key in round.project_keys.iter_mut() {
-                if current_project_key == &project_key {
+            for current_project_key in round.clone().project_keys.into_iter() {
+                if current_project_key == project_key {
                     project_exists_in_round = true;
                     break;
                 }
@@ -495,7 +523,7 @@ pub mod pallet {
             if WhitelistSpots::<T>::contains_key(project_key) {
                 let mut contributer_is_whitelisted = false;
                 let whitelist_spots = Self::whitelist_spots(project_key).unwrap();
-                for whitelist_spot in whitelist_spots.clone().iter_mut() {
+                for whitelist_spot in whitelist_spots.clone().into_iter() {
                     if whitelist_spot.who == who {
                         contributer_is_whitelisted = true;
                         break;
@@ -558,6 +586,7 @@ pub mod pallet {
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
+                funding_threshold_met: project.funding_threshold_met,
             };
 
             // Add proposal to list
@@ -611,7 +640,7 @@ pub mod pallet {
 
             let mut milestones = Vec::new();
             // set is_approved
-            project.approved_for_funding = true;
+            project.funding_threshold_met = true;
             for mut milestone in project.milestones.into_iter() {
                 for key in milestone_keys.clone().into_iter() {
                     if milestone.milestone_key == key {
@@ -655,6 +684,7 @@ pub mod pallet {
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
+                funding_threshold_met: project.funding_threshold_met,
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
@@ -679,7 +709,7 @@ pub mod pallet {
                 Error::<T>::OnlyInitiatorCanSubmitMilestone
             );
             ensure!(
-                project.approved_for_funding,
+                project.funding_threshold_met,
                 Error::<T>::OnlyApprovedProjectsCanSubmitMilestones
             );
 
@@ -855,6 +885,7 @@ pub mod pallet {
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
+                funding_threshold_met: project.funding_threshold_met,
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
@@ -909,6 +940,7 @@ pub mod pallet {
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
+                funding_threshold_met: project.funding_threshold_met,
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
@@ -1099,6 +1131,7 @@ pub struct Project<AccountId, Balance, BlockNumber> {
     initiator: AccountId,
     create_block_number: BlockNumber,
     approved_for_funding: bool,
+    funding_threshold_met: bool,
 }
 
 /// White struct
