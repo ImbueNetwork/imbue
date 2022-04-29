@@ -469,7 +469,6 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute() {
         let project_keys: Vec<ProjectKey> = vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
-        let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
         let max_cap = 1000000u64;
 
         let whitelist = Whitelist { who: alice, max_cap: max_cap };
@@ -560,7 +559,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
         .unwrap();
 
         //approve project
-        Proposals::approve(Origin::root(), 0, milestone_keys).unwrap();
+        Proposals::approve(Origin::root(), 0, Some(milestone_keys)).unwrap();
 
         //approve event
         let exp_approvedproject_event = <frame_system::Pallet<Test>>::events()
@@ -612,7 +611,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
 
         assert_noop!(
             //approve project
-            Proposals::approve(Origin::root(), project_key, milestone_keys),
+            Proposals::approve(Origin::root(), project_key, Some(milestone_keys)),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -660,7 +659,7 @@ fn test_submit_milestone() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_keys
+            Some(milestone_keys)
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -762,7 +761,7 @@ fn test_voting_on_a_milestone() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_keys
+            Some(milestone_keys)
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -896,7 +895,7 @@ fn test_finalize_a_milestone_without_voting() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_index
+            Some(milestone_index)
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -1006,7 +1005,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_index
+            Some(milestone_index)
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -1107,7 +1106,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_keys
+            Some(milestone_keys)
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -1230,7 +1229,7 @@ fn submit_multiple_milestones() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_keys
+            Some(milestone_keys)
         ));
 
         assert_ok!(Proposals::submit_milestone(
