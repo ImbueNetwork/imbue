@@ -356,7 +356,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin.clone())?;
             Self::ensure_initator(who, project_key)?;
-            let mut project_whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>> = Vec::new();
+            let mut project_whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>> =
+                Vec::new();
             let whitelist_exists = WhitelistSpots::<T>::contains_key(project_key);
             if whitelist_exists {
                 let existing_spots = Self::whitelist_spots(project_key).unwrap();
@@ -421,7 +422,8 @@ pub mod pallet {
             <Rounds<T>>::insert(key, Some(round));
 
             for project_key in project_keys.clone().into_iter() {
-                let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+                let project =
+                    Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
                 // Update project withdrawn funds
                 let updated_project = Project {
@@ -436,14 +438,12 @@ pub mod pallet {
                     withdrawn_funds: project.withdrawn_funds,
                     initiator: project.initiator,
                     create_block_number: project.create_block_number,
-                    approved_for_funding: project.approved_for_funding,
-                    funding_threshold_met: true,
+                    approved_for_funding: true,
+                    funding_threshold_met: project.funding_threshold_met,
                 };
 
                 // Add proposal to list
                 <Projects<T>>::insert(project_key, updated_project);
-
-
             }
 
             Self::deposit_event(Event::FundingRoundCreated(key));
@@ -517,7 +517,8 @@ pub mod pallet {
             }
 
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
-            let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            let mut project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
             // Find whitelist if exists
             if WhitelistSpots::<T>::contains_key(project_key) {
@@ -529,7 +530,10 @@ pub mod pallet {
                         break;
                     }
                 }
-                ensure!(contributer_is_whitelisted, Error::<T>::OnlyWhitelistedAccountsCanContribute);
+                ensure!(
+                    contributer_is_whitelisted,
+                    Error::<T>::OnlyWhitelistedAccountsCanContribute
+                );
             }
 
             // Transfer contribute to proposal account
@@ -592,7 +596,6 @@ pub mod pallet {
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
 
-
             Ok(().into())
         }
 
@@ -603,7 +606,7 @@ pub mod pallet {
         pub fn approve(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            milestone_keys: Vec<MilestoneKey>,
+            milestone_keys: Option<Vec<MilestoneKey>>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             let round_key = RoundCount::<T>::get();
@@ -641,14 +644,14 @@ pub mod pallet {
             let mut milestones = Vec::new();
             // set is_approved
             project.funding_threshold_met = true;
-            for mut milestone in project.milestones.into_iter() {
-                for key in milestone_keys.clone().into_iter() {
-                    if milestone.milestone_key == key {
-                        let vote_lookup_key = (project_key, key);
-                        let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
-                        if votes_exist {
-                            let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
-                            if vote.yay > vote.nay {
+            if milestone_keys.is_some() {
+                for mut milestone in project.milestones.into_iter() {
+                    for key in milestone_keys.as_ref().unwrap().clone().into_iter() {
+                        if milestone.milestone_key == key {
+                            let vote_lookup_key = (project_key, key);
+                            let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
+                            if votes_exist {
+                                let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
                                 milestone.is_approved = true;
                                 let updated_vote = Vote {
                                     yay: vote.yay,
@@ -664,10 +667,9 @@ pub mod pallet {
                             }
                         }
                     }
+                    milestones.push(milestone.clone());
                 }
-                milestones.push(milestone.clone());
             }
-
             <Rounds<T>>::insert(round_key, Some(round));
 
             // Update project milestones
@@ -917,7 +919,10 @@ pub mod pallet {
             }
 
             let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
-            ensure!(available_funds > (0_u32).into(), Error::<T>::NoAvailableFundsToWithdraw);
+            ensure!(
+                available_funds > (0_u32).into(),
+                Error::<T>::NoAvailableFundsToWithdraw
+            );
 
             T::MultiCurrency::transfer(
                 project.currency_id,
@@ -1010,11 +1015,11 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_account()
     }
 
-    pub fn ensure_initator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>>{
+    pub fn ensure_initator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>> {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         match project.initiator == who {
             true => Ok(()),
-            false => Err(Error::<T>::OnlyInitiatorCanSubmitMilestone)
+            false => Err(Error::<T>::OnlyInitiatorCanSubmitMilestone),
         }
     }
 
