@@ -26,6 +26,8 @@ mod tests;
 pub mod weights;
 pub use weights::*;
 
+use frame_system::pallet_prelude::*;
+
 const MAX_DESC_FIELD_LENGTH: usize = 5000;
 const MAX_STRING_FIELD_LENGTH: usize = 256;
 // set end to 5 mins for demo purposes
@@ -34,7 +36,6 @@ const MILESTONES_VOTING_WINDOW: u32 = 25u32;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_system::pallet_prelude::*;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -65,6 +66,16 @@ pub mod pallet {
         Identity,
         ProjectKey,
         Project<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+        OptionQuery,
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn whitelist_spots)]
+    pub type WhitelistSpots<T: Config> = StorageMap<
+        _,
+        Identity,
+        ProjectKey,
+        Vec<Whitelist<T::AccountId, BalanceOf<T>>>,
         OptionQuery,
     >;
 
@@ -184,10 +195,11 @@ pub mod pallet {
         /// There was an overflow.
         ///
         Overflow,
+        OnlyApprovedProjectsCanSubmitMilestones,
         OnlyContributorsCanVote,
         OnlyInitiatorCanSubmitMilestone,
         OnlyInitiatorOrAdminCanApproveMilestone,
-        OnlyApprovedProjectsCanSubmitMilestones,
+        OnlyWhitelistedAccountsCanContribute,
         ProposalAmountExceed,
         ProjectNotInRound,
         ProposalWithdrawn,
@@ -202,6 +214,7 @@ pub mod pallet {
         VoteAlreadyExists,
         MilestoneVotingNotComplete,
         WithdrawalExpirationExceed,
+        WhitelistSpotDoesNotExist,
     }
 
     #[pallet::hooks]
@@ -225,7 +238,7 @@ pub mod pallet {
             required_funds: BalanceOf<T>,
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
+            let who = ensure_signed(origin.clone())?;
 
             // Check if identity is required
             let is_identity_needed = IsIdentityRequired::<T>::get();
@@ -332,6 +345,42 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Step 1.5 (INITATOR)
+        /// Add whitelist to a project
+        #[pallet::weight(<T as Config>::WeightInfo::create_project())]
+        pub fn add_project_whitelist(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+            whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin.clone())?;
+            Self::ensure_initator(who, project_key)?;
+            let mut project_whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>> = Vec::new();
+            let whitelist_exists = WhitelistSpots::<T>::contains_key(project_key);
+            if whitelist_exists {
+                let existing_spots = Self::whitelist_spots(project_key).unwrap();
+                project_whitelist_spots.extend(existing_spots);
+            }
+
+            project_whitelist_spots.extend(whitelist_spots);
+            <WhitelistSpots<T>>::insert(project_key, project_whitelist_spots);
+
+            Ok(().into())
+        }
+
+        /// Step 1.5 (INITATOR)
+        /// Remove a whitelist
+        #[pallet::weight(<T as Config>::WeightInfo::create_project())]
+        pub fn remove_project_whitelist(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin.clone())?;
+            Self::ensure_initator(who, project_key)?;
+            <WhitelistSpots<T>>::remove(project_key);
+            Ok(().into())
+        }
+
         /// Step 2 (ADMIN)
         /// Schedule a round
         /// proposal_keys: the proposals were selected for this round
@@ -401,20 +450,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-
-
-        /// Step 3 (CONTRIBUTOR/FUNDER)
-        /// Contribute to a proposal
-        #[pallet::weight(<T as Config>::WeightInfo::contribute())]
-        pub fn test(
-            origin: OriginFor<T>,
-            whitelist_spot: Whitelist<AccountIdOf<T>, BalanceOf<T>>,
-        ) -> DispatchResultWithPostInfo {
-            Ok(().into())
-        }
-
-
-
         /// Step 3 (CONTRIBUTOR/FUNDER)
         /// Contribute to a proposal
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
@@ -454,10 +489,20 @@ pub mod pallet {
             }
 
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
-            let mut project =
-                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-
+            // Find whitelist if exists
+            if WhitelistSpots::<T>::contains_key(project_key) {
+                let mut contributer_is_whitelisted = false;
+                let whitelist_spots = Self::whitelist_spots(project_key).unwrap();
+                for whitelist_spot in whitelist_spots.clone().iter_mut() {
+                    if whitelist_spot.who == who {
+                        contributer_is_whitelisted = true;
+                        break;
+                    }
+                }
+                ensure!(contributer_is_whitelisted, Error::<T>::OnlyWhitelistedAccountsCanContribute);
+            }
 
             // Transfer contribute to proposal account
             T::MultiCurrency::transfer(
@@ -843,7 +888,6 @@ pub mod pallet {
             let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
             ensure!(available_funds > (0_u32).into(), Error::<T>::NoAvailableFundsToWithdraw);
 
-
             T::MultiCurrency::transfer(
                 project.currency_id,
                 &Self::project_account_id(project_key),
@@ -934,19 +978,16 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_account()
     }
 
-    pub fn project_account_id(key: ProjectKey) -> T::AccountId {
-        T::PalletId::get().into_sub_account(key)
+    pub fn ensure_initator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>>{
+        let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        match project.initiator == who {
+            true => Ok(()),
+            false => Err(Error::<T>::OnlyInitiatorCanSubmitMilestone)
+        }
     }
 
-    /// Get all projects
-    pub fn get_projects() -> Vec<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>> {
-        let len = ProjectCount::<T>::get();
-        let mut projects: Vec<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>> = Vec::new();
-        for i in 0..len {
-            let project = <Projects<T>>::get(i).unwrap();
-            projects.push(project);
-        }
-        projects
+    pub fn project_account_id(key: ProjectKey) -> T::AccountId {
+        T::PalletId::get().into_sub_account(key)
     }
 
     pub fn get_project(project_key: u32) -> Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber> {

@@ -157,6 +157,38 @@ fn create_a_test_project_with_no_data() {
 }
 
 #[test]
+fn create_a_test_project_and_add_whitelist() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let max_cap = 1000000u64;
+    let mut t = sp_io::TestExternalities::default();
+    t.execute_with(|| {
+        create_project(alice);
+        let whitelist = Whitelist { who: alice, max_cap: max_cap };
+        Proposals::add_project_whitelist(
+            Origin::signed(bob),
+            0,
+            vec![whitelist.clone()]
+        )
+        .unwrap();
+    });
+}
+
+#[test]
+fn create_a_test_project_remove_whitelist() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let mut t = sp_io::TestExternalities::default();
+    t.execute_with(|| {
+        create_project(alice);
+        Proposals::remove_project_whitelist(
+            Origin::signed(alice),
+            0,
+        )
+        .unwrap();
+    });
+}
+
+#[test]
 fn create_a_test_project_and_schedule_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let mut t = sp_io::TestExternalities::default();
@@ -307,7 +339,6 @@ fn cancel_round() {
     });
 }
 
-
 #[test]
 fn test_canceling_started_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
@@ -375,10 +406,6 @@ fn test_canceling_round_without_root_privilege() {
     });
 }
 
-
-
-
-
 #[test]
 fn create_a_test_project_and_schedule_round_and_contribute() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
@@ -431,6 +458,71 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
         );
     });
 }
+
+#[test]
+fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    ExtBuilder.build().execute_with(|| {
+        //create_project extrinsic
+        create_project(alice);
+
+        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_key: u32 = 0;
+        let contribution_amount = 2000u64;
+        let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+        let max_cap = 1000000u64;
+
+        let whitelist = Whitelist { who: alice, max_cap: max_cap };
+        Proposals::add_project_whitelist(
+            Origin::signed(alice),
+            0,
+            vec![whitelist.clone()]
+        )
+        .unwrap();
+
+        //schedule_round extrinsic
+        Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 1,
+            System::block_number() + 10,
+            //Project key starts with 0 for the first project submitted to the chain
+            project_keys,
+        )
+        .unwrap();
+
+        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+        let additional_amount = 10_000;
+
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
+
+        run_to_block(4);
+
+        //contribute extrinsic
+        Proposals::contribute(
+            Origin::signed(alice),
+            project_key,
+            contribution_amount,
+        )
+        .unwrap();
+
+        //contribute success event
+        let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            exp_contributedtoproject_event,
+            mock::Event::from(proposals::Event::ContributeSucceeded(
+                alice,
+                project_key,
+                contribution_amount,
+                CurrencyId::Native,
+                4
+            ))
+        );
+    });
+}
+
 
 #[test]
 fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
