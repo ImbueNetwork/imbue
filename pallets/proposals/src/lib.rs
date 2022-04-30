@@ -173,11 +173,14 @@ pub mod pallet {
         RoundCancelled(RoundKey),
         VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
         MilestoneApproved(ProjectKey, MilestoneKey, T::BlockNumber),
+        WhitelistAdded(ProjectKey, T::BlockNumber),
+        WhitelistRemoved(ProjectKey, T::BlockNumber),
     }
 
     // Errors inform users that something went wrong.
     #[pallet::error]
     pub enum Error<T> {
+        ContributionMustBeLowerThanMaxCap,
         EndBlockNumberInvalid,
         EndTooEarly,
         IdentityNeeded,
@@ -367,7 +370,8 @@ pub mod pallet {
 
             project_whitelist_spots.extend(whitelist_spots);
             <WhitelistSpots<T>>::insert(project_key, project_whitelist_spots);
-
+            let now = <frame_system::Pallet<T>>::block_number();
+            Self::deposit_event(Event::WhitelistAdded(project_key,now));
             Ok(().into())
         }
 
@@ -381,6 +385,8 @@ pub mod pallet {
             let who = ensure_signed(origin.clone())?;
             Self::ensure_initator(who, project_key)?;
             <WhitelistSpots<T>>::remove(project_key);
+            let now = <frame_system::Pallet<T>>::block_number();
+            Self::deposit_event(Event::WhitelistRemoved(project_key,now));
             Ok(().into())
         }
 
@@ -525,15 +531,22 @@ pub mod pallet {
             if WhitelistSpots::<T>::contains_key(project_key) {
                 let mut contributer_is_whitelisted = false;
                 let whitelist_spots = Self::whitelist_spots(project_key).unwrap();
+                let mut max_cap = (0_u32).into();
                 for whitelist_spot in whitelist_spots.clone().into_iter() {
                     if whitelist_spot.who == who {
                         contributer_is_whitelisted = true;
+                        max_cap = whitelist_spot.max_cap;
                         break;
                     }
                 }
                 ensure!(
                     contributer_is_whitelisted,
                     Error::<T>::OnlyWhitelistedAccountsCanContribute
+                );
+
+                ensure!(
+                    max_cap == (0_u32).into() || max_cap >= value,
+                    Error::<T>::ContributionMustBeLowerThanMaxCap
                 );
             }
 
@@ -642,7 +655,7 @@ pub mod pallet {
                 ensure!(round.end < now, Error::<T>::RoundNotEnded);
             }
 
-            let mut milestones = Vec::new();
+            let mut milestones = project.milestones.clone();
             // set is_approved
             project.funding_threshold_met = true;
             if milestone_keys.is_some() {
