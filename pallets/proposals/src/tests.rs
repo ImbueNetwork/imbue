@@ -28,8 +28,7 @@ use sp_std::vec::Vec;
 
 #[test]
 fn create_a_test_project() {
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         Proposals::create_project(
             Origin::signed(alice),
@@ -55,8 +54,7 @@ fn create_a_test_project() {
 
 #[test]
 fn create_a_test_project_with_less_than_100_percent() {
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
         Proposals::create_project(
@@ -88,9 +86,8 @@ fn create_a_test_project_with_less_than_100_percent() {
 
 #[test]
 fn create_a_test_project_with_no_name() {
-    let mut t = sp_io::TestExternalities::default();
 
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
         Proposals::create_project(
@@ -122,8 +119,7 @@ fn create_a_test_project_with_no_name() {
 
 #[test]
 fn create_a_test_project_with_no_data() {
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
             Proposals::create_project(
@@ -185,8 +181,7 @@ fn create_a_test_project_and_add_whitelist_from_non_initatorfail() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let max_cap = 1000000u64;
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
         let whitelist = Whitelist {
             who: alice,
@@ -226,8 +221,7 @@ fn create_a_test_project_remove_whitelist() {
 #[test]
 fn create_a_test_project_and_schedule_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
         Proposals::schedule_round(
@@ -244,8 +238,7 @@ fn create_a_test_project_and_schedule_round() {
 #[test]
 fn schedule_round_invalid_project_key() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
         assert_noop!(
@@ -270,8 +263,7 @@ fn schedule_round_invalid_project_key() {
 #[test]
 fn schedule_round_invalid_end_block_no() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
         assert_noop!(
@@ -296,8 +288,7 @@ fn schedule_round_invalid_end_block_no() {
 #[test]
 fn cancel_round_no_active_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
         assert_noop!(
@@ -658,7 +649,6 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
 
         let project_keys: Vec<ProjectKey> = vec![0];
         let project_key = 0;
-        let milestone_keys: Vec<MilestoneKey> = vec![0];
         let contribution_amount = 1000000u64;
 
         //schedule_round extrinsic
@@ -672,7 +662,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
         .unwrap();
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = 1000000;
+        let additional_amount = contribution_amount;
         let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
 
         run_to_block(4);
@@ -680,7 +670,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
         Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
 
         //approve project
-        Proposals::approve(Origin::root(), 0, Some(milestone_keys)).unwrap();
+        Proposals::approve(Origin::root(), 0, None).unwrap();
 
         //approve event
         let exp_approvedproject_event = <frame_system::Pallet<Test>>::events()
@@ -705,7 +695,6 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
         let project_keys: Vec<ProjectKey> = vec![0];
         let project_key = 0;
         let contribution_amount = 100000u64;
-        let milestone_keys: Vec<MilestoneKey> = vec![0];
 
         //schedule_round extrinsic
         Proposals::schedule_round(
@@ -718,7 +707,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
         .unwrap();
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = 1000000;
+        let additional_amount = contribution_amount;
         let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
 
         run_to_block(4);
@@ -727,7 +716,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
 
         assert_noop!(
             //approve project
-            Proposals::approve(Origin::root(), project_key, Some(milestone_keys)),
+            Proposals::approve(Origin::root(), project_key, None),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -751,7 +740,6 @@ fn test_submit_milestone() {
 
         let project_index = 0;
         let project_keys: Vec<ProjectKey> = vec![0];
-        let milestone_keys: Vec<MilestoneKey> = vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -775,7 +763,7 @@ fn test_submit_milestone() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            Some(milestone_keys)
+            None
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -853,7 +841,6 @@ fn test_voting_on_a_milestone() {
 
         let project_index = 0;
         let project_keys: Vec<ProjectKey> = vec![0];
-        let milestone_keys: Vec<MilestoneKey> = vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -877,7 +864,7 @@ fn test_voting_on_a_milestone() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            Some(milestone_keys)
+            None
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -1422,7 +1409,6 @@ fn submit_multiple_milestones() {
     proposed_milestones.push(milestone2);
 
     let project_keys: Vec<ProjectKey> = vec![0];
-    let milestone_keys: Vec<MilestoneKey> = vec![0, 1];
 
     ExtBuilder.build().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
@@ -1455,7 +1441,7 @@ fn submit_multiple_milestones() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            Some(milestone_keys)
+            None
         ));
 
         assert_ok!(Proposals::submit_milestone(
