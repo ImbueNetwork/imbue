@@ -358,6 +358,7 @@ pub mod pallet {
             Self::ensure_initator(who, project_key)?;
             let mut project_whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>> =
                 Vec::new();
+
             let whitelist_exists = WhitelistSpots::<T>::contains_key(project_key);
             if whitelist_exists {
                 let existing_spots = Self::whitelist_spots(project_key).unwrap();
@@ -645,29 +646,32 @@ pub mod pallet {
             // set is_approved
             project.funding_threshold_met = true;
             if milestone_keys.is_some() {
-                for mut milestone in project.milestones.into_iter() {
-                    for key in milestone_keys.as_ref().unwrap().clone().into_iter() {
+                for key in milestone_keys.as_ref().unwrap().clone().into_iter() {
+                    for mut milestone in project.milestones.clone().into_iter() {
                         if milestone.milestone_key == key {
                             let vote_lookup_key = (project_key, key);
                             let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
+
+                            let mut updated_vote = Vote {
+                                yay: (0_u32).into(),
+                                nay: (0_u32).into(),
+                                is_approved: true,
+                            };
+                            milestone.is_approved = true;
                             if votes_exist {
-                                let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
-                                milestone.is_approved = true;
-                                let updated_vote = Vote {
+                                let vote = <MilestoneVotes<T>>::get(vote_lookup_key).unwrap();
+                                updated_vote = Vote {
                                     yay: vote.yay,
                                     nay: vote.nay,
                                     is_approved: true,
                                 };
-                                Self::deposit_event(Event::MilestoneApproved(
-                                    project_key,
-                                    key,
-                                    now,
-                                ));
-                                <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                             }
+
+                            Self::deposit_event(Event::MilestoneApproved(project_key, key, now));
+                            <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                         }
+                        milestones.push(milestone.clone());
                     }
-                    milestones.push(milestone.clone());
                 }
             }
             <Rounds<T>>::insert(round_key, Some(round));
@@ -794,20 +798,21 @@ pub mod pallet {
 
             <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
 
-            let current_vote = <MilestoneVotes<T>>::try_get((project_key, milestone_key)).unwrap();
+            let user_milestone_vote =
+                <MilestoneVotes<T>>::get((project_key, milestone_key)).unwrap();
 
             if approve_milestone {
                 let updated_vote = Vote {
-                    yay: current_vote.yay + contribution_amount,
-                    nay: current_vote.nay,
-                    is_approved: current_vote.is_approved,
+                    yay: user_milestone_vote.yay + contribution_amount,
+                    nay: user_milestone_vote.nay,
+                    is_approved: user_milestone_vote.is_approved,
                 };
                 <MilestoneVotes<T>>::insert((project_key, milestone_key), updated_vote)
             } else {
                 let updated_vote = Vote {
-                    yay: current_vote.yay,
-                    nay: current_vote.nay + contribution_amount,
-                    is_approved: current_vote.is_approved,
+                    yay: user_milestone_vote.yay,
+                    nay: user_milestone_vote.nay + contribution_amount,
+                    is_approved: user_milestone_vote.is_approved,
                 };
                 <MilestoneVotes<T>>::insert((project_key, milestone_key), updated_vote)
             }
