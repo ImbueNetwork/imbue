@@ -200,7 +200,7 @@ pub mod pallet {
         Overflow,
         OnlyApprovedProjectsCanSubmitMilestones,
         OnlyContributorsCanVote,
-        OnlyInitiatorCanSubmitMilestone,
+        UserIsNotInitator,
         OnlyInitiatorOrAdminCanApproveMilestone,
         OnlyWhitelistedAccountsCanContribute,
         ProposalAmountExceed,
@@ -480,6 +480,8 @@ pub mod pallet {
             round.is_canceled = true;
             <Rounds<T>>::insert(round_key, Some(round));
 
+            // TODO loop through projects and refund contributers
+
             Self::deposit_event(Event::RoundCancelled(count - 1));
 
             Ok(().into())
@@ -736,7 +738,7 @@ pub mod pallet {
 
             ensure!(
                 project.initiator == who,
-                Error::<T>::OnlyInitiatorCanSubmitMilestone
+                Error::<T>::UserIsNotInitator
             );
             ensure!(
                 project.funding_threshold_met,
@@ -1048,7 +1050,7 @@ impl<T: Config> Pallet<T> {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         match project.initiator == who {
             true => Ok(()),
-            false => Err(Error::<T>::OnlyInitiatorCanSubmitMilestone),
+            false => Err(Error::<T>::UserIsNotInitator),
         }
     }
 
