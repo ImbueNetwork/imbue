@@ -526,17 +526,25 @@ pub mod pallet {
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
             let mut project =
                 Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            let mut max_cap = (0_u32).into();
 
             // Find whitelist if exists
             if WhitelistSpots::<T>::contains_key(project_key) {
                 let mut contributer_is_whitelisted = false;
+                let mut new_contribution_value = value;
                 let whitelist_spots = Self::whitelist_spots(project_key).unwrap();
-                let mut max_cap = (0_u32).into();
                 for whitelist_spot in whitelist_spots.clone().into_iter() {
                     if whitelist_spot.who == who {
                         contributer_is_whitelisted = true;
                         max_cap = whitelist_spot.max_cap;
                         break;
+                    }
+                }
+
+                for contribution in project.clone().contributions.iter() {
+                    if contribution.account_id == who {
+                        new_contribution_value += contribution.value;
+                        break
                     }
                 }
                 ensure!(
@@ -545,7 +553,7 @@ pub mod pallet {
                 );
 
                 ensure!(
-                    max_cap == (0_u32).into() || max_cap >= value,
+                    max_cap == (0_u32).into() || max_cap >= new_contribution_value,
                     Error::<T>::ContributionMustBeLowerThanMaxCap
                 );
             }

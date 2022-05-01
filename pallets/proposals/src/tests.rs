@@ -601,7 +601,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
 
         let project_keys: Vec<ProjectKey> = vec![0];
         let project_key: u32 = 0;
-        let contribution_amount = 1_000_000u64;
+        let contribution_amount = 60_000u64;
         let max_cap = 100_000u64;
 
         let whitelist = Whitelist {
@@ -622,12 +622,14 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
         .unwrap();
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let _ = Currencies::deposit(CurrencyId::Native, &alice, contribution_amount);
+        let alice_balance = 100_000_000u64;
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, alice_balance);
 
         run_to_block(4);
+        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
 
         assert_noop!(
-            Proposals::contribute(Origin::signed(alice), project_key, contribution_amount,),
+            Proposals::contribute(Origin::signed(alice), project_key, contribution_amount),
             //approve project
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
