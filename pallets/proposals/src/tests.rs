@@ -155,7 +155,7 @@ fn create_a_test_project_with_no_data() {
 #[test]
 fn create_a_test_project_and_add_whitelist() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let max_cap = 1000000u64;
+    let max_cap = 1_000_000u64;
     ExtBuilder.build().execute_with(|| {
         create_project(alice);
         let whitelist = Whitelist {
@@ -195,7 +195,7 @@ fn create_a_test_project_and_add_whitelist_from_non_initatorfail() {
                     actual_weight: None,
                     pays_fee: Pays::Yes,
                 },
-                error: Error::<Test>::OnlyInitiatorCanSubmitMilestone.into()
+                error: Error::<Test>::UserIsNotInitator.into()
             }
         );
     });
