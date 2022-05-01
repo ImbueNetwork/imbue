@@ -8,7 +8,7 @@ use common_types::CurrencyId;
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
-use frame_support::{pallet_prelude::*, PalletId};
+use frame_support::{pallet_prelude::*, transactional, PalletId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -488,6 +488,7 @@ pub mod pallet {
         /// Step 3 (CONTRIBUTOR/FUNDER)
         /// Contribute to a proposal
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
+        #[transactional]
         pub fn contribute(
             origin: OriginFor<T>,
             project_key: ProjectKey,
@@ -527,11 +528,22 @@ pub mod pallet {
             let mut project =
                 Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             let mut max_cap = (0_u32).into();
+            let mut new_contribution_value:BalanceOf<T> = value;
+            let mut found_contribution: Option<&ContributionOf<T>> = None;
+            let mut existing_contribution_index = 0;
+
+            for (index, contribution) in project.contributions.iter().enumerate() {
+                if contribution.account_id == who {
+                    new_contribution_value += contribution.value;
+                    found_contribution = Some(contribution);
+                    existing_contribution_index = index;
+                    break
+                }
+            }
 
             // Find whitelist if exists
             if WhitelistSpots::<T>::contains_key(project_key) {
                 let mut contributer_is_whitelisted = false;
-                let mut new_contribution_value = value;
                 let whitelist_spots = Self::whitelist_spots(project_key).unwrap();
                 for whitelist_spot in whitelist_spots.clone().into_iter() {
                     if whitelist_spot.who == who {
@@ -541,12 +553,6 @@ pub mod pallet {
                     }
                 }
 
-                for contribution in project.clone().contributions.iter() {
-                    if contribution.account_id == who {
-                        new_contribution_value += contribution.value;
-                        break
-                    }
-                }
                 ensure!(
                     contributer_is_whitelisted,
                     Error::<T>::OnlyWhitelistedAccountsCanContribute
@@ -578,17 +584,14 @@ pub mod pallet {
 
             // Find previous contribution by account_id
             // If you have contributed before, then add to that contribution. Otherwise join the list.
-            let mut found_contribution: Option<&mut ContributionOf<T>> = None;
-            for contribution in project.contributions.iter_mut() {
-                if contribution.account_id == who {
-                    found_contribution = Some(contribution);
-                    break;
-                }
-            }
-
-            match found_contribution {
-                Some(contribution) => {
-                    contribution.value += value;
+            match found_contribution.clone() {
+                Some(_contribution) => {
+                    // project.contributions.remove(&contribution);
+                    project.contributions.remove(existing_contribution_index);
+                    project.contributions.push(ContributionOf::<T> {
+                        account_id: who.clone(),
+                        value: new_contribution_value,
+                    });
                 }
                 None => {
                     project.contributions.push(ContributionOf::<T> {
