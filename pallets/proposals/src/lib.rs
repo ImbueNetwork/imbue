@@ -664,8 +664,10 @@ pub mod pallet {
 
             let funds_matched = total_contribution_amount >= project.required_funds;
             if !funds_matched {
-                // If the funds have not been matched then check if the round must be over
+                // If the funds have not been matched then check if the round is over
                 ensure!(round.end < now, Error::<T>::RoundNotEnded);
+
+                // Once the round ends, check for the funding threshold met. (set threshold for 75%)
             }
 
             let mut milestones = project.milestones.clone();
