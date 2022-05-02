@@ -32,7 +32,7 @@ const parachainNodeFlags = [
 
 const relaychain = {
     "bin": "/polkadot",
-    chain: "rococo-local",
+    chain: "rococo-dev",
     nodes: [
         {
             name: "alice",

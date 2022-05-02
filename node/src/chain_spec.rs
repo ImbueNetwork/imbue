@@ -113,7 +113,7 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
         ChainType::Live,
         move || {
             development_genesis(
-                AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
+                AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
                 vec![
                     (
                         get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -144,7 +144,7 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
 }
 
 fn endowed_accounts() -> Vec<AccountId> {
-    vec![AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap()]
+    vec![AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap()]
 }
 
 fn council_members() -> Vec<AccountId> {
@@ -163,7 +163,7 @@ fn tech_committee_members() -> Vec<AccountId> {
 
 fn endowed_accounts_local() -> Vec<AccountId> {
     vec![
-        AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
+        AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         get_account_id_from_seed::<sr25519::Public>("Bob"),
     ]
