@@ -28,8 +28,7 @@ use sp_std::vec::Vec;
 
 #[test]
 fn create_a_test_project() {
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         Proposals::create_project(
             Origin::signed(alice),
@@ -55,8 +54,7 @@ fn create_a_test_project() {
 
 #[test]
 fn create_a_test_project_with_less_than_100_percent() {
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
         Proposals::create_project(
@@ -88,9 +86,8 @@ fn create_a_test_project_with_less_than_100_percent() {
 
 #[test]
 fn create_a_test_project_with_no_name() {
-    let mut t = sp_io::TestExternalities::default();
 
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
         Proposals::create_project(
@@ -122,8 +119,7 @@ fn create_a_test_project_with_no_name() {
 
 #[test]
 fn create_a_test_project_with_no_data() {
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
             Proposals::create_project(
@@ -159,40 +155,73 @@ fn create_a_test_project_with_no_data() {
 #[test]
 fn create_a_test_project_and_add_whitelist() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let max_cap = 1_000_000u64;
+    ExtBuilder.build().execute_with(|| {
+        create_project(alice);
+        let whitelist = Whitelist {
+            who: alice,
+            max_cap: max_cap,
+        };
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+            .unwrap();
+
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            latest_event,
+            mock::Event::from(proposals::Event::WhitelistAdded(0, 1))
+        );
+    });
+}
+
+#[test]
+fn create_a_test_project_and_add_whitelist_from_non_initatorfail() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let max_cap = 1000000u64;
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
-        let whitelist = Whitelist { who: alice, max_cap: max_cap };
-        Proposals::add_project_whitelist(
-            Origin::signed(bob),
-            0,
-            vec![whitelist.clone()]
-        )
-        .unwrap();
+        let whitelist = Whitelist {
+            who: alice,
+            max_cap: max_cap,
+        };
+
+        assert_noop!(
+            Proposals::add_project_whitelist(Origin::signed(bob), 0, vec![whitelist.clone()]),
+            DispatchErrorWithPostInfo {
+                post_info: PostDispatchInfo {
+                    actual_weight: None,
+                    pays_fee: Pays::Yes,
+                },
+                error: Error::<Test>::UserIsNotInitator.into()
+            }
+        );
     });
 }
 
 #[test]
 fn create_a_test_project_remove_whitelist() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
-        Proposals::remove_project_whitelist(
-            Origin::signed(alice),
-            0,
-        )
-        .unwrap();
+        Proposals::remove_project_whitelist(Origin::signed(alice), 0).unwrap();
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            latest_event,
+            mock::Event::from(proposals::Event::WhitelistRemoved(0, 1))
+        );
     });
 }
 
 #[test]
 fn create_a_test_project_and_schedule_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
         Proposals::schedule_round(
@@ -209,8 +238,7 @@ fn create_a_test_project_and_schedule_round() {
 #[test]
 fn schedule_round_invalid_project_key() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
         assert_noop!(
@@ -235,8 +263,7 @@ fn schedule_round_invalid_project_key() {
 #[test]
 fn schedule_round_invalid_end_block_no() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
         assert_noop!(
@@ -261,8 +288,7 @@ fn schedule_round_invalid_end_block_no() {
 #[test]
 fn cancel_round_no_active_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let mut t = sp_io::TestExternalities::default();
-    t.execute_with(|| {
+    ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
         assert_noop!(
@@ -353,22 +379,21 @@ fn test_canceling_started_round() {
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
-            System::block_number() - 1 ,
+            System::block_number() - 1,
             System::block_number() + 1,
             project_keys
         ));
 
-        assert_noop!(<proposals::Pallet<Test>>::cancel_round(
-            Origin::root(),
-            0
-        ),DispatchErrorWithPostInfo {
+        assert_noop!(
+            <proposals::Pallet<Test>>::cancel_round(Origin::root(), 0),
+            DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
                     pays_fee: Pays::Yes,
                 },
                 error: Error::<Test>::RoundStarted.into(),
-            });
-
+            }
+        );
     });
 }
 
@@ -387,22 +412,21 @@ fn test_canceling_round_without_root_privilege() {
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
-            System::block_number() - 1 ,
+            System::block_number() - 1,
             System::block_number() + 1,
             project_keys
         ));
 
-        assert_noop!(<proposals::Pallet<Test>>::cancel_round(
-            Origin::signed(alice),
-            0
-        ),DispatchErrorWithPostInfo {
+        assert_noop!(
+            <proposals::Pallet<Test>>::cancel_round(Origin::signed(alice), 0),
+            DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
                     pays_fee: Pays::Yes,
                 },
                 error: DispatchError::BadOrigin,
-            });
-
+            }
+        );
     });
 }
 
@@ -434,12 +458,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
 
         run_to_block(4);
         //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
+        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
 
         //contribute success event
         let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
@@ -460,7 +479,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
 }
 
 #[test]
-fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute() {
+fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contribute() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     ExtBuilder.build().execute_with(|| {
         //create_project extrinsic
@@ -469,16 +488,14 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute() {
         let project_keys: Vec<ProjectKey> = vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
-        let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
         let max_cap = 1000000u64;
 
-        let whitelist = Whitelist { who: alice, max_cap: max_cap };
-        Proposals::add_project_whitelist(
-            Origin::signed(alice),
-            0,
-            vec![whitelist.clone()]
-        )
-        .unwrap();
+        let whitelist = Whitelist {
+            who: alice,
+            max_cap: max_cap,
+        };
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+            .unwrap();
 
         //schedule_round extrinsic
         Proposals::schedule_round(
@@ -491,19 +508,14 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute() {
         .unwrap();
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = 10_000;
+        let additional_amount = contribution_amount;
 
         let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
 
         run_to_block(4);
 
         //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
+        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
 
         //contribute success event
         let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
@@ -523,6 +535,112 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute() {
     });
 }
 
+#[test]
+fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap_and_contribute() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    ExtBuilder.build().execute_with(|| {
+        //create_project extrinsic
+        create_project(alice);
+
+        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_key: u32 = 0;
+        let contribution_amount = 2000u64;
+        let max_cap = 0u64;
+
+        let whitelist = Whitelist {
+            who: alice,
+            max_cap: max_cap,
+        };
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+            .unwrap();
+
+        //schedule_round extrinsic
+        Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 1,
+            System::block_number() + 10,
+            //Project key starts with 0 for the first project submitted to the chain
+            project_keys,
+        )
+        .unwrap();
+
+        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+        let additional_amount = contribution_amount;
+
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
+
+        run_to_block(4);
+
+        //contribute extrinsic
+        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
+
+        //contribute success event
+        let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            exp_contributedtoproject_event,
+            mock::Event::from(proposals::Event::ContributeSucceeded(
+                alice,
+                project_key,
+                contribution_amount,
+                CurrencyId::Native,
+                4
+            ))
+        );
+    });
+}
+
+#[test]
+fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_over_capfail() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    ExtBuilder.build().execute_with(|| {
+        //create_project extrinsic
+        create_project(alice);
+
+        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_key: u32 = 0;
+        let contribution_amount = 60_000u64;
+        let max_cap = 100_000u64;
+
+        let whitelist = Whitelist {
+            who: alice,
+            max_cap: max_cap,
+        };
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+            .unwrap();
+
+        //schedule_round extrinsic
+        Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 1,
+            System::block_number() + 10,
+            //Project key starts with 0 for the first project submitted to the chain
+            project_keys,
+        )
+        .unwrap();
+
+        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+        let alice_balance = 100_000_000u64;
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, alice_balance);
+
+        run_to_block(4);
+        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
+
+        assert_noop!(
+            Proposals::contribute(Origin::signed(alice), project_key, contribution_amount),
+            //approve project
+            DispatchErrorWithPostInfo {
+                post_info: PostDispatchInfo {
+                    actual_weight: None,
+                    pays_fee: Pays::Yes,
+                },
+                error: Error::<Test>::ContributionMustBeLowerThanMaxCap.into()
+            }
+        );
+    });
+}
 
 #[test]
 fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
@@ -533,7 +651,6 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
 
         let project_keys: Vec<ProjectKey> = vec![0];
         let project_key = 0;
-        let milestone_keys: Vec<MilestoneKey> = vec![0];
         let contribution_amount = 1000000u64;
 
         //schedule_round extrinsic
@@ -547,20 +664,15 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
         .unwrap();
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = 1000000;
+        let additional_amount = contribution_amount;
         let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
 
         run_to_block(4);
         //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
+        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
 
         //approve project
-        Proposals::approve(Origin::root(), 0, milestone_keys).unwrap();
+        Proposals::approve(Origin::root(), 0, None).unwrap();
 
         //approve event
         let exp_approvedproject_event = <frame_system::Pallet<Test>>::events()
@@ -585,7 +697,6 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
         let project_keys: Vec<ProjectKey> = vec![0];
         let project_key = 0;
         let contribution_amount = 100000u64;
-        let milestone_keys: Vec<MilestoneKey> = vec![0];
 
         //schedule_round extrinsic
         Proposals::schedule_round(
@@ -598,21 +709,16 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
         .unwrap();
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = 1000000;
+        let additional_amount = contribution_amount;
         let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
 
         run_to_block(4);
         //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
+        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
 
         assert_noop!(
             //approve project
-            Proposals::approve(Origin::root(), project_key, milestone_keys),
+            Proposals::approve(Origin::root(), project_key, None),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -636,7 +742,6 @@ fn test_submit_milestone() {
 
         let project_index = 0;
         let project_keys: Vec<ProjectKey> = vec![0];
-        let milestone_keys: Vec<MilestoneKey> = vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -660,7 +765,7 @@ fn test_submit_milestone() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_keys
+            None
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -738,7 +843,6 @@ fn test_voting_on_a_milestone() {
 
         let project_index = 0;
         let project_keys: Vec<ProjectKey> = vec![0];
-        let milestone_keys: Vec<MilestoneKey> = vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -762,7 +866,7 @@ fn test_voting_on_a_milestone() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_keys
+            None
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -806,29 +910,24 @@ fn test_voting_on_a_canceled_round() {
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
-            System::block_number() + 1 ,
+            System::block_number() + 1,
             System::block_number() + 2,
             project_keys
         ));
 
-        assert_ok!(<proposals::Pallet<Test>>::cancel_round(
-            Origin::root(),
-            0
-        ));
+        assert_ok!(<proposals::Pallet<Test>>::cancel_round(Origin::root(), 0));
 
         run_to_block(5);
-        assert_noop!(Proposals::vote_on_milestone(
-            Origin::signed(bob),
-            project_index,
-            0,
-            true
-        ), DispatchErrorWithPostInfo {
+        assert_noop!(
+            Proposals::vote_on_milestone(Origin::signed(bob), project_index, 0, true),
+            DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
                     pays_fee: Pays::Yes,
                 },
                 error: Error::<Test>::RoundNotProcessing.into(),
-            });
+            }
+        );
 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -896,7 +995,7 @@ fn test_finalize_a_milestone_without_voting() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_index
+            Some(milestone_index)
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -926,20 +1025,18 @@ fn test_finalize_a_milestone_without_voting() {
             0
         ));
 
-        assert_noop!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
-            project_index,
-            1
-        ), DispatchErrorWithPostInfo {
+        assert_noop!(
+            Proposals::finalise_milestone_voting(Origin::signed(alice), project_index, 1),
+            DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
                     pays_fee: Pays::Yes,
                 },
                 error: Error::<Test>::MilestoneVotingNotComplete.into(),
-            });
+            }
+        );
     });
 }
-
 
 #[test]
 fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed() {
@@ -1006,7 +1103,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_index
+            None
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -1023,12 +1120,12 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         run_to_block(5);
         //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob),project_index, 0, true,).ok();
-        Proposals::vote_on_milestone(Origin::signed(bob),project_index, 1, true,).ok();
+        Proposals::vote_on_milestone(Origin::signed(bob), project_index, 0, true).ok();
+        Proposals::vote_on_milestone(Origin::signed(bob), project_index, 1, true).ok();
 
         //Charlie voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 0, true,).ok();
-        Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 1, true,).ok();
+        Proposals::vote_on_milestone(Origin::signed(charlie), project_index, 0, true).ok();
+        Proposals::vote_on_milestone(Origin::signed(charlie), project_index, 1, true).ok();
 
         assert_ok!(Proposals::finalise_milestone_voting(
             Origin::signed(alice),
@@ -1048,12 +1145,20 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         ));
 
         //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw:u32 = proposed_milestones1.get(0).unwrap().percentage_to_unlock +  proposed_milestones1.get(1).unwrap().percentage_to_unlock;
+        let total_percentage_to_withdraw: u32 =
+            proposed_milestones1.get(0).unwrap().percentage_to_unlock
+                + proposed_milestones1.get(1).unwrap().percentage_to_unlock;
 
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
-        assert_ne!(Balances::free_balance(&alice), additional_amount + required_funds);
-        assert_eq!(Balances::free_balance(&alice), additional_amount + required_funds * (total_percentage_to_withdraw as u64)/100);
+        assert_ne!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds
+        );
+        assert_eq!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
+        );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -1062,14 +1167,121 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(alice, 0, 500000u64,CurrencyId::Native))
+            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
+                alice,
+                0,
+                500000u64,
+                CurrencyId::Native
+            ))
         );
-
     })
 }
 
+#[test]
+fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone_completed() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
+    let additional_amount = 10000000u64;
+    let required_funds = 1000000u64;
 
+    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
+    let milestone1: ProposedMilestone = ProposedMilestone {
+        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        percentage_to_unlock: 20,
+    };
+    let milestone2: ProposedMilestone = ProposedMilestone {
+        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        percentage_to_unlock: 30,
+    };
+
+    let milestone3: ProposedMilestone = ProposedMilestone {
+        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        percentage_to_unlock: 50,
+    };
+    proposed_milestones.push(milestone1);
+    proposed_milestones.push(milestone2);
+    proposed_milestones.push(milestone3);
+    let proposed_milestones1 = proposed_milestones.clone();
+
+    ExtBuilder.build().execute_with(|| {
+        deposit_initial_balance(&alice, &bob, additional_amount);
+        let _ = Currencies::deposit(CurrencyId::Native, &charlie, additional_amount);
+        create_project_multiple_milestones(alice, proposed_milestones);
+
+        let project_index = 0;
+        let project_keys: Vec<ProjectKey> = vec![0];
+
+        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+            Origin::root(),
+            System::block_number() - 1,
+            System::block_number() + 1,
+            project_keys
+        ));
+
+        let value = 500000u64;
+        assert_ok!(<proposals::Pallet<Test>>::contribute(
+            Origin::signed(bob),
+            project_index,
+            value
+        ));
+
+        assert_ok!(<proposals::Pallet<Test>>::contribute(
+            Origin::signed(charlie),
+            project_index,
+            value
+        ));
+
+        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
+        milestone_index.push(0);
+        milestone_index.push(1);
+
+        run_to_block(3);
+
+        assert_ok!(Proposals::approve(
+            Origin::root(),
+            project_index,
+            Some(milestone_index)
+        ));
+
+        assert_ok!(<proposals::Pallet<Test>>::withdraw(
+            Origin::signed(alice),
+            project_index
+        ));
+
+        //calculating the total percentage that can be withdrawn based on the submitted milestones
+        let total_percentage_to_withdraw: u32 =
+            proposed_milestones1.get(0).unwrap().percentage_to_unlock
+                + proposed_milestones1.get(1).unwrap().percentage_to_unlock;
+
+        //making sure that only balance is equal to the amount withdrawn
+        //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
+        assert_ne!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds
+        );
+        assert_eq!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
+        );
+
+        //can withdraw only the amount corresponding to the milestone percentage completion
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            latest_event,
+            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
+                alice,
+                0,
+                500000u64,
+                CurrencyId::Native
+            ))
+        );
+    })
+}
 
 #[test]
 fn test_withdraw_upon_project_approval_and_finalised_voting() {
@@ -1083,7 +1295,6 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
 
         let project_index = 0;
         let project_keys: Vec<ProjectKey> = vec![0];
-        let milestone_keys: Vec<MilestoneKey> = vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1107,7 +1318,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_keys
+            None
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -1135,7 +1346,10 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
             project_index
         ));
 
-        assert_eq!(Balances::free_balance(&alice), additional_amount + required_funds);
+        assert_eq!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds
+        );
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
             .expect("Expected at least one EventRecord to be found")
@@ -1197,7 +1411,6 @@ fn submit_multiple_milestones() {
     proposed_milestones.push(milestone2);
 
     let project_keys: Vec<ProjectKey> = vec![0];
-    let milestone_keys: Vec<MilestoneKey> = vec![0, 1];
 
     ExtBuilder.build().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
@@ -1230,7 +1443,7 @@ fn submit_multiple_milestones() {
         assert_ok!(Proposals::approve(
             Origin::root(),
             project_index,
-            milestone_keys
+            None
         ));
 
         assert_ok!(Proposals::submit_milestone(

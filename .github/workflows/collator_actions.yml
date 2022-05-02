@@ -39,3 +39,7 @@ jobs:
 
       - name: Build imbue collator 
         run: cargo build --release
+
+      - name: Run tests
+        run: cargo test
+
