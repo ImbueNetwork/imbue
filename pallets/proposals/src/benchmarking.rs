@@ -125,7 +125,7 @@ benchmarks! {
         Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         
         //2nd argument - project key
-    }: _(RawOrigin::Root, 0, milestone_keys)
+    }: _(RawOrigin::Root, 0, Some(milestone_keys))
     verify {
        //assert_last_event::<T>(Event::ProjectApproved(1,0).into());
     }
@@ -156,7 +156,7 @@ benchmarks! {
         //contribute
         Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         //Approve
-        Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
+        Proposals::<T>::approve(RawOrigin::Root.into(), 0, Some(milestone_keys))?;
 
         //project key - 2nd argument as u32 instead of vec
         //Milestone key - 3rd argument as u32
@@ -192,7 +192,7 @@ benchmarks! {
         //contribute
         Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         //Approve
-        Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
+        Proposals::<T>::approve(RawOrigin::Root.into(), 0, Some(milestone_keys))?;
         //Submit Milestone
         //project key - 2nd argument as u32 instead of vec
         //Milestone key - 3rd argument as u32
@@ -236,7 +236,7 @@ benchmarks! {
         //contribute
         Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         //Approve
-        Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
+        Proposals::<T>::approve(RawOrigin::Root.into(), 0, Some(milestone_keys))?;
         //Submit Milestone
         //project key - 2nd argument as u32 instead of vec
         //Milestone key - 3rd argument as u32
@@ -285,7 +285,7 @@ benchmarks! {
         //contribute
         Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0, contribution_amount)?;
         //Approve
-        Proposals::<T>::approve(RawOrigin::Root.into(), 0, milestone_keys)?;
+        Proposals::<T>::approve(RawOrigin::Root.into(), 0, Some(milestone_keys))?;
         //Submit Milestone
         //project key - 2nd argument as u32 instead of vec
         //Milestone key - 3rd argument as u32
