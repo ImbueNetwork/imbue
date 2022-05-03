@@ -59,6 +59,7 @@ pub trait WeightInfo {
     fn finalize_round() -> Weight;
     fn approve() -> Weight;
     fn withdraw() -> Weight;
+    fn refund() -> Weight;
 }
 
 /// Weights for pallet_quadratic_funding using the Substrate node and recommended hardware.
@@ -125,6 +126,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
+    fn refund() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+    }
 }
 
 // For backwards compatibility and tests
@@ -186,6 +192,11 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(1_u64))
     }
     fn withdraw() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(RocksDbWeight::get().reads(4_u64))
+            .saturating_add(RocksDbWeight::get().writes(2_u64))
+    }
+    fn refund() -> Weight {
         (66_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))

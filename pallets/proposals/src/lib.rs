@@ -966,6 +966,43 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+          /// Ad Hoc Step (ADMIN)
+        /// Refund
+        #[pallet::weight(<T as Config>::WeightInfo::refund())]
+        pub fn refund(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResultWithPostInfo {
+            //ensure only admin can perform refund
+            ensure_root(origin)?;
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            let total_contribution_amount: BalanceOf<T> =
+            Self::get_total_project_contributions(project_key);
+            
+            //getting the locked milestone percentage - these are also milestones that have not been approved
+            let mut locked_milestone_percentage: u32 = 0;
+            for milestone in project.milestones.clone() {
+                if !milestone.is_approved {
+                    locked_milestone_percentage += milestone.percentage_to_unlock;
+                }
+            }
+
+            for contribution in project.contributions.iter() {
+                let who = contribution.account_id.clone();
+                let refund_amount: BalanceOf<T> = (contribution.value * locked_milestone_percentage.into()) / 100u32.into();
+
+                T::MultiCurrency::transfer(
+                    project.currency_id,
+                    &Self::project_account_id(project_key),
+                    &who,
+                    refund_amount,
+                )?;
+            }
+
+            Ok(().into())
+        }
     }
 }
 

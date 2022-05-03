@@ -159,14 +159,14 @@ fn create_a_test_project_with_no_data() {
 #[test]
 fn create_a_test_project_and_add_whitelist() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    //let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let max_cap = 1000000u64;
     let mut t = sp_io::TestExternalities::default();
     t.execute_with(|| {
         create_project(alice);
         let whitelist = Whitelist { who: alice, max_cap: max_cap };
         Proposals::add_project_whitelist(
-            Origin::signed(bob),
+            Origin::signed(alice),
             0,
             vec![whitelist.clone()]
         )
@@ -469,7 +469,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute() {
         let project_keys: Vec<ProjectKey> = vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
-        let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+        //let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
         let max_cap = 1000000u64;
 
         let whitelist = Whitelist { who: alice, max_cap: max_cap };
