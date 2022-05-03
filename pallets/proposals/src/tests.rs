@@ -1267,6 +1267,64 @@ fn submit_multiple_milestones() {
     });
 }
 
+#[test]
+fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    ExtBuilder.build().execute_with(|| {
+        //create_project extrinsic
+        create_project(alice);
+
+        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_key: u32 = 0;
+        let contribution_amount = 2000u64;
+
+        //schedule_round extrinsic
+        Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 1,
+            System::block_number() + 10,
+            //Project key starts with 0 for the first project submitted to the chain
+            project_keys,
+        )
+        .unwrap();
+
+        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+        let additional_amount = 10_000;
+
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
+
+        run_to_block(4);
+        //contribute extrinsic
+        Proposals::contribute(
+            Origin::signed(alice),
+            project_key,
+            contribution_amount,
+        )
+        .unwrap();
+
+        Proposals::refund(
+            Origin::root(),
+            project_key
+        )
+        .unwrap();
+
+        //contribute success event
+        let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            exp_projectfundsrefunded_event,
+            mock::Event::from(proposals::Event::ProjectLockedFundsRefunded(
+                project_key,
+                contribution_amount
+            ))
+        );
+    });
+}
+
+
+
 //common helper methods
 fn create_project(alice: AccountId) {
     assert_ok!(Proposals::create_project(
