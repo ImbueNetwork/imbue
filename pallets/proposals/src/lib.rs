@@ -984,8 +984,6 @@ pub mod pallet {
             ensure_root(origin)?;
             let project =
                 Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-            let total_contribution_amount: BalanceOf<T> =
-            Self::get_total_project_contributions(project_key);
             
             //getting the locked milestone percentage - these are also milestones that have not been approved
             let mut refunded_funds: BalanceOf<T> = 0_u32.into();

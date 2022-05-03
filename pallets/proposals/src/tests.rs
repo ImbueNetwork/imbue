@@ -1290,7 +1290,6 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
 
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         let additional_amount = 10_000;
-
         let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
 
         run_to_block(4);
@@ -1302,11 +1301,18 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
         )
         .unwrap();
 
+        //ensuring alice's balance has reduced after contribution
+        let alice_balance_post_contribute: u64 = 8_000;
+        assert_eq!(alice_balance_post_contribute,Balances::free_balance(&alice));
+
         Proposals::refund(
             Origin::root(),
             project_key
         )
         .unwrap();
+
+        //ensuring the refunded amount was transferred back successfully
+        assert_eq!(additional_amount,Balances::free_balance(&alice));
 
         //contribute success event
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
