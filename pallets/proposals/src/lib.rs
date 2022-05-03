@@ -173,6 +173,7 @@ pub mod pallet {
         RoundCancelled(RoundKey),
         VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
         MilestoneApproved(ProjectKey, MilestoneKey, T::BlockNumber),
+        ProjectLockedFundsRefunded(ProjectKey, BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -328,6 +329,7 @@ pub mod pallet {
                 initiator: who.clone(),
                 create_block_number: <frame_system::Pallet<T>>::block_number(),
                 approved_for_funding: false,
+                cancelled: false,
             };
 
             // Add proposal to list
@@ -558,6 +560,7 @@ pub mod pallet {
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
+                cancelled: false,
             };
 
             // Add proposal to list
@@ -655,6 +658,7 @@ pub mod pallet {
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
+                cancelled: false,
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
@@ -855,6 +859,7 @@ pub mod pallet {
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
+                cancelled: false,
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
@@ -909,6 +914,7 @@ pub mod pallet {
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
+                cancelled: false,
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
@@ -982,6 +988,7 @@ pub mod pallet {
             Self::get_total_project_contributions(project_key);
             
             //getting the locked milestone percentage - these are also milestones that have not been approved
+            let mut refunded_funds: BalanceOf<T> = 0_u32.into();
             let mut locked_milestone_percentage: u32 = 0;
             for milestone in project.milestones.clone() {
                 if !milestone.is_approved {
@@ -999,7 +1006,32 @@ pub mod pallet {
                     &who,
                     refund_amount,
                 )?;
+
+                refunded_funds += refund_amount;
             }
+
+            // Update project cancellation status
+            let updated_project = Project {
+                name: project.name,
+                logo: project.logo,
+                description: project.description,
+                website: project.website,
+                milestones: project.milestones,
+                contributions: project.contributions,
+                required_funds: project.required_funds,
+                currency_id: project.currency_id,
+                withdrawn_funds: project.withdrawn_funds,
+                initiator: project.initiator,
+                create_block_number: project.create_block_number,
+                approved_for_funding: project.approved_for_funding,
+                cancelled: true,
+            };
+            // Updated new project status to chain
+            <Projects<T>>::insert(project_key, updated_project);
+            Self::deposit_event(Event::ProjectLockedFundsRefunded(
+                project_key,
+                refunded_funds,
+            ));
 
             Ok(().into())
         }
@@ -1136,6 +1168,7 @@ pub struct Project<AccountId, Balance, BlockNumber> {
     initiator: AccountId,
     create_block_number: BlockNumber,
     approved_for_funding: bool,
+    cancelled: bool
 }
 
 /// White struct
