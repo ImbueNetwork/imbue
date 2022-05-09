@@ -21,7 +21,7 @@ ARG APT_PACKAGES
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update
 RUN apt-get install -y\
-        gnupg2 ca-certificates git awscli \
+        gnupg2 ca-certificates git awscli wget \
         ${APT_PACKAGES}
 
 RUN git clone https://github.com/paritytech/polkadot-launch launch
@@ -31,5 +31,6 @@ RUN yarn
 COPY --from=builder /imbue /
 COPY --from=polkadot /usr/bin/polkadot /
 COPY --from=subkey /usr/local/bin/subkey /
+RUN /polkadot build-spec --chain rococo-local --raw --disable-default-bootnode > rococo-local.json
 
 EXPOSE 30330-30345 9933-9960 8080 3001

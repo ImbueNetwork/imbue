@@ -1,6 +1,6 @@
   imbue-1:
     container_name: imbue-1
-    image: imbuenetwork/imbue:main
+    image: samelamin/imbue:0.9.17
     ports:
       - "9615:9615"
       - "9616:9616"
@@ -14,7 +14,7 @@
 
   imbue-2:
     container_name: imbue-2
-    image: imbuenetwork/imbue:main
+    image: samelamin/imbue:0.9.17
     ports:
       - "9662:9615"
       - "9663:9616"
@@ -28,7 +28,7 @@
 
   imbue-3:
     container_name: imbue-3
-    image: imbuenetwork/imbue:main
+    image: samelamin/imbue:0.9.17
     ports:
       - "9664:9615"
       - "9665:9616"
