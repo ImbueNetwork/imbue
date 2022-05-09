@@ -1,13 +1,16 @@
 use cumulus_primitives_core::ParaId;
-use development_runtime::{AccountId, AuraId, CouncilConfig, Signature, CouncilMembershipConfig, DemocracyConfig, TechnicalMembershipConfig, TechnicalCommitteeConfig};
+use development_runtime::{
+    AccountId, AuraId, CouncilConfig, CouncilMembershipConfig, DemocracyConfig, Signature,
+    TechnicalCommitteeConfig, TechnicalMembershipConfig,
+};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-
+use hex_literal::hex;
 use development_runtime::currency::IMBU;
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     AccountId32,
@@ -85,10 +88,12 @@ pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentCha
         move || {
             development_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
-                vec![(
-                    get_account_id_from_seed::<sr25519::Public>("Alice"),
-                    get_collator_keys_from_seed("Alice"),
-                )],
+                vec![
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Alice"),
+                        get_collator_keys_from_seed("Alice"),
+                    )
+                ],
                 endowed_accounts_local(),
                 Some(250_000_000 * IMBU),
                 council_members(),
@@ -120,9 +125,17 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
                         get_collator_keys_from_seed("Alice"),
                     ),
                     (
-                        get_account_id_from_seed::<sr25519::Public>("Bob"),
-                        get_collator_keys_from_seed("Bob"),
+                        hex!["17c93b50295e42ba30018fc8ec9e2793faff94b657541da184cc875d66f38cf0"]
+                            .into(),
+                        hex!["17c93b50295e42ba30018fc8ec9e2793faff94b657541da184cc875d66f38cf0"]
+                            .unchecked_into(),
                     ),
+                    (
+                        hex!["a6ec01606dfd7f0162cc37ecab22c85bd3dd2faa4f8827874c1f86078c6bf403"]
+                            .into(),
+                        hex!["a6ec01606dfd7f0162cc37ecab22c85bd3dd2faa4f8827874c1f86078c6bf403"]
+                            .unchecked_into(),
+                    )
                 ],
                 endowed_accounts(),
                 Some(250_000_000 * IMBU),
@@ -148,17 +161,21 @@ fn endowed_accounts() -> Vec<AccountId> {
 }
 
 fn council_members() -> Vec<AccountId> {
-    vec![AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
-    AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
-    AccountId32::from_str("5FsLoiGenakVKDwE7YHe58KLrENj2QZ6zxLLbeUCWKVagMAQ").unwrap(),
-    AccountId32::from_str("5EexofvmRpHVFYFehejL7yF3LW1RGZmNR9wAx5fcYXgRUnYp").unwrap()]
+    vec![
+        AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
+        AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
+        AccountId32::from_str("5FsLoiGenakVKDwE7YHe58KLrENj2QZ6zxLLbeUCWKVagMAQ").unwrap(),
+        AccountId32::from_str("5EexofvmRpHVFYFehejL7yF3LW1RGZmNR9wAx5fcYXgRUnYp").unwrap(),
+    ]
 }
 
 fn tech_committee_members() -> Vec<AccountId> {
-    vec![AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
-    AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
-    AccountId32::from_str("5FsLoiGenakVKDwE7YHe58KLrENj2QZ6zxLLbeUCWKVagMAQ").unwrap(),
-    AccountId32::from_str("5EexofvmRpHVFYFehejL7yF3LW1RGZmNR9wAx5fcYXgRUnYp").unwrap()]
+    vec![
+        AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
+        AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
+        AccountId32::from_str("5FsLoiGenakVKDwE7YHe58KLrENj2QZ6zxLLbeUCWKVagMAQ").unwrap(),
+        AccountId32::from_str("5EexofvmRpHVFYFehejL7yF3LW1RGZmNR9wAx5fcYXgRUnYp").unwrap(),
+    ]
 }
 
 fn endowed_accounts_local() -> Vec<AccountId> {
@@ -228,13 +245,13 @@ fn development_genesis(
             ..Default::default()
         },
         council_membership: CouncilMembershipConfig {
-			members: council_membership,
-			phantom: Default::default(),
-		},
+            members: council_membership,
+            phantom: Default::default(),
+        },
         technical_membership: TechnicalMembershipConfig {
-			members: technical_committee_membership,
-			phantom: Default::default(),
-		},
+            members: technical_committee_membership,
+            phantom: Default::default(),
+        },
         session: development_runtime::SessionConfig {
             keys: initial_authorities
                 .iter()
