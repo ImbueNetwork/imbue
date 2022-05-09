@@ -121,10 +121,6 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
                 AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
                 vec![
                     (
-                        get_account_id_from_seed::<sr25519::Public>("Alice"),
-                        get_collator_keys_from_seed("Alice"),
-                    ),
-                    (
                         hex!["17c93b50295e42ba30018fc8ec9e2793faff94b657541da184cc875d66f38cf0"]
                             .into(),
                         hex!["a8465ed76ebfd2ab2fd95e949efdb41bd0208df470fd195b2023a84de500b31b"]
