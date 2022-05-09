@@ -127,13 +127,13 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
                     (
                         hex!["17c93b50295e42ba30018fc8ec9e2793faff94b657541da184cc875d66f38cf0"]
                             .into(),
-                        hex!["17c93b50295e42ba30018fc8ec9e2793faff94b657541da184cc875d66f38cf0"]
+                        hex!["a8465ed76ebfd2ab2fd95e949efdb41bd0208df470fd195b2023a84de500b31b"]
                             .unchecked_into(),
                     ),
                     (
                         hex!["a6ec01606dfd7f0162cc37ecab22c85bd3dd2faa4f8827874c1f86078c6bf403"]
                             .into(),
-                        hex!["a6ec01606dfd7f0162cc37ecab22c85bd3dd2faa4f8827874c1f86078c6bf403"]
+                        hex!["72992197d9d63d698428f1d94354e8ac6aba3a451d666c6bb433e046499a3665"]
                             .unchecked_into(),
                     )
                 ],

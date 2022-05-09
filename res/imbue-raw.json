@@ -1,6 +1,6 @@
 {
-  "name": "imbue chachacha testnet",
-  "id": "imbue-chachacha-testnet",
+  "name": "imbue rococo-dev testnet",
+  "id": "imbue-rococo-dev-testnet",
   "chainType": "Live",
   "bootNodes": [],
   "telemetryEndpoints": [
