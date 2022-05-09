@@ -21,7 +21,7 @@ ARG APT_PACKAGES
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update
 RUN apt-get install -y\
-        gnupg2 ca-certificates git \
+        gnupg2 ca-certificates git awscli \
         ${APT_PACKAGES}
 
 RUN git clone https://github.com/paritytech/polkadot-launch launch
