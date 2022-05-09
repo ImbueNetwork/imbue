@@ -1330,6 +1330,157 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
 }
 
 
+#[test]
+fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
+    let additional_amount = 10000000u64;
+    let required_funds = 1000000u64;
+
+    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
+
+    let milestone1: ProposedMilestone = ProposedMilestone {
+        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        percentage_to_unlock: 20,
+    };
+    let milestone2: ProposedMilestone = ProposedMilestone {
+        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        percentage_to_unlock: 30,
+    };
+
+    let milestone3: ProposedMilestone = ProposedMilestone {
+        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        percentage_to_unlock: 50,
+    };
+    proposed_milestones.push(milestone1);
+    proposed_milestones.push(milestone2);
+    proposed_milestones.push(milestone3);
+    let proposed_milestones1 = proposed_milestones.clone();
+
+    ExtBuilder.build().execute_with(|| {
+        deposit_initial_balance(&alice, &bob, additional_amount);
+        let _ = Currencies::deposit(CurrencyId::Native, &charlie, additional_amount);
+        create_project_multiple_milestones(alice, proposed_milestones);
+
+        let project_index = 0;
+        let project_keys: Vec<ProjectKey> = vec![0];
+
+        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+            Origin::root(),
+            System::block_number() - 1,
+            System::block_number() + 1,
+            project_keys
+        ));
+
+        let value = 500000u64;
+        assert_ok!(<proposals::Pallet<Test>>::contribute(
+            Origin::signed(bob),
+            project_index,
+            value
+        ));
+
+        assert_ok!(<proposals::Pallet<Test>>::contribute(
+            Origin::signed(charlie),
+            project_index,
+            value
+        ));
+
+        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
+        milestone_index.push(0);
+        milestone_index.push(1);
+
+        run_to_block(3);
+
+        assert_ok!(Proposals::approve(
+            Origin::root(),
+            project_index,
+            milestone_index
+        ));
+
+        assert_ok!(Proposals::submit_milestone(
+            Origin::signed(alice),
+            project_index,
+            0
+        ));
+
+        assert_ok!(Proposals::submit_milestone(
+            Origin::signed(alice),
+            project_index,
+            1
+        ));
+
+        run_to_block(5);
+        //Bob voting on the submitted milestone
+        Proposals::vote_on_milestone(Origin::signed(bob),project_index, 0, true,).ok();
+        //Proposals::vote_on_milestone(Origin::signed(bob),project_index, 1, true,).ok();
+
+        //Charlie voting on the submitted milestone
+        Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 0, true,).ok();
+        //Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 1, true,).ok();
+
+        assert_ok!(Proposals::finalise_milestone_voting(
+            Origin::signed(alice),
+            project_index,
+            0
+        ));
+
+        assert_ok!(<proposals::Pallet<Test>>::withdraw(
+            Origin::signed(alice),
+            project_index
+        ));
+
+        //calculating the total percentage that can be withdrawn based on the submitted milestones
+        let total_percentage_to_withdraw:u32 = proposed_milestones1.get(0).unwrap().percentage_to_unlock;
+
+        //making sure that only balance is equal to the amount withdrawn
+        //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
+        //checking that Alice now has 10.2m
+        assert_ne!(Balances::free_balance(&alice), additional_amount + required_funds);
+        assert_eq!(Balances::free_balance(&alice), additional_amount + required_funds * (total_percentage_to_withdraw as u64)/100);
+
+        //can withdraw only the amount corresponding to the milestone percentage completion
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            latest_event,
+            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(alice, 0, 500000u64,CurrencyId::Native))
+        );
+
+        //validating contributor current balance
+        let contributor_balance_pre_refund: u64 = 9_500_000;
+        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&bob));
+        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&charlie));
+
+        Proposals::refund(
+            Origin::root(),
+            project_index
+        )
+        .unwrap();
+
+        //ensuring the refunded amount was transferred back successfully
+        let contributor_balance_pre_refund: u64 = 9_900_000;
+        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&bob));
+        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&charlie));
+
+        //contribute success event
+        let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            exp_projectfundsrefunded_event,
+            mock::Event::from(proposals::Event::ProjectLockedFundsRefunded(
+                project_index,
+                800000u64
+            ))
+        );
+
+    })
+}
+
 
 //common helper methods
 fn create_project(alice: AccountId) {
