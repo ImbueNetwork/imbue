@@ -1,0 +1,41 @@
+  imbue-1:
+    container_name: imbue-1
+    image: imbuenetwork/imbue:main
+    ports:
+      - "9615:9615"
+      - "9616:9616"
+      - "9942:9942"
+      - "9980:9930"
+      - "31033:31033"
+      - "31034:31034"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-raw.json; wget https://raw.githubusercontent.com/centrifuge/polkadot/chachacha/node/service/res/rococo-chachacha.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2102 --chain imbue-raw.json --execution=wasm --prometheus-external --port 31033 --  --port 31034 --chain rococo-chachacha.json --execution=wasm --sync fast --pruning archive --prometheus-external"
+    volumes:
+      - ./imbue_db/cumulus_parachain_1:/cumulus_parachain/
+
+  imbue-2:
+    container_name: imbue-2
+    image: imbuenetwork/imbue:main
+    ports:
+      - "9662:9615"
+      - "9663:9616"
+      - "9901:9942"
+      - "9981:9930"
+      - "31035:31035"
+      - "31036:31036"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-raw.json; wget https://raw.githubusercontent.com/centrifuge/polkadot/chachacha/node/service/res/rococo-chachacha.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2102 --chain imbue-raw.json --execution=wasm --prometheus-external --port 31035 --  --port 31036 --chain rococo-chachacha.json --execution=wasm --sync fast --pruning archive --prometheus-external"
+    volumes:
+      - ./imbue_db/cumulus_parachain_2:/cumulus_parachain/
+
+  imbue-3:
+    container_name: imbue-3
+    image: imbuenetwork/imbue:main
+    ports:
+      - "9664:9615"
+      - "9665:9616"
+      - "9902:9942"
+      - "9982:9930"
+      - "31037:31037"
+      - "31038:31038"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-raw.json; wget https://raw.githubusercontent.com/centrifuge/polkadot/chachacha/node/service/res/rococo-chachacha.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2102 --chain imbue-raw.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain rococo-chachacha.json --execution=wasm --sync fast --pruning archive --prometheus-external"
+    volumes:
+      - ./imbue_db/cumulus_parachain_3:/cumulus_parachain/
