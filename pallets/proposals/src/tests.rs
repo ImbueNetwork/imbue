@@ -1446,7 +1446,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(alice, 0, 500000u64,CurrencyId::Native))
+            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(alice, 0, 200000u64,CurrencyId::Native))
         );
 
         //validating contributor current balance
