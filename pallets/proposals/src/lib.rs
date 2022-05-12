@@ -670,8 +670,9 @@ pub mod pallet {
             // set is_approved
             project.funding_threshold_met = true;
             if milestone_keys.is_some() {
-                for key in milestone_keys.as_ref().unwrap().clone().into_iter() {
-                    for mut milestone in project.milestones.clone().into_iter() {
+                milestones = Vec::new();
+                for mut milestone in project.milestones.clone().into_iter() {
+                    for key in milestone_keys.as_ref().unwrap().clone().into_iter() {
                         if milestone.milestone_key == key {
                             let vote_lookup_key = (project_key, key);
                             let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
@@ -694,8 +695,8 @@ pub mod pallet {
                             Self::deposit_event(Event::MilestoneApproved(project_key, key, now));
                             <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                         }
-                        milestones.push(milestone.clone());
                     }
+                    milestones.push(milestone.clone());
                 }
             }
             <Rounds<T>>::insert(round_key, Some(round));
