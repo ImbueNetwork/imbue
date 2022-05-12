@@ -371,7 +371,7 @@ pub mod pallet {
             project_whitelist_spots.extend(whitelist_spots);
             <WhitelistSpots<T>>::insert(project_key, project_whitelist_spots);
             let now = <frame_system::Pallet<T>>::block_number();
-            Self::deposit_event(Event::WhitelistAdded(project_key,now));
+            Self::deposit_event(Event::WhitelistAdded(project_key, now));
             Ok(().into())
         }
 
@@ -386,7 +386,7 @@ pub mod pallet {
             Self::ensure_initator(who, project_key)?;
             <WhitelistSpots<T>>::remove(project_key);
             let now = <frame_system::Pallet<T>>::block_number();
-            Self::deposit_event(Event::WhitelistRemoved(project_key,now));
+            Self::deposit_event(Event::WhitelistRemoved(project_key, now));
             Ok(().into())
         }
 
@@ -505,32 +505,28 @@ pub mod pallet {
             // round list must be not none
             let round_key = RoundCount::<T>::get();
             ensure!(round_key > 0, Error::<T>::NoActiveRound);
-
+            let mut project_exists_in_round = false;
             // Find processing round
             let mut processing_round: Option<RoundOf<T>> = None;
             for i in (0..round_key).rev() {
                 let round = <Rounds<T>>::get(i).unwrap();
                 if !round.is_canceled && round.start < now && round.end > now {
-                    processing_round = Some(round);
+                    // Find proposal by key
+                    for current_project_key in round.clone().project_keys.into_iter() {
+                        if current_project_key == project_key {
+                            project_exists_in_round = true;
+                            processing_round = Some(round);
+                            break;
+                        }
+                    }
                 }
             }
-
             let round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
-
-            // Find proposal by key
-            let mut project_exists_in_round = false;
-            for current_project_key in round.clone().project_keys.into_iter() {
-                if current_project_key == project_key {
-                    project_exists_in_round = true;
-                    break;
-                }
-            }
-
             ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
             let mut project =
                 Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             let mut max_cap = (0_u32).into();
-            let mut new_contribution_value:BalanceOf<T> = value;
+            let mut new_contribution_value: BalanceOf<T> = value;
             let mut found_contribution: Option<&ContributionOf<T>> = None;
             let mut existing_contribution_index = 0;
 
@@ -539,7 +535,7 @@ pub mod pallet {
                     new_contribution_value += contribution.value;
                     found_contribution = Some(contribution);
                     existing_contribution_index = index;
-                    break
+                    break;
                 }
             }
 
@@ -738,10 +734,7 @@ pub mod pallet {
             let project =
                 Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-            ensure!(
-                project.initiator == who,
-                Error::<T>::UserIsNotInitator
-            );
+            ensure!(project.initiator == who, Error::<T>::UserIsNotInitator);
             ensure!(
                 project.funding_threshold_met,
                 Error::<T>::OnlyApprovedProjectsCanSubmitMilestones
