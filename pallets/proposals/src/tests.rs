@@ -327,13 +327,13 @@ fn cancel_round() {
     //create_project extrinsic
     ExtBuilder.build().execute_with(|| {
         create_project(alice);
-        let project_key: Vec<ProjectKey> = vec![0];
+        let project_keys: Vec<ProjectKey> = vec![0];
         //schedule_round extrinsic
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
-            project_key
+            project_keys.clone()
         ));
 
         let exp_fundingroundcreated_event = <frame_system::Pallet<Test>>::events()
@@ -343,7 +343,7 @@ fn cancel_round() {
 
         assert_eq!(
             exp_fundingroundcreated_event,
-            mock::Event::from(proposals::Event::FundingRoundCreated(0))
+            mock::Event::from(proposals::Event::FundingRoundCreated(0, project_keys))
         );
 
         let round_index = 0;
