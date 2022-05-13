@@ -157,7 +157,7 @@ pub mod pallet {
             BalanceOf<T>,
             common_types::CurrencyId,
         ),
-        FundingRoundCreated(RoundKey),
+        FundingRoundCreated(RoundKey, Vec<ProjectKey>),
         VotingRoundCreated(RoundKey),
         MilestoneSubmitted(ProjectKey, MilestoneKey),
         ContributeSucceeded(
@@ -453,7 +453,7 @@ pub mod pallet {
                 <Projects<T>>::insert(project_key, updated_project);
             }
 
-            Self::deposit_event(Event::FundingRoundCreated(key));
+            Self::deposit_event(Event::FundingRoundCreated(key, project_keys));
             RoundCount::<T>::put(next_key);
 
             Ok(().into())
