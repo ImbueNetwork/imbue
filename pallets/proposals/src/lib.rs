@@ -158,7 +158,7 @@ pub mod pallet {
             common_types::CurrencyId,
         ),
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
-        VotingRoundCreated(RoundKey),
+        VotingRoundCreated(RoundKey, ProjectKey),
         MilestoneSubmitted(ProjectKey, MilestoneKey),
         ContributeSucceeded(
             T::AccountId,
@@ -423,7 +423,7 @@ pub mod pallet {
             let key = RoundCount::<T>::get();
 
             let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
-            let round = RoundOf::<T>::new(start, end, project_keys.clone());
+            let round = RoundOf::<T>::new(start, end, project_keys.clone(),RoundType::ContributionRound);
 
             // Add proposal round to list
             <Rounds<T>>::insert(key, Some(round));
@@ -743,7 +743,7 @@ pub mod pallet {
 
             let end = now + MILESTONES_VOTING_WINDOW.into();
             let key = RoundCount::<T>::get();
-            let round = RoundOf::<T>::new(now, end, vec![project_key]);
+            let round = RoundOf::<T>::new(now, end, vec![project_key], RoundType::VotingRound);
             let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
             let vote = Vote {
@@ -757,7 +757,7 @@ pub mod pallet {
             // Add proposal round to list
             <Rounds<T>>::insert(key, Some(round));
             RoundCount::<T>::put(next_key);
-            Self::deposit_event(Event::VotingRoundCreated(key));
+            Self::deposit_event(Event::VotingRoundCreated(key, project_key));
             Ok(().into())
         }
 
@@ -1081,12 +1081,21 @@ type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T
 type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 
+
+
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+pub enum RoundType {
+    ContributionRound,
+    VotingRound
+}
+
 /// Round struct
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Round<BlockNumber> {
     start: BlockNumber,
     end: BlockNumber,
     project_keys: Vec<ProjectKey>,
+    round_type: RoundType,
     is_canceled: bool,
 }
 
@@ -1095,12 +1104,14 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
         start: BlockNumber,
         end: BlockNumber,
         project_keys: Vec<ProjectKey>,
+        round_type: RoundType,
     ) -> Round<BlockNumber> {
         Round {
             start,
             end,
             project_keys,
             is_canceled: false,
+            round_type,
         }
     }
 }
@@ -1172,6 +1183,8 @@ pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,
 }
+
+
 
 #[cfg(feature = "std")]
 impl<T: Config> GenesisConfig<T> {
