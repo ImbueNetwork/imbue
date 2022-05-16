@@ -780,7 +780,7 @@ fn test_submit_milestone() {
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::VotingRoundCreated(1))
+            mock::Event::from(proposals::Event::VotingRoundCreated(1, project_index))
         );
     });
 }
@@ -1458,7 +1458,7 @@ fn submit_multiple_milestones() {
             .event;
         assert_eq!(
             voting_round_event_1,
-            mock::Event::from(proposals::Event::VotingRoundCreated(1))
+            mock::Event::from(proposals::Event::VotingRoundCreated(1, project_index))
         );
 
         run_to_block(5);
@@ -1475,7 +1475,7 @@ fn submit_multiple_milestones() {
             .event;
         assert_eq!(
             voting_round_event_2,
-            mock::Event::from(proposals::Event::VotingRoundCreated(2))
+            mock::Event::from(proposals::Event::VotingRoundCreated(2,project_index))
         );
     });
 }
