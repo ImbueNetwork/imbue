@@ -84,7 +84,7 @@ pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentCha
         format!("imbue {} testnet", environment).as_str(),
         // ID
         format!("imbue-{}-testnet", environment).as_str(),
-        ChainType::Development,
+        ChainType::Local,
         move || {
             development_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
