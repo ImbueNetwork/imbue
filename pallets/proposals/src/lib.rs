@@ -100,7 +100,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn rounds)]
-    pub type Rounds<T> = StorageMap<_, Blake2_128Concat, RoundKey, Option<RoundOf<T>>, ValueQuery>;
+    pub type Rounds<T> = StorageMap<_, Identity, RoundKey, Option<RoundOf<T>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn round_count)]
