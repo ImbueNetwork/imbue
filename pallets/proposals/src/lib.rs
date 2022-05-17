@@ -968,7 +968,7 @@ pub mod pallet {
                 contributions: project.contributions,
                 required_funds: project.required_funds,
                 currency_id: project.currency_id,
-                withdrawn_funds: available_funds,
+                withdrawn_funds: available_funds + project.withdrawn_funds,
                 initiator: project.initiator,
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
