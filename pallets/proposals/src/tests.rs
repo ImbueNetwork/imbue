@@ -86,7 +86,6 @@ fn create_a_test_project_with_less_than_100_percent() {
 
 #[test]
 fn create_a_test_project_with_no_name() {
-
     ExtBuilder.build().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
@@ -762,11 +761,7 @@ fn test_submit_milestone() {
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(
-            Origin::root(),
-            project_index,
-            None
-        ));
+        assert_ok!(Proposals::approve(Origin::root(), project_index, None));
 
         assert_ok!(Proposals::submit_milestone(
             Origin::signed(alice),
@@ -863,11 +858,7 @@ fn test_voting_on_a_milestone() {
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(
-            Origin::root(),
-            project_index,
-            None
-        ));
+        assert_ok!(Proposals::approve(Origin::root(), project_index, None));
 
         assert_ok!(Proposals::submit_milestone(
             Origin::signed(alice),
@@ -1100,11 +1091,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(
-            Origin::root(),
-            project_index,
-            None
-        ));
+        assert_ok!(Proposals::approve(Origin::root(), project_index, None));
 
         assert_ok!(Proposals::submit_milestone(
             Origin::signed(alice),
@@ -1145,7 +1132,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         ));
 
         //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw: u32 =
+        let initial_percentage_to_withdraw: u32 =
             proposed_milestones1.get(0).unwrap().percentage_to_unlock
                 + proposed_milestones1.get(1).unwrap().percentage_to_unlock;
 
@@ -1157,7 +1144,41 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         );
         assert_eq!(
             Balances::free_balance(&alice),
-            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
+            additional_amount + required_funds * (initial_percentage_to_withdraw as u64) / 100
+        );
+
+        // withdraw last milestone
+        assert_ok!(Proposals::submit_milestone(
+            Origin::signed(alice),
+            project_index,
+            2
+        ));
+        run_to_block(10);
+        //Bob voting on the submitted milestone
+        Proposals::vote_on_milestone(Origin::signed(bob), project_index, 2, true).ok();
+        //Charlie voting on the submitted milestone
+        Proposals::vote_on_milestone(Origin::signed(charlie), project_index, 2, true).ok();
+
+        assert_ok!(Proposals::finalise_milestone_voting(
+            Origin::signed(alice),
+            project_index,
+            2
+        ));
+
+        //calculating the total percentage that can be withdrawn based on the submitted milestones
+        let total_percentage_to_withdraw: u32 =
+            proposed_milestones1.get(0).unwrap().percentage_to_unlock
+                + proposed_milestones1.get(1).unwrap().percentage_to_unlock
+                + proposed_milestones1.get(2).unwrap().percentage_to_unlock;
+
+        assert_ok!(<proposals::Pallet<Test>>::withdraw(
+            Origin::signed(alice),
+            project_index
+        ));
+
+        assert_eq!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds
         );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
@@ -1315,11 +1336,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(
-            Origin::root(),
-            project_index,
-            None
-        ));
+        assert_ok!(Proposals::approve(Origin::root(), project_index, None));
 
         assert_ok!(Proposals::submit_milestone(
             Origin::signed(alice),
@@ -1440,11 +1457,7 @@ fn submit_multiple_milestones() {
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(
-            Origin::root(),
-            project_index,
-            None
-        ));
+        assert_ok!(Proposals::approve(Origin::root(), project_index, None));
 
         assert_ok!(Proposals::submit_milestone(
             Origin::signed(alice),
@@ -1475,7 +1488,7 @@ fn submit_multiple_milestones() {
             .event;
         assert_eq!(
             voting_round_event_2,
-            mock::Event::from(proposals::Event::VotingRoundCreated(2,project_index))
+            mock::Event::from(proposals::Event::VotingRoundCreated(2, project_index))
         );
     });
 }
