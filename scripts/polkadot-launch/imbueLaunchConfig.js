@@ -4,8 +4,8 @@ let relaychainBasePort = 30300;
 let relaychainBaseRPCPort = 9900;
 let relaychainBaseWSPort = 9914;
 
-let parachainBasePort = 30400;
-let parachainBaseRPCPort = 9930;
+let parachainBasePort = 31400;
+let parachainBaseRPCPort = 9980;
 let parachainBaseWSPort = 9942;
 const parachainAlicePrometheusPort = 9610;
 
@@ -67,7 +67,6 @@ const relaychain = {
 const imbue = {
     bin: "/imbue",
     id: "2102",
-    chain: "imbue-dev",
     balance: "1000000000000000000000",
     nodes: [
         {
@@ -84,6 +83,8 @@ const imbue = {
         },
         ...[
             "bob",
+            "charlie",
+            "dave",
         ].map((name, idx) => ({
             name,
             wsPort: parachainBaseWSPort + idx,

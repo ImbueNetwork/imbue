@@ -4,8 +4,8 @@ services:
       container_name: launch
       image: samelamin/imbue:0.9.17
       ports:
-        - "30330-30345:30330-30345"
-        - "9900-9960:9900-9960"
+        - "30330-31345:30330-31345"
+        - "9900-9990:9900-9990"
       command: bash -c "cp /polkadot-launch/imbueLaunchConfig.js /launch/; yarn start imbueLaunchConfig.js"
       volumes:
         - ./polkadot-launch/:/polkadot-launch/
