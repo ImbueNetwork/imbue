@@ -17,6 +17,8 @@
 use crate::rpc;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::ParachainConsensus;
+use cumulus_client_cli::CollatorOptions;
+
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
@@ -24,29 +26,26 @@ use cumulus_client_service::{
 use cumulus_primitives_core::{
     ParaId,
 };
-use cumulus_relay_chain_interface::RelayChainInterface;
+use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
+use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
 use polkadot_service::NativeExecutionDispatch;
 
-use cumulus_relay_chain_local::build_relay_chain_interface;
 pub use parachains_common::{AccountId, Balance, Block, Hash, Header, Index as Nonce};
 
 use sc_client_api::ExecutorProvider;
-use sc_consensus::{import_queue::Verifier as VerifierT, BlockImportParams};
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::NetworkService;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_api::{ApiExt, ConstructRuntimeApi};
-use sp_consensus::{CacheKeyId, SlotData};
-use sp_consensus_aura::{sr25519::AuthorityId as AuraId, AuraApi};
+use sp_api::{ConstructRuntimeApi};
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::{
-    generic::BlockId,
-    traits::{BlakeTwo256, Header as HeaderT},
+    traits::{BlakeTwo256},
 };
 use std::{sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
-
+use cumulus_relay_chain_rpc_interface::RelayChainRPCInterface;
+use polkadot_service::CollatorPair;
 /// Native executor instance.
 pub struct DevelopmentRuntimeExecutor;
 
@@ -181,20 +180,40 @@ where
     Ok(params)
 }
 
+async fn build_relay_chain_interface(
+	polkadot_config: Configuration,
+	parachain_config: &Configuration,
+	telemetry_worker_handle: Option<TelemetryWorkerHandle>,
+	task_manager: &mut TaskManager,
+	collator_options: CollatorOptions,
+) -> RelayChainResult<(Arc<(dyn RelayChainInterface + 'static)>, Option<CollatorPair>)> {
+	match collator_options.relay_chain_rpc_url {
+		Some(relay_chain_url) =>
+			Ok((Arc::new(RelayChainRPCInterface::new(relay_chain_url).await?) as Arc<_>, None)),
+		None => build_inprocess_relay_chain(
+			polkadot_config,
+			parachain_config,
+			telemetry_worker_handle,
+			task_manager,
+		),
+	}
+}
+
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
 async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
-    parachain_config: Configuration,
-    polkadot_config: Configuration,
-    id: ParaId,
-    _rpc_ext_builder: RB,
-    build_import_queue: BIQ,
-    build_consensus: BIC,
+	parachain_config: Configuration,
+	polkadot_config: Configuration,
+	collator_options: CollatorOptions,
+	id: ParaId,
+	_rpc_ext_builder: RB,
+	build_import_queue: BIQ,
+	build_consensus: BIC,
 ) -> sc_service::error::Result<(
-    TaskManager,
-    Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+	TaskManager,
+	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
 )>
 where
     RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
@@ -261,12 +280,18 @@ where
     let backend = params.backend.clone();
     let mut task_manager = params.task_manager;
 
-    let (relay_chain_interface, collator_key) =
-        build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
-            .map_err(|e| match e {
-                polkadot_service::Error::Sub(x) => x,
-                s => format!("{}", s).into(),
-            })?;
+    let (relay_chain_interface, collator_key) = build_relay_chain_interface(
+		polkadot_config,
+		&parachain_config,
+		telemetry_worker_handle,
+		&mut task_manager,
+		collator_options.clone(),
+	)
+	.await
+	.map_err(|e| match e {
+		RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
+		s => s.to_string().into(),
+	})?;
 
     let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
 
@@ -356,21 +381,22 @@ where
             spawner,
             parachain_consensus,
             import_queue,
-            collator_key,
+            collator_key: collator_key.expect("Command line arguments do not allow this. qed"),
             relay_chain_slot_duration,
         };
 
         start_collator(params).await?;
     } else {
         let params = StartFullNodeParams {
-            client: client.clone(),
-            announce_block,
-            task_manager: &mut task_manager,
-            para_id: id,
-            relay_chain_interface,
-            import_queue,
-            relay_chain_slot_duration,
-        };
+			client: client.clone(),
+			announce_block,
+			task_manager: &mut task_manager,
+			para_id: id,
+			relay_chain_interface,
+			relay_chain_slot_duration,
+			import_queue,
+			collator_options,
+		};
 
         start_full_node(params)?;
     }
@@ -420,9 +446,9 @@ pub fn build_development_import_queue(
             let time = sp_timestamp::InherentDataProvider::from_system_time();
 
             let slot =
-                sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+                sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
                     *time,
-                    slot_duration.slot_duration(),
+                    slot_duration,
                 );
 
             Ok((time, slot))
@@ -439,6 +465,7 @@ pub fn build_development_import_queue(
 pub async fn start_development_node(
     parachain_config: Configuration,
     polkadot_config: Configuration,
+    collator_options: CollatorOptions,
     id: ParaId,
 ) -> sc_service::error::Result<(
     TaskManager,
@@ -453,6 +480,7 @@ pub async fn start_development_node(
     start_node_impl::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _, _, _>(
         parachain_config,
         polkadot_config,
+        collator_options,
         id,
         |_| Ok(Default::default()),
         build_development_import_queue,
@@ -499,9 +527,9 @@ pub async fn start_development_node(
                         let time = sp_timestamp::InherentDataProvider::from_system_time();
 
                         let slot =
-						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
 							*time,
-							slot_duration.slot_duration(),
+							slot_duration,
 						);
 
                         let parachain_inherent = parachain_inherent.ok_or_else(|| {
@@ -528,59 +556,4 @@ pub async fn start_development_node(
         },
     )
     .await
-}
-
-enum BuildOnAccess<R> {
-    Uninitialized(Option<Box<dyn FnOnce() -> R + Send + Sync>>),
-    Initialized(R),
-}
-
-impl<R> BuildOnAccess<R> {
-    fn get_mut(&mut self) -> &mut R {
-        loop {
-            match self {
-                Self::Uninitialized(f) => {
-                    *self = Self::Initialized((f.take().unwrap())());
-                }
-                Self::Initialized(ref mut r) => return r,
-            }
-        }
-    }
-}
-
-struct Verifier<Client> {
-    client: Arc<Client>,
-    aura_verifier: BuildOnAccess<Box<dyn VerifierT<Block>>>,
-    relay_chain_verifier: Box<dyn VerifierT<Block>>,
-}
-
-#[async_trait::async_trait]
-impl<Client> VerifierT<Block> for Verifier<Client>
-where
-    Client: sp_api::ProvideRuntimeApi<Block> + Send + Sync,
-    Client::Api: AuraApi<Block, AuraId>,
-{
-    async fn verify(
-        &mut self,
-        block_import: BlockImportParams<Block, ()>,
-    ) -> Result<
-        (
-            BlockImportParams<Block, ()>,
-            Option<Vec<(CacheKeyId, Vec<u8>)>>,
-        ),
-        String,
-    > {
-        let block_id = BlockId::hash(*block_import.header.parent_hash());
-
-        if self
-            .client
-            .runtime_api()
-            .has_api::<dyn AuraApi<Block, AuraId>>(&block_id)
-            .unwrap_or(false)
-        {
-            self.aura_verifier.get_mut().verify(block_import).await
-        } else {
-            self.relay_chain_verifier.verify(block_import).await
-        }
-    }
 }

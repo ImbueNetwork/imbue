@@ -24,7 +24,6 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
 use sp_core::{
-    u32_trait::{_1, _2, _3, _4},
     OpaqueMetadata,
 };
 
@@ -40,7 +39,7 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, Perbill, Permill,
 };
-use sp_std::{cmp::Ordering, marker::PhantomData, prelude::*};
+use sp_std::{convert::{TryFrom, TryInto}, cmp::Ordering, marker::PhantomData, prelude::*};
 
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -51,13 +50,13 @@ mod weights;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-    construct_runtime, ensure, match_type, parameter_types,
+    construct_runtime, ensure, parameter_types,
     traits::{
         fungibles, Contains,  Currency as PalletCurrency, EnsureOneOf, EqualPrivilegeOnly, Everything, Get, IsInVec, Nothing,
         OnUnbalanced, Imbalance, Randomness,
     },
     weights::{
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},ConstantMultiplier,
         DispatchClass, IdentityFee, Weight,
     },
     PalletId, StorageValue,
@@ -269,10 +268,10 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
-    type TransactionByteFee = TransactionByteFee;
-    type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type WeightToFee = WeightToFee;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
+    type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -364,18 +363,6 @@ parameter_types! {
     // One ROC buys 1 second of weight.
     pub const WeightPrice: (MultiLocation, u128) = (MultiLocation::parent(), IMBU);
     pub const MaxInstructions: u32 = 100;
-}
-
-match_type! {
-    pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
-        MultiLocation { parents: 1, interior: Here } |
-        MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Unit, .. }) }
-    };
-}
-match_type! {
-    pub type Statemint: impl Contains<MultiLocation> = {
-        MultiLocation { parents: 1, interior: X1(Parachain(1000)) }
-    };
 }
 
 pub struct ToTreasury;
@@ -523,6 +510,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
     type ControllerOrigin = EnsureRoot<AccountId>;
     type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+    type WeightInfo = ();
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -852,9 +840,7 @@ where
 
 
 /// All council members must vote yes to create this origin.
-// type AllOfCouncil = EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
-
-type HalfOfCouncil = EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+type HalfOfCouncil = EnsureProportionAtLeast<AccountId, CouncilCollective, 1 ,2>;
 /// A majority of the Unit body from Rococo over XCM is our required administration origin.
 pub type AdminOrigin = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfCouncil = EnsureRootOr<HalfOfCouncil>;
@@ -873,16 +859,11 @@ parameter_types! {
     pub const MaxInvulnerables: u32 = 100;
 }
 
-type CollatorSelectionUpdateOrigin = EnsureOneOf<
-    EnsureRoot<AccountId>,
-    pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
->;
-
 // Implement Collator Selection pallet configuration trait for the runtime
 impl pallet_collator_selection::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type UpdateOrigin = CollatorSelectionUpdateOrigin;
+    type UpdateOrigin = MoreThanHalfCouncil;
     type PotId = PotId;
     type MaxCandidates = MaxCandidates;
     type MinCandidates = MinCandidates;
@@ -953,6 +934,8 @@ impl orml_tokens::Config for Runtime {
     type OnDust = orml_tokens::TransferDust<Runtime, TreasuryAccount>;
     type MaxLocks = ORMLMaxLocks;
     type DustRemovalWhitelist = Nothing;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
 }
 
 pub type Amount = i128;
@@ -962,7 +945,6 @@ parameter_types! {
 }
 
 impl orml_currencies::Config for Runtime {
-    type Event = Event;
     type MultiCurrency = OrmlTokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
     type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -1032,9 +1014,7 @@ parameter_types! {
 impl pallet_treasury::Config for Runtime {
     type Currency = Balances;
     // either democracy or 75% of council votes
-    type ApproveOrigin = EnsureRootOr<
-        pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
-    >;
+    type ApproveOrigin = MoreThanHalfCouncil;
     // either democracy or more than 50% council votes
     type RejectOrigin = EnsureRootOr<HalfOfCouncil>;
     type Event = Event;
@@ -1101,7 +1081,7 @@ construct_runtime! {
         AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
         XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 124,
 
-        Currencies: orml_currencies::{Pallet, Call, Event<T>},
+        Currencies: orml_currencies::{Pallet, Call},
         OrmlTokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
         UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
 
@@ -1201,14 +1181,14 @@ impl_runtime_apis! {
     }
 
     impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
-        fn validate_transaction(
-            source: TransactionSource,
-            tx: <Block as BlockT>::Extrinsic,
-            block_hash: <Block as BlockT>::Hash,
-        ) -> TransactionValidity {
-            Executive::validate_transaction(source, tx, block_hash)
-        }
-    }
+		fn validate_transaction(
+			source: TransactionSource,
+			tx: <Block as BlockT>::Extrinsic,
+			block_hash: <Block as BlockT>::Hash,
+		) -> TransactionValidity {
+			Executive::validate_transaction(source, tx, block_hash)
+		}
+	}
 
     impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
         fn offchain_worker(header: &<Block as BlockT>::Header) {
