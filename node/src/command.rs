@@ -32,7 +32,7 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
 use std::{io::Write, net::SocketAddr};
-
+use frame_benchmarking_cli::BenchmarkCmd;
 // default to the Statemint/Statemine/Westmint id
 const DEFAULT_PARA_ID: u32 = 2102;
 
@@ -250,7 +250,7 @@ pub fn run() -> Result<()> {
             })
         }
         Some(Subcommand::Revert(cmd)) => construct_async_run!(|components, cli, cmd, config| {
-            Ok(cmd.run(components.client, components.backend))
+            Ok(cmd.run(components.client, components.backend, None))
         }),
         Some(Subcommand::ExportGenesisState(params)) => {
             let mut builder = sc_cli::LoggerBuilder::new("");
@@ -306,19 +306,42 @@ pub fn run() -> Result<()> {
             Ok(())
         }
         Some(Subcommand::Benchmark(cmd)) => {
-			if cfg!(feature = "runtime-benchmarks") {
-				let runner = cli.create_runner(cmd)?;
+			let runner = cli.create_runner(cmd)?;
+			// Switch on the concrete benchmark sub-command-
+			match cmd {
+				BenchmarkCmd::Pallet(cmd) =>
+					if cfg!(feature = "runtime-benchmarks") {
+						runner.sync_run(|config| cmd.run::<development_runtime::Block, DevelopmentRuntimeExecutor>(config))
+					} else {
+						Err("Benchmarking wasn't enabled when building the node. \
+					You can enable it with `--features runtime-benchmarks`."
+							.into())
+					},
+				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
+					let partials = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
+						&config,
+						crate::service::build_development_import_queue,
+					)?;
+					cmd.run(partials.client)
+				}),
+				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
+					let partials = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
+						&config,
+						crate::service::build_development_import_queue,
+					)?;
+					let db = partials.backend.expose_db();
+					let storage = partials.backend.expose_storage();
 
-				runner.sync_run(|config| cmd.run::<development_runtime::Block, DevelopmentRuntimeExecutor>(config))
-			} else {
-				Err("Benchmarking wasn't enabled when building the node. You can enable it with \
-				     `--features runtime-benchmarks`."
-					.into())
+					cmd.run(config, partials.client.clone(), db, storage)
+				}),
+				BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
+				BenchmarkCmd::Machine(cmd) => runner.sync_run(|config| cmd.run(&config)),
 			}
-        }
+		},
 
         None => {
             let runner = cli.create_runner(&(*cli.run).normalize())?;
+			let collator_options = cli.run.collator_options();
 
             runner.run_node_until_exit(|config| async move {
 
@@ -337,8 +360,7 @@ pub fn run() -> Result<()> {
                 let id = ParaId::from(cli.run.parachain_id.clone().or(para_id).unwrap_or(DEFAULT_PARA_ID));
 
 
-                let parachain_account =
-                    AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
+                let parachain_account = AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account(&id);
                 let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
                 let block: crate::service::Block =
                     generate_genesis_block(&config.chain_spec, state_version)
@@ -364,7 +386,7 @@ pub fn run() -> Result<()> {
 
                 match config.chain_spec.identify() {
                     ChainIdentity::Development => {
-                        crate::service::start_development_node(config, polkadot_config, id)
+                        crate::service::start_development_node(config, polkadot_config,collator_options, id)
                             .await
                             .map(|r| r.0)
                             .map_err(Into::into)
