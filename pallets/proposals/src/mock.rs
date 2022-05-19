@@ -3,15 +3,14 @@ use crate as proposals;
 use frame_support::{
     ord_parameter_types, parameter_types,
     traits::{ConstU32, Nothing},
-    weights::{IdentityFee, Weight},
+    weights::{ConstantMultiplier, IdentityFee, Weight},
     PalletId,
 };
 
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, Pair, Public, H256};
 
-use sp_std::str;
-use sp_std::vec::Vec;
+use sp_std::{convert::{TryFrom, TryInto}, vec::Vec, str };
 
 use sp_runtime::{
     testing::{Header, TestXt},
@@ -47,7 +46,6 @@ pub type AdaptedBasicCurrency =
     orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
 impl orml_currencies::Config for Test {
-    type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
     type NativeCurrency = AdaptedBasicCurrency;
@@ -64,7 +62,7 @@ frame_support::construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Proposals: proposals::{Pallet, Call, Storage, Event<T>},
         Tokens: orml_tokens::{Pallet, Storage, Event<T>},
-        Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
+        Currencies: orml_currencies::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
@@ -92,6 +90,8 @@ impl orml_tokens::Config for Test {
     type OnDust = orml_tokens::TransferDust<Test, DustAccount>;
     type MaxLocks = MaxLocks;
     type DustRemovalWhitelist = Nothing;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -100,10 +100,10 @@ parameter_types! {
 }
 impl pallet_transaction_payment::Config for Test {
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
-    type TransactionByteFee = TransactionByteFee;
-    type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type WeightToFee = IdentityFee<u64>;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
+    type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
 parameter_types! {
