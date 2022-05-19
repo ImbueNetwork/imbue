@@ -25,9 +25,6 @@ pub mod types {
     use frame_support::traits::EnsureOneOf;
     use frame_system::EnsureRoot;
 
-    use scale_info::TypeInfo;
-    #[cfg(feature = "std")]
-    use serde::{Deserialize, Serialize};
     use sp_core::U256;
     use sp_runtime::traits::{BlakeTwo256, IdentifyAccount, Verify};
     use sp_std::vec::Vec;
@@ -87,22 +84,6 @@ pub mod types {
 
     pub struct TokenId(pub U256);
 
-    /// A representation of InstanceId for Uniques.
-    #[derive(
-        codec::Encode,
-        codec::Decode,
-        Default,
-        Copy,
-        Clone,
-        PartialEq,
-        Eq,
-        codec::CompactAs,
-        Debug,
-        codec::MaxEncodedLen,
-        TypeInfo,
-    )]
-    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    pub struct InstanceId(pub u128);
 }
 
 pub mod currency {
