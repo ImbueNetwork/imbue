@@ -10,6 +10,7 @@ let parachainBaseWSPort = 9942;
 const parachainAlicePrometheusPort = 9610;
 
 const commonFlags = [
+    "--force-authing",
     "--unsafe-ws-external",
     "--rpc-cors=all",
     "--rpc-external",
@@ -84,6 +85,8 @@ const imbue = {
         },
         ...[
             "bob",
+            "charlie",
+            "dave",
         ].map((name, idx) => ({
             name,
             wsPort: parachainBaseWSPort + idx,
