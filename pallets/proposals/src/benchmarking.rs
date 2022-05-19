@@ -45,11 +45,11 @@ benchmarks! {
         create_project_common::<T>(CONTRIBUTION);
         let start_block: T::BlockNumber = 0u32.into();
         let end_block: T::BlockNumber = 10u32.into();
-        let project_key: Vec<ProjectKey> = vec![0];
+        let project_keys: Vec<ProjectKey> = vec![0];
 
-    }: _(RawOrigin::Root, start_block, end_block, project_key)
+    }: _(RawOrigin::Root, start_block, end_block, project_keys.clone())
     verify {
-        assert_last_event::<T>(Event::FundingRoundCreated(0).into());
+        assert_last_event::<T>(Event::FundingRoundCreated(0, project_keys).into());
     }
 
     cancel_round {

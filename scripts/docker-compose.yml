@@ -6,7 +6,7 @@ services:
       ports:
         - "30330-31345:30330-31345"
         - "9900-9990:9900-9990"
-      command: bash -c "cp /polkadot-launch/imbueLaunchConfig.js /launch/; yarn start imbueLaunchConfig.js"
+      command: bash -c "cp /polkadot-launch/imbueLaunchConfig.js /launch/;rm rococo-*; yarn start imbueLaunchConfig.js"
       volumes:
         - ./polkadot-launch/:/polkadot-launch/
   frontend:

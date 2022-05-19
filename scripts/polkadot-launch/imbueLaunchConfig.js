@@ -10,7 +10,7 @@ let parachainBaseWSPort = 9942;
 const parachainAlicePrometheusPort = 9610;
 
 const commonFlags = [
-    "--force-authing",
+    "--force-authoring",
     "--unsafe-ws-external",
     "--rpc-cors=all",
     "--rpc-external",

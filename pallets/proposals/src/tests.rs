@@ -1165,12 +1165,6 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             2
         ));
 
-        //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw: u32 =
-            proposed_milestones1.get(0).unwrap().percentage_to_unlock
-                + proposed_milestones1.get(1).unwrap().percentage_to_unlock
-                + proposed_milestones1.get(2).unwrap().percentage_to_unlock;
-
         assert_ok!(<proposals::Pallet<Test>>::withdraw(
             Origin::signed(alice),
             project_index
