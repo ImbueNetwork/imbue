@@ -176,6 +176,7 @@ pub mod pallet {
         MilestoneApproved(ProjectKey, MilestoneKey, T::BlockNumber),
         WhitelistAdded(ProjectKey, T::BlockNumber),
         WhitelistRemoved(ProjectKey, T::BlockNumber),
+        ProjectLockedFundsRefunded(ProjectKey, BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -333,6 +334,7 @@ pub mod pallet {
                 create_block_number: <frame_system::Pallet<T>>::block_number(),
                 approved_for_funding: false,
                 funding_threshold_met: false,
+                cancelled: false,
             };
 
             // Add proposal to list
@@ -448,6 +450,7 @@ pub mod pallet {
                     create_block_number: project.create_block_number,
                     approved_for_funding: true,
                     funding_threshold_met: project.funding_threshold_met,
+                    cancelled: project.cancelled,
                 };
 
                 // Add proposal to list
@@ -615,6 +618,7 @@ pub mod pallet {
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
                 funding_threshold_met: project.funding_threshold_met,
+                cancelled: project.cancelled,
             };
 
             // Add proposal to list
@@ -717,6 +721,7 @@ pub mod pallet {
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
                 funding_threshold_met: project.funding_threshold_met,
+                cancelled: project.cancelled,
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
@@ -916,6 +921,7 @@ pub mod pallet {
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
                 funding_threshold_met: project.funding_threshold_met,
+                cancelled: project.cancelled,
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
@@ -974,6 +980,7 @@ pub mod pallet {
                 create_block_number: project.create_block_number,
                 approved_for_funding: project.approved_for_funding,
                 funding_threshold_met: project.funding_threshold_met,
+                cancelled: project.cancelled,
             };
             // Add proposal to list
             <Projects<T>>::insert(project_key, updated_project);
@@ -1028,6 +1035,68 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             IsIdentityRequired::<T>::put(is_identity_required);
+
+            Ok(().into())
+        }
+
+                  /// Ad Hoc Step (ADMIN)
+        /// Refund
+        #[pallet::weight(<T as Config>::WeightInfo::refund())]
+        pub fn refund(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResultWithPostInfo {
+            //ensure only admin can perform refund
+            ensure_root(origin)?;
+            let project =
+                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            
+            //getting the locked milestone percentage - these are also milestones that have not been approved
+            let mut refunded_funds: BalanceOf<T> = 0_u32.into();
+            let mut locked_milestone_percentage: u32 = 0;
+            for milestone in project.milestones.clone() {
+                if !milestone.is_approved {
+                    locked_milestone_percentage += milestone.percentage_to_unlock;
+                }
+            }
+
+            for contribution in project.contributions.iter() {
+                let who = contribution.account_id.clone();
+                let refund_amount: BalanceOf<T> = (contribution.value * locked_milestone_percentage.into()) / 100u32.into();
+
+                T::MultiCurrency::transfer(
+                    project.currency_id,
+                    &Self::project_account_id(project_key),
+                    &who,
+                    refund_amount,
+                )?;
+
+                refunded_funds += refund_amount;
+            }
+
+            // Update project cancellation status
+            let updated_project = Project {
+                name: project.name,
+                logo: project.logo,
+                description: project.description,
+                website: project.website,
+                milestones: project.milestones,
+                contributions: project.contributions,
+                required_funds: project.required_funds,
+                currency_id: project.currency_id,
+                withdrawn_funds: project.withdrawn_funds,
+                initiator: project.initiator,
+                create_block_number: project.create_block_number,
+                approved_for_funding: project.approved_for_funding,
+                funding_threshold_met: project.funding_threshold_met,
+                cancelled: true,
+            };
+            // Updated new project status to chain
+            <Projects<T>>::insert(project_key, updated_project);
+            Self::deposit_event(Event::ProjectLockedFundsRefunded(
+                project_key,
+                refunded_funds,
+            ));
 
             Ok(().into())
         }
@@ -1176,6 +1245,7 @@ pub struct Project<AccountId, Balance, BlockNumber> {
     create_block_number: BlockNumber,
     approved_for_funding: bool,
     funding_threshold_met: bool,
+    cancelled: bool,
 }
 
 /// White struct
