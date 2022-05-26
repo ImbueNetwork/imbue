@@ -159,7 +159,7 @@ pub mod pallet {
             common_types::CurrencyId,
         ),
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
-        VotingRoundCreated(RoundKey, ProjectKey),
+        VotingRoundCreated(RoundKey, Vec<ProjectKey>),
         MilestoneSubmitted(ProjectKey, MilestoneKey),
         ContributeSucceeded(
             T::AccountId,
@@ -306,9 +306,10 @@ pub mod pallet {
             start: T::BlockNumber,
             end: T::BlockNumber,
             project_keys: Vec<ProjectKey>,
+            round_type: RoundType
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
-            Self::new_round(start, end, project_keys)
+            Self::new_round(start, end, project_keys, round_type)
         }
 
         /// Step 2.5 (ADMIN)
@@ -621,6 +622,7 @@ impl<T: Config> Pallet<T> {
         start: T::BlockNumber,
         end: T::BlockNumber,
         project_keys: Vec<ProjectKey>,
+        round_type: RoundType
     ) -> DispatchResultWithPostInfo {
         let now = <frame_system::Pallet<T>>::block_number();
         // The number of items cannot exceed the maximum
@@ -647,7 +649,7 @@ impl<T: Config> Pallet<T> {
             start,
             end,
             project_keys.clone(),
-            RoundType::ContributionRound,
+            round_type.clone(),
         );
 
         // Add proposal round to list
@@ -679,7 +681,10 @@ impl<T: Config> Pallet<T> {
             <Projects<T>>::insert(project_key, updated_project);
         }
 
-        Self::deposit_event(Event::FundingRoundCreated(key, project_keys));
+        match round_type.clone() {
+            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys))}
+            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys))}
+        }
         RoundCount::<T>::put(next_key);
 
         Ok(().into())
@@ -942,7 +947,7 @@ impl<T: Config> Pallet<T> {
         // Add proposal round to list
         <Rounds<T>>::insert(key, Some(round));
         RoundCount::<T>::put(next_key);
-        Self::deposit_event(Event::VotingRoundCreated(key, project_key));
+        Self::deposit_event(Event::VotingRoundCreated(key, vec![project_key]));
         Ok(().into())
     }
 
