@@ -31,8 +31,6 @@ use frame_system::pallet_prelude::*;
 
 const MAX_DESC_FIELD_LENGTH: usize = 5000;
 const MAX_STRING_FIELD_LENGTH: usize = 256;
-// set end to 5 mins for demo purposes
-const MILESTONES_VOTING_WINDOW: u32 = 25u32;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -53,6 +51,13 @@ pub mod pallet {
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
 
         type WeightInfo: WeightInfo;
+    }
+
+
+    #[pallet::type_value]
+    pub fn InitialMilestoneVotingWindow<T: Config>() -> u32
+    {
+        100800u32
     }
 
     #[pallet::pallet]
@@ -112,6 +117,10 @@ pub mod pallet {
     pub type MaxProposalCountPerRound<T> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn milestone_voting_window)]
+    pub type MilestoneVotingWindow<T> = StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow<T>>;
+
+    #[pallet::storage]
     #[pallet::getter(fn withdrawal_expiration)]
     pub type WithdrawalExpiration<T> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
@@ -122,6 +131,7 @@ pub mod pallet {
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub init_max_proposal_count_per_round: u32,
+        pub init_milestone_voting_window: u32,
         pub init_withdrawal_expiration: BlockNumberFor<T>,
         pub init_is_identity_required: bool,
     }
@@ -131,6 +141,7 @@ pub mod pallet {
         fn default() -> Self {
             Self {
                 init_max_proposal_count_per_round: 5,
+                init_milestone_voting_window: 100800u32,
                 init_withdrawal_expiration: Default::default(),
                 init_is_identity_required: Default::default(),
             }
@@ -141,6 +152,7 @@ pub mod pallet {
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             MaxProposalCountPerRound::<T>::put(self.init_max_proposal_count_per_round);
+            MilestoneVotingWindow::<T>::put(self.init_max_proposal_count_per_round);
             WithdrawalExpiration::<T>::put(self.init_withdrawal_expiration);
             IsIdentityRequired::<T>::put(self.init_is_identity_required);
         }
@@ -425,6 +437,25 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+
+        /// Set milestone voting window
+        #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
+        pub fn set_milestone_voting_window(
+            origin: OriginFor<T>,
+            new_milestone_voting_window: u32,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            ensure!(
+                new_milestone_voting_window > 0,
+                Error::<T>::ParamLimitExceed
+            );
+            MilestoneVotingWindow::<T>::put(new_milestone_voting_window);
+
+            Ok(().into())
+        }
+
+
 
         /// Set withdrawal expiration
         #[pallet::weight(<T as Config>::WeightInfo::set_withdrawal_expiration())]
@@ -930,8 +961,7 @@ impl<T: Config> Pallet<T> {
             project.funding_threshold_met,
             Error::<T>::OnlyApprovedProjectsCanSubmitMilestones
         );
-
-        let end = now + MILESTONES_VOTING_WINDOW.into();
+        let end = now + MilestoneVotingWindow::<T>::get().into();
         let key = RoundCount::<T>::get();
         let round = RoundOf::<T>::new(now, end, vec![project_key], RoundType::VotingRound);
         let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
