@@ -6,8 +6,6 @@ use common_types::CurrencyId;
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
 
-#[cfg(feature = "std")]
-use frame_support::traits::GenesisBuild;
 use frame_support::{pallet_prelude::*, transactional, PalletId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -127,36 +125,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn is_identity_required)]
     pub type IsIdentityRequired<T> = StorageValue<_, bool, ValueQuery>;
-
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
-        pub init_max_proposal_count_per_round: u32,
-        pub init_milestone_voting_window: u32,
-        pub init_withdrawal_expiration: BlockNumberFor<T>,
-        pub init_is_identity_required: bool,
-    }
-
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                init_max_proposal_count_per_round: 5,
-                init_milestone_voting_window: 100800u32,
-                init_withdrawal_expiration: Default::default(),
-                init_is_identity_required: Default::default(),
-            }
-        }
-    }
-
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-        fn build(&self) {
-            MaxProposalCountPerRound::<T>::put(self.init_max_proposal_count_per_round);
-            MilestoneVotingWindow::<T>::put(self.init_max_proposal_count_per_round);
-            WithdrawalExpiration::<T>::put(self.init_withdrawal_expiration);
-            IsIdentityRequired::<T>::put(self.init_is_identity_required);
-        }
-    }
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -1351,21 +1319,4 @@ pub struct Project<AccountId, Balance, BlockNumber> {
 pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,
-}
-
-#[cfg(feature = "std")]
-impl<T: Config> GenesisConfig<T> {
-    /// Direct implementation of `GenesisBuild::build_storage`.
-    ///
-    /// Kept in order not to break dependency.
-    pub fn build_storage(&self) -> Result<sp_runtime::Storage, String> {
-        <Self as GenesisBuild<T>>::build_storage(self)
-    }
-
-    /// Direct implementation of `GenesisBuild::assimilate_storage`.
-    ///
-    /// Kept in order not to break dependency.
-    pub fn assimilate_storage(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
-        <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
-    }
 }
