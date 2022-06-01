@@ -6,8 +6,6 @@ use common_types::CurrencyId;
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
 
-#[cfg(feature = "std")]
-use frame_support::traits::GenesisBuild;
 use frame_support::{pallet_prelude::*, transactional, PalletId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -31,8 +29,6 @@ use frame_system::pallet_prelude::*;
 
 const MAX_DESC_FIELD_LENGTH: usize = 5000;
 const MAX_STRING_FIELD_LENGTH: usize = 256;
-// set end to 5 mins for demo purposes
-const MILESTONES_VOTING_WINDOW: u32 = 25u32;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -53,6 +49,13 @@ pub mod pallet {
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
 
         type WeightInfo: WeightInfo;
+    }
+
+
+    #[pallet::type_value]
+    pub fn InitialMilestoneVotingWindow<T: Config>() -> u32
+    {
+        100800u32
     }
 
     #[pallet::pallet]
@@ -112,39 +115,16 @@ pub mod pallet {
     pub type MaxProposalCountPerRound<T> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn milestone_voting_window)]
+    pub type MilestoneVotingWindow<T> = StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow<T>>;
+
+    #[pallet::storage]
     #[pallet::getter(fn withdrawal_expiration)]
     pub type WithdrawalExpiration<T> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn is_identity_required)]
     pub type IsIdentityRequired<T> = StorageValue<_, bool, ValueQuery>;
-
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
-        pub init_max_proposal_count_per_round: u32,
-        pub init_withdrawal_expiration: BlockNumberFor<T>,
-        pub init_is_identity_required: bool,
-    }
-
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                init_max_proposal_count_per_round: 5,
-                init_withdrawal_expiration: Default::default(),
-                init_is_identity_required: Default::default(),
-            }
-        }
-    }
-
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-        fn build(&self) {
-            MaxProposalCountPerRound::<T>::put(self.init_max_proposal_count_per_round);
-            WithdrawalExpiration::<T>::put(self.init_withdrawal_expiration);
-            IsIdentityRequired::<T>::put(self.init_is_identity_required);
-        }
-    }
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -159,7 +139,7 @@ pub mod pallet {
             common_types::CurrencyId,
         ),
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
-        VotingRoundCreated(RoundKey, ProjectKey),
+        VotingRoundCreated(RoundKey, Vec<ProjectKey>),
         MilestoneSubmitted(ProjectKey, MilestoneKey),
         ContributeSucceeded(
             T::AccountId,
@@ -306,9 +286,10 @@ pub mod pallet {
             start: T::BlockNumber,
             end: T::BlockNumber,
             project_keys: Vec<ProjectKey>,
+            round_type: RoundType
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
-            Self::new_round(start, end, project_keys)
+            Self::new_round(start, end, project_keys, round_type)
         }
 
         /// Step 2.5 (ADMIN)
@@ -424,6 +405,25 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+
+        /// Set milestone voting window
+        #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
+        pub fn set_milestone_voting_window(
+            origin: OriginFor<T>,
+            new_milestone_voting_window: u32,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            ensure!(
+                new_milestone_voting_window > 0,
+                Error::<T>::ParamLimitExceed
+            );
+            MilestoneVotingWindow::<T>::put(new_milestone_voting_window);
+
+            Ok(().into())
+        }
+
+
 
         /// Set withdrawal expiration
         #[pallet::weight(<T as Config>::WeightInfo::set_withdrawal_expiration())]
@@ -621,6 +621,7 @@ impl<T: Config> Pallet<T> {
         start: T::BlockNumber,
         end: T::BlockNumber,
         project_keys: Vec<ProjectKey>,
+        round_type: RoundType
     ) -> DispatchResultWithPostInfo {
         let now = <frame_system::Pallet<T>>::block_number();
         // The number of items cannot exceed the maximum
@@ -647,7 +648,7 @@ impl<T: Config> Pallet<T> {
             start,
             end,
             project_keys.clone(),
-            RoundType::ContributionRound,
+            round_type.clone(),
         );
 
         // Add proposal round to list
@@ -679,7 +680,10 @@ impl<T: Config> Pallet<T> {
             <Projects<T>>::insert(project_key, updated_project);
         }
 
-        Self::deposit_event(Event::FundingRoundCreated(key, project_keys));
+        match round_type.clone() {
+            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys))}
+            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys))}
+        }
         RoundCount::<T>::put(next_key);
 
         Ok(().into())
@@ -925,8 +929,7 @@ impl<T: Config> Pallet<T> {
             project.funding_threshold_met,
             Error::<T>::OnlyApprovedProjectsCanSubmitMilestones
         );
-
-        let end = now + MILESTONES_VOTING_WINDOW.into();
+        let end = now + MilestoneVotingWindow::<T>::get().into();
         let key = RoundCount::<T>::get();
         let round = RoundOf::<T>::new(now, end, vec![project_key], RoundType::VotingRound);
         let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
@@ -942,7 +945,7 @@ impl<T: Config> Pallet<T> {
         // Add proposal round to list
         <Rounds<T>>::insert(key, Some(round));
         RoundCount::<T>::put(next_key);
-        Self::deposit_event(Event::VotingRoundCreated(key, project_key));
+        Self::deposit_event(Event::VotingRoundCreated(key, vec![project_key]));
         Ok(().into())
     }
 
@@ -1316,21 +1319,4 @@ pub struct Project<AccountId, Balance, BlockNumber> {
 pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,
-}
-
-#[cfg(feature = "std")]
-impl<T: Config> GenesisConfig<T> {
-    /// Direct implementation of `GenesisBuild::build_storage`.
-    ///
-    /// Kept in order not to break dependency.
-    pub fn build_storage(&self) -> Result<sp_runtime::Storage, String> {
-        <Self as GenesisBuild<T>>::build_storage(self)
-    }
-
-    /// Direct implementation of `GenesisBuild::assimilate_storage`.
-    ///
-    /// Kept in order not to break dependency.
-    pub fn assimilate_storage(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
-        <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
-    }
 }

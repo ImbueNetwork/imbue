@@ -229,6 +229,7 @@ fn create_a_test_project_and_schedule_round() {
             System::block_number() + 1,
             //Project key starts with 0 for the first project submitted to the chain
             vec![0],
+            RoundType::ContributionRound
         )
         .unwrap();
     });
@@ -246,7 +247,8 @@ fn schedule_round_invalid_project_key() {
                 System::block_number(),
                 System::block_number() + 1,
                 //Project key starts with 0 for the first project submitted to the chain
-                vec![1]
+                vec![1],
+                RoundType::ContributionRound
             ),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
@@ -271,7 +273,8 @@ fn schedule_round_invalid_end_block_no() {
                 System::block_number() + 6000,
                 System::block_number() + 3000,
                 //Project key starts with 0 for the first project submitted to the chain
-                vec![1]
+                vec![1],
+                RoundType::ContributionRound
             ),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
@@ -296,7 +299,8 @@ fn cancel_round_no_active_round() {
                 System::block_number() + 6000,
                 System::block_number() + 3000,
                 //Project key starts with 0 for the first project submitted to the chain
-                vec![1]
+                vec![1],
+                RoundType::ContributionRound
             ),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
@@ -332,7 +336,8 @@ fn cancel_round() {
             Origin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
-            project_keys.clone()
+            project_keys.clone(),
+            RoundType::ContributionRound
         ));
 
         let exp_fundingroundcreated_event = <frame_system::Pallet<Test>>::events()
@@ -380,7 +385,8 @@ fn test_canceling_started_round() {
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         assert_noop!(
@@ -413,7 +419,8 @@ fn test_canceling_round_without_root_privilege() {
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         assert_noop!(
@@ -447,6 +454,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
+            RoundType::ContributionRound
         )
         .unwrap();
 
@@ -503,6 +511,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
+            RoundType::ContributionRound
         )
         .unwrap();
 
@@ -560,6 +569,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
+            RoundType::ContributionRound
         )
         .unwrap();
 
@@ -617,6 +627,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
+            RoundType::ContributionRound
         )
         .unwrap();
 
@@ -659,6 +670,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
+            RoundType::ContributionRound
         )
         .unwrap();
 
@@ -704,6 +716,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
+            RoundType::ContributionRound
         )
         .unwrap();
 
@@ -746,7 +759,8 @@ fn test_submit_milestone() {
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         let value = 100u64;
@@ -775,7 +789,7 @@ fn test_submit_milestone() {
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::VotingRoundCreated(1, project_index))
+            mock::Event::from(proposals::Event::VotingRoundCreated(1, vec![project_index]))
         );
     });
 }
@@ -798,7 +812,8 @@ fn test_submit_milestone_without_approval() {
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         let value = 100u64;
@@ -843,7 +858,8 @@ fn test_voting_on_a_milestone() {
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         let value = 100u64;
@@ -903,7 +919,8 @@ fn test_voting_on_a_canceled_round() {
             Origin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         assert_ok!(<proposals::Pallet<Test>>::cancel_round(Origin::root(), 0));
@@ -967,7 +984,8 @@ fn test_finalize_a_milestone_without_voting() {
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         let value = 100u64;
@@ -1069,7 +1087,8 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         let value = 500000u64;
@@ -1232,7 +1251,8 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         let value = 500000u64;
@@ -1315,7 +1335,8 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         let required_funds = 100u64;
@@ -1435,7 +1456,8 @@ fn submit_multiple_milestones() {
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         let value = 100u64;
@@ -1465,7 +1487,7 @@ fn submit_multiple_milestones() {
             .event;
         assert_eq!(
             voting_round_event_1,
-            mock::Event::from(proposals::Event::VotingRoundCreated(1, project_index))
+            mock::Event::from(proposals::Event::VotingRoundCreated(1, vec![project_index]))
         );
 
         run_to_block(5);
@@ -1482,7 +1504,7 @@ fn submit_multiple_milestones() {
             .event;
         assert_eq!(
             voting_round_event_2,
-            mock::Event::from(proposals::Event::VotingRoundCreated(2, project_index))
+            mock::Event::from(proposals::Event::VotingRoundCreated(2, vec![project_index]))
         );
     });
 }
@@ -1505,6 +1527,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
+            RoundType::ContributionRound
         )
         .unwrap();
 
@@ -1589,7 +1612,8 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
-            project_keys
+            project_keys,
+            RoundType::ContributionRound
         ));
 
         let value = 500000u64;
