@@ -20,8 +20,8 @@ FROM node:17.6.0-slim
 ARG APT_PACKAGES
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update
-RUN apt-get install -y\
-        gnupg2 ca-certificates git awscli wget curl \
+RUN apt-get install -y \
+        gnupg2 ca-certificates git awscli wget curl vim \
         ${APT_PACKAGES}
 
 RUN git clone https://github.com/paritytech/polkadot-launch launch
