@@ -134,7 +134,7 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
                     )
                 ],
                 endowed_accounts(),
-                Some(250_000_000 * IMBU),
+                Some(500_000_000 * IMBU),
                 council_members(),
                 tech_committee_members(),
                 id,
