@@ -26,7 +26,7 @@ pub fn imbue_properties() -> Properties {
 }
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type DevelopmentChainSpec = sc_service::GenericChainSpec<imbue_kusama_runtime::GenesisConfig>;
+pub type ImbueKusamaChainSpec = sc_service::GenericChainSpec<imbue_kusama_runtime::GenesisConfig>;
 
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
@@ -78,8 +78,8 @@ pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
     get_public_from_seed::<AuraId>(seed)
 }
 
-pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentChainSpec {
-    DevelopmentChainSpec::from_genesis(
+pub fn development_local_config(id: ParaId, environment: &str) -> ImbueKusamaChainSpec {
+    ImbueKusamaChainSpec::from_genesis(
         // Name
         format!("imbue {} testnet", environment).as_str(),
         // ID
@@ -110,8 +110,8 @@ pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentCha
     )
 }
 
-pub fn development_environment_config(id: ParaId, environment: &str) -> DevelopmentChainSpec {
-    DevelopmentChainSpec::from_genesis(
+pub fn development_environment_config(id: ParaId, environment: &str) -> ImbueKusamaChainSpec {
+    ImbueKusamaChainSpec::from_genesis(
         format!("imbue {} testnet", environment).as_str(),
         // ID
         format!("imbue-{}-testnet", environment).as_str(),
@@ -150,6 +150,13 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
         Some(imbue_properties()),
         None,
     )
+}
+
+pub fn imbue_kusama_config() -> ImbueKusamaChainSpec {
+	ImbueKusamaChainSpec::from_json_bytes(
+		&include_bytes!("../../res/genesis/imbue-kusama-raw.json")[..],
+	)
+	.unwrap()
 }
 
 fn endowed_accounts() -> Vec<AccountId> {
