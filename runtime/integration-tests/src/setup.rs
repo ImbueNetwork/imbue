@@ -1,6 +1,6 @@
 use common_runtime::Balance;
 use common_runtime::TokenMetadata;
-pub use development_runtime::{AccountId, CurrencyId, Origin, Runtime, System};
+pub use imbue_kusama_runtime::{AccountId, CurrencyId, Origin, Runtime, System};
 use frame_support::traits::GenesisBuild;
 
 /// Accounts
@@ -8,7 +8,7 @@ pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
 
 /// Parachain Ids
-pub const PARA_ID_DEVELOPMENT: u32 = 2102;
+pub const PARA_ID_DEVELOPMENT: u32 = 2121;
 pub const PARA_ID_SIBLING: u32 = 3000;
 pub const PARA_ID_KARURA: u32 = 2000;
 
@@ -41,7 +41,7 @@ impl ExtBuilder {
         let mut t = frame_system::GenesisConfig::default()
             .build_storage::<Runtime>()
             .unwrap();
-        let native_currency_id = development_runtime::NativeToken::get();
+        let native_currency_id = imbue_kusama_runtime::NativeToken::get();
         pallet_balances::GenesisConfig::<Runtime> {
             balances: self
                 .balances

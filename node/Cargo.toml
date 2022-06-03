@@ -19,7 +19,8 @@ name = 'imbue'
 default = []
 runtime-benchmarks = [
     'polkadot-cli/runtime-benchmarks',
-	'development-runtime/runtime-benchmarks',
+	'imbue-kusama-runtime/runtime-benchmarks',
+	'imbue-kusama-runtime/runtime-benchmarks',
 ]
 
 [dependencies]
@@ -36,7 +37,7 @@ serde = { version = "1.0.132", features = ["derive"] }
 hex-literal = "0.3.4"
 
 # Parachain runtimes
-development-runtime = { path = '../runtime/development' }
+imbue-kusama-runtime = { path = '../runtime/imbue-kusama' }
 common-runtime = { path = '../runtime/common' }
 
 # Substrate dependencies
