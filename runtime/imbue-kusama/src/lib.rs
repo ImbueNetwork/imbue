@@ -384,7 +384,7 @@ parameter_types! {
     pub NativePerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(2102), GeneralKey(CurrencyId::Native.encode())),
+            X2(Parachain(2121), GeneralKey(CurrencyId::Native.encode())),
         ).into(),
         native_per_second(),
     );
@@ -1352,7 +1352,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
             } => {
                 match para_id {
                     // Local testing para ids
-                    2102 | 3000 => match key[..] {
+                    2121 | 3000 => match key[..] {
                         [0] => Some(CurrencyId::Native),
                         _ => None,
                     },

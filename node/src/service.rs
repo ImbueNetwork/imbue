@@ -47,17 +47,17 @@ use substrate_prometheus_endpoint::Registry;
 use cumulus_relay_chain_rpc_interface::RelayChainRPCInterface;
 use polkadot_service::CollatorPair;
 /// Native executor instance.
-pub struct DevelopmentRuntimeExecutor;
+pub struct ImbueKusamaRuntimeExecutor;
 
-impl sc_executor::NativeExecutionDispatch for DevelopmentRuntimeExecutor {
+impl sc_executor::NativeExecutionDispatch for ImbueKusamaRuntimeExecutor {
     type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
     fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-        development_runtime::api::dispatch(method, data)
+        imbue_kusama_runtime::api::dispatch(method, data)
     }
 
     fn native_version() -> sc_executor::NativeVersion {
-        development_runtime::native_version()
+        imbue_kusama_runtime::native_version()
     }
 }
 
@@ -407,12 +407,12 @@ where
 }
 
 /// Build the import queue for the development parachain runtime.
-pub fn build_development_import_queue(
+pub fn build_kusama_import_queue(
     client: Arc<
         TFullClient<
             Block,
-            development_runtime::RuntimeApi,
-            NativeElseWasmExecutor<DevelopmentRuntimeExecutor>,
+            imbue_kusama_runtime::RuntimeApi,
+            NativeElseWasmExecutor<ImbueKusamaRuntimeExecutor>,
         >,
     >,
     config: &Configuration,
@@ -423,8 +423,8 @@ pub fn build_development_import_queue(
         Block,
         TFullClient<
             Block,
-            development_runtime::RuntimeApi,
-            NativeElseWasmExecutor<DevelopmentRuntimeExecutor>,
+            imbue_kusama_runtime::RuntimeApi,
+            NativeElseWasmExecutor<ImbueKusamaRuntimeExecutor>,
         >,
     >,
     sc_service::Error,
@@ -462,7 +462,7 @@ pub fn build_development_import_queue(
 }
 
 /// Start a development parachain node.
-pub async fn start_development_node(
+pub async fn start_kusama_node(
     parachain_config: Configuration,
     polkadot_config: Configuration,
     collator_options: CollatorOptions,
@@ -472,18 +472,18 @@ pub async fn start_development_node(
     Arc<
         TFullClient<
             Block,
-            development_runtime::RuntimeApi,
-            NativeElseWasmExecutor<DevelopmentRuntimeExecutor>,
+            imbue_kusama_runtime::RuntimeApi,
+            NativeElseWasmExecutor<ImbueKusamaRuntimeExecutor>,
         >,
     >,
 )> {
-    start_node_impl::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _, _, _>(
+    start_node_impl::<imbue_kusama_runtime::RuntimeApi, ImbueKusamaRuntimeExecutor, _, _, _>(
         parachain_config,
         polkadot_config,
         collator_options,
         id,
         |_| Ok(Default::default()),
-        build_development_import_queue,
+        build_kusama_import_queue,
         |client,
          prometheus_registry,
          telemetry,

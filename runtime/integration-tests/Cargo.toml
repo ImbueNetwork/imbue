@@ -41,7 +41,7 @@ xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev="65cdc715
 
 # Local
 common-runtime = { path = "../common" }
-development-runtime = { path = "../development" }
+imbue-kusama-runtime = { path = "../imbue-kusama" }
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 
