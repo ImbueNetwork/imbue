@@ -1,5 +1,5 @@
 use cumulus_primitives_core::ParaId;
-use development_runtime::{
+use imbue_kusama_runtime::{
     AccountId, AuraId, CouncilConfig, CouncilMembershipConfig, DemocracyConfig, Signature,
     TechnicalCommitteeConfig, TechnicalMembershipConfig,
 };
@@ -9,7 +9,7 @@ use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use hex_literal::hex;
-use development_runtime::currency::IMBU;
+use imbue_kusama_runtime::currency::IMBU;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
@@ -26,7 +26,7 @@ pub fn imbue_properties() -> Properties {
 }
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type DevelopmentChainSpec = sc_service::GenericChainSpec<development_runtime::GenesisConfig>;
+pub type ImbueKusamaChainSpec = sc_service::GenericChainSpec<imbue_kusama_runtime::GenesisConfig>;
 
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
@@ -78,8 +78,8 @@ pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
     get_public_from_seed::<AuraId>(seed)
 }
 
-pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentChainSpec {
-    DevelopmentChainSpec::from_genesis(
+pub fn development_local_config(id: ParaId, environment: &str) -> ImbueKusamaChainSpec {
+    ImbueKusamaChainSpec::from_genesis(
         // Name
         format!("imbue {} testnet", environment).as_str(),
         // ID
@@ -110,8 +110,8 @@ pub fn development_local_config(id: ParaId, environment: &str) -> DevelopmentCha
     )
 }
 
-pub fn development_environment_config(id: ParaId, environment: &str) -> DevelopmentChainSpec {
-    DevelopmentChainSpec::from_genesis(
+pub fn development_environment_config(id: ParaId, environment: &str) -> ImbueKusamaChainSpec {
+    ImbueKusamaChainSpec::from_genesis(
         format!("imbue {} testnet", environment).as_str(),
         // ID
         format!("imbue-{}-testnet", environment).as_str(),
@@ -152,6 +152,13 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> Developm
     )
 }
 
+pub fn imbue_kusama_config() -> ImbueKusamaChainSpec {
+	ImbueKusamaChainSpec::from_json_bytes(
+		&include_bytes!("../../res/genesis/imbue-kusama-raw.json")[..],
+	)
+	.unwrap()
+}
+
 fn endowed_accounts() -> Vec<AccountId> {
     vec![AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap()]
 }
@@ -162,6 +169,7 @@ fn council_members() -> Vec<AccountId> {
         AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
         AccountId32::from_str("5FsLoiGenakVKDwE7YHe58KLrENj2QZ6zxLLbeUCWKVagMAQ").unwrap(),
         AccountId32::from_str("5EexofvmRpHVFYFehejL7yF3LW1RGZmNR9wAx5fcYXgRUnYp").unwrap(),
+        AccountId32::from_str("5FZ991YDZYhsiCmqfsenJLieVFKAgS5rgxTaDbeSu7yP96Bs").unwrap(),
     ]
 }
 
@@ -171,6 +179,7 @@ fn tech_committee_members() -> Vec<AccountId> {
         AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
         AccountId32::from_str("5FsLoiGenakVKDwE7YHe58KLrENj2QZ6zxLLbeUCWKVagMAQ").unwrap(),
         AccountId32::from_str("5EexofvmRpHVFYFehejL7yF3LW1RGZmNR9wAx5fcYXgRUnYp").unwrap(),
+        AccountId32::from_str("5FZ991YDZYhsiCmqfsenJLieVFKAgS5rgxTaDbeSu7yP96Bs").unwrap(),
     ]
 }
 
@@ -182,26 +191,26 @@ fn endowed_accounts_local() -> Vec<AccountId> {
     ]
 }
 
-pub fn get_dev_session_keys(keys: development_runtime::AuraId) -> development_runtime::SessionKeys {
-    development_runtime::SessionKeys { aura: keys }
+pub fn get_dev_session_keys(keys: imbue_kusama_runtime::AuraId) -> imbue_kusama_runtime::SessionKeys {
+    imbue_kusama_runtime::SessionKeys { aura: keys }
 }
 
 fn development_genesis(
     root_key: AccountId,
     initial_authorities: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
-    total_issuance: Option<development_runtime::Balance>,
+    total_issuance: Option<imbue_kusama_runtime::Balance>,
     council_membership: Vec<AccountId>,
     technical_committee_membership: Vec<AccountId>,
     id: ParaId,
-) -> development_runtime::GenesisConfig {
+) -> imbue_kusama_runtime::GenesisConfig {
     let num_endowed_accounts = endowed_accounts.len();
 
     let (balances, token_balances) = match total_issuance {
         Some(total_issuance) => {
             let balance_per_endowed = total_issuance
-                .checked_div(num_endowed_accounts as development_runtime::Balance)
-                .unwrap_or(0 as development_runtime::Balance);
+                .checked_div(num_endowed_accounts as imbue_kusama_runtime::Balance)
+                .unwrap_or(0 as imbue_kusama_runtime::Balance);
             (
                 endowed_accounts
                     .iter()
@@ -218,20 +227,20 @@ fn development_genesis(
         None => (vec![], vec![]),
     };
 
-    development_runtime::GenesisConfig {
-        system: development_runtime::SystemConfig {
-            code: development_runtime::WASM_BINARY
+    imbue_kusama_runtime::GenesisConfig {
+        system: imbue_kusama_runtime::SystemConfig {
+            code: imbue_kusama_runtime::WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
         },
-        balances: development_runtime::BalancesConfig { balances: balances },
-        sudo: development_runtime::SudoConfig {
+        balances: imbue_kusama_runtime::BalancesConfig { balances: balances },
+        sudo: imbue_kusama_runtime::SudoConfig {
             key: Some(root_key),
         },
-        orml_tokens: development_runtime::OrmlTokensConfig {
+        orml_tokens: imbue_kusama_runtime::OrmlTokensConfig {
             balances: token_balances,
         },
-        collator_selection: development_runtime::CollatorSelectionConfig {
+        collator_selection: imbue_kusama_runtime::CollatorSelectionConfig {
             invulnerables: initial_authorities
                 .iter()
                 .cloned()
@@ -248,7 +257,7 @@ fn development_genesis(
             members: technical_committee_membership,
             phantom: Default::default(),
         },
-        session: development_runtime::SessionConfig {
+        session: imbue_kusama_runtime::SessionConfig {
             keys: initial_authorities
                 .iter()
                 .cloned()
@@ -261,10 +270,10 @@ fn development_genesis(
                 })
                 .collect(),
         },
-        // scheduler: development_runtime::SchedulerConfig {},
+        // scheduler: imbue_kusama_runtime::SchedulerConfig {},
         vesting: Default::default(),
-        parachain_info: development_runtime::ParachainInfoConfig { parachain_id: id },
-        aura: development_runtime::AuraConfig {
+        parachain_info: imbue_kusama_runtime::ParachainInfoConfig { parachain_id: id },
+        aura: imbue_kusama_runtime::AuraConfig {
             authorities: Default::default(),
         },
         council: CouncilConfig {

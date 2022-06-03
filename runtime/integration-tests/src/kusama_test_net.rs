@@ -21,7 +21,7 @@ use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 
 use common_runtime::AccountId;
-use development_runtime::CurrencyId;
+use imbue_kusama_runtime::CurrencyId;
 
 use crate::setup::{
     ksm_amount, native_amount, ExtBuilder, ALICE, BOB, PARA_ID_DEVELOPMENT, PARA_ID_KARURA,
@@ -38,30 +38,30 @@ decl_test_relay_chain! {
 
 decl_test_parachain! {
     pub struct Development {
-        Runtime = development_runtime::Runtime,
-        Origin = development_runtime::Origin,
-        XcmpMessageHandler = development_runtime::XcmpQueue,
-        DmpMessageHandler = development_runtime::DmpQueue,
+        Runtime = imbue_kusama_runtime::Runtime,
+        Origin = imbue_kusama_runtime::Origin,
+        XcmpMessageHandler = imbue_kusama_runtime::XcmpQueue,
+        DmpMessageHandler = imbue_kusama_runtime::DmpQueue,
         new_ext = para_ext(PARA_ID_DEVELOPMENT),
     }
 }
 
 decl_test_parachain! {
     pub struct Sibling {
-        Runtime = development_runtime::Runtime,
-        Origin = development_runtime::Origin,
-        XcmpMessageHandler = development_runtime::XcmpQueue,
-        DmpMessageHandler = development_runtime::DmpQueue,
+        Runtime = imbue_kusama_runtime::Runtime,
+        Origin = imbue_kusama_runtime::Origin,
+        XcmpMessageHandler = imbue_kusama_runtime::XcmpQueue,
+        DmpMessageHandler = imbue_kusama_runtime::DmpQueue,
         new_ext = para_ext(PARA_ID_SIBLING),
     }
 }
 
 decl_test_parachain! {
     pub struct Karura {
-        Runtime = development_runtime::Runtime,
-        Origin = development_runtime::Origin,
-        XcmpMessageHandler = development_runtime::XcmpQueue,
-        DmpMessageHandler = development_runtime::DmpQueue,
+        Runtime = imbue_kusama_runtime::Runtime,
+        Origin = imbue_kusama_runtime::Origin,
+        XcmpMessageHandler = imbue_kusama_runtime::XcmpQueue,
+        DmpMessageHandler = imbue_kusama_runtime::DmpQueue,
         new_ext = para_ext(PARA_ID_KARURA),
     }
 }
@@ -74,7 +74,7 @@ decl_test_network! {
             // fails with: "error: arbitrary expressions aren't allowed in patterns"
 
             // Be sure to use `PARA_ID_DEVELOPMENT`
-            (2102, Development),
+            (2121, Development),
             // Be sure to use `PARA_ID_SIBLING`
             (3000, Sibling),
             // Be sure to use `PARA_ID_KARURA`
@@ -136,7 +136,7 @@ pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
             (AccountId::from(BOB), CurrencyId::Native, native_amount(10)),
             (AccountId::from(ALICE), CurrencyId::KSM, ksm_amount(10)),
             (
-                development_runtime::TreasuryAccount::get(),
+                imbue_kusama_runtime::TreasuryAccount::get(),
                 CurrencyId::KSM,
                 ksm_amount(1),
             ),

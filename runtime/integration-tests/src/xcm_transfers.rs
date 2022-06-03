@@ -22,7 +22,7 @@ use crate::setup::{
 	development_account, karura_account, ksm_amount, kusd_amount, native_amount, sibling_account,
 	ALICE, BOB, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
 };
-use development_runtime::{
+use imbue_kusama_runtime::{
 	Balances, KUsdPerSecond, KsmPerSecond, NativePerSecond, Origin, OrmlTokens,
 	XTokens,
 };
@@ -227,13 +227,13 @@ fn transfer_ksm_to_relay_chain() {
 
 #[test]
 fn currency_id_convert_imbu() {
-	use development_runtime::CurrencyIdConvert;
+	use imbue_kusama_runtime::CurrencyIdConvert;
 	use sp_runtime::traits::Convert as C2;
 	use sp_runtime::codec::Encode;
 
 	let imbu_location: MultiLocation = MultiLocation::new(
 		1,
-		X2(Parachain(2102), GeneralKey(CurrencyId::Native.encode())),
+		X2(Parachain(2121), GeneralKey(CurrencyId::Native.encode())),
 	);
 
 	assert_eq!(
