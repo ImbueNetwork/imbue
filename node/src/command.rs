@@ -17,7 +17,7 @@
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    service::{new_partial, DevelopmentRuntimeExecutor},
+    service::{new_partial, ImbueKusamaRuntimeExecutor},
 };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
@@ -34,10 +34,10 @@ use sp_runtime::traits::Block as BlockT;
 use std::{io::Write, net::SocketAddr};
 use frame_benchmarking_cli::BenchmarkCmd;
 // default to the Statemint/Statemine/Westmint id
-const DEFAULT_PARA_ID: u32 = 2102;
+const DEFAULT_PARA_ID: u32 = 2121;
 
 enum ChainIdentity {
-    Development,
+    ImbueKusama,
 }
 
 trait IdentifyChain {
@@ -46,7 +46,7 @@ trait IdentifyChain {
 
 impl IdentifyChain for dyn sc_service::ChainSpec {
     fn identify(&self) -> ChainIdentity {
-        ChainIdentity::Development
+        ChainIdentity::ImbueKusama
     }
 }
 
@@ -81,7 +81,7 @@ fn load_spec(
         path => {
             let chain_spec = chain_spec::DevelopmentChainSpec::from_json_file(path.into())?;
             match chain_spec.identify() {
-                ChainIdentity::Development => Box::new(
+                ChainIdentity::ImbueKusama => Box::new(
                     chain_spec::DevelopmentChainSpec::from_json_file(path.into())?,
                 ),
             }
@@ -126,7 +126,7 @@ impl SubstrateCli for Cli {
 
     fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
         match spec.identify() {
-            ChainIdentity::Development => &development_runtime::VERSION,
+            ChainIdentity::ImbueKusama => &imbue_kusama_runtime::VERSION,
         }
     }
 }
@@ -185,11 +185,11 @@ macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
 		match runner.config().chain_spec.identify() {
-			ChainIdentity::Development => {
+			ChainIdentity::ImbueKusama => {
 				runner.async_run(|$config| {
-					let $components = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
+					let $components = new_partial::<imbue_kusama_runtime::RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
 						&$config,
-						crate::service::build_development_import_queue,
+						crate::service::build_kusama_import_queue,
 					)?;
 					let task_manager = $components.task_manager;
 					{ $( $code )* }.map(|v| (v, task_manager))
@@ -311,23 +311,23 @@ pub fn run() -> Result<()> {
 			match cmd {
 				BenchmarkCmd::Pallet(cmd) =>
 					if cfg!(feature = "runtime-benchmarks") {
-						runner.sync_run(|config| cmd.run::<development_runtime::Block, DevelopmentRuntimeExecutor>(config))
+						runner.sync_run(|config| cmd.run::<imbue_kusama_runtime::Block, ImbueKusamaRuntimeExecutor>(config))
 					} else {
 						Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
 							.into())
 					},
 				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
-					let partials = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
+					let partials = new_partial::<imbue_kusama_runtime::RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
 						&config,
-						crate::service::build_development_import_queue,
+						crate::service::build_kusama_import_queue,
 					)?;
 					cmd.run(partials.client)
 				}),
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-					let partials = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
+					let partials = new_partial::<imbue_kusama_runtime::RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
 						&config,
-						crate::service::build_development_import_queue,
+						crate::service::build_kusama_import_queue,
 					)?;
 					let db = partials.backend.expose_db();
 					let storage = partials.backend.expose_storage();
@@ -385,8 +385,8 @@ pub fn run() -> Result<()> {
                 );
 
                 match config.chain_spec.identify() {
-                    ChainIdentity::Development => {
-                        crate::service::start_development_node(config, polkadot_config,collator_options, id)
+                    ChainIdentity::ImbueKusama => {
+                        crate::service::start_kusama_node(config, polkadot_config,collator_options, id)
                             .await
                             .map(|r| r.0)
                             .map_err(Into::into)
