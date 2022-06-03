@@ -77,12 +77,13 @@ fn load_spec(
             para_id,
             "chachacha",
         )),
+        "imbue-kusama" => Box::new(chain_spec::imbue_kusama_config()),
 
         path => {
-            let chain_spec = chain_spec::DevelopmentChainSpec::from_json_file(path.into())?;
+            let chain_spec = chain_spec::ImbueKusamaChainSpec::from_json_file(path.into())?;
             match chain_spec.identify() {
                 ChainIdentity::ImbueKusama => Box::new(
-                    chain_spec::DevelopmentChainSpec::from_json_file(path.into())?,
+                    chain_spec::ImbueKusamaChainSpec::from_json_file(path.into())?,
                 ),
             }
         }
