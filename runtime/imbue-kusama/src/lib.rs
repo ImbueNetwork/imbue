@@ -114,8 +114,8 @@ impl_opaque_keys! {
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("imbue-dev"),
-    impl_name: create_runtime_str!("imbue-dev"),
+    spec_name: create_runtime_str!("imbue"),
+    impl_name: create_runtime_str!("imbue"),
     authoring_version: 1,
     spec_version: 1008,
     impl_version: 1,
