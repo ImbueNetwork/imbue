@@ -58,6 +58,13 @@ pub mod pallet {
         100800u32
     }
 
+    //Approval Threshold - set default threshold value    
+    #[pallet::type_value]
+    pub fn InitialApprovalThresholdPercentage<T: Config>() -> u32
+    {
+        75u32
+    }
+
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
@@ -125,6 +132,10 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn is_identity_required)]
     pub type IsIdentityRequired<T> = StorageValue<_, bool, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn approval_threshold_percentage)]
+    pub type ApprovalThresholdPercentage<T> = StorageValue<_, u32, ValueQuery, InitialApprovalThresholdPercentage<T>>;
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -850,7 +861,15 @@ impl<T: Config> Pallet<T> {
         let total_contribution_amount: BalanceOf<T> =
             Self::get_total_project_contributions(project_key);
 
-        let funds_matched = total_contribution_amount >= project.required_funds;
+        //retrieve approval threshold from storage
+        let approval_threshold_percentage :u32 = 0;
+        //ApprovalThresholdPercentage::<T>::put(approval_threshold_percentage);
+        
+        //let funds_matched = total_contribution_amount >= project.required_funds;
+        //Approval Threshold - initially setting to hardcoded threshold as 75% for testing
+        //let funds_matched = total_contribution_amount >= project.required_funds * approval_threshold_percentage.into() / 100u32.into();
+        let funds_matched = total_contribution_amount >= (project.required_funds * 75u32.into()) / 100u32.into();
+        //let funds_matched = total_contribution_amount >= project.required_funds;
         if !funds_matched {
             // If the funds have not been matched then check if the round is over
             ensure!(round.end < now, Error::<T>::RoundNotEnded);
