@@ -26,6 +26,8 @@ use sp_core::sr25519;
 use sp_std::str;
 use sp_std::vec::Vec;
 
+// I suggest using constants for e.g. project parameters
+
 #[test]
 fn create_a_test_project() {
     ExtBuilder.build().execute_with(|| {
@@ -100,6 +102,7 @@ fn create_a_test_project_with_no_name() {
             //website
             str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec(),
             //milestone
+            // while testing `no_name` make the rest of parameters correct (like percentage) 
             vec![ProposedMilestone {
                 name: Vec::new(), percentage_to_unlock: 99
             }],
@@ -116,6 +119,8 @@ fn create_a_test_project_with_no_name() {
     });
 }
 
+// This test has no sense after the above one
+// I suggest checks for each attribute separately
 #[test]
 fn create_a_test_project_with_no_data() {
     ExtBuilder.build().execute_with(|| {
@@ -153,6 +158,7 @@ fn create_a_test_project_with_no_data() {
 
 #[test]
 fn create_a_test_project_and_add_whitelist() {
+    // How about creating `get_alice_account` function to simplify the call?
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let max_cap = 1_000_000u64;
     ExtBuilder.build().execute_with(|| {
@@ -161,6 +167,7 @@ fn create_a_test_project_and_add_whitelist() {
             who: alice,
             max_cap: max_cap,
         };
+        // You can use `assert_ok` for checking the extrinsic
         Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
             .unwrap();
 
@@ -223,13 +230,15 @@ fn create_a_test_project_and_schedule_round() {
     ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
+        // Test without any assert looks strange
+        // How about testing events? (if applicable)
         Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
             System::block_number() + 1,
             //Project key starts with 0 for the first project submitted to the chain
             vec![0],
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
     });
@@ -293,6 +302,8 @@ fn cancel_round_no_active_round() {
     ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
+        // Why does this check exist?
+        // This is a `cancel_round`
         assert_noop!(
             Proposals::schedule_round(
                 Origin::root(),
@@ -340,6 +351,8 @@ fn cancel_round() {
             RoundType::ContributionRound
         ));
 
+        // IMHO you do not need to check events about scheduling a round here
+        // It should be covered in an adequate test
         let exp_fundingroundcreated_event = <frame_system::Pallet<Test>>::events()
             .pop()
             .expect("Expected at least one EventRecord to be found")
@@ -388,7 +401,8 @@ fn test_canceling_started_round() {
             project_keys,
             RoundType::ContributionRound
         ));
-
+        // Just a note
+        // It is hard to find information about starting a round
         assert_noop!(
             <proposals::Pallet<Test>>::cancel_round(Origin::root(), 0),
             DispatchErrorWithPostInfo {
@@ -404,6 +418,8 @@ fn test_canceling_started_round() {
 
 #[test]
 //only user with root privilege can cancel the round
+// Does it apply only for already started rounds? Or for all?
+// It looks like a test when a round is started and non-root user wants to execute an action
 fn test_canceling_round_without_root_privilege() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
@@ -448,16 +464,18 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
         let contribution_amount = 2000u64;
 
         //schedule_round extrinsic
+        // How about adding function for test initialization? (Both creates project and schedules round)
         Proposals::schedule_round(
             Origin::root(),
             System::block_number() + 1,
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
+        // Why duplicated Alice account? (see first line of the tes)
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         let additional_amount = 10_000;
 
@@ -511,7 +529,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -569,7 +587,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -627,7 +645,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -670,7 +688,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -716,7 +734,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -937,6 +955,10 @@ fn test_voting_on_a_canceled_round() {
             }
         );
 
+        // Does this check make sense?
+        // You have tests for cancelling rounds
+        // Failing extrinsic MUST NOT emit any event and modify current state
+        // Transaction has to be totally applied or totally rejected (without any state changes and without any events) 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
             .expect("Expected at least one EventRecord to be found")
@@ -969,6 +991,7 @@ fn test_finalize_a_milestone_without_voting() {
         name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
         percentage_to_unlock: 50,
     };
+    // I think it can be refactored as a function (e.g. `prepare_milestones`)
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
     proposed_milestones.push(milestone3);
@@ -1527,7 +1550,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -1537,25 +1560,19 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
 
         run_to_block(4);
         //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
+        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
 
         //ensuring alice's balance has reduced after contribution
         let alice_balance_post_contribute: u64 = 8_000;
-        assert_eq!(alice_balance_post_contribute,Balances::free_balance(&alice));
+        assert_eq!(
+            alice_balance_post_contribute,
+            Balances::free_balance(&alice)
+        );
 
-        Proposals::refund(
-            Origin::root(),
-            project_key
-        )
-        .unwrap();
+        Proposals::refund(Origin::root(), project_key).unwrap();
 
         //ensuring the refunded amount was transferred back successfully
-        assert_eq!(additional_amount,Balances::free_balance(&alice));
+        assert_eq!(additional_amount, Balances::free_balance(&alice));
 
         //contribute success event
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
@@ -1654,10 +1671,10 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
 
         run_to_block(5);
         //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob),project_index, 0, true,).ok();
+        Proposals::vote_on_milestone(Origin::signed(bob), project_index, 0, true).ok();
 
         //Charlie voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 0, true,).ok();
+        Proposals::vote_on_milestone(Origin::signed(charlie), project_index, 0, true).ok();
 
         assert_ok!(Proposals::finalise_milestone_voting(
             Origin::signed(alice),
@@ -1671,13 +1688,20 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         ));
 
         //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw:u32 = proposed_milestones1.get(0).unwrap().percentage_to_unlock;
+        let total_percentage_to_withdraw: u32 =
+            proposed_milestones1.get(0).unwrap().percentage_to_unlock;
 
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
         //checking that Alice now has 10.2m
-        assert_ne!(Balances::free_balance(&alice), additional_amount + required_funds);
-        assert_eq!(Balances::free_balance(&alice), additional_amount + required_funds * (total_percentage_to_withdraw as u64)/100);
+        assert_ne!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds
+        );
+        assert_eq!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
+        );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -1686,24 +1710,31 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(alice, 0, 200000u64,CurrencyId::Native))
+            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
+                alice,
+                0,
+                200000u64,
+                CurrencyId::Native
+            ))
         );
 
         //validating contributor current balance
         let contributor_balance_pre_refund: u64 = 9_500_000;
-        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&bob));
-        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&charlie));
+        assert_eq!(contributor_balance_pre_refund, Balances::free_balance(&bob));
+        assert_eq!(
+            contributor_balance_pre_refund,
+            Balances::free_balance(&charlie)
+        );
 
-        Proposals::refund(
-            Origin::root(),
-            project_index
-        )
-        .unwrap();
+        Proposals::refund(Origin::root(), project_index).unwrap();
 
         //ensuring the refunded amount was transferred back successfully
         let contributor_balance_pre_refund: u64 = 9_900_000;
-        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&bob));
-        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&charlie));
+        assert_eq!(contributor_balance_pre_refund, Balances::free_balance(&bob));
+        assert_eq!(
+            contributor_balance_pre_refund,
+            Balances::free_balance(&charlie)
+        );
 
         //contribute success event
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
@@ -1717,7 +1748,6 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
                 800000u64
             ))
         );
-
     })
 }
 
