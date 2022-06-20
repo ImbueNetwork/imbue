@@ -5,7 +5,6 @@ use common_types::CurrencyId;
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
-
 use frame_support::{pallet_prelude::*, transactional, PalletId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -51,10 +50,8 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
     }
 
-
     #[pallet::type_value]
-    pub fn InitialMilestoneVotingWindow<T: Config>() -> u32
-    {
+    pub fn InitialMilestoneVotingWindow<T: Config>() -> u32 {
         100800u32
     }
 
@@ -116,7 +113,8 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn milestone_voting_window)]
-    pub type MilestoneVotingWindow<T> = StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow<T>>;
+    pub type MilestoneVotingWindow<T> =
+        StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn withdrawal_expiration)]
@@ -209,6 +207,8 @@ pub mod pallet {
     // These functions materialize as "extrinsics", which are often compared to transactions.
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
+    // Use BoundedVec in extrinsic parameters instead of Vec
+    // It is a huge security issue while using unbounded vectors
     impl<T: Config> Pallet<T> {
         /// Step 1 (INITATOR)
         /// Create project
@@ -238,6 +238,7 @@ pub mod pallet {
 
         /// Step 1.5 (INITATOR)
         /// Add whitelist to a project
+        // Why `create_project weight`?
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn add_project_whitelist(
             origin: OriginFor<T>,
@@ -251,6 +252,7 @@ pub mod pallet {
 
             let whitelist_exists = WhitelistSpots::<T>::contains_key(project_key);
             if whitelist_exists {
+                // Do not use `unwrap` -> add error handling
                 let existing_spots = Self::whitelist_spots(project_key).unwrap();
                 project_whitelist_spots.extend(existing_spots);
             }
@@ -259,11 +261,13 @@ pub mod pallet {
             <WhitelistSpots<T>>::insert(project_key, project_whitelist_spots);
             let now = <frame_system::Pallet<T>>::block_number();
             Self::deposit_event(Event::WhitelistAdded(project_key, now));
+            // IMHO Ok(()) will work :)
             Ok(().into())
         }
 
         /// Step 1.5 (INITATOR)
         /// Remove a whitelist
+        // Why `create_project` weight?
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn remove_project_whitelist(
             origin: OriginFor<T>,
@@ -286,7 +290,7 @@ pub mod pallet {
             start: T::BlockNumber,
             end: T::BlockNumber,
             project_keys: Vec<ProjectKey>,
-            round_type: RoundType
+            round_type: RoundType,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             Self::new_round(start, end, project_keys, round_type)
@@ -314,7 +318,7 @@ pub mod pallet {
             <Rounds<T>>::insert(round_key, Some(round));
 
             // TODO loop through projects and refund contributers
-
+            // Bear in mind that the transaction must be atomic (above TODO about refunds)
             Self::deposit_event(Event::RoundCancelled(count - 1));
 
             Ok(().into())
@@ -384,7 +388,10 @@ pub mod pallet {
         /// Step 8 (INITATOR)
         /// Withdraw
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
-        pub fn withdraw(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
+        pub fn withdraw(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::new_withdrawal(who, project_key)
         }
@@ -406,7 +413,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-
         /// Set milestone voting window
         #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
         pub fn set_milestone_voting_window(
@@ -422,8 +428,6 @@ pub mod pallet {
 
             Ok(().into())
         }
-
-
 
         /// Set withdrawal expiration
         #[pallet::weight(<T as Config>::WeightInfo::set_withdrawal_expiration())]
@@ -500,6 +504,9 @@ impl<T: Config> Pallet<T> {
         total_contribution_amount
     }
 
+    // DispatchResult should be returned by extrinsic functions
+    // These functions should return Result<_, Error<T>>
+    // This function is too long, I suggest refactoring
     fn new_project(
         who: T::AccountId,
         name: Vec<u8>,
@@ -621,7 +628,7 @@ impl<T: Config> Pallet<T> {
         start: T::BlockNumber,
         end: T::BlockNumber,
         project_keys: Vec<ProjectKey>,
-        round_type: RoundType
+        round_type: RoundType,
     ) -> DispatchResultWithPostInfo {
         let now = <frame_system::Pallet<T>>::block_number();
         // The number of items cannot exceed the maximum
@@ -644,14 +651,12 @@ impl<T: Config> Pallet<T> {
         let key = RoundCount::<T>::get();
 
         let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
-        let round = RoundOf::<T>::new(
-            start,
-            end,
-            project_keys.clone(),
-            round_type.clone(),
-        );
+        let round = RoundOf::<T>::new(start, end, project_keys.clone(), round_type.clone());
 
         // Add proposal round to list
+        
+        // It modifies state but later an error can occur
+        // This operation should be properly reverted 
         <Rounds<T>>::insert(key, Some(round));
 
         for project_key in project_keys.clone().into_iter() {
@@ -681,8 +686,12 @@ impl<T: Config> Pallet<T> {
         }
 
         match round_type.clone() {
-            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys))}
-            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys))}
+            RoundType::VotingRound => {
+                Self::deposit_event(Event::VotingRoundCreated(key, project_keys))
+            }
+            RoundType::ContributionRound => {
+                Self::deposit_event(Event::FundingRoundCreated(key, project_keys))
+            }
         }
         RoundCount::<T>::put(next_key);
 
@@ -1096,7 +1105,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn new_withdrawal(who: T::AccountId, project_key: ProjectKey) -> DispatchResultWithPostInfo {
+    pub fn new_withdrawal(
+        who: T::AccountId,
+        project_key: ProjectKey,
+    ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         let total_contribution_amount: BalanceOf<T> =
