@@ -1,6 +1,6 @@
 {
-  "name": "imbue rococo-dev testnet",
-  "id": "imbue-rococo-dev-testnet",
+  "name": "imbue kusama",
+  "id": "imbue-kusama",
   "chainType": "Live",
   "bootNodes": [],
   "telemetryEndpoints": [

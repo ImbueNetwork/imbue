@@ -10,7 +10,7 @@ services:
       - "9980:9930"
       - "31033:31033"
       - "31034:31034"
-    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-raw.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --log=xcm=debug --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 31033 --  --port 31034 --chain kusama --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999 --ws-max-connections=200"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-spec.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --log=xcm=debug --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-kusama-spec.json --execution=wasm --prometheus-external --port 31033 --  --port 31034 --chain kusama --sync warp --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999 --ws-max-connections=200"
     volumes:
       - ./imbue_db/cumulus_parachain_1:/cumulus_parachain/
 
@@ -24,7 +24,7 @@ services:
       - "9981:9930"
       - "31035:31035"
       - "31036:31036"
-    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-raw.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 31035 --  --port 31036 --chain kusama --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-spec.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-kusama-spec.json --execution=wasm --prometheus-external --port 31035 --  --port 31036 --chain kusama --sync warp --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
     volumes:
       - ./imbue_db/cumulus_parachain_2:/cumulus_parachain/
       
@@ -38,7 +38,7 @@ services:
       - "9982:9930"
       - "31037:31037"
       - "31038:31038"
-    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-raw.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain kusama --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-spec.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-kusama-spec.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain kusama --sync warp --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
     volumes:
       - ./imbue_db/cumulus_parachain_3:/cumulus_parachain/
       
@@ -52,7 +52,7 @@ services:
       - "9983:9930"
       - "31039:31037"
       - "31040:31038"
-    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-raw.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain kusama --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-spec.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-kusama-spec.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain kusama --sync warp --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
     volumes:
       - ./imbue_db/cumulus_parachain_4:/cumulus_parachain/
       
@@ -66,7 +66,7 @@ services:
       - "9984:9930"
       - "31041:31037"
       - "31042:31038"
-    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-raw.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain kusama --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-spec.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-kusama-spec.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain kusama --sync warp --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
     volumes:
       - ./imbue_db/cumulus_parachain_5:/cumulus_parachain/
       
@@ -80,7 +80,7 @@ services:
       - "9985:9930"
       - "31043:31037"
       - "31044:31038"
-    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-raw.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain kusama --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/genesis/imbue-kusama-spec.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-kusama-spec.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain kusama --sync warp --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
     volumes:
       - ./imbue_db/cumulus_parachain_6:/cumulus_parachain/
 
