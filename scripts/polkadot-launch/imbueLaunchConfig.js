@@ -29,11 +29,13 @@ const parachainNodeFlags = [
     "--execution=wasm",
     "--",
     "--prometheus-external",
+    "--ws-max-out-buffer-capacity=99999",
+    "--ws-max-connections=200",
 ];
 
 const relaychain = {
     "bin": "/polkadot",
-    chain: "rococo-dev",
+    chain: "rococo-local",
     nodes: [
         {
             name: "alice",
@@ -67,8 +69,9 @@ const relaychain = {
 
 const imbue = {
     bin: "/imbue",
-    id: "2102",
+    id: "2121",
     balance: "1000000000000000000000",
+    chain: "local",
     nodes: [
         {
             name: "alice",
@@ -84,8 +87,6 @@ const imbue = {
         },
         ...[
             "bob",
-            "charlie",
-            "dave",
         ].map((name, idx) => ({
             name,
             wsPort: parachainBaseWSPort + idx,
