@@ -1,4 +1,6 @@
 const basePathBase = process.env.POLKADOT_LAUNCH_BASE_PATH_BASE || void 0;
+const aliceNodeKey = process.env.NODE_KEY_ALICE;
+const bobNodeKey = process.env.NODE_KEY_BOB;
 
 let relaychainBasePort = 30300;
 let relaychainBaseRPCPort = 9900;
@@ -30,7 +32,7 @@ const parachainNodeFlags = [
     "--",
     "--prometheus-external",
     "--ws-max-out-buffer-capacity=99999",
-    "--ws-max-connections=200",
+    "--ws-max-connections=200"
 ];
 
 const relaychain = {
@@ -83,6 +85,7 @@ const imbue = {
             flags: [
                 `--prometheus-port=${parachainAlicePrometheusPort}`,
                 ...parachainNodeFlags,
+                `--node-key=${aliceNodeKey}`
             ]
         },
         ...[
@@ -93,7 +96,10 @@ const imbue = {
             rpcPort: parachainBaseRPCPort + idx,
             port: parachainBasePort + idx,
             basePath: basePathBase && `${basePathBase}/${name}-${idx}-imbue`,
-            flags: parachainNodeFlags,
+            flags: [
+                ...parachainNodeFlags,
+                `--node-key=${bobNodeKey}`
+            ]
         }))
     ]
 };
