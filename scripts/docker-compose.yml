@@ -9,6 +9,9 @@ services:
       command: bash -c "cp /polkadot-launch/imbueLaunchConfig.js /launch/;rm rococo-*; yarn start imbueLaunchConfig.js"
       volumes:
         - ./polkadot-launch/:/polkadot-launch/
+      environment:
+        NODE_KEY_ALICE: ${NODE_KEY_ALICE}
+        NODE_KEY_BOB: ${NODE_KEY_BOB}
   frontend:
     container_name: frontend
     image: jacogr/polkadot-js-apps
