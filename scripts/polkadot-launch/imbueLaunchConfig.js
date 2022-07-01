@@ -37,7 +37,7 @@ const parachainNodeFlags = [
 
 const relaychain = {
     "bin": "/polkadot",
-    chain: "rococo-local",
+    chain: "rococo-dev",
     nodes: [
         {
             name: "alice",
@@ -84,8 +84,8 @@ const imbue = {
             basePath: basePathBase && `${basePathBase}/alice-imbue`,
             flags: [
                 `--prometheus-port=${parachainAlicePrometheusPort}`,
+                `--node-key=${aliceNodeKey}`,
                 ...parachainNodeFlags,
-                `--node-key=${aliceNodeKey}`
             ]
         },
         ...[
@@ -97,8 +97,8 @@ const imbue = {
             port: parachainBasePort + idx,
             basePath: basePathBase && `${basePathBase}/${name}-${idx}-imbue`,
             flags: [
-                ...parachainNodeFlags,
-                `--node-key=${bobNodeKey}`
+                `--node-key=${bobNodeKey}`,
+                ...parachainNodeFlags
             ]
         }))
     ]
