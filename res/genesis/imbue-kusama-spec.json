@@ -3,12 +3,9 @@
   "id": "imbue-kusama",
   "chainType": "Live",
   "bootNodes": [
-    "/ip4/3.141.27.190/tcp/31033/p2p/12D3KooWNbHzt59TcrVzYXA4Rse36BpjWirHCW2pFBSJwfKnFdow",
-    "/ip4/3.141.27.190/tcp/31035/p2p/12D3KooWMLkMUSKV8s7tKWcJuCLYW9ydNMrE46tirFkpCs2v7mi6",
-    "/ip4/3.141.27.190/tcp/31037/p2p/12D3KooWPxYuDWHaYaWWfhSZXjYuYnV71cgghqHz9nXPeFLHsncd",
-    "/ip4/3.141.27.190/tcp/31039/p2p/12D3KooWCczruR8dmdXfpa78SLQDHWujjV9B783AhwRVW8rnA667",
-    "/ip4/3.141.27.190/tcp/31041/p2p/12D3KooWSHnFpk5UQ6DqGhYxNtrwSjsXXMjWmGMvAXWPgZ3FdE9u",
-    "/ip4/3.141.27.190/tcp/31043/p2p/12D3KooWMMPLrm8aeqZL7ZMp7MKA2dQe379UZejCJZNkxzYqWRcy"
+    "/ip4/3.15.181.11/tcp/31033/p2p/12D3KooWDNNQ3AUxoguk4sawmrUtqB6s9L6DN1wR1Khymp78hoWb",
+    "/ip4/3.16.45.222/tcp/31033/p2p/12D3KooWHTM5HoiBri5pWvufQmEKeX9gLADFXenJPR2XmSGnAAJj",
+    "/ip4/3.144.76.3/tcp/31033/p2p/12D3KooWSHSFM9YaX9rNrszmZcQbP3NPfXzBgwppgftpMbjTSuvE"
   ],
   "telemetryEndpoints": [
     [
