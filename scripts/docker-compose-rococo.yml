@@ -2,7 +2,7 @@ version: "3.2"
 services:
   imbue-1:
     container_name: imbue-1
-    image: samelamin/imbue:0.9.20
+    image: samelamin/imbue:0.9.26
     ports:
       - "9615:9615"
       - "9616:9616"
@@ -15,77 +15,6 @@ services:
     command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-rococo-spec.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --log=xcm=debug --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --node-key=$NODE_KEY --ws-port 9942 --rpc-port 9930 --parachain-id  2121 --chain imbue-rococo-spec.json --execution=wasm --prometheus-external --port 30333 --  --port 30334 --chain rococo --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999 --ws-max-connections=200"
     volumes:
       - ./imbue_db/cumulus_parachain_1:/cumulus_parachain/
-
-  # imbue-2:
-  #   container_name: imbue-2
-  #   image: samelamin/imbue:0.9.20
-  #   ports:
-  #     - "9662:9615"
-  #     - "9663:9616"
-  #     - "9901:9942"
-  #     - "9981:9930"
-  #     - "31035:31035"
-  #     - "31036:31036"
-  #   command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-rococo-spec.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id  2121 --chain imbue-rococo-spec.json --execution=wasm --prometheus-external --port 31035 --  --port 31036 --chain rococo --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
-  #   volumes:
-  #     - ./imbue_db/cumulus_parachain_2:/cumulus_parachain/
-      
-  # imbue-3:
-  #   container_name: imbue-3
-  #   image: samelamin/imbue:0.9.20
-  #   ports:
-  #     - "9664:9615"
-  #     - "9665:9616"
-  #     - "9902:9942"
-  #     - "9982:9930"
-  #     - "31037:31037"
-  #     - "31038:31038"
-  #   command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-rococo-spec.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id  2121 --chain imbue-rococo-spec.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain rococo --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
-  #   volumes:
-  #     - ./imbue_db/cumulus_parachain_3:/cumulus_parachain/
-      
-  # imbue-4:
-  #   container_name: imbue-4
-  #   image: samelamin/imbue:0.9.20
-  #   ports:
-  #     - "9666:9615"
-  #     - "9667:9616"
-  #     - "9903:9942"
-  #     - "9983:9930"
-  #     - "31039:31037"
-  #     - "31040:31038"
-  #   command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-rococo-spec.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id  2121 --chain imbue-rococo-spec.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain rococo --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
-  #   volumes:
-  #     - ./imbue_db/cumulus_parachain_4:/cumulus_parachain/
-      
-  # imbue-5:
-  #   container_name: imbue-5
-  #   image: samelamin/imbue:0.9.20
-  #   ports:
-  #     - "9668:9615"
-  #     - "9669:9616"
-  #     - "9904:9942"
-  #     - "9984:9930"
-  #     - "31041:31037"
-  #     - "31042:31038"
-  #   command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-rococo-spec.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id  2121 --chain imbue-rococo-spec.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain rococo --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
-  #   volumes:
-  #     - ./imbue_db/cumulus_parachain_5:/cumulus_parachain/
-      
-  # imbue-6:
-  #   container_name: imbue-6
-  #   image: samelamin/imbue:0.9.20
-  #   ports:
-  #     - "9670:9615"
-  #     - "9671:9616"
-  #     - "9905:9942"
-  #     - "9985:9930"
-  #     - "31043:31037"
-  #     - "31044:31038"
-  #   command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-rococo-spec.json;/imbue --log=xcm=debug --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id  2121 --chain imbue-rococo-spec.json --execution=wasm --prometheus-external --port 31037 --  --port 31038 --chain rococo --sync fast --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999"
-  #   volumes:
-  #     - ./imbue_db/cumulus_parachain_6:/cumulus_parachain/
-
   frontend:
     container_name: frontend
     image: jacogr/polkadot-js-apps
