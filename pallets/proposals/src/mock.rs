@@ -64,7 +64,7 @@ frame_support::construct_runtime!(
         Tokens: orml_tokens::{Pallet, Storage, Event<T>},
         Currencies: orml_currencies::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -76,7 +76,7 @@ orml_traits::parameter_type_with_key! {
 }
 
 parameter_types! {
-    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account_truncating();
     pub MaxLocks: u32 = 2;
 }
 
@@ -92,6 +92,8 @@ impl orml_tokens::Config for Test {
     type DustRemovalWhitelist = Nothing;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 parameter_types! {
@@ -104,6 +106,7 @@ impl pallet_transaction_payment::Config for Test {
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
+    type Event = Event;
 }
 
 parameter_types! {

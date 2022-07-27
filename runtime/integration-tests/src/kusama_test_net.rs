@@ -94,11 +94,11 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
         balances: vec![
             (AccountId::from(ALICE), native_amount(2002)),
             (
-                ParaId::from(PARA_ID_DEVELOPMENT).into_account(),
+                ParaId::from(PARA_ID_DEVELOPMENT).into_account_truncating(),
                 native_amount(7),
             ),
             (
-                ParaId::from(PARA_ID_SIBLING).into_account(),
+                ParaId::from(PARA_ID_SIBLING).into_account_truncating(),
                 native_amount(7),
             ),
         ],
