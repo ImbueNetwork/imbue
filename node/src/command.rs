@@ -20,7 +20,7 @@ use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 use std::{net::SocketAddr};
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-// default to the Statemint/Statemine/Westmint id
+const DEFAULT_PARA_ID: u32 = 2121;
 
 enum ChainIdentity {
     ImbueKusama,
@@ -179,9 +179,9 @@ pub fn run() -> Result<()> {
 
     match &cli.subcommand {
         Some(Subcommand::BuildSpec(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
-        }
+			let runner = cli.create_runner(cmd)?;
+			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
+		},
         Some(Subcommand::CheckBlock(cmd)) => {
             construct_async_run!(|components, cli, cmd, config| {
                 Ok(cmd.run(components.client, components.import_queue))
@@ -294,10 +294,9 @@ pub fn run() -> Result<()> {
 				);
 
 				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec)
-					.map(|e| e.para_id)
-					.ok_or_else(|| "Could not find parachain ID in chain-spec.")?;
+					.map(|e| e.para_id);
 
-                let id = ParaId::from(para_id);
+                    let id = ParaId::from(cli.run.parachain_id.clone().or(para_id).unwrap_or(DEFAULT_PARA_ID));
 
 
                 let parachain_account = AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(&id);
