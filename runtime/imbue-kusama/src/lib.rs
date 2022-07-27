@@ -22,6 +22,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     OpaqueMetadata,
@@ -52,7 +53,7 @@ mod weights;
 pub use frame_support::{
     construct_runtime, ensure, parameter_types,
     traits::{
-        fungibles, Contains,  Currency as PalletCurrency, EnsureOneOf, EqualPrivilegeOnly, Everything, Get, IsInVec, Nothing,
+        fungibles, Contains,  Currency as PalletCurrency, EqualPrivilegeOnly, Everything, Get, IsInVec, Nothing,
         OnUnbalanced, Imbalance, Randomness,
     },
     weights::{
@@ -104,12 +105,6 @@ pub use common_runtime::Index;
 pub use common_runtime::*;
 
 pub type SessionHandlers = ();
-
-impl_opaque_keys! {
-    pub struct SessionKeys {
-        pub aura: Aura,
-    }
-}
 
 /// This runtime version.
 #[sp_version::runtime_version]
@@ -267,6 +262,7 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+    type Event = Event;
     type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
     type WeightToFee = WeightToFee;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
@@ -293,6 +289,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type OutboundXcmpMessageSource = XcmpQueue;
     type XcmpMessageHandler = XcmpQueue;
     type ReservedXcmpWeight = ReservedXcmpWeight;
+    type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -384,7 +381,7 @@ parameter_types! {
     pub NativePerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(2121), GeneralKey(CurrencyId::Native.encode())),
+            X2(Parachain(2121), GeneralKey((CurrencyId::Native.encode()).try_into().unwrap())),
         ).into(),
         native_per_second(),
     );
@@ -392,7 +389,7 @@ parameter_types! {
     pub KUsdPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KUSD_KEY.to_vec()))
+            X2(Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KUSD_KEY.to_vec().try_into().unwrap()))
         ).into(),
         // kUSD:KSM = 400:1
         ksm_per_second() * 400
@@ -921,7 +918,7 @@ impl orml_xtokens::Config for Runtime {
 
 parameter_types! {
     pub ORMLMaxLocks: u32 = 2;
-    pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+    pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 impl orml_tokens::Config for Runtime {
@@ -936,6 +933,8 @@ impl orml_tokens::Config for Runtime {
     type DustRemovalWhitelist = Nothing;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 pub type Amount = i128;
@@ -1015,6 +1014,7 @@ impl pallet_treasury::Config for Runtime {
     type Currency = Balances;
     // either democracy or 75% of council votes
     type ApproveOrigin = MoreThanHalfCouncil;
+	type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
     // either democracy or more than 50% council votes
     type RejectOrigin = EnsureRootOr<HalfOfCouncil>;
     type Event = Event;
@@ -1051,7 +1051,7 @@ construct_runtime! {
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Treasury: pallet_treasury::{Pallet, Storage, Config, Event<T>, Call},
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
@@ -1137,6 +1137,29 @@ mod benches {
         [pallet_timestamp, Timestamp]
         [proposals, ImbueProposals]
     );
+}
+
+/// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
+/// the specifics of the runtime. They can then be made to be agnostic over specific formats
+/// of data like extrinsics, allowing for them to continue syncing the network through upgrades
+/// to even the core data structures.
+pub mod opaque {
+	use super::*;
+	use sp_runtime::{generic, traits::BlakeTwo256};
+
+	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+	/// Opaque block header type.
+	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+	/// Opaque block type.
+	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+	/// Opaque block identifier type.
+	pub type BlockId = generic::BlockId<Block>;
+}
+
+impl_opaque_keys! {
+	pub struct SessionKeys {
+		pub aura: Aura,
+	}
 }
 
 impl_runtime_apis! {
@@ -1394,7 +1417,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
                 1,
                 X2(
                     Parachain(parachains::karura::ID),
-                    GeneralKey(parachains::karura::KUSD_KEY.into()),
+                    GeneralKey(parachains::karura::KUSD_KEY.to_vec().try_into().unwrap()),
                 ),
             ),
             _ => native_currency_location(id),
@@ -1412,10 +1435,10 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-    pub ParachainMinFee: |location: MultiLocation| -> u128 {
+    pub ParachainMinFee: |location: MultiLocation| -> Option<u128> {
         #[allow(clippy::match_ref_pats)] // false positive
         match (location.parents, location.first_interior()) {
-            _ => u128::MAX,
+            _ => Some(u128::MAX),
         }
     };
 }
@@ -1436,7 +1459,7 @@ fn native_currency_location(id: CurrencyId) -> MultiLocation {
         1,
         X2(
             Parachain(ParachainInfo::get().into()),
-            GeneralKey(id.encode()),
+            GeneralKey((id.encode()).try_into().unwrap()),
         ),
     )
 }

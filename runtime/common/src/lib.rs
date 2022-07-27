@@ -22,13 +22,13 @@ pub use types::*;
 
 /// Common types for all runtimes
 pub mod types {
-    use frame_support::traits::EnsureOneOf;
+    use frame_support::traits::EitherOfDiverse;
     use frame_system::EnsureRoot;
 
     use sp_core::U256;
     use sp_runtime::traits::{BlakeTwo256, IdentifyAccount, Verify};
     use sp_std::vec::Vec;
-    pub type EnsureRootOr<O> = EnsureOneOf<EnsureRoot<AccountId>, O>;
+    pub type EnsureRootOr<O> = EitherOfDiverse<EnsureRoot<AccountId>, O>;
 
     pub use common_types::CurrencyId;
 
