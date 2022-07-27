@@ -470,7 +470,7 @@ impl<T: Config> Pallet<T> {
     /// This actually does computation. If you need to keep using it, then make sure you cache the
     /// value and only call this once.
     pub fn account_id() -> T::AccountId {
-        T::PalletId::get().into_account()
+        T::PalletId::get().into_account_truncating()
     }
 
     pub fn ensure_initator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>> {
@@ -482,7 +482,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn project_account_id(key: ProjectKey) -> T::AccountId {
-        T::PalletId::get().into_sub_account(key)
+        T::PalletId::get().into_sub_account_truncating(key)
     }
 
     pub fn get_project(project_key: u32) -> Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber> {
