@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::rpc;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_cli::CollatorOptions;
+
+use jsonrpsee::RpcModule;
 
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
@@ -186,6 +187,7 @@ async fn build_relay_chain_interface(
 	telemetry_worker_handle: Option<TelemetryWorkerHandle>,
 	task_manager: &mut TaskManager,
 	collator_options: CollatorOptions,
+	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> RelayChainResult<(Arc<(dyn RelayChainInterface + 'static)>, Option<CollatorPair>)> {
 	match collator_options.relay_chain_rpc_url {
 		Some(relay_chain_url) =>
@@ -195,6 +197,7 @@ async fn build_relay_chain_interface(
 			parachain_config,
 			telemetry_worker_handle,
 			task_manager,
+			hwbench,
 		),
 	}
 }
@@ -211,61 +214,62 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	_rpc_ext_builder: RB,
 	build_import_queue: BIQ,
 	build_consensus: BIC,
+	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(
 	TaskManager,
 	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
 )>
 where
-    RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
-        + Send
-        + Sync
-        + 'static,
-    RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-        + sp_api::Metadata<Block>
-        + sp_session::SessionKeys<Block>
-        + sp_api::ApiExt<
-            Block,
-            StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
-        > + sp_offchain::OffchainWorkerApi<Block>
-        + sp_block_builder::BlockBuilder<Block>
-        + cumulus_primitives_core::CollectCollationInfo<Block>
-        + pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-        + frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-    sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
-    Executor: sc_executor::NativeExecutionDispatch + 'static,
-    RB: Fn(
-            Arc<TFullClient<Block, RuntimeApi, Executor>>,
-        ) -> Result<jsonrpc_core::IoHandler<sc_rpc::Metadata>, sc_service::Error>
-        + Send
-        + 'static,
-    BIQ: FnOnce(
-            Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
-            &Configuration,
-            Option<TelemetryHandle>,
-            &TaskManager,
-        ) -> Result<
-            sc_consensus::DefaultImportQueue<
-                Block,
-                TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
-            >,
-            sc_service::Error,
-        > + 'static,
-    BIC: FnOnce(
-        Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
-        Option<&Registry>,
-        Option<TelemetryHandle>,
-        &TaskManager,
-        Arc<dyn RelayChainInterface>,
-        Arc<
-            sc_transaction_pool::FullPool<
-                Block,
-                TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
-            >,
-        >,
-        Arc<NetworkService<Block, Hash>>,
-        SyncCryptoStorePtr,
-        bool,
-    ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
+	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
+		+ Send
+		+ Sync
+		+ 'static,
+	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+		+ sp_api::Metadata<Block>
+		+ sp_session::SessionKeys<Block>
+		+ sp_api::ApiExt<
+			Block,
+			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
+		> + sp_offchain::OffchainWorkerApi<Block>
+		+ sp_block_builder::BlockBuilder<Block>
+		+ cumulus_primitives_core::CollectCollationInfo<Block>
+		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
+		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
+	Executor: sc_executor::NativeExecutionDispatch + 'static,
+	RB: Fn(
+			Arc<TFullClient<Block, RuntimeApi, Executor>>,
+		) -> Result<RpcModule<()>, sc_service::Error>
+		+ Send
+		+ 'static,
+	BIQ: FnOnce(
+			Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+			&Configuration,
+			Option<TelemetryHandle>,
+			&TaskManager,
+		) -> Result<
+			sc_consensus::DefaultImportQueue<
+				Block,
+				TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+			>,
+			sc_service::Error,
+		> + 'static,
+	BIC: FnOnce(
+		Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+		Option<&Registry>,
+		Option<TelemetryHandle>,
+		&TaskManager,
+		Arc<dyn RelayChainInterface>,
+		Arc<
+			sc_transaction_pool::FullPool<
+				Block,
+				TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+			>,
+		>,
+		Arc<NetworkService<Block, Hash>>,
+		SyncCryptoStorePtr,
+		bool,
+	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
     if matches!(parachain_config.role, Role::Light) {
         return Err("Light client not supported!".into());
@@ -280,12 +284,13 @@ where
     let backend = params.backend.clone();
     let mut task_manager = params.task_manager;
 
-    let (relay_chain_interface, collator_key) = build_relay_chain_interface(
+	let (relay_chain_interface, collator_key) = build_relay_chain_interface(
 		polkadot_config,
 		&parachain_config,
 		telemetry_worker_handle,
 		&mut task_manager,
 		collator_options.clone(),
+		hwbench.clone(),
 	)
 	.await
 	.map_err(|e| match e {
@@ -321,33 +326,34 @@ where
             network.clone(),
         );
     }
-    let rpc_extensions_builder = {
-        let client = client.clone();
-        let transaction_pool = transaction_pool.clone();
 
-        Box::new(move |deny_unsafe, _| {
-            let deps = rpc::FullDeps {
-                client: client.clone(),
-                pool: transaction_pool.clone(),
-                deny_unsafe,
-            };
+    let rpc_builder = {
+		let client = client.clone();
+		let transaction_pool = transaction_pool.clone();
 
-            Ok(rpc::create_full(deps))
-        })
-    };
+		Box::new(move |deny_unsafe, _| {
+			let deps = crate::rpc::FullDeps {
+				client: client.clone(),
+				pool: transaction_pool.clone(),
+				deny_unsafe,
+			};
 
-    sc_service::spawn_tasks(sc_service::SpawnTasksParams {
-        rpc_extensions_builder,
-        client: client.clone(),
-        transaction_pool: transaction_pool.clone(),
-        task_manager: &mut task_manager,
-        config: parachain_config,
-        keystore: params.keystore_container.sync_keystore(),
-        backend: backend.clone(),
-        network: network.clone(),
-        system_rpc_tx,
-        telemetry: telemetry.as_mut(),
-    })?;
+			crate::rpc::create_full(deps).map_err(Into::into)
+		})
+	};
+    
+	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+		rpc_builder,
+		client: client.clone(),
+		transaction_pool: transaction_pool.clone(),
+		task_manager: &mut task_manager,
+		config: parachain_config,
+		keystore: params.keystore_container.sync_keystore(),
+		backend: backend.clone(),
+		network: network.clone(),
+		system_rpc_tx,
+		telemetry: telemetry.as_mut(),
+	})?;
 
     let announce_block = {
         let network = network.clone();
@@ -464,54 +470,42 @@ pub fn build_kusama_import_queue(
 /// Start a development parachain node.
 pub async fn start_kusama_node(
     parachain_config: Configuration,
-    polkadot_config: Configuration,
-    collator_options: CollatorOptions,
-    id: ParaId,
+	polkadot_config: Configuration,
+	collator_options: CollatorOptions,
+	id: ParaId,
+	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(
-    TaskManager,
-    Arc<
-        TFullClient<
-            Block,
-            imbue_kusama_runtime::RuntimeApi,
-            NativeElseWasmExecutor<ImbueKusamaRuntimeExecutor>,
-        >,
-    >,
+	TaskManager,
+	Arc<TFullClient<Block, imbue_kusama_runtime::RuntimeApi, NativeElseWasmExecutor<ImbueKusamaRuntimeExecutor>>>,
 )> {
     start_node_impl::<imbue_kusama_runtime::RuntimeApi, ImbueKusamaRuntimeExecutor, _, _, _>(
-        parachain_config,
-        polkadot_config,
-        collator_options,
-        id,
-        |_| Ok(Default::default()),
-        build_kusama_import_queue,
-        |client,
-         prometheus_registry,
-         telemetry,
-         task_manager,
-         relay_chain_interface,
-         transaction_pool,
-         sync_oracle,
-         keystore,
-         force_authoring| {
-            let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
+		parachain_config,
+		polkadot_config,
+		collator_options,
+		id,
+		|_| Ok(RpcModule::new(())),
+		build_kusama_import_queue,
+		|client,
+		 prometheus_registry,
+		 telemetry,
+		 task_manager,
+		 relay_chain_interface,
+		 transaction_pool,
+		 sync_oracle,
+		 keystore,
+		 force_authoring| {
+			let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
-            let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
-                task_manager.spawn_handle(),
-                client.clone(),
-                transaction_pool,
-                prometheus_registry.clone(),
-                telemetry.clone(),
-            );
+			let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
+				task_manager.spawn_handle(),
+				client.clone(),
+				transaction_pool,
+				prometheus_registry,
+				telemetry.clone(),
+			);
 
-            Ok(AuraConsensus::build::<
-                sp_consensus_aura::sr25519::AuthorityPair,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
-            >(BuildAuraConsensusParams {
+            Ok(AuraConsensus::build::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(
+				BuildAuraConsensusParams {
                 proposer_factory,
                 create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
                     let relay_chain_interface = relay_chain_interface.clone();
@@ -554,6 +548,7 @@ pub async fn start_kusama_node(
                 telemetry,
             }))
         },
+        hwbench,
     )
     .await
 }
