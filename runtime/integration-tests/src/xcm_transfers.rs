@@ -233,7 +233,7 @@ fn currency_id_convert_imbu() {
 
 	let imbu_location: MultiLocation = MultiLocation::new(
 		1,
-		X2(Parachain(2121), GeneralKey(CurrencyId::Native.encode())),
+		X2(Parachain(2121), GeneralKey((CurrencyId::Native.encode()).try_into().unwrap())),
 	);
 
 	assert_eq!(
