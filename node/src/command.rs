@@ -1,18 +1,5 @@
-// Copyright 2019-2021 Parity Technologies (UK) Ltd.
-// This file is part of Cumulus.
+// Copyright 2019-2021 Imbue Network(UK) Ltd.
 
-// Cumulus is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Cumulus is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
     chain_spec,
@@ -20,21 +7,20 @@ use crate::{
     service::{new_partial, ImbueKusamaRuntimeExecutor},
 };
 use codec::Encode;
-use cumulus_client_service::genesis::generate_genesis_block;
+use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use log::info;
-use polkadot_parachain::primitives::AccountIdConversion;
+use imbue_kusama_runtime::{Block, RuntimeApi};
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
     NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::traits::Block as BlockT;
-use std::{io::Write, net::SocketAddr};
-use frame_benchmarking_cli::BenchmarkCmd;
+use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
+use std::{net::SocketAddr};
+use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 // default to the Statemint/Statemine/Westmint id
-const DEFAULT_PARA_ID: u32 = 2121;
 
 enum ChainIdentity {
     ImbueKusama,
@@ -57,24 +43,20 @@ impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
 }
 
 fn load_spec(
-    id: &str,
-    para_id: ParaId,
+    id: &str
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         // Rococo
         "" | "local" => Box::new(chain_spec::development_local_config(
-            para_id,
             "rococo-local",
         )),
         "imbue-dev" => Box::new(chain_spec::development_environment_config(
-            para_id,
             "rococo-dev",
         )),
         "imbue-rococo" => Box::new(chain_spec::development_environment_config(
-            para_id, "rococo",
+            "rococo",
         )),
         "imbue-chachacha" => Box::new(chain_spec::development_environment_config(
-            para_id,
             "chachacha",
         )),
         "imbue-kusama" => Box::new(chain_spec::imbue_kusama_config()),
@@ -118,11 +100,11 @@ impl SubstrateCli for Cli {
     }
 
     fn copyright_start_year() -> i32 {
-        2017
+        2020
     }
 
     fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-        load_spec(id, self.run.parachain_id.unwrap_or(DEFAULT_PARA_ID).into())
+        load_spec(id)
     }
 
     fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -160,7 +142,7 @@ impl SubstrateCli for RelayChainCli {
     }
 
     fn copyright_start_year() -> i32 {
-        2017
+        2020
     }
 
     fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -173,22 +155,13 @@ impl SubstrateCli for RelayChainCli {
     }
 }
 
-fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
-    let mut storage = chain_spec.build_storage()?;
-
-    storage
-        .top
-        .remove(sp_core::storage::well_known_keys::CODE)
-        .ok_or_else(|| "Could not find wasm file in genesis state!".into())
-}
-
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
 		match runner.config().chain_spec.identify() {
 			ChainIdentity::ImbueKusama => {
 				runner.async_run(|$config| {
-					let $components = new_partial::<imbue_kusama_runtime::RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
+					let $components = new_partial::<RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
 						&$config,
 						crate::service::build_kusama_import_queue,
 					)?;
@@ -229,104 +202,64 @@ pub fn run() -> Result<()> {
                 Ok(cmd.run(components.client, components.import_queue))
             })
         }
-        Some(Subcommand::PurgeChain(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
+		Some(Subcommand::PurgeChain(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
 
-            runner.sync_run(|config| {
-                let polkadot_cli = RelayChainCli::new(
-                    &config,
-                    [RelayChainCli::executable_name().to_string()]
-                        .iter()
-                        .chain(cli.relaychain_args.iter()),
-                );
+			runner.sync_run(|config| {
+				let polkadot_cli = RelayChainCli::new(
+					&config,
+					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
+				);
 
-                let polkadot_config = SubstrateCli::create_configuration(
-                    &polkadot_cli,
-                    &polkadot_cli,
-                    config.tokio_handle.clone(),
-                )
-                .map_err(|err| format!("Relay chain argument error: {}", err))?;
+				let polkadot_config = SubstrateCli::create_configuration(
+					&polkadot_cli,
+					&polkadot_cli,
+					config.tokio_handle.clone(),
+				)
+				.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
-                cmd.run(config, polkadot_config)
-            })
-        }
+				cmd.run(config, polkadot_config)
+			})
+		},
         Some(Subcommand::Revert(cmd)) => construct_async_run!(|components, cli, cmd, config| {
             Ok(cmd.run(components.client, components.backend, None))
         }),
-        Some(Subcommand::ExportGenesisState(params)) => {
-            let mut builder = sc_cli::LoggerBuilder::new("");
-            builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-            let _ = builder.init();
-            let chain_spec = &load_spec(
-                &params.chain.clone().unwrap_or_default(),
-                params.parachain_id.unwrap_or(10001).into(),
-            )?;
-            let state_version = Cli::native_runtime_version(&chain_spec).state_version();
-
-            let block: crate::service::Block = generate_genesis_block(
-                &load_spec(
-                    &params.chain.clone().unwrap_or_default(),
-                    params.parachain_id.unwrap_or(DEFAULT_PARA_ID).into(),
-                )?,
-                state_version,
-            )?;
-            let raw_header = block.header().encode();
-            let output_buf = if params.raw {
-                raw_header
-            } else {
-                format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-            };
-
-            if let Some(output) = &params.output {
-                std::fs::write(output, output_buf)?;
-            } else {
-                std::io::stdout().write_all(&output_buf)?;
-            }
-
-            Ok(())
-        }
-        Some(Subcommand::ExportGenesisWasm(params)) => {
-            let mut builder = sc_cli::LoggerBuilder::new("");
-            builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-            let _ = builder.init();
-
-            let raw_wasm_blob =
-                extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
-            let output_buf = if params.raw {
-                raw_wasm_blob
-            } else {
-                format!("0x{:?}", HexDisplay::from(&raw_wasm_blob)).into_bytes()
-            };
-
-            if let Some(output) = &params.output {
-                std::fs::write(output, output_buf)?;
-            } else {
-                std::io::stdout().write_all(&output_buf)?;
-            }
-
-            Ok(())
-        }
+        Some(Subcommand::ExportGenesisState(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			runner.sync_run(|_config| {
+				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
+				let state_version = Cli::native_runtime_version(&spec).state_version();
+				cmd.run::<Block>(&*spec, state_version)
+			})
+		},
+        Some(Subcommand::ExportGenesisWasm(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			runner.sync_run(|_config| {
+				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
+				cmd.run(&*spec)
+			})
+		},
         Some(Subcommand::Benchmark(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			// Switch on the concrete benchmark sub-command-
 			match cmd {
 				BenchmarkCmd::Pallet(cmd) =>
 					if cfg!(feature = "runtime-benchmarks") {
-						runner.sync_run(|config| cmd.run::<imbue_kusama_runtime::Block, ImbueKusamaRuntimeExecutor>(config))
+						runner.sync_run(|config| cmd.run::<Block, ImbueKusamaRuntimeExecutor>(config))
 					} else {
 						Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
 							.into())
 					},
 				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
-					let partials = new_partial::<imbue_kusama_runtime::RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
+					let partials = new_partial::<RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
 						&config,
 						crate::service::build_kusama_import_queue,
 					)?;
 					cmd.run(partials.client)
 				}),
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-					let partials = new_partial::<imbue_kusama_runtime::RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
+					let partials = new_partial::<RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
 						&config,
 						crate::service::build_kusama_import_queue,
 					)?;
@@ -336,37 +269,42 @@ pub fn run() -> Result<()> {
 					cmd.run(config, partials.client.clone(), db, storage)
 				}),
 				BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
-				BenchmarkCmd::Machine(cmd) => runner.sync_run(|config| cmd.run(&config)),
+				BenchmarkCmd::Machine(cmd) =>
+					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
 			}
 		},
 
         None => {
-            let runner = cli.create_runner(&(*cli.run).normalize())?;
+			let runner = cli.create_runner(&cli.run.normalize())?;
 			let collator_options = cli.run.collator_options();
 
             runner.run_node_until_exit(|config| async move {
-
+				let hwbench = if !cli.no_hardware_benchmarks {
+					config.database.path().map(|database_path| {
+						let _ = std::fs::create_dir_all(&database_path);
+						sc_sysinfo::gather_hwbench(Some(database_path))
+					})
+				} else {
+					None
+				};
 
                 let polkadot_cli = RelayChainCli::new(
-                    &config,
-                    [RelayChainCli::executable_name().to_string()]
-                        .iter()
-                        .chain(cli.relaychain_args.iter()),
-                );
+					&config,
+					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
+				);
+
+				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec)
+					.map(|e| e.para_id)
+					.ok_or_else(|| "Could not find parachain ID in chain-spec.")?;
+
+                let id = ParaId::from(para_id);
 
 
-                let extension = chain_spec::Extensions::try_get(&*config.chain_spec);
-				let para_id = extension.map(|e| e.para_id);
-
-                let id = ParaId::from(cli.run.parachain_id.clone().or(para_id).unwrap_or(DEFAULT_PARA_ID));
-
-
-                let parachain_account = AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account(&id);
-                let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
-                let block: crate::service::Block =
-                    generate_genesis_block(&config.chain_spec, state_version)
-                        .map_err(|e| format!("{:?}", e))?;
-                let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
+                let parachain_account = AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(&id);
+				let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
+				let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
+					.map_err(|e| format!("{:?}", e))?;
+				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
                 let tokio_handle = config.tokio_handle.clone();
                 let polkadot_config =
@@ -387,7 +325,7 @@ pub fn run() -> Result<()> {
 
                 match config.chain_spec.identify() {
                     ChainIdentity::ImbueKusama => {
-                        crate::service::start_kusama_node(config, polkadot_config,collator_options, id)
+                        crate::service::start_kusama_node(config, polkadot_config,collator_options, id, hwbench)
                             .await
                             .map(|r| r.0)
                             .map_err(Into::into)

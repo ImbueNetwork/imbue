@@ -8,6 +8,7 @@ use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use std::convert::TryInto;
 use hex_literal::hex;
 use imbue_kusama_runtime::currency::IMBU;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
@@ -78,7 +79,7 @@ pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
     get_public_from_seed::<AuraId>(seed)
 }
 
-pub fn development_local_config(id: ParaId, environment: &str) -> ImbueKusamaChainSpec {
+pub fn development_local_config(environment: &str) -> ImbueKusamaChainSpec {
     ImbueKusamaChainSpec::from_genesis(
         // Name
         format!("imbue {} testnet", environment).as_str(),
@@ -98,7 +99,7 @@ pub fn development_local_config(id: ParaId, environment: &str) -> ImbueKusamaCha
                 Some(250_000_000 * IMBU),
                 council_members(),
                 tech_committee_members(),
-                id,
+                1000.into(),
             )
         },
         Vec::new(),
@@ -110,7 +111,7 @@ pub fn development_local_config(id: ParaId, environment: &str) -> ImbueKusamaCha
     )
 }
 
-pub fn development_environment_config(id: ParaId, environment: &str) -> ImbueKusamaChainSpec {
+pub fn development_environment_config(environment: &str) -> ImbueKusamaChainSpec {
     ImbueKusamaChainSpec::from_genesis(
         format!("imbue {} testnet", environment).as_str(),
         // ID
@@ -137,7 +138,7 @@ pub fn development_environment_config(id: ParaId, environment: &str) -> ImbueKus
                 Some(200_000_000 * IMBU),
                 council_members(),
                 tech_committee_members(),
-                id,
+                1000.into(),
             )
         },
         Vec::new(),
@@ -250,11 +251,11 @@ fn development_genesis(
             ..Default::default()
         },
         council_membership: CouncilMembershipConfig {
-            members: council_membership,
+            members: council_membership.try_into().expect("convert error!"),
             phantom: Default::default(),
         },
         technical_membership: TechnicalMembershipConfig {
-            members: technical_committee_membership,
+            members: technical_committee_membership.try_into().expect("convert error!"),
             phantom: Default::default(),
         },
         session: imbue_kusama_runtime::SessionConfig {
