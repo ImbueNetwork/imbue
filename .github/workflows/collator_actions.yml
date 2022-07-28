@@ -37,6 +37,9 @@ jobs:
       - name: Update submodules
         run: git submodule update --recursive --remote
 
+      - name: Clean unused directories 
+        run: sudo rm -rf /usr/share/dotnet;sudo rm -rf /opt/ghc;sudo rm -rf "/usr/local/share/boost";sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
       - name: Build imbue collator 
         run: cargo build --release
 
