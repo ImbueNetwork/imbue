@@ -20,7 +20,7 @@ use sp_runtime::{
 /// Properties for imbue.
 pub fn imbue_properties() -> Properties {
     let mut properties = Properties::new();
-    properties.insert("ss58Format".into(), 31.into());
+    properties.insert("ss58Format".into(), 42.into());
     properties.insert("tokenDecimals".into(), 12.into());
     properties.insert("tokenSymbol".into(), "IMBU".into());
     properties
