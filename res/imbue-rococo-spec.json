@@ -3,9 +3,9 @@
   "id": "imbue-rococo-dev-testnet",
   "chainType": "Live",
   "bootNodes": [ 
-    "/ip4/3.139.96.49/tcp/31033/p2p/12D3KooWJoAY3PaHVsxe5uUxFPYrZ4HRrBzJuzjm4YFf35kUYVSz",
-    "/ip4/3.139.96.49/tcp/31035/p2p/12D3KooWChpyikrePL4CsEU31GNcsx89qWoCJnSVkQuMvgvZbjM8",
-    "/ip4/3.139.96.49/tcp/31037/p2p/12D3KooWAF5cauoNakEfoTQ4DurURC7RAZNkSAaY4JHo4kFWoMnL"],
+    "/ip4/13.59.92.128/tcp/30333/p2p/12D3KooWJp6SAVLsc2aoEAwP3D9ETEcBKW9tvV1ZvfDqXBUw74zQ",
+    "/ip4/3.13.1.191/tcp/30333/p2p/12D3KooWS9zjsa3GMzxX3AueGrRZCHvCsSJwVd91r5kHxUgXReww",
+    "/ip4/3.135.76.127/tcp/30333/p2p/12D3KooWDC3eSCQ9adtSdPUnWLGA1qxS7Th8Ab4NDMnQ8iB3ZdkX"],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
