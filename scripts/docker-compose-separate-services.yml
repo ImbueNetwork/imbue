@@ -2,7 +2,7 @@ version: "3.2"
 services:
   alice:
     container_name: alice
-    image: samelamin/imbue:0.9.20
+    image: samelamin/imbue:0.9.26
     ports:
       - "9912:9934"
       - "9914:9944"
@@ -13,7 +13,7 @@ services:
 
   bob:
     container_name: bob
-    image: samelamin/imbue:0.9.20
+    image: samelamin/imbue:0.9.26
     ports:
       - "9915:9934"
       - "9916:9944"
@@ -24,7 +24,7 @@ services:
 
   charlie:
     container_name: charlie
-    image: samelamin/imbue:0.9.20
+    image: samelamin/imbue:0.9.26
     ports:
       - "9917:9934"
       - "9918:9944"
@@ -35,7 +35,7 @@ services:
 
   imbue-1:
     container_name: imbue-1
-    image: samelamin/imbue:0.9.20
+    image: samelamin/imbue:0.9.26
     ports:
       - "9615:9615"
       - "9616:9616"
@@ -49,7 +49,7 @@ services:
 
   imbue-2:
     container_name: imbue-2
-    image: samelamin/imbue:0.9.20
+    image: samelamin/imbue:0.9.26
     ports:
       - "9662:9615"
       - "9663:9616"
@@ -63,7 +63,7 @@ services:
       
   imbue-3:
     container_name: imbue-3
-    image: samelamin/imbue:0.9.20
+    image: samelamin/imbue:0.9.26
     ports:
       - "9664:9615"
       - "9665:9616"
