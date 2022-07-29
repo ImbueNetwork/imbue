@@ -3,9 +3,9 @@
   "id": "imbue-rococo-dev-testnet",
   "chainType": "Live",
   "bootNodes": [ 
-    "/ip4/3.16.46.163/tcp/30333/p2p/12D3KooWAkWMf7zWFVS73yWK2ob478GcFA4XwGH5yq8zU7bokpPt",
-    "/ip4/3.16.46.163/tcp/31035/p2p/12D3KooWQffJCn6cT2j36zBCxx75AYieiCKMjBjnGizVmPrQBZqS",
-    "/ip4/3.16.46.163/tcp/31037/p2p/12D3KooWF9UVzYavB3uW4jdHmXW7tZXkVw2kutKoJLE1vcaa8uLf"],
+    "/ip4/3.13.1.191/tcp/30333/p2p/12D3KooWS9zjsa3GMzxX3AueGrRZCHvCsSJwVd91r5kHxUgXReww",
+    "/ip4/13.59.92.128/tcp/30333/p2p/12D3KooWJp6SAVLsc2aoEAwP3D9ETEcBKW9tvV1ZvfDqXBUw74zQ",
+    "/ip4/3.135.76.127/tcp/30333/p2p/12D3KooWDC3eSCQ9adtSdPUnWLGA1qxS7Th8Ab4NDMnQ8iB3ZdkX"],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
@@ -14,7 +14,7 @@
   ],
   "protocolId": "imbue",
   "properties": {
-    "ss58Format": 31,
+    "ss58Format": 42,
     "tokenDecimals": 12,
     "tokenSymbol": "IMBU"
   },

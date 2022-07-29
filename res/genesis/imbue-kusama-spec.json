@@ -15,7 +15,7 @@
   ],
   "protocolId": "imbue",
   "properties": {
-    "ss58Format": 31,
+    "ss58Format": 42,
     "tokenDecimals": 12,
     "tokenSymbol": "IMBU"
   },
