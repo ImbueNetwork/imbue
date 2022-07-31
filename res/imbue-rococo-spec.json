@@ -5,7 +5,9 @@
   "bootNodes": [ 
     "/ip4/3.13.1.191/tcp/30333/p2p/12D3KooWS9zjsa3GMzxX3AueGrRZCHvCsSJwVd91r5kHxUgXReww",
     "/ip4/13.59.92.128/tcp/30333/p2p/12D3KooWJp6SAVLsc2aoEAwP3D9ETEcBKW9tvV1ZvfDqXBUw74zQ",
-    "/ip4/3.135.76.127/tcp/30333/p2p/12D3KooWDC3eSCQ9adtSdPUnWLGA1qxS7Th8Ab4NDMnQ8iB3ZdkX"],
+    "/ip4/3.135.76.127/tcp/30333/p2p/12D3KooWDC3eSCQ9adtSdPUnWLGA1qxS7Th8Ab4NDMnQ8iB3ZdkX",
+    "/ip4/3.139.96.49/tcp/30333/p2p/12D3KooWQw25R1NXfs4GcE4Yq1ZQoRcsjsF1Tj81VDgTJmvNyWe6",
+    "/ip4/3.16.46.163/tcp/30333/p2p/12D3KooWJqFPQcnsFvYe2efQYfVgr5uKjrCiWtv8kJ23hVGxeMiG"],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
