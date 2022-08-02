@@ -7,7 +7,7 @@
     "/ip4/13.59.92.128/tcp/30333/p2p/12D3KooWJp6SAVLsc2aoEAwP3D9ETEcBKW9tvV1ZvfDqXBUw74zQ",
     "/ip4/3.135.76.127/tcp/30333/p2p/12D3KooWDC3eSCQ9adtSdPUnWLGA1qxS7Th8Ab4NDMnQ8iB3ZdkX",
     "/ip4/3.16.46.163/tcp/30333/p2p/12D3KooWMNuBeVDSDHf7ZLzpvqs977GiXfW6qPxkcdhW9WUYVJ2n",
-    "/ip4/3.139.96.49/tcp/30333/p2p/12D3KooWQw25R1NXfs4GcE4Yq1ZQoRcsjsF1Tj81VDgTJmvNyWe6"],
+    "/ip4/3.139.96.49/tcp/30333/p2p/12D3KooWReR5YCFw7cbS1bVVEr6H1fkbZMNC5S9thuaXz1wizLS1"],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
