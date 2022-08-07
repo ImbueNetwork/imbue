@@ -112,7 +112,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 1,
-    spec_version: 1009,
+    spec_version: 1010,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -259,6 +259,12 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 
 parameter_types! {
     pub const OperationalFeeMultiplier: u8 = 5;
+}
+
+
+impl orml_xcm::Config for Runtime {
+	type Event = Event;
+	type SovereignOrigin = MoreThanHalfCouncil;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -1083,6 +1089,8 @@ construct_runtime! {
 
         Currencies: orml_currencies::{Pallet, Call},
         OrmlTokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
+        OrmlXcm: orml_xcm::{Pallet, Call, Event<T>},
+
         UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
 
         // XCM helpers.
