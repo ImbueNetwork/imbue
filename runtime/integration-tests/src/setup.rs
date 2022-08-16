@@ -94,6 +94,9 @@ pub fn kusd_amount(amount: Balance) -> Balance {
     amount * dollar(CurrencyId::KUSD)
 }
 
+pub fn kar_amount(amount: Balance) -> Balance {
+    amount * dollar(CurrencyId::KAR)
+}
 
 pub fn ksm_amount(amount: Balance) -> Balance {
     amount * dollar(CurrencyId::KSM)

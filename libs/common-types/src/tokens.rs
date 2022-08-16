@@ -16,6 +16,7 @@ pub enum CurrencyId {
     KSM,
     // Karura Dollar
     KUSD,
+    KAR,
 }
 
 impl TokenMetadata for CurrencyId {
@@ -23,6 +24,7 @@ impl TokenMetadata for CurrencyId {
         match self {
             CurrencyId::Native => b"Native currency".to_vec(),
             CurrencyId::KUSD => b"Karura Dollar".to_vec(),
+            CurrencyId::KAR => b"Karura".to_vec(),
             CurrencyId::KSM => b"Kusama".to_vec(),
         }
     }
@@ -31,13 +33,15 @@ impl TokenMetadata for CurrencyId {
         match self {
             CurrencyId::Native => b"IMBU".to_vec(),
             CurrencyId::KUSD => b"KUSD".to_vec(),
+            CurrencyId::KAR => b"KAR".to_vec(),
             CurrencyId::KSM => b"KSM".to_vec(),
         }
     }
 
     fn decimals(&self) -> u8 {
         match self {
-            CurrencyId::Native => 12, CurrencyId::KUSD | CurrencyId::KSM => 12,
+            CurrencyId::Native => 12, 
+            CurrencyId::KUSD | CurrencyId::KAR | CurrencyId::KSM => 12,
         }
     }
 }
