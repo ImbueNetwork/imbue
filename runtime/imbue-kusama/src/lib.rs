@@ -112,7 +112,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 1,
-    spec_version: 1010,
+    spec_version: 1015,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -384,10 +384,18 @@ impl TakeRevenue for ToTreasury {
 parameter_types! {
     pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
 
-    pub NativePerSecond: (AssetId, u128) = (
+    pub CanonicalImbuePerSecond: (AssetId, u128) = (
+        MultiLocation::new(
+            0,
+            X1(GeneralKey(parachains::kusama::imbue::IMBUE_KEY.to_vec().try_into().unwrap())),
+        ).into(),
+        native_per_second(),
+    );
+
+    pub ImbuePerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(2121), GeneralKey((CurrencyId::Native.encode()).try_into().unwrap())),
+            X2(Parachain(parachains::kusama::imbue::ID), GeneralKey(parachains::kusama::imbue::IMBUE_KEY.to_vec().try_into().unwrap()))
         ).into(),
         native_per_second(),
     );
@@ -395,9 +403,16 @@ parameter_types! {
     pub KUsdPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KUSD_KEY.to_vec().try_into().unwrap()))
+            X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::KUSD_KEY.to_vec().try_into().unwrap()))
         ).into(),
-        // kUSD:KSM = 400:1
+        ksm_per_second() * 400
+    );
+
+    pub KarPerSecond: (AssetId, u128) = (
+        MultiLocation::new(
+            1,
+            X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::KAR_KEY.to_vec().try_into().unwrap()))
+        ).into(),
         ksm_per_second() * 400
     );
 }
@@ -407,8 +422,10 @@ parameter_types! {
 /// the xcm executor won't know how to charge fees for a transfer of said token.
 pub type Trader = (
     FixedRateOfFungible<KsmPerSecond, ToTreasury>,
-    FixedRateOfFungible<NativePerSecond, ToTreasury>,
+    FixedRateOfFungible<CanonicalImbuePerSecond, ToTreasury>,
+    FixedRateOfFungible<ImbuePerSecond, ToTreasury>,
     FixedRateOfFungible<KUsdPerSecond, ToTreasury>,
+    FixedRateOfFungible<KarPerSecond, ToTreasury>,
 );
 
 pub type Barrier = (
@@ -1375,21 +1392,32 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
         if location == MultiLocation::parent() {
             return Some(CurrencyId::KSM);
         }
-
         match location.clone() {
+            MultiLocation {
+				parents: 0,
+				interior: X1(GeneralKey(key)),
+			} => match &key[..] {
+				parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
+				_ => None,
+			},
             MultiLocation {
                 parents: 1,
                 interior: X2(Parachain(para_id), GeneralKey(key)),
             } => {
                 match para_id {
-                    // Local testing para ids
-                    2121 | 3000 => match key[..] {
-                        [0] => Some(CurrencyId::Native),
+                    parachains::kusama::karura::ID => match &key[..] {
+                        parachains::kusama::karura::KUSD_KEY => Some(CurrencyId::KUSD),
+                        parachains::kusama::karura::KAR_KEY => Some(CurrencyId::KAR),
                         _ => None,
                     },
 
-                    parachains::karura::ID => match &key[..] {
-                        parachains::karura::KUSD_KEY => Some(CurrencyId::KUSD),
+                    parachains::kusama::imbue::ID => match &key[..] {
+                        parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
+                        _ => None,
+                    },
+
+                    id if id == u32::from(ParachainInfo::get()) => match &key[..] {
+                        parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
                         _ => None,
                     },
                     _ => None,
@@ -1424,8 +1452,15 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
             CurrencyId::KUSD => MultiLocation::new(
                 1,
                 X2(
-                    Parachain(parachains::karura::ID),
-                    GeneralKey(parachains::karura::KUSD_KEY.to_vec().try_into().unwrap()),
+                    Parachain(parachains::kusama::karura::ID),
+                    GeneralKey(parachains::kusama::karura::KUSD_KEY.to_vec().try_into().unwrap()),
+                ),
+            ),
+            CurrencyId::KAR => MultiLocation::new(
+                1,
+                X2(
+                    Parachain(parachains::kusama::karura::ID),
+                    GeneralKey(parachains::kusama::karura::KAR_KEY.to_vec().try_into().unwrap()),
                 ),
             ),
             _ => native_currency_location(id),

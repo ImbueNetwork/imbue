@@ -19,11 +19,11 @@ use crate::kusama_test_net::{Development, Karura, KusamaNet, Sibling, TestNet};
 use orml_traits::MultiCurrency;
 use common_types::CurrencyId;
 use crate::setup::{
-	development_account, karura_account, ksm_amount, kusd_amount, native_amount, sibling_account,
+	development_account, karura_account, kar_amount, ksm_amount, kusd_amount, native_amount, sibling_account,
 	ALICE, BOB, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
 };
 use imbue_kusama_runtime::{
-	Balances, KUsdPerSecond, KsmPerSecond, NativePerSecond, Origin, OrmlTokens,
+	Balances, KarPerSecond, KUsdPerSecond, KsmPerSecond, CanonicalImbuePerSecond, Origin, OrmlTokens,
 	XTokens,
 };
 use common_runtime::Balance;
@@ -63,7 +63,7 @@ fn transfer_native_to_sibling() {
 				)
 				.into()
 			),
-			8_000_000_000_000,
+			1_000_000_000,
 		));
 
 		// Confirm that Alice's balance is initial balance - amount transferred
@@ -168,6 +168,89 @@ fn transfer_kusd_to_development() {
 }
 
 #[test]
+fn transfer_kar_to_development() {
+
+	TestNet::reset();
+
+	let alice_initial_balance = kar_amount(10);
+	let bob_initial_balance = kar_amount(10);
+	let transfer_amount = kar_amount(7);
+
+	Karura::execute_with(|| {
+		assert_ok!(OrmlTokens::deposit(
+			CurrencyId::KAR,
+			&ALICE.into(),
+			alice_initial_balance
+		));
+
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::KAR, &development_account()),
+			0
+		);
+	});
+
+	Development::execute_with(|| {
+		assert_ok!(OrmlTokens::deposit(
+			CurrencyId::KAR,
+			&BOB.into(),
+			bob_initial_balance
+		));
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::KAR, &BOB.into()),
+			bob_initial_balance,
+		);
+
+		assert_ok!(OrmlTokens::deposit(
+			CurrencyId::KUSD,
+			&karura_account().into(),
+			bob_initial_balance
+		));
+	});
+
+	Karura::execute_with(|| {
+		assert_ok!(XTokens::transfer(
+			Origin::signed(ALICE.into()),
+			CurrencyId::KAR,
+			transfer_amount,
+			Box::new(
+				MultiLocation::new(
+					1,
+					X2(
+						Parachain(PARA_ID_DEVELOPMENT),
+						Junction::AccountId32 {
+							network: NetworkId::Any,
+							id: BOB.into(),
+						}
+					)
+				)
+				.into()
+			),
+			8_000_000_000,
+		));
+
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::KAR, &ALICE.into()),
+			alice_initial_balance - transfer_amount
+		);
+
+		// Verify that the amount transferred is now part of the development account here
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::KAR, &development_account()),
+			transfer_amount
+		);
+	});
+
+	Development::execute_with(|| {
+		// Verify that BOB now has initial balance + amount transferred - fee
+		assert_eq!(
+			OrmlTokens::free_balance(CurrencyId::KAR, &BOB.into()),
+			bob_initial_balance + transfer_amount - kar_fee()
+		);
+	});
+}
+
+
+#[test]
 fn transfer_from_relay_chain() {
 	let transfer_amount: Balance = ksm_amount(1);
 
@@ -246,6 +329,18 @@ fn currency_id_convert_imbu() {
 		Some(CurrencyId::Native),
 	);
 
+	let imbu_location_2: MultiLocation = MultiLocation::new(
+		0,
+		X1(GeneralKey((CurrencyId::Native.encode()).try_into().unwrap())),
+	);
+
+
+	assert_eq!(
+		CurrencyIdConvert::convert(imbu_location_2.clone()),
+		Some(CurrencyId::Native),
+	);
+
+
 	Development::execute_with(|| {
 		assert_eq!(
 			CurrencyIdConvert::convert(CurrencyId::Native),
@@ -256,7 +351,7 @@ fn currency_id_convert_imbu() {
 
 // The fee associated with transferring Native tokens
 fn native_fee() -> Balance {
-	let (_asset, fee) = NativePerSecond::get();
+	let (_asset, fee) = CanonicalImbuePerSecond::get();
 	// NOTE: it is possible that in different machines this value may differ. We shall see.
 	fee.div_euclid(10_000) * 8
 }
@@ -268,6 +363,14 @@ fn kusd_fee() -> Balance {
 	// NOTE: it is possible that in different machines this value may differ. We shall see.
 	fee.div_euclid(10_000) * 8
 }
+
+// The fee associated with transferring KUSD tokens
+fn kar_fee() -> Balance {
+	let (_asset, fee) = KarPerSecond::get();
+	// NOTE: it is possible that in different machines this value may differ. We shall see.
+	fee.div_euclid(10_000) * 8
+}
+
 
 // The fee associated with transferring KSM tokens
 fn ksm_fee() -> Balance {
