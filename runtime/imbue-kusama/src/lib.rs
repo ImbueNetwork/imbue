@@ -112,7 +112,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 1,
-    spec_version: 1015,
+    spec_version: 1016,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
