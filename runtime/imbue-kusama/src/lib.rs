@@ -395,7 +395,7 @@ parameter_types! {
     pub ImbuePerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-			X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(parachains::kusama::imbue::IMBUE_KEY.to_vec().try_into().unwrap()))
+            X2(Parachain(parachains::kusama::imbue::ID), GeneralKey(parachains::kusama::imbue::IMBUE_KEY.to_vec().try_into().unwrap()))
         ).into(),
         native_per_second(),
     );
@@ -1392,7 +1392,6 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
         if location == MultiLocation::parent() {
             return Some(CurrencyId::KSM);
         }
-
         match location.clone() {
             MultiLocation {
 				parents: 0,
@@ -1406,14 +1405,14 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
                 interior: X2(Parachain(para_id), GeneralKey(key)),
             } => {
                 match para_id {
-                    // 2122 | 3001 => match key[..] {
-                    //     [0] => Some(CurrencyId::Native),
-                    //     _ => None,
-                    // },
-
                     parachains::kusama::karura::ID => match &key[..] {
                         parachains::kusama::karura::KUSD_KEY => Some(CurrencyId::KUSD),
                         parachains::kusama::karura::KAR_KEY => Some(CurrencyId::KAR),
+                        _ => None,
+                    },
+
+                    parachains::kusama::imbue::ID => match &key[..] {
+                        parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
                         _ => None,
                     },
 
@@ -1421,7 +1420,6 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
                         parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
                         _ => None,
                     },
-
                     _ => None,
                 }
             }
