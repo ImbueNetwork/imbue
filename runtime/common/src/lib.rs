@@ -184,6 +184,7 @@ pub mod parachains {
         }
 
         pub mod imbue {
+            pub const ID: u32 = 2121;
             pub const IMBUE_KEY: &[u8] = &[0];
         }
 

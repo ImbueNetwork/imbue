@@ -76,15 +76,13 @@ fn transfer_native_to_sibling() {
 		assert_eq!(Balances::free_balance(&sibling_account()), transfer_amount);
 	});
 
-
-	// TODO FIX ME
-	// Sibling::execute_with(|| {
-	// 	// Verify that BOB now has initial balance + amount transferred - fee
-	// 	assert_eq!(
-	// 		Balances::free_balance(&BOB.into()),
-	// 		bob_initial_balance + transfer_amount - native_fee(),
-	// 	);
-	// });
+	Sibling::execute_with(|| {
+		// Verify that BOB now has initial balance + amount transferred - fee
+		assert_eq!(
+			Balances::free_balance(&BOB.into()),
+			bob_initial_balance + transfer_amount - native_fee(),
+		);
+	});
 }
 
 #[test]
