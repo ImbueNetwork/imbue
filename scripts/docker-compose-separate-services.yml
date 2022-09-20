@@ -7,7 +7,7 @@ services:
       - "9912:9934"
       - "9914:9944"
       - "30301:30331"
-    command: bash -c "/polkadot --unsafe-ws-external --allow-private-ipv4 --rpc-cors all  --log=parity_ws::io=debug --wasm-execution Compiled --rpc-external --rpc-methods Unsafe -d /cumulus_relay/alice --validator --alice --ws-port 9944 --port 30331 --rpc-port 9934 --name alice --chain rococo-local.json --ws-max-out-buffer-capacity=99999 --ws-max-connections=200"
+    command: bash -c "/polkadot --unsafe-ws-external --allow-private-ipv4 --rpc-cors all  --log=parity_ws::io=debug --wasm-execution Compiled --rpc-external --rpc-methods Unsafe -d /cumulus_relay/alice --validator --alice --ws-port 9944 --port 30331 --rpc-port 9934 --name alice --chain rococo-local.json --rpc-max-request-size=99999 --ws-max-connections=200"
     volumes:
       - ./imbue_db/cumulus_relay:/cumulus_relay/
 
@@ -18,7 +18,7 @@ services:
       - "9915:9934"
       - "9916:9944"
       - "30302:30331"
-    command: bash -c "/polkadot --unsafe-ws-external --allow-private-ipv4 --rpc-cors all --wasm-execution Compiled --rpc-external --rpc-methods Unsafe -d /cumulus_relay/bob --validator --bob --ws-port 9944 --port 30331 --rpc-port 9934 --name alice --chain rococo-local.json --ws-max-out-buffer-capacity=99999"
+    command: bash -c "/polkadot --unsafe-ws-external --allow-private-ipv4 --rpc-cors all --wasm-execution Compiled --rpc-external --rpc-methods Unsafe -d /cumulus_relay/bob --validator --bob --ws-port 9944 --port 30331 --rpc-port 9934 --name alice --chain rococo-local.json --rpc-max-request-size=99999"
     volumes:
       - ./imbue_db/cumulus_relay:/cumulus_relay/
 
@@ -29,7 +29,7 @@ services:
       - "9917:9934"
       - "9918:9944"
       - "30303:30331"
-    command: bash -c "/polkadot --unsafe-ws-external --allow-private-ipv4 --rpc-cors all --wasm-execution Compiled --rpc-external --rpc-methods Unsafe -d /cumulus_relay/charlie --validator --charlie --ws-port 9944 --port 30331 --rpc-port 9934 --name alice --chain rococo-local.json --ws-max-out-buffer-capacity=99999"
+    command: bash -c "/polkadot --unsafe-ws-external --allow-private-ipv4 --rpc-cors all --wasm-execution Compiled --rpc-external --rpc-methods Unsafe -d /cumulus_relay/charlie --validator --charlie --ws-port 9944 --port 30331 --rpc-port 9934 --name alice --chain rococo-local.json --rpc-max-request-size=99999"
     volumes:
       - ./imbue_db/cumulus_relay:/cumulus_relay/
 
@@ -43,7 +43,7 @@ services:
       - "9980:9930"
       - "30333:30333"
       - "30334:30334"
-    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-raw.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --log=parity_ws::io=debug  --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 30333 --  --port 30334 --chain rococo-local.json --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999 --ws-max-connections=200 --unsafe-pruning --pruning=1000"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-raw.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --log=parity_ws::io=debug  --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 30333 --  --port 30334 --chain rococo-local.json --execution=wasm --prometheus-external --rpc-max-request-size=99999 --ws-max-connections=200 --unsafe-pruning --pruning=1000"
     volumes:
       - ./imbue_db/cumulus_parachain_1:/cumulus_parachain/
 
@@ -57,7 +57,7 @@ services:
       - "9981:9930"
       - "30335:30335"
       - "30336:30336"
-    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-raw.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 30335 --  --port 30336 --chain rococo-local.json --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999 --unsafe-pruning --pruning=1000"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-raw.json;/imbue  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 30335 --  --port 30336 --chain rococo-local.json --execution=wasm --prometheus-external --rpc-max-request-size=99999 --unsafe-pruning --pruning=1000"
     volumes:
       - ./imbue_db/cumulus_parachain_2:/cumulus_parachain/
       
@@ -71,7 +71,7 @@ services:
       - "9982:9930"
       - "30337:30337"
       - "30338:30338"
-    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-raw.json;/imbue --log=parity_ws::io=debug  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 30337 --  --port 30338 --chain rococo-local.json --execution=wasm --prometheus-external --ws-max-out-buffer-capacity=99999 --unsafe-pruning --pruning=1000"
+    command: bash -c "wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-raw.json;/imbue --log=parity_ws::io=debug  --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1  --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-raw.json --execution=wasm --prometheus-external --port 30337 --  --port 30338 --chain rococo-local.json --execution=wasm --prometheus-external --rpc-max-request-size=99999 --unsafe-pruning --pruning=1000"
     volumes:
       - ./imbue_db/cumulus_parachain_3:/cumulus_parachain/
 
