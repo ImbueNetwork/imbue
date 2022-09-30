@@ -112,7 +112,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 1,
-    spec_version: 1016,
+    spec_version: 1019,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -400,12 +400,20 @@ parameter_types! {
         native_per_second(),
     );
 
+    pub MgxPerSecond: (AssetId, u128) = (
+        MultiLocation::new(
+            1,
+            X2(Parachain(parachains::kusama::mangata::ID), GeneralKey(parachains::kusama::mangata::MGX_KEY.to_vec().try_into().unwrap()))
+        ).into(),
+        ksm_per_second() * 100
+    );
+
     pub KUsdPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
             X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::KUSD_KEY.to_vec().try_into().unwrap()))
         ).into(),
-        ksm_per_second() * 400
+        ksm_per_second() * 50
     );
 
     pub KarPerSecond: (AssetId, u128) = (
@@ -413,7 +421,7 @@ parameter_types! {
             1,
             X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::KAR_KEY.to_vec().try_into().unwrap()))
         ).into(),
-        ksm_per_second() * 400
+        ksm_per_second() * 100
     );
 }
 
@@ -426,6 +434,7 @@ pub type Trader = (
     FixedRateOfFungible<ImbuePerSecond, ToTreasury>,
     FixedRateOfFungible<KUsdPerSecond, ToTreasury>,
     FixedRateOfFungible<KarPerSecond, ToTreasury>,
+    FixedRateOfFungible<MgxPerSecond, ToTreasury>,
 );
 
 pub type Barrier = (
