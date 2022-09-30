@@ -24,9 +24,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
-use sp_core::{
-    OpaqueMetadata,
-};
+use sp_core::OpaqueMetadata;
 
 use pallet_collective::EnsureProportionAtLeast;
 use sp_runtime::{
@@ -40,7 +38,12 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, Perbill, Permill,
 };
-use sp_std::{convert::{TryFrom, TryInto}, cmp::Ordering, marker::PhantomData, prelude::*};
+use sp_std::{
+    cmp::Ordering,
+    convert::{TryFrom, TryInto},
+    marker::PhantomData,
+    prelude::*,
+};
 
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -53,12 +56,12 @@ mod weights;
 pub use frame_support::{
     construct_runtime, ensure, parameter_types,
     traits::{
-        fungibles, Contains,  Currency as PalletCurrency, EqualPrivilegeOnly, Everything, Get, IsInVec, Nothing,
-        OnUnbalanced, Imbalance, Randomness,
+        fungibles, Contains, Currency as PalletCurrency, EnsureOriginWithArg, EqualPrivilegeOnly,
+        Everything, Get, Imbalance, IsInVec, Nothing, OnUnbalanced, Randomness,
     },
     weights::{
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},ConstantMultiplier,
-        DispatchClass, IdentityFee, Weight,
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+        ConstantMultiplier, DispatchClass, IdentityFee, Weight,
     },
     PalletId, StorageValue,
 };
@@ -66,18 +69,23 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot,
 };
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key};
+use orml_traits::{
+    location::AbsoluteReserveProvider, parameter_type_with_key,
+    };
 use orml_xcm_support::{
     DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
 
 use crate::sp_api_hidden_includes_IMPL_RUNTIME_APIS::sp_api::Encode;
 pub use common_runtime::{
+    asset_registry::{AuthorityOrigin, CustomAssetProcessor},
     fee::WeightToFee,
-    xcm_fees::{ksm_per_second, native_per_second},
+    xcm_fees::{default_per_second, ksm_per_second, native_per_second},
+    common_xcm::{general_key, FixedConversionRateProvider}
 };
-pub use common_types::CurrencyId;
+pub use common_types::{CurrencyId, CustomMetadata};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -112,7 +120,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 1,
-    spec_version: 1019,
+    spec_version: 1020,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -213,7 +221,6 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
-
 type NegativeImbalance = <Balances as PalletCurrency<AccountId>>::NegativeImbalance;
 
 pub struct DealWithFees;
@@ -261,10 +268,9 @@ parameter_types! {
     pub const OperationalFeeMultiplier: u8 = 5;
 }
 
-
 impl orml_xcm::Config for Runtime {
-	type Event = Event;
-	type SovereignOrigin = MoreThanHalfCouncil;
+    type Event = Event;
+    type SovereignOrigin = MoreThanHalfCouncil;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -408,10 +414,10 @@ parameter_types! {
         ksm_per_second() * 100
     );
 
-    pub KUsdPerSecond: (AssetId, u128) = (
+    pub AUsdPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::KUSD_KEY.to_vec().try_into().unwrap()))
+            X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::AUSD_KEY.to_vec().try_into().unwrap()))
         ).into(),
         ksm_per_second() * 50
     );
@@ -425,14 +431,30 @@ parameter_types! {
     );
 }
 
+// pub struct FeePerSecondProvider;
+// impl FixedConversionRateProvider for FeePerSecondProvider {
+//     fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
+//         let metadata = OrmlAssetRegistry::metadata_by_location(&location)?;
+//         metadata
+//             .additional
+//             .xcm
+//             .fee_per_second
+//             .or_else(|| Some(default_per_second(metadata.decimals)))
+//     }
+// }
+
 /// Trader - The means of purchasing weight credit for XCM execution.
 /// We need to ensure we have at least one rule per token we want to handle or else
 /// the xcm executor won't know how to charge fees for a transfer of said token.
 pub type Trader = (
-    FixedRateOfFungible<KsmPerSecond, ToTreasury>,
     FixedRateOfFungible<CanonicalImbuePerSecond, ToTreasury>,
     FixedRateOfFungible<ImbuePerSecond, ToTreasury>,
-    FixedRateOfFungible<KUsdPerSecond, ToTreasury>,
+    FixedRateOfFungible<KsmPerSecond, ToTreasury>,
+	AssetRegistryTrader<
+		FixedRateAssetRegistryTrader<FixedConversionRateProvider<OrmlAssetRegistry>>,
+		ToTreasury,
+	>, 
+    FixedRateOfFungible<AUsdPerSecond, ToTreasury>,
     FixedRateOfFungible<KarPerSecond, ToTreasury>,
     FixedRateOfFungible<MgxPerSecond, ToTreasury>,
 );
@@ -623,25 +645,23 @@ impl pallet_scheduler::Config for Runtime {
     type NoPreimagePostponement = NoPreimagePostponement;
 }
 
-
 parameter_types! {
-	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
-	pub DepositBase: Balance = deposit(1, 88);
-	// Additional storage item size of 32 bytes.
-	pub DepositFactor: Balance = deposit(0, 32);
-	pub const MaxSignatories: u16 = 100;
+    // One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
+    pub DepositBase: Balance = deposit(1, 88);
+    // Additional storage item size of 32 bytes.
+    pub DepositFactor: Balance = deposit(0, 32);
+    pub const MaxSignatories: u16 = 100;
 }
 
 impl pallet_multisig::Config for Runtime {
-	type Call = Call;
-	type Currency = Balances;
-	type DepositBase = DepositBase;
-	type DepositFactor = DepositFactor;
-	type Event = Event;
-	type MaxSignatories = MaxSignatories;
-	type WeightInfo = ();
+    type Call = Call;
+    type Currency = Balances;
+    type DepositBase = DepositBase;
+    type DepositFactor = DepositFactor;
+    type Event = Event;
+    type MaxSignatories = MaxSignatories;
+    type WeightInfo = ();
 }
-
 
 parameter_types! {
     /// The maximum amount of time (in blocks) for council members to vote on motions.
@@ -686,89 +706,86 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
-
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
-	type AddOrigin = MoreThanHalfCouncil;
-	type Event = Event;
-	type MaxMembers = CouncilMaxMembers;
-	type MembershipChanged = Council;
-	type MembershipInitialized = Council;
-	type PrimeOrigin = MoreThanHalfCouncil;
-	type RemoveOrigin = MoreThanHalfCouncil;
-	type ResetOrigin = MoreThanHalfCouncil;
-	type SwapOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
+    type AddOrigin = MoreThanHalfCouncil;
+    type Event = Event;
+    type MaxMembers = CouncilMaxMembers;
+    type MembershipChanged = Council;
+    type MembershipInitialized = Council;
+    type PrimeOrigin = MoreThanHalfCouncil;
+    type RemoveOrigin = MoreThanHalfCouncil;
+    type ResetOrigin = MoreThanHalfCouncil;
+    type SwapOrigin = MoreThanHalfCouncil;
+    type WeightInfo = ();
 }
 
 impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
-	type AddOrigin = MoreThanHalfCouncil;
-	type Event = Event;
-	type MaxMembers = TechCommitteeMaxMembers;
-	type MembershipChanged = TechnicalCommittee;
-	type MembershipInitialized = TechnicalCommittee;
-	type PrimeOrigin = MoreThanHalfCouncil;
-	type RemoveOrigin = MoreThanHalfCouncil;
-	type ResetOrigin = MoreThanHalfCouncil;
-	type SwapOrigin = MoreThanHalfCouncil;
-	type WeightInfo = ();
+    type AddOrigin = MoreThanHalfCouncil;
+    type Event = Event;
+    type MaxMembers = TechCommitteeMaxMembers;
+    type MembershipChanged = TechnicalCommittee;
+    type MembershipInitialized = TechnicalCommittee;
+    type PrimeOrigin = MoreThanHalfCouncil;
+    type RemoveOrigin = MoreThanHalfCouncil;
+    type ResetOrigin = MoreThanHalfCouncil;
+    type SwapOrigin = MoreThanHalfCouncil;
+    type WeightInfo = ();
 }
 
 parameter_types! {
-	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
-	pub const VotingPeriod: BlockNumber = 7 * DAYS;
-	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
-	pub MinimumDeposit: Balance = 100 * dollar(CurrencyId::Native);
-	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
-	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
-	pub const InstantAllowed: bool = true;
-	pub const MaxVotes: u32 = 100;
-	pub const MaxProposals: u32 = 100;
+    pub const LaunchPeriod: BlockNumber = 7 * DAYS;
+    pub const VotingPeriod: BlockNumber = 7 * DAYS;
+    pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
+    pub MinimumDeposit: Balance = 500 * IMBU;
+    pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
+    pub const CooloffPeriod: BlockNumber = 7 * DAYS;
+    pub const InstantAllowed: bool = true;
+    pub const MaxVotes: u32 = 100;
+    pub const MaxProposals: u32 = 100;
 }
 
 impl pallet_democracy::Config for Runtime {
-	type BlacklistOrigin = EnsureRoot<AccountId>;
-	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
-	// Root must agree.
-	type CancelProposalOrigin = HalfOfCouncil;
+    type BlacklistOrigin = EnsureRoot<AccountId>;
+    // To cancel a proposal before it has been passed, the technical committee must be unanimous or
+    // Root must agree.
+    type CancelProposalOrigin = HalfOfCouncil;
 
-	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-	type CancellationOrigin = HalfOfCouncil;
-	type CooloffPeriod = CooloffPeriod;
-	type Currency = Balances;
-	type EnactmentPeriod = EnactmentPeriod;
-	type Event = Event;
-	/// A unanimous council can have the next scheduled referendum be a straight default-carries
-	/// (NTB) vote.
-	type ExternalDefaultOrigin = HalfOfCouncil;
-	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
-	type ExternalMajorityOrigin = HalfOfCouncil;
-	/// A straight majority of the council can decide what their next motion is.
-	type ExternalOrigin = HalfOfCouncil;
-	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
-	/// be tabled immediately and with a shorter voting/enactment period.
-	type FastTrackOrigin = HalfOfCouncil;
-	type FastTrackVotingPeriod = FastTrackVotingPeriod;
-	type InstantAllowed = InstantAllowed;
-	type InstantOrigin = HalfOfCouncil;
-	type LaunchPeriod = LaunchPeriod;
-	type MaxProposals = MaxProposals;
-	type MaxVotes = MaxVotes;
-	type MinimumDeposit = MinimumDeposit;
-	type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
-	type PalletsOrigin = OriginCaller;
-	type PreimageByteDeposit = PreimageByteDeposit;
-	type Proposal = Call;
-	type Scheduler = Scheduler;
-	type Slash = Treasury;
-	// Any single technical committee member may veto a coming council proposal, however they can
-	// only do it once and it lasts only for the cool-off period.
-	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
-	type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
-	type VotingPeriod = VotingPeriod;
-	type WeightInfo = ();
+    // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
+    type CancellationOrigin = HalfOfCouncil;
+    type CooloffPeriod = CooloffPeriod;
+    type Currency = Balances;
+    type EnactmentPeriod = EnactmentPeriod;
+    type Event = Event;
+    /// A unanimous council can have the next scheduled referendum be a straight default-carries
+    /// (NTB) vote.
+    type ExternalDefaultOrigin = HalfOfCouncil;
+    /// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
+    type ExternalMajorityOrigin = HalfOfCouncil;
+    /// A straight majority of the council can decide what their next motion is.
+    type ExternalOrigin = HalfOfCouncil;
+    /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
+    /// be tabled immediately and with a shorter voting/enactment period.
+    type FastTrackOrigin = HalfOfCouncil;
+    type FastTrackVotingPeriod = FastTrackVotingPeriod;
+    type InstantAllowed = InstantAllowed;
+    type InstantOrigin = HalfOfCouncil;
+    type LaunchPeriod = LaunchPeriod;
+    type MaxProposals = MaxProposals;
+    type MaxVotes = MaxVotes;
+    type MinimumDeposit = MinimumDeposit;
+    type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
+    type PalletsOrigin = OriginCaller;
+    type PreimageByteDeposit = PreimageByteDeposit;
+    type Proposal = Call;
+    type Scheduler = Scheduler;
+    type Slash = Treasury;
+    // Any single technical committee member may veto a coming council proposal, however they can
+    // only do it once and it lasts only for the cool-off period.
+    type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
+    type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
+    type VotingPeriod = VotingPeriod;
+    type WeightInfo = ();
 }
-
-
 
 parameter_types! {
     pub const UncleGenerations: BlockNumber = 5;
@@ -866,10 +883,8 @@ where
     type Extrinsic = UncheckedExtrinsic;
 }
 
-
-
 /// All council members must vote yes to create this origin.
-type HalfOfCouncil = EnsureProportionAtLeast<AccountId, CouncilCollective, 1 ,2>;
+type HalfOfCouncil = EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
 /// A majority of the Unit body from Rococo over XCM is our required administration origin.
 pub type AdminOrigin = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfCouncil = EnsureRootOr<HalfOfCouncil>;
@@ -966,7 +981,17 @@ impl orml_tokens::Config for Runtime {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+    type OnKilledTokenAccount = ();
+}
+
+impl orml_asset_registry::Config for Runtime {
+    type AssetId = CurrencyId;
+    type AssetProcessor = asset_registry::CustomAssetProcessor;
+    type AuthorityOrigin = asset_registry::AuthorityOrigin<Origin, EnsureRootOr<HalfOfCouncil>>;
+    type Balance = Balance;
+    type CustomMetadata = CustomMetadata;
+    type Event = Event;
+    type WeightInfo = ();
 }
 
 pub type Amount = i128;
@@ -1046,7 +1071,7 @@ impl pallet_treasury::Config for Runtime {
     type Currency = Balances;
     // either democracy or 75% of council votes
     type ApproveOrigin = MoreThanHalfCouncil;
-	type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
     // either democracy or more than 50% council votes
     type RejectOrigin = EnsureRootOr<HalfOfCouncil>;
     type Event = Event;
@@ -1073,6 +1098,7 @@ impl proposals::Config for Runtime {
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
     type WeightInfo = ();
 }
+
 construct_runtime! {
     pub enum Runtime where
         Block = Block,
@@ -1091,7 +1117,7 @@ construct_runtime! {
         Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>},
 
         CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
+        TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 
         CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -1114,6 +1140,7 @@ construct_runtime! {
         XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 124,
 
         Currencies: orml_currencies::{Pallet, Call},
+        OrmlAssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>},
         OrmlTokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
         OrmlXcm: orml_xcm::{Pallet, Call, Event<T>},
 
@@ -1178,22 +1205,22 @@ mod benches {
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
 /// to even the core data structures.
 pub mod opaque {
-	use super::*;
-	use sp_runtime::{generic, traits::BlakeTwo256};
+    use super::*;
+    use sp_runtime::{generic, traits::BlakeTwo256};
 
-	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
-	/// Opaque block header type.
-	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	/// Opaque block type.
-	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-	/// Opaque block identifier type.
-	pub type BlockId = generic::BlockId<Block>;
+    pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+    /// Opaque block header type.
+    pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+    /// Opaque block type.
+    pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+    /// Opaque block identifier type.
+    pub type BlockId = generic::BlockId<Block>;
 }
 
 impl_opaque_keys! {
-	pub struct SessionKeys {
-		pub aura: Aura,
-	}
+    pub struct SessionKeys {
+        pub aura: Aura,
+    }
 }
 
 impl_runtime_apis! {
@@ -1238,14 +1265,14 @@ impl_runtime_apis! {
     }
 
     impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
-		fn validate_transaction(
-			source: TransactionSource,
-			tx: <Block as BlockT>::Extrinsic,
-			block_hash: <Block as BlockT>::Hash,
-		) -> TransactionValidity {
-			Executive::validate_transaction(source, tx, block_hash)
-		}
-	}
+        fn validate_transaction(
+            source: TransactionSource,
+            tx: <Block as BlockT>::Extrinsic,
+            block_hash: <Block as BlockT>::Hash,
+        ) -> TransactionValidity {
+            Executive::validate_transaction(source, tx, block_hash)
+        }
+    }
 
     impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
         fn offchain_worker(header: &<Block as BlockT>::Header) {
@@ -1401,38 +1428,37 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
         if location == MultiLocation::parent() {
             return Some(CurrencyId::KSM);
         }
+
         match location.clone() {
             MultiLocation {
-				parents: 0,
-				interior: X1(GeneralKey(key)),
-			} => match &key[..] {
-				parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
-				_ => None,
-			},
+                parents: 0,
+                interior: X1(GeneralKey(key)),
+            } => match &key[..] {
+                parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
+                _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+            },
             MultiLocation {
                 parents: 1,
                 interior: X2(Parachain(para_id), GeneralKey(key)),
-            } => {
-                match para_id {
-                    parachains::kusama::karura::ID => match &key[..] {
-                        parachains::kusama::karura::KUSD_KEY => Some(CurrencyId::KUSD),
-                        parachains::kusama::karura::KAR_KEY => Some(CurrencyId::KAR),
-                        _ => None,
-                    },
+            } => match para_id {
+                parachains::kusama::karura::ID => match &key[..] {
+                    parachains::kusama::karura::AUSD_KEY => Some(CurrencyId::AUSD),
+                    parachains::kusama::karura::KAR_KEY => Some(CurrencyId::KAR),
+                    _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                },
 
-                    parachains::kusama::imbue::ID => match &key[..] {
-                        parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
-                        _ => None,
-                    },
+                parachains::kusama::imbue::ID => match &key[..] {
+                    parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
+                    _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                },
 
-                    id if id == u32::from(ParachainInfo::get()) => match &key[..] {
-                        parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
-                        _ => None,
-                    },
-                    _ => None,
-                }
-            }
-            _ => None,
+                id if id == u32::from(ParachainInfo::get()) => match &key[..] {
+                    parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
+                    _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                },
+                _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+            },
+            _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
         }
     }
 }
@@ -1455,28 +1481,37 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 /// Other chains need to know how this conversion takes place in order to
 /// handle it on their side.
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
-    fn convert(id: CurrencyId) -> Option<MultiLocation> {
-        let x = match id {
-            CurrencyId::KSM => MultiLocation::parent(),
-            CurrencyId::KUSD => MultiLocation::new(
-                1,
-                X2(
-                    Parachain(parachains::kusama::karura::ID),
-                    GeneralKey(parachains::kusama::karura::KUSD_KEY.to_vec().try_into().unwrap()),
-                ),
-            ),
-            CurrencyId::KAR => MultiLocation::new(
-                1,
-                X2(
-                    Parachain(parachains::kusama::karura::ID),
-                    GeneralKey(parachains::kusama::karura::KAR_KEY.to_vec().try_into().unwrap()),
-                ),
-            ),
-            _ => native_currency_location(id),
-        };
-        Some(x)
-    }
+
+	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		match id {
+			CurrencyId::KSM => Some(MultiLocation::parent()),
+			CurrencyId::AUSD => Some(MultiLocation::new(
+				1,
+				X2(
+					Parachain(parachains::kusama::karura::ID),
+					general_key(parachains::kusama::karura::AUSD_KEY),
+				),
+			)),
+            CurrencyId::KAR => Some(MultiLocation::new(
+				1,
+				X2(
+					Parachain(parachains::kusama::karura::ID),
+					general_key(parachains::kusama::karura::KAR_KEY),
+				),
+			)),
+			CurrencyId::Native => Some(MultiLocation::new(
+				1,
+				X2(
+					Parachain(ParachainInfo::get().into()),
+					general_key(parachains::kusama::imbue::IMBUE_KEY),
+				),
+			)),
+			CurrencyId::ForeignAsset(_) => OrmlAssetRegistry::multilocation(&id).ok()?,
+			_ => None,
+		}
+	}
 }
+
 
 parameter_types! {
     pub const NativeToken: CurrencyId = CurrencyId::Native;
@@ -1504,16 +1539,6 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
         })
         .into()
     }
-}
-
-fn native_currency_location(id: CurrencyId) -> MultiLocation {
-    MultiLocation::new(
-        1,
-        X2(
-            Parachain(ParachainInfo::get().into()),
-            GeneralKey((id.encode()).try_into().unwrap()),
-        ),
-    )
 }
 
 /// Allow checking in assets that have issuance > 0.
