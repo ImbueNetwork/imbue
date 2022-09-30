@@ -182,12 +182,14 @@ pub mod parachains {
             pub const KAR_KEY: &[u8] = &[0, 128];
             pub const KUSD_KEY: &[u8] = &[0, 129];
         }
-
+        pub mod mangata {
+            pub const ID: u32 = 2110;
+            pub const MGX_KEY: &[u8] = &[0];
+        }
         pub mod imbue {
             pub const ID: u32 = 2121;
             pub const IMBUE_KEY: &[u8] = &[0];
         }
-
     }
 
 }
