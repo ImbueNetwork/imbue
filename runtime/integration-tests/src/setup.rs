@@ -1,5 +1,4 @@
 use common_runtime::Balance;
-use common_runtime::TokenMetadata;
 pub use imbue_kusama_runtime::{AccountId, CurrencyId, Origin, Runtime, System};
 use frame_support::traits::GenesisBuild;
 
@@ -90,8 +89,8 @@ pub fn native_amount(amount: Balance) -> Balance {
     amount * dollar(CurrencyId::Native)
 }
 
-pub fn kusd_amount(amount: Balance) -> Balance {
-    amount * dollar(CurrencyId::KUSD)
+pub fn ausd_amount(amount: Balance) -> Balance {
+    amount * dollar(CurrencyId::AUSD)
 }
 
 pub fn kar_amount(amount: Balance) -> Balance {

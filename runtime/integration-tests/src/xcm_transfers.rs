@@ -19,11 +19,11 @@ use crate::kusama_test_net::{Development, Karura, KusamaNet, Sibling, TestNet};
 use orml_traits::MultiCurrency;
 use common_types::CurrencyId;
 use crate::setup::{
-	development_account, karura_account, kar_amount, ksm_amount, kusd_amount, native_amount, sibling_account,
+	development_account, karura_account, kar_amount, ksm_amount, ausd_amount, native_amount, sibling_account,
 	ALICE, BOB, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
 };
 use imbue_kusama_runtime::{
-	Balances, KarPerSecond, KUsdPerSecond, KsmPerSecond, CanonicalImbuePerSecond, Origin, OrmlTokens,
+	Balances, KarPerSecond, AUsdPerSecond, KsmPerSecond, CanonicalImbuePerSecond, Origin, OrmlTokens,
 	XTokens,
 };
 use common_runtime::Balance;
@@ -86,40 +86,40 @@ fn transfer_native_to_sibling() {
 }
 
 #[test]
-fn transfer_kusd_to_development() {
+fn transfer_ausd_to_development() {
 
 	TestNet::reset();
 
-	let alice_initial_balance = kusd_amount(10);
-	let bob_initial_balance = kusd_amount(10);
-	let transfer_amount = kusd_amount(7);
+	let alice_initial_balance = ausd_amount(10);
+	let bob_initial_balance = ausd_amount(10);
+	let transfer_amount = ausd_amount(7);
 
 	Karura::execute_with(|| {
 		assert_ok!(OrmlTokens::deposit(
-			CurrencyId::KUSD,
+			CurrencyId::AUSD,
 			&ALICE.into(),
 			alice_initial_balance
 		));
 
 		assert_eq!(
-			OrmlTokens::free_balance(CurrencyId::KUSD, &development_account()),
+			OrmlTokens::free_balance(CurrencyId::AUSD, &development_account()),
 			0
 		);
 	});
 
 	Development::execute_with(|| {
 		assert_ok!(OrmlTokens::deposit(
-			CurrencyId::KUSD,
+			CurrencyId::AUSD,
 			&BOB.into(),
 			bob_initial_balance
 		));
 		assert_eq!(
-			OrmlTokens::free_balance(CurrencyId::KUSD, &BOB.into()),
+			OrmlTokens::free_balance(CurrencyId::AUSD, &BOB.into()),
 			bob_initial_balance,
 		);
 
 		assert_ok!(OrmlTokens::deposit(
-			CurrencyId::KUSD,
+			CurrencyId::AUSD,
 			&karura_account().into(),
 			bob_initial_balance
 		));
@@ -128,7 +128,7 @@ fn transfer_kusd_to_development() {
 	Karura::execute_with(|| {
 		assert_ok!(XTokens::transfer(
 			Origin::signed(ALICE.into()),
-			CurrencyId::KUSD,
+			CurrencyId::AUSD,
 			transfer_amount,
 			Box::new(
 				MultiLocation::new(
@@ -147,13 +147,13 @@ fn transfer_kusd_to_development() {
 		));
 
 		assert_eq!(
-			OrmlTokens::free_balance(CurrencyId::KUSD, &ALICE.into()),
+			OrmlTokens::free_balance(CurrencyId::AUSD, &ALICE.into()),
 			alice_initial_balance - transfer_amount
 		);
 
 		// Verify that the amount transferred is now part of the development account here
 		assert_eq!(
-			OrmlTokens::free_balance(CurrencyId::KUSD, &development_account()),
+			OrmlTokens::free_balance(CurrencyId::AUSD, &development_account()),
 			transfer_amount
 		);
 	});
@@ -161,8 +161,8 @@ fn transfer_kusd_to_development() {
 	Development::execute_with(|| {
 		// Verify that BOB now has initial balance + amount transferred - fee
 		assert_eq!(
-			OrmlTokens::free_balance(CurrencyId::KUSD, &BOB.into()),
-			bob_initial_balance + transfer_amount - kusd_fee()
+			OrmlTokens::free_balance(CurrencyId::AUSD, &BOB.into()),
+			bob_initial_balance + transfer_amount - ausd_fee()
 		);
 	});
 }
@@ -201,7 +201,7 @@ fn transfer_kar_to_development() {
 		);
 
 		assert_ok!(OrmlTokens::deposit(
-			CurrencyId::KUSD,
+			CurrencyId::AUSD,
 			&karura_account().into(),
 			bob_initial_balance
 		));
@@ -357,14 +357,14 @@ fn native_fee() -> Balance {
 }
 
 
-// The fee associated with transferring KUSD tokens
-fn kusd_fee() -> Balance {
-	let (_asset, fee) = KUsdPerSecond::get();
+// The fee associated with transferring AUSD tokens
+fn ausd_fee() -> Balance {
+	let (_asset, fee) = AUsdPerSecond::get();
 	// NOTE: it is possible that in different machines this value may differ. We shall see.
 	fee.div_euclid(10_000) * 8
 }
 
-// The fee associated with transferring KUSD tokens
+// The fee associated with transferring AUSD tokens
 fn kar_fee() -> Balance {
 	let (_asset, fee) = KarPerSecond::get();
 	// NOTE: it is possible that in different machines this value may differ. We shall see.

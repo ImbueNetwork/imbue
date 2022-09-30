@@ -554,26 +554,14 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitvec"
-version = "0.20.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7774144344a4faa177370406a7ff5f1da24303817368584c6206c8303eb07848"
-dependencies = [
- "funty 1.1.0",
- "radium 0.6.2",
- "tap",
- "wyz 0.2.0",
-]
-
-[[package]]
-name = "bitvec"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1489fcb93a5bb47da0462ca93ad252ad6af2145cce58d10d46a83931ba9f016b"
 dependencies = [
- "funty 2.0.0",
- "radium 0.7.0",
+ "funty",
+ "radium",
  "tap",
- "wyz 0.5.0",
+ "wyz",
 ]
 
 [[package]]
@@ -1023,9 +1011,10 @@ dependencies = [
  "frame-system",
  "hex",
  "hex-literal",
+ "orml-traits",
  "pallet-authorship",
  "pallet-balances",
- "parity-scale-codec 2.3.1",
+ "parity-scale-codec 3.1.5",
  "scale-info 1.0.0",
  "serde",
  "smallvec 1.8.1",
@@ -1035,6 +1024,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "substrate-wasm-builder",
+ "xcm",
 ]
 
 [[package]]
@@ -2723,12 +2713,6 @@ checksum = "a06f77d526c1a601b7c4cdd98f54b5eaabffc14d5f2f0296febdc7f357c6d3ba"
 
 [[package]]
 name = "funty"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fed34cd105917e91daa4da6b3728c47b068749d6a62c59811f06ed2ac71d9da7"
-
-[[package]]
-name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
@@ -3369,6 +3353,7 @@ dependencies = [
  "hex",
  "hex-literal",
  "log",
+ "orml-asset-registry",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -3724,7 +3709,7 @@ version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
  "beefy-primitives",
- "bitvec 1.0.0",
+ "bitvec",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
@@ -5245,6 +5230,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-asset-registry"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.26#33dbc5e35305d0cf5937c896dae8655ca7da95d8"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "pallet-xcm",
+ "parity-scale-codec 3.1.5",
+ "scale-info 2.1.2",
+ "serde",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+]
+
+[[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.26#33dbc5e35305d0cf5937c896dae8655ca7da95d8"
@@ -6351,11 +6355,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373b1a4c1338d9cd3d1fa53b3a11bdab5ab6bd80a20f7f7becd76953ae2be909"
 dependencies = [
  "arrayvec 0.7.2",
- "bitvec 0.20.4",
  "byte-slice-cast",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive 2.3.1",
- "serde",
 ]
 
 [[package]]
@@ -6365,7 +6367,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9182e4a71cae089267ab03e67c99368db7cd877baf50f931e5d6d4b71e195ac0"
 dependencies = [
  "arrayvec 0.7.2",
- "bitvec 1.0.0",
+ "bitvec",
  "byte-slice-cast",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive 3.1.3",
@@ -6976,7 +6978,7 @@ name = "polkadot-node-core-approval-voting"
 version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
- "bitvec 1.0.0",
+ "bitvec",
  "derive_more",
  "futures 0.3.21",
  "futures-timer",
@@ -7005,7 +7007,7 @@ name = "polkadot-node-core-av-store"
 version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
- "bitvec 1.0.0",
+ "bitvec",
  "futures 0.3.21",
  "futures-timer",
  "kvdb",
@@ -7025,7 +7027,7 @@ name = "polkadot-node-core-backing"
 version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
- "bitvec 1.0.0",
+ "bitvec",
  "fatality",
  "futures 0.3.21",
  "polkadot-erasure-coding",
@@ -7145,7 +7147,7 @@ name = "polkadot-node-core-provisioner"
 version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
- "bitvec 1.0.0",
+ "bitvec",
  "fatality",
  "futures 0.3.21",
  "futures-timer",
@@ -7424,7 +7426,7 @@ name = "polkadot-primitives"
 version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
- "bitvec 1.0.0",
+ "bitvec",
  "frame-system",
  "hex-literal",
  "parity-scale-codec 3.1.5",
@@ -7487,7 +7489,7 @@ version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
  "beefy-primitives",
- "bitvec 1.0.0",
+ "bitvec",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
@@ -7572,7 +7574,7 @@ version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
  "beefy-primitives",
- "bitvec 1.0.0",
+ "bitvec",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",
@@ -7643,7 +7645,7 @@ version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
  "bitflags",
- "bitvec 1.0.0",
+ "bitvec",
  "derive_more",
  "frame-benchmarking",
  "frame-support",
@@ -8139,12 +8141,6 @@ checksum = "3bcdf212e9776fbcb2d23ab029360416bb1706b1aea2d1a5ba002727cbcab804"
 dependencies = [
  "proc-macro2",
 ]
-
-[[package]]
-name = "radium"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "643f8f41a8ebc4c5dc4515c82bb8abd397b527fc20fd681b7c011c2aee5d44fb"
 
 [[package]]
 name = "radium"
@@ -9898,7 +9894,7 @@ version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c46be926081c9f4dd5dd9b6f1d3e3229f2360bc6502dd8836f84a93b7c75e99a"
 dependencies = [
- "bitvec 1.0.0",
+ "bitvec",
  "cfg-if 1.0.0",
  "derive_more",
  "parity-scale-codec 3.1.5",
@@ -12413,7 +12409,7 @@ version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
 dependencies = [
  "beefy-primitives",
- "bitvec 1.0.0",
+ "bitvec",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
@@ -12692,12 +12688,6 @@ checksum = "0120db82e8a1e0b9fb3345a539c478767c0048d842860994d96113d5b667bd69"
 dependencies = [
  "winapi",
 ]
-
-[[package]]
-name = "wyz"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85e60b0d1b5f99db2556934e21937020776a5d31520bf169e851ac44e6420214"
 
 [[package]]
 name = "wyz"

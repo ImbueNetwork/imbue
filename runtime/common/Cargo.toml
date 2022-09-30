@@ -11,7 +11,7 @@ version = '2.0.0'
 targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
-codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive'] }
+codec = { package = 'parity-scale-codec', version = '3.0.0', default-features = false, features = ['derive'] }
 serde = { version = "1.0.102", optional = true }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 smallvec = "1.4.0"
@@ -29,9 +29,12 @@ sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = 
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.26", default-features = false }
+
 # Local Dependencies
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
 
 [dev-dependencies]
 hex-literal = "0.3.1"
@@ -52,4 +55,6 @@ std = [
 	'sp-std/std',
 	"common-traits/std",
 	"common-types/std",
+	"orml-traits/std",
+	"xcm/std",
 ]
