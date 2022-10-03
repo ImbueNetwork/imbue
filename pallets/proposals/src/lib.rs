@@ -714,10 +714,10 @@ impl<T: Config> Pallet<T> {
             let round = <Rounds<T>>::get(i).unwrap();
             if !round.is_canceled && round.start < now && round.end > now {
                 // Find proposal by key
-                for current_project_key in round.clone().project_keys.into_iter() {
-                    if current_project_key == project_key {
+                for current_project_key in round.project_keys.iter() {
+                    if current_project_key == &project_key {
                         project_exists_in_round = true;
-                        processing_round = Some(round);
+                        processing_round = Some(round.clone());
                         break;
                     }
                 }
