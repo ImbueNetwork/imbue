@@ -711,6 +711,7 @@ impl<T: Config> Pallet<T> {
         // Find processing round
         let mut processing_round: Option<RoundOf<T>> = None;
         for i in (0..round_key).rev() {
+            
             let round = <Rounds<T>>::get(i).unwrap();
             if !round.is_canceled && round.start < now && round.end > now {
                 // Find proposal by key

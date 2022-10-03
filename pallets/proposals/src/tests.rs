@@ -1721,6 +1721,24 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     })
 }
 
+#[test]
+fn test_schedule_round_fails_gracefully_with_empty_vec() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    ExtBuilder.build().execute_with(|| {
+        create_project(alice);
+
+        assert_noop!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 1,
+            //Project key starts with 0 for the first project submitted to the chain
+            vec![],
+            RoundType::ContributionRound
+        ), Error::<Test>::LengthMustExceedZero);
+        
+    });
+}
+
 //common helper methods
 fn create_project(alice: AccountId) {
     assert_ok!(Proposals::create_project(
