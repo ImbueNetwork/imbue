@@ -199,6 +199,7 @@ pub mod pallet {
         VoteAlreadyExists,
         MilestoneVotingNotComplete,
         WithdrawalExpirationExceed,
+        ///Whitelist spot does not exist in storage.
         WhitelistSpotDoesNotExist,
     }
 
@@ -251,8 +252,11 @@ pub mod pallet {
 
             let whitelist_exists = WhitelistSpots::<T>::contains_key(project_key);
             if whitelist_exists {
-                let existing_spots = Self::whitelist_spots(project_key).unwrap();
-                project_whitelist_spots.extend(existing_spots);
+                if let Some(existing_spots) = Self::whitelist_spots(project_key) {
+                    project_whitelist_spots.extend(existing_spots);
+                }  else {
+                    return Err(Error::<T>::WhitelistSpotDoesNotExist.into())
+                }
             }
 
             project_whitelist_spots.extend(whitelist_spots);
