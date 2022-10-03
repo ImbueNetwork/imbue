@@ -1,22 +1,5 @@
-// Copyright 2019-2021 Parity Technologies (UK) Ltd.
-// This file is part of Cumulus.
-
-// Cumulus is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Cumulus is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use common_traits::TokenMetadata;
 pub use constants::*;
 pub use types::*;
 
@@ -25,7 +8,6 @@ pub mod types {
     use frame_support::traits::EitherOfDiverse;
     use frame_system::EnsureRoot;
 
-    use sp_core::U256;
     use sp_runtime::traits::{BlakeTwo256, IdentifyAccount, Verify};
     use sp_std::vec::Vec;
     pub type EnsureRootOr<O> = EitherOfDiverse<EnsureRoot<AccountId>, O>;
@@ -82,7 +64,6 @@ pub mod types {
     // A cryptographic salt to be combined with a value before hashing.
     pub type Salt = FixedArray<u8, 32>;
 
-    pub struct TokenId(pub U256);
 
 }
 
@@ -117,8 +98,6 @@ pub mod constants {
     use super::currency::CENTS as CENTI_CURRENCY;
     use super::types::Balance;
     use super::types::BlockNumber;
-    use common_traits::TokenMetadata;
-    use common_types::CurrencyId;
     use frame_support::weights::{constants::WEIGHT_PER_SECOND, Weight};
     use sp_runtime::Perbill;
 
@@ -149,26 +128,6 @@ pub mod constants {
     /// We allow for 0.5 seconds of compute with a 6 second average block time.
     pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 
-    pub fn base_tx(currency: CurrencyId) -> Balance {
-        cent(currency) / 10
-    }
-
-    pub fn dollar(currency_id: CurrencyId) -> Balance {
-        10u128.saturating_pow(currency_id.decimals().into())
-    }
-
-    pub fn cent(currency_id: CurrencyId) -> Balance {
-        dollar(currency_id) / 100
-    }
-
-    pub fn millicent(currency_id: CurrencyId) -> Balance {
-        cent(currency_id) / 1000
-    }
-    
-    pub fn microcent(currency_id: CurrencyId) -> Balance {
-        millicent(currency_id) / 1000
-    }
-
     pub fn base_tx_in_imbu() -> Balance {
         CENTI_CURRENCY / 10
     }
@@ -180,41 +139,52 @@ pub mod parachains {
         pub mod karura {
             pub const ID: u32 = 2000;
             pub const KAR_KEY: &[u8] = &[0, 128];
-            pub const KUSD_KEY: &[u8] = &[0, 129];
+            pub const AUSD_KEY: &[u8] = &[0, 129];
         }
-
+        pub mod mangata {
+            pub const ID: u32 = 2110;
+            pub const MGX_KEY: &[u8] = &[0];
+        }
         pub mod imbue {
             pub const ID: u32 = 2121;
-            pub const IMBUE_KEY: &[u8] = &[0];
+            pub const IMBUE_KEY: &[u8] = &[0, 150];
         }
-
     }
 
 }
 
 pub mod xcm_fees {
-    use super::constants::base_tx;
     use super::types::Balance;
-    pub use common_traits::TokenMetadata;
-    pub use common_types::CurrencyId;
+    pub use common_types::{CurrencyId,currency_decimals};
     use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND};
 
     // The fee cost per second for transferring the native token in cents.
     pub fn native_per_second() -> Balance {
-        base_tx_per_second(CurrencyId::Native)
+        default_per_second(currency_decimals::NATIVE)
     }
 
     pub fn ksm_per_second() -> Balance {
-        base_tx_per_second(CurrencyId::KSM) / 50
+        default_per_second(currency_decimals::KSM) / 50
     }
 
-    fn base_tx_per_second(currency: CurrencyId) -> Balance {
-        let base_weight = Balance::from(ExtrinsicBaseWeight::get());
-        let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
-        base_tx_per_second * base_tx(currency)
-    }
+    pub fn default_per_second(decimals: u32) -> Balance {
+		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
+		let default_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+		default_per_second * base_fee(decimals)
+	}
+
+    fn base_fee(decimals: u32) -> Balance {
+		dollar(decimals)
+			// cents
+			.saturating_div(100)
+			// a tenth of a cent
+			.saturating_div(10)
+	}
+
+	pub fn dollar(decimals: u32) -> Balance {
+		10u128.saturating_pow(decimals)
+	}
 }
-
 /// Fee-related
 pub mod fee {
     use super::constants::base_tx_in_imbu;
@@ -251,7 +221,118 @@ pub mod fee {
         base_tx_per_second * base_tx_in_imbu()
     }
 
+
     pub fn ksm_per_second() -> u128 {
         kar_per_second() / 50
     }
+}
+
+/// AssetRegistry's AssetProcessor
+pub mod asset_registry {
+    use super::types::{AccountId, Balance};
+	use common_types::{CurrencyId, CustomMetadata};
+	use codec::{Decode, Encode, MaxEncodedLen};
+	use frame_support::{
+		dispatch::RawOrigin,
+		sp_std::marker::PhantomData,
+		traits::{EnsureOrigin, EnsureOriginWithArg},
+	};
+	use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
+	use scale_info::TypeInfo;
+	use sp_runtime::DispatchError;
+
+	#[derive(
+		Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+	)]
+	pub struct CustomAssetProcessor;
+
+	impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for CustomAssetProcessor {
+		fn pre_register(
+			id: Option<CurrencyId>,
+			metadata: AssetMetadata<Balance, CustomMetadata>,
+		) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata>), DispatchError> {
+			match id {
+				Some(id) => Ok((id, metadata)),
+				None => Err(DispatchError::Other("asset-registry: AssetId is required")),
+			}
+		}
+
+		fn post_register(
+			_id: CurrencyId,
+			_asset_metadata: AssetMetadata<Balance, CustomMetadata>,
+		) -> Result<(), DispatchError> {
+			Ok(())
+		}
+	}
+
+	/// The OrmlAssetRegistry::AuthorityOrigin impl
+	pub struct AuthorityOrigin<
+		// The origin type
+		Origin,
+		// The default EnsureOrigin impl used to authorize all
+		// assets besides tranche tokens.
+		DefaultEnsureOrigin,
+	>(PhantomData<(Origin, DefaultEnsureOrigin)>);
+
+	impl<
+			Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
+			DefaultEnsureOrigin: EnsureOrigin<Origin>,
+		> EnsureOriginWithArg<Origin, Option<CurrencyId>> for AuthorityOrigin<Origin, DefaultEnsureOrigin>
+	{
+		type Success = ();
+
+		fn try_origin(
+			origin: Origin,
+			asset_id: &Option<CurrencyId>,
+		) -> Result<Self::Success, Origin> {
+            match asset_id {
+				// Any other `asset_id` defaults to EnsureRoot
+				_ => DefaultEnsureOrigin::try_origin(origin).map(|_| ()),
+			}
+		}
+
+		#[cfg(feature = "runtime-benchmarks")]
+		fn successful_origin(_asset_id: &Option<CurrencyId>) -> Origin {
+			unimplemented!()
+		}
+	}
+}
+
+pub mod common_xcm {
+    use super::types::{Balance};
+	use common_types::{CurrencyId, CustomMetadata};
+	use frame_support::sp_std::marker::PhantomData;
+	use sp_runtime::{traits::ConstU32, WeakBoundedVec};
+	use xcm::latest::{Junction::GeneralKey, MultiLocation};
+
+	use crate::xcm_fees::default_per_second;
+
+	/// Our FixedConversionRateProvider, used to charge XCM-related fees for tokens registered in
+	/// the asset registry that were not already handled by native Trader rules.
+	pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
+
+	impl<
+			OrmlAssetRegistry: orml_traits::asset_registry::Inspect<
+				AssetId = CurrencyId,
+				Balance = Balance,
+				CustomMetadata = CustomMetadata,
+			>,
+		> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<OrmlAssetRegistry>
+	{
+		fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
+			let metadata = OrmlAssetRegistry::metadata_by_location(location)?;
+			metadata
+				.additional
+				.xcm
+				.fee_per_second
+				.or_else(|| Some(default_per_second(metadata.decimals)))
+		}
+	}
+
+	pub fn general_key(key: &[u8]) -> xcm::latest::Junction {
+		GeneralKey(WeakBoundedVec::<u8, ConstU32<32>>::force_from(
+			key.into(),
+			None,
+		))
+	}
 }
