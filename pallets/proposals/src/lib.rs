@@ -178,7 +178,6 @@ pub mod pallet {
         NoActiveRound,
         NoActiveProposal,
         /// There was an overflow.
-        ///
         Overflow,
         OnlyApprovedProjectsCanSubmitMilestones,
         OnlyContributorsCanVote,
@@ -201,6 +200,8 @@ pub mod pallet {
         WithdrawalExpirationExceed,
         ///Whitelist spot does not exist in storage.
         WhitelistSpotDoesNotExist,
+        /// The input vector must exceed length zero.
+        LengthMustExceedZero,
     }
 
     #[pallet::hooks]
@@ -634,7 +635,10 @@ impl<T: Config> Pallet<T> {
 
         // project_key should be smaller than project count
         let project_count = ProjectCount::<T>::get();
-        let last_project = project_keys.last().unwrap();
+
+        // Ensure that the project keys will never be empty, this is done as it is an extrinsic parameter.
+        ensure!(project_keys.len() > 0usize, Error::<T>::LengthMustExceedZero);
+        let last_project = project_keys.last().expect("project keys length is validated; qed");
 
         ensure!(
             last_project < &project_count,
