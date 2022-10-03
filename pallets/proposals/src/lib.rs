@@ -252,11 +252,8 @@ pub mod pallet {
 
             let whitelist_exists = WhitelistSpots::<T>::contains_key(project_key);
             if whitelist_exists {
-                if let Some(existing_spots) = Self::whitelist_spots(project_key) {
-                    project_whitelist_spots.extend(existing_spots);
-                }  else {
-                    return Err(Error::<T>::WhitelistSpotDoesNotExist.into())
-                }
+                let existing_spots = Self::whitelist_spots(project_key).ok_or(Error::<T>::WhitelistSpotDoesNotExist)?;
+                project_whitelist_spots.extend(existing_spots);
             }
 
             project_whitelist_spots.extend(whitelist_spots);
@@ -489,19 +486,19 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_sub_account_truncating(key)
     }
 
-    pub fn get_project(project_key: u32) -> Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber> {
-        <Projects<T>>::try_get(project_key).unwrap()
+    pub fn get_project(project_key: u32) -> Result<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>, Error<T>> {
+        Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)
     }
 
-    pub fn get_total_project_contributions(project_key: u32) -> BalanceOf<T> {
-        let project = <Projects<T>>::try_get(project_key).unwrap();
+    pub fn get_total_project_contributions(project_key: u32) -> Result<BalanceOf<T>, Error<T>> {
+        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         // Calculate contribution amount
         let mut total_contribution_amount: BalanceOf<T> = (0_u32).into();
         for contribution in project.contributions.iter() {
             let contribution_value = contribution.value;
             total_contribution_amount += contribution_value;
         }
-        total_contribution_amount
+        Ok(total_contribution_amount)
     }
 
     fn new_project(
@@ -852,7 +849,8 @@ impl<T: Config> Pallet<T> {
         let mut project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let total_contribution_amount: BalanceOf<T> =
-            Self::get_total_project_contributions(project_key);
+            Self::get_total_project_contributions(project_key)?;
+
 
         let funds_matched = total_contribution_amount >= project.required_funds;
         if !funds_matched {
@@ -1048,7 +1046,7 @@ impl<T: Config> Pallet<T> {
         );
 
         let total_contribution_amount: BalanceOf<T> =
-            Self::get_total_project_contributions(project_key);
+            Self::get_total_project_contributions(project_key)?;
 
         let mut milestones = Vec::new();
         // set is_approved
@@ -1104,7 +1102,7 @@ impl<T: Config> Pallet<T> {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         let total_contribution_amount: BalanceOf<T> =
-            Self::get_total_project_contributions(project_key);
+            Self::get_total_project_contributions(project_key)?;
 
         let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
         for milestone in project.milestones.clone() {
