@@ -28,7 +28,10 @@ pub use weights::*;
 use frame_system::pallet_prelude::*;
 
 const MAX_DESC_FIELD_LENGTH: usize = 5000;
-const MAX_STRING_FIELD_LENGTH: usize = 256;
+const MAX_STRING_FIELD_LENGTH: u8 = u8::MAX;
+
+type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, <T as crate::Config>::MaxWhitelistPerProject>;
+
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -49,11 +52,13 @@ pub mod pallet {
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
 
         type WeightInfo: WeightInfo;
+
+        type MaxWhitelistPerProject: Get<u32>;
     }
 
 
     #[pallet::type_value]
-    pub fn InitialMilestoneVotingWindow<T: Config>() -> u32
+    pub fn InitialMilestoneVotingWindow() -> u32
     {
         100800u32
     }
@@ -116,7 +121,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn milestone_voting_window)]
-    pub type MilestoneVotingWindow<T> = StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow<T>>;
+    pub type MilestoneVotingWindow<T> = StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow>;
 
     #[pallet::storage]
     #[pallet::getter(fn withdrawal_expiration)]
@@ -244,7 +249,7 @@ pub mod pallet {
         pub fn add_project_whitelist(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>>,
+            whitelist_spots: BoundedWhitelistSpots<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin.clone())?;
             Self::ensure_initator(who, project_key)?;
@@ -548,11 +553,11 @@ impl<T: Config> Pallet<T> {
         );
 
         ensure!(
-            name.len() <= MAX_STRING_FIELD_LENGTH,
+            name.len() <= MAX_STRING_FIELD_LENGTH.into(),
             Error::<T>::ParamLimitExceed
         );
         ensure!(
-            logo.len() <= MAX_STRING_FIELD_LENGTH,
+            logo.len() <= MAX_STRING_FIELD_LENGTH.into(),
             Error::<T>::ParamLimitExceed
         );
         ensure!(
@@ -560,7 +565,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::ParamLimitExceed
         );
         ensure!(
-            website.len() <= MAX_STRING_FIELD_LENGTH,
+            website.len() <= MAX_STRING_FIELD_LENGTH.into(),
             Error::<T>::ParamLimitExceed
         );
 
@@ -573,7 +578,7 @@ impl<T: Config> Pallet<T> {
         // Fill in the proposals structure in advance
         for milestone in proposed_milestones {
             ensure!(
-                milestone.name.len() <= MAX_STRING_FIELD_LENGTH,
+                milestone.name.len() <= MAX_STRING_FIELD_LENGTH.into(),
                 Error::<T>::ParamLimitExceed
             );
             milestones.push(Milestone {

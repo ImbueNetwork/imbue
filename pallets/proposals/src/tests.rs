@@ -3,7 +3,7 @@ use crate::mock::*;
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::{
-    assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo,
+    assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo, bounded_vec
 };
 use sp_core::sr25519;
 use sp_std::str;
@@ -144,7 +144,7 @@ fn create_a_test_project_and_add_whitelist() {
             who: alice,
             max_cap: max_cap,
         };
-        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, bounded_vec![whitelist.clone()])
             .unwrap();
 
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -171,7 +171,7 @@ fn create_a_test_project_and_add_whitelist_from_non_initatorfail() {
         };
 
         assert_noop!(
-            Proposals::add_project_whitelist(Origin::signed(bob), 0, vec![whitelist.clone()]),
+            Proposals::add_project_whitelist(Origin::signed(bob), 0, bounded_vec![whitelist.clone()]),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -484,7 +484,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
             who: alice,
             max_cap: max_cap,
         };
-        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, bounded_vec![whitelist.clone()])
             .unwrap();
 
         //schedule_round extrinsic
@@ -542,7 +542,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
             who: alice,
             max_cap: max_cap,
         };
-        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, bounded_vec![whitelist.clone()])
             .unwrap();
 
         //schedule_round extrinsic
@@ -600,7 +600,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
             who: alice,
             max_cap: max_cap,
         };
-        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, bounded_vec![whitelist.clone()])
             .unwrap();
 
         //schedule_round extrinsic
