@@ -231,7 +231,7 @@ pub mod fee {
 pub mod asset_registry {
     use super::types::{AccountId, Balance};
 	use common_types::{CurrencyId, CustomMetadata};
-	use codec::{Decode, Encode, MaxEncodedLen};
+	use codec::{Decode, Encode};
 	use frame_support::{
 		dispatch::RawOrigin,
 		sp_std::marker::PhantomData,
@@ -242,7 +242,7 @@ pub mod asset_registry {
 	use sp_runtime::DispatchError;
 
 	#[derive(
-		Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+		Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo,
 	)]
 	pub struct CustomAssetProcessor;
 

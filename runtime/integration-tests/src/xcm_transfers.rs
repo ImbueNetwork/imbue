@@ -15,6 +15,11 @@ use xcm_emulator::TestExt;
 
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
 
+use common_runtime::{
+	parachains,
+	common_xcm::general_key,
+};
+
 use crate::kusama_test_net::{Development, Karura, KusamaNet, Sibling, TestNet};
 use orml_traits::MultiCurrency;
 use common_types::CurrencyId;
@@ -312,17 +317,11 @@ fn transfer_ksm_to_relay_chain() {
 fn currency_id_convert_imbu() {
 	use imbue_kusama_runtime::CurrencyIdConvert;
 	use sp_runtime::traits::Convert as C2;
-	use sp_runtime::codec::Encode;
 
 	let imbu_location: MultiLocation = MultiLocation::new(
 		1,
-		X2(Parachain(2121), GeneralKey((CurrencyId::Native.encode()).try_into().unwrap())),
-	);
-
-	assert_eq!(
-		CurrencyId::Native.encode(),
-		vec![0]
-	);
+		X2(Parachain(2121), general_key(parachains::kusama::imbue::IMBUE_KEY)
+	));
 
 	assert_eq!(
 		CurrencyIdConvert::convert(imbu_location.clone()),
@@ -331,22 +330,14 @@ fn currency_id_convert_imbu() {
 
 	let imbu_location_2: MultiLocation = MultiLocation::new(
 		0,
-		X1(GeneralKey((CurrencyId::Native.encode()).try_into().unwrap())),
+		X1(general_key(parachains::kusama::imbue::IMBUE_KEY)),
 	);
-
 
 	assert_eq!(
 		CurrencyIdConvert::convert(imbu_location_2.clone()),
 		Some(CurrencyId::Native),
 	);
 
-
-	Development::execute_with(|| {
-		assert_eq!(
-			CurrencyIdConvert::convert(CurrencyId::Native),
-			Some(imbu_location)
-		)
-	});
 }
 
 // The fee associated with transferring Native tokens
