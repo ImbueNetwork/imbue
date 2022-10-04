@@ -6,32 +6,28 @@ use common_types::CurrencyId;
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
 
-use frame_support::{pallet_prelude::*, transactional, PalletId};
+use frame_support::{pallet_prelude::*, transactional, PalletId, traits::ConstU32};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::convert::TryInto;
-use sp_std::prelude::*;
-use sp_std::vec;
+use sp_std::{
+    convert::TryInto,
+    prelude::*,
+    vec
+};
+use frame_system::pallet_prelude::*;
 #[cfg(test)]
 mod mock;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
 #[cfg(test)]
 mod tests;
 
 pub mod weights;
 pub use weights::*;
-
-use frame_system::pallet_prelude::*;
-
-const MAX_DESC_FIELD_LENGTH: usize = 5000;
-const MAX_STRING_FIELD_LENGTH: u8 = u8::MAX;
-
-type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, <T as crate::Config>::MaxWhitelistPerProject>;
-
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -292,7 +288,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             start: T::BlockNumber,
             end: T::BlockNumber,
-            project_keys: Vec<ProjectKey>,
+            project_keys: BoundedProjectKeys,
             round_type: RoundType
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
@@ -627,7 +623,7 @@ impl<T: Config> Pallet<T> {
     fn new_round(
         start: T::BlockNumber,
         end: T::BlockNumber,
-        project_keys: Vec<ProjectKey>,
+        project_keys: BoundedProjectKeys,
         round_type: RoundType
     ) -> DispatchResultWithPostInfo {
         let now = <frame_system::Pallet<T>>::block_number();
@@ -657,14 +653,14 @@ impl<T: Config> Pallet<T> {
         let round = RoundOf::<T>::new(
             start,
             end,
-            project_keys.clone(),
+            project_keys.clone().into(),
             round_type.clone(),
         );
 
         // Add proposal round to list
         <Rounds<T>>::insert(key, Some(round));
 
-        for project_key in project_keys.clone().into_iter() {
+        for project_key in project_keys.iter() {
             let project =
                 Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
@@ -691,8 +687,8 @@ impl<T: Config> Pallet<T> {
         }
 
         match round_type.clone() {
-            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys))}
-            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys))}
+            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))}
+            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))}
         }
         RoundCount::<T>::put(next_key);
 
@@ -1223,6 +1219,10 @@ impl<T: Config> Pallet<T> {
     }
 }
 
+const MAX_DESC_FIELD_LENGTH: usize = 5000;
+const MAX_STRING_FIELD_LENGTH: u8 = u8::MAX;
+
+type MaxProjectKeys =  ConstU32<1000>; 
 pub type RoundKey = u32;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
@@ -1233,6 +1233,9 @@ type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T
 
 type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
+
+type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, <T as crate::Config>::MaxWhitelistPerProject>;
+type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub enum RoundType {

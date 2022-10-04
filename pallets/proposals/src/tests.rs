@@ -211,7 +211,7 @@ fn create_a_test_project_and_schedule_round() {
             System::block_number(),
             System::block_number() + 1,
             //Project key starts with 0 for the first project submitted to the chain
-            vec![0],
+            bounded_vec![0],
             RoundType::ContributionRound
         )
         .unwrap();
@@ -230,7 +230,7 @@ fn schedule_round_invalid_project_key() {
                 System::block_number(),
                 System::block_number() + 1,
                 //Project key starts with 0 for the first project submitted to the chain
-                vec![1],
+                bounded_vec![1],
                 RoundType::ContributionRound
             ),
             DispatchErrorWithPostInfo {
@@ -256,7 +256,7 @@ fn schedule_round_invalid_end_block_no() {
                 System::block_number() + 6000,
                 System::block_number() + 3000,
                 //Project key starts with 0 for the first project submitted to the chain
-                vec![1],
+                bounded_vec![1],
                 RoundType::ContributionRound
             ),
             DispatchErrorWithPostInfo {
@@ -282,7 +282,7 @@ fn cancel_round_no_active_round() {
                 System::block_number() + 6000,
                 System::block_number() + 3000,
                 //Project key starts with 0 for the first project submitted to the chain
-                vec![1],
+                bounded_vec![1],
                 RoundType::ContributionRound
             ),
             DispatchErrorWithPostInfo {
@@ -313,7 +313,7 @@ fn cancel_round() {
     //create_project extrinsic
     ExtBuilder.build().execute_with(|| {
         create_project(alice);
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         //schedule_round extrinsic
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
@@ -330,7 +330,7 @@ fn cancel_round() {
 
         assert_eq!(
             exp_fundingroundcreated_event,
-            mock::Event::from(proposals::Event::FundingRoundCreated(0, project_keys))
+            mock::Event::from(proposals::Event::FundingRoundCreated(0, project_keys.to_vec()))
         );
 
         let round_index = 0;
@@ -362,7 +362,7 @@ fn test_canceling_started_round() {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -396,7 +396,7 @@ fn test_canceling_round_without_root_privilege() {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -426,7 +426,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
 
@@ -475,7 +475,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
         let max_cap = 1000000u64;
@@ -533,7 +533,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
         let max_cap = 0u64;
@@ -591,7 +591,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 60_000u64;
         let max_cap = 100_000u64;
@@ -642,7 +642,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key = 0;
         let contribution_amount = 1000000u64;
 
@@ -688,7 +688,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key = 0;
         let contribution_amount = 100000u64;
 
@@ -736,7 +736,7 @@ fn test_submit_milestone() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -789,7 +789,7 @@ fn test_submit_milestone_without_approval() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -835,7 +835,7 @@ fn test_voting_on_a_milestone() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -896,7 +896,7 @@ fn test_voting_on_a_canceled_round() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -961,7 +961,7 @@ fn test_finalize_a_milestone_without_voting() {
         create_project_multiple_milestones(alice, proposed_milestones);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1064,7 +1064,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         create_project_multiple_milestones(alice, proposed_milestones);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1228,7 +1228,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         create_project_multiple_milestones(alice, proposed_milestones);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1312,7 +1312,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1425,7 +1425,7 @@ fn submit_multiple_milestones() {
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
 
-    let project_keys: Vec<ProjectKey> = vec![0];
+    let project_keys: BoundedProjectKeys = bounded_vec![0];
 
     ExtBuilder.build().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
@@ -1499,7 +1499,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
 
@@ -1589,7 +1589,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         create_project_multiple_milestones(alice, proposed_milestones);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1715,7 +1715,7 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
             System::block_number(),
             System::block_number() + 1,
             // Empty keys is the test.
-            vec![],
+            bounded_vec![],
             RoundType::ContributionRound
         ), Error::<Test>::LengthMustExceedZero);
     });
