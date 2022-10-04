@@ -505,10 +505,10 @@ impl<T: Config> Pallet<T> {
 
     fn new_project(
         who: T::AccountId,
-        name: Vec<u8>,
-        logo: Vec<u8>,
-        description: Vec<u8>,
-        website: Vec<u8>,
+        name: BoundedStringField,
+        logo: BoundedStringField,
+        description: BoundedStringField,
+        website: BoundedStringField,
         proposed_milestones: Vec<ProposedMilestone>,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
@@ -548,23 +548,6 @@ impl<T: Config> Pallet<T> {
             Error::<T>::MilestonesTotalPercentageMustEqual100
         );
 
-        ensure!(
-            name.len() <= MAX_STRING_FIELD_LENGTH.into(),
-            Error::<T>::ParamLimitExceed
-        );
-        ensure!(
-            logo.len() <= MAX_STRING_FIELD_LENGTH.into(),
-            Error::<T>::ParamLimitExceed
-        );
-        ensure!(
-            description.len() <= MAX_DESC_FIELD_LENGTH,
-            Error::<T>::ParamLimitExceed
-        );
-        ensure!(
-            website.len() <= MAX_STRING_FIELD_LENGTH.into(),
-            Error::<T>::ParamLimitExceed
-        );
-
         let project_key = ProjectCount::<T>::get();
         let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
@@ -573,6 +556,8 @@ impl<T: Config> Pallet<T> {
 
         // Fill in the proposals structure in advance
         for milestone in proposed_milestones {
+            //TODO:
+            // is this needed? probably not
             ensure!(
                 milestone.name.len() <= MAX_STRING_FIELD_LENGTH.into(),
                 Error::<T>::ParamLimitExceed
@@ -1220,8 +1205,7 @@ impl<T: Config> Pallet<T> {
 }
 
 const MAX_DESC_FIELD_LENGTH: usize = 5000;
-const MAX_STRING_FIELD_LENGTH: u8 = u8::MAX;
-
+type MaxStringFieldLen = ConstU8<u8::MAX>;
 type MaxProjectKeys =  ConstU32<1000>; 
 type MaxMileStoneKeys =  ConstU32<1000>; 
 
@@ -1236,9 +1220,11 @@ type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T
 type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 
+// These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, <T as crate::Config>::MaxWhitelistPerProject>;
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMileStoneKeys>;
+type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub enum RoundType {
