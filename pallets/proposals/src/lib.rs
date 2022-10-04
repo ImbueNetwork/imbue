@@ -876,7 +876,7 @@ impl<T: Config> Pallet<T> {
             for mut milestone in project.milestones.into_iter() {
                 for key in milestone_keys.as_ref().expect("is_some has been called; qed").iter() {
                     if &milestone.milestone_key == key {
-                        let vote_lookup_key = (project_key, key.clone());
+                        let vote_lookup_key = (project_key, *key);
                         let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
 
                         let mut updated_vote = Vote {
@@ -894,7 +894,7 @@ impl<T: Config> Pallet<T> {
                             };
                         }
 
-                        Self::deposit_event(Event::MilestoneApproved(project.initiator.clone(), project_key, key, now));
+                        Self::deposit_event(Event::MilestoneApproved(project.initiator.clone(), project_key, *key, now));
                         <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                     }
                 }
