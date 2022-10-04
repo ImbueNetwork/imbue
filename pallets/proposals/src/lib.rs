@@ -338,12 +338,12 @@ pub mod pallet {
 
         /// Step 4 (ADMIN)
         /// Approve project
-        /// If the project is approve, the project initator can withdraw funds for approved milestones
+        /// If the project is approved, the project initator can withdraw funds for approved milestones
         #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            milestone_keys: Option<Vec<MilestoneKey>>,
+            milestone_keys: Option<BoundedMilestoneKeys>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             Self::do_approve(project_key, milestone_keys)
@@ -829,7 +829,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn do_approve(
         project_key: ProjectKey,
-        milestone_keys: Option<Vec<MilestoneKey>>,
+        milestone_keys: Option<BoundedMilestoneKeys>,
     ) -> DispatchResultWithPostInfo {
         let round_key = RoundCount::<T>::get();
         // Find processing round
@@ -1223,6 +1223,8 @@ const MAX_DESC_FIELD_LENGTH: usize = 5000;
 const MAX_STRING_FIELD_LENGTH: u8 = u8::MAX;
 
 type MaxProjectKeys =  ConstU32<1000>; 
+type MaxMileStoneKeys =  ConstU32<1000>; 
+
 pub type RoundKey = u32;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
@@ -1236,6 +1238,7 @@ type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 
 type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, <T as crate::Config>::MaxWhitelistPerProject>;
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
+type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMileStoneKeys>;
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub enum RoundType {
