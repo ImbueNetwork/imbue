@@ -753,8 +753,8 @@ fn test_submit_milestone() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
@@ -806,8 +806,8 @@ fn test_submit_milestone_without_approval() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
@@ -852,8 +852,8 @@ fn test_voting_on_a_milestone() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
@@ -978,9 +978,9 @@ fn test_finalize_a_milestone_without_voting() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
-        milestone_index.push(1);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
+        let _ = milestone_index.try_push(1);
 
         run_to_block(3);
 
@@ -1087,9 +1087,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
-        milestone_index.push(1);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
+        let _ = milestone_index.try_push(1);
 
         run_to_block(3);
 
@@ -1251,9 +1251,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
-        milestone_index.push(1);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
+        let _ = milestone_index.try_push(1);
 
         run_to_block(3);
 
@@ -1329,8 +1329,8 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
             required_funds
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
@@ -1450,9 +1450,9 @@ fn submit_multiple_milestones() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(milestone_index_1);
-        milestone_index.push(milestone_index_2);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(milestone_index_1);
+        let _ = milestone_index.try_push(milestone_index_2);
 
         run_to_block(3);
 
@@ -1612,8 +1612,8 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
