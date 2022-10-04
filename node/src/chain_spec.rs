@@ -235,6 +235,7 @@ fn development_genesis(
                 .to_vec(),
         },
         balances: imbue_kusama_runtime::BalancesConfig { balances: balances },
+        orml_asset_registry: Default::default(),
         sudo: imbue_kusama_runtime::SudoConfig {
             key: Some(root_key),
         },
