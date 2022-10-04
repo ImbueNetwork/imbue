@@ -12,7 +12,6 @@ use sp_std::str;
 use sp_std::vec::Vec;
 use sp_runtime::traits::UniqueSaturatedFrom;
 
-
 const CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
 
@@ -311,12 +310,6 @@ benchmarks! {
 
 }
 
-impl_benchmark_test_suite!(
-    Pallet,
-    crate::mock::TestExternalitiesBuilder::default().build(|| {}),
-    crate::mock::MockRuntime,
-);
-
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event)
 where
     <T as frame_system::Config>::AccountId: AsRef<[u8]>,
@@ -365,4 +358,4 @@ fn create_funded_user<T: Config>(
 }
 
 
-impl_benchmark_test_suite!(Proposals, crate::mock::new_test_ext(), crate::mock::Test);
+impl_benchmark_test_suite!(Proposals, crate::mock::build_test_externality(), crate::mock::Test);
