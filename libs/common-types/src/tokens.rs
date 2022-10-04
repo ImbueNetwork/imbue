@@ -1,10 +1,8 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-use common_traits::TokenMetadata;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_std::vec::Vec;
 
 #[derive(
     Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
@@ -15,33 +13,44 @@ pub enum CurrencyId {
     // Karura KSM
     KSM,
     // Karura Dollar
-    KUSD,
+    AUSD,
     KAR,
+    MGX,
+    ForeignAsset(ForeignAssetId),
+
 }
 
-impl TokenMetadata for CurrencyId {
-    fn name(&self) -> Vec<u8> {
-        match self {
-            CurrencyId::Native => b"Native currency".to_vec(),
-            CurrencyId::KUSD => b"Karura Dollar".to_vec(),
-            CurrencyId::KAR => b"Karura".to_vec(),
-            CurrencyId::KSM => b"Kusama".to_vec(),
-        }
-    }
+pub mod currency_decimals {
+    pub const NATIVE: u32 = 12;
+    pub const AUSD: u32 = 12;
+    pub const KSM: u32 = 12;
+}
 
-    fn symbol(&self) -> Vec<u8> {
-        match self {
-            CurrencyId::Native => b"IMBU".to_vec(),
-            CurrencyId::KUSD => b"KUSD".to_vec(),
-            CurrencyId::KAR => b"KAR".to_vec(),
-            CurrencyId::KSM => b"KSM".to_vec(),
-        }
-    }
+impl Default for CurrencyId {
+	fn default() -> Self {
+		CurrencyId::Native
+	}
+}
 
-    fn decimals(&self) -> u8 {
-        match self {
-            CurrencyId::Native => 12, 
-            CurrencyId::KUSD | CurrencyId::KAR | CurrencyId::KSM => 12,
-        }
-    }
+
+pub type ForeignAssetId = u32;
+
+#[derive(
+    Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct CustomMetadata {
+	/// XCM-related metadata.
+	/// XCM-related metadata, optional.
+	pub xcm: XcmMetadata,
+}
+
+
+#[derive(
+    Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct XcmMetadata {
+	/// The fee charged for every second that an XCM message takes to execute.
+	pub fee_per_second: Option<u128>,
 }

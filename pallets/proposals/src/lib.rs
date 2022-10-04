@@ -140,7 +140,7 @@ pub mod pallet {
         ),
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
         VotingRoundCreated(RoundKey, Vec<ProjectKey>),
-        MilestoneSubmitted(ProjectKey, MilestoneKey),
+        MilestoneSubmitted(T::AccountId, ProjectKey, MilestoneKey),
         ContributeSucceeded(
             T::AccountId,
             ProjectKey,
@@ -153,7 +153,7 @@ pub mod pallet {
         ProjectApproved(RoundKey, ProjectKey),
         RoundCancelled(RoundKey),
         VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
-        MilestoneApproved(ProjectKey, MilestoneKey, T::BlockNumber),
+        MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, T::BlockNumber),
         WhitelistAdded(ProjectKey, T::BlockNumber),
         WhitelistRemoved(ProjectKey, T::BlockNumber),
         ProjectLockedFundsRefunded(ProjectKey, BalanceOf<T>),
@@ -894,7 +894,7 @@ impl<T: Config> Pallet<T> {
                             };
                         }
 
-                        Self::deposit_event(Event::MilestoneApproved(project_key, key.clone(), now));
+                        Self::deposit_event(Event::MilestoneApproved(project.initiator.clone(), project_key, key, now));
                         <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                     }
                 }
@@ -951,7 +951,7 @@ impl<T: Config> Pallet<T> {
         };
         let vote_lookup_key = (project_key, milestone_key);
         <MilestoneVotes<T>>::insert(vote_lookup_key, vote);
-        Self::deposit_event(Event::MilestoneSubmitted(project_key, milestone_key));
+        Self::deposit_event(Event::MilestoneSubmitted(who, project_key, milestone_key));
         // Add proposal round to list
         <Rounds<T>>::insert(key, Some(round));
         RoundCount::<T>::put(next_key);
@@ -1075,7 +1075,7 @@ impl<T: Config> Pallet<T> {
                         is_approved: true,
                     };
                     let now = <frame_system::Pallet<T>>::block_number();
-                    Self::deposit_event(Event::MilestoneApproved(project_key, milestone_key, now));
+                    Self::deposit_event(Event::MilestoneApproved(project.initiator.clone(), project_key, milestone_key, now));
 
                     <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                 }
