@@ -1731,7 +1731,7 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
             Origin::root(),
             System::block_number(),
             System::block_number() + 1,
-            //Project key starts with 0 for the first project submitted to the chain
+            // Empty keys is the test.
             vec![],
             RoundType::ContributionRound
         ), Error::<Test>::LengthMustExceedZero);
