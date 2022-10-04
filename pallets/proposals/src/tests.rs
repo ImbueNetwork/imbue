@@ -1735,7 +1735,6 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
             vec![],
             RoundType::ContributionRound
         ), Error::<Test>::LengthMustExceedZero);
-        
     });
 }
 
