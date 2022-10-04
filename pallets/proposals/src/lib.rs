@@ -198,8 +198,8 @@ pub mod pallet {
         VoteAlreadyExists,
         MilestoneVotingNotComplete,
         WithdrawalExpirationExceed,
-        ///Whitelist spot does not exist in storage.
-        WhitelistSpotDoesNotExist,
+        /// The given key must exist in storage.
+        KeyNotFound,
         /// The input vector must exceed length zero.
         LengthMustExceedZero,
     }
@@ -253,7 +253,7 @@ pub mod pallet {
 
             let whitelist_exists = WhitelistSpots::<T>::contains_key(project_key);
             if whitelist_exists {
-                let existing_spots = Self::whitelist_spots(project_key).ok_or(Error::<T>::WhitelistSpotDoesNotExist)?;
+                let existing_spots = Self::whitelist_spots(project_key).ok_or(Error::<T>::KeyNotFound)?;
                 project_whitelist_spots.extend(existing_spots);
             }
 
@@ -711,8 +711,8 @@ impl<T: Config> Pallet<T> {
         // Find processing round
         let mut processing_round: Option<RoundOf<T>> = None;
         for i in (0..round_key).rev() {
-            
-            let round = <Rounds<T>>::get(i).unwrap();
+
+            let round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
             if !round.is_canceled && round.start < now && round.end > now {
                 // Find proposal by key
                 for current_project_key in round.project_keys.iter() {
@@ -745,7 +745,7 @@ impl<T: Config> Pallet<T> {
         // Find whitelist if exists
         if WhitelistSpots::<T>::contains_key(project_key) {
             let mut contributer_is_whitelisted = false;
-            let whitelist_spots = Self::whitelist_spots(project_key).unwrap();
+            let whitelist_spots = Self::whitelist_spots(project_key).ok_or(Error::<T>::KeyNotFound)?;
             for whitelist_spot in whitelist_spots.clone().into_iter() {
                 if whitelist_spot.who == who {
                     contributer_is_whitelisted = true;
@@ -834,8 +834,11 @@ impl<T: Config> Pallet<T> {
         // Find processing round
         let mut latest_round: Option<RoundOf<T>> = None;
         let mut project_exists_in_round = false;
+
         for i in (0..round_key).rev() {
-            let current_round = <Rounds<T>>::get(i).unwrap();
+            // Get the current round and check that both the key exists and the value under the key is some.
+            let current_round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
+
             if !current_round.is_canceled && current_round.project_keys.contains(&project_key) {
                 latest_round = Some(current_round);
                 project_exists_in_round = true;
@@ -870,10 +873,10 @@ impl<T: Config> Pallet<T> {
         project.funding_threshold_met = true;
         if milestone_keys.is_some() {
             milestones = Vec::new();
-            for mut milestone in project.milestones.clone().into_iter() {
-                for key in milestone_keys.as_ref().unwrap().clone().into_iter() {
-                    if milestone.milestone_key == key {
-                        let vote_lookup_key = (project_key, key);
+            for mut milestone in project.milestones.into_iter() {
+                for key in milestone_keys.as_ref().expect("is_some has been called; qed").iter() {
+                    if &milestone.milestone_key == key {
+                        let vote_lookup_key = (project_key, key.clone());
                         let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
 
                         let mut updated_vote = Vote {
@@ -883,7 +886,7 @@ impl<T: Config> Pallet<T> {
                         };
                         milestone.is_approved = true;
                         if votes_exist {
-                            let vote = <MilestoneVotes<T>>::get(vote_lookup_key).unwrap();
+                            let vote = <MilestoneVotes<T>>::get(vote_lookup_key).expect("milestone votes contains key has been called; qed");
                             updated_vote = Vote {
                                 yay: vote.yay,
                                 nay: vote.nay,
@@ -891,7 +894,7 @@ impl<T: Config> Pallet<T> {
                             };
                         }
 
-                        Self::deposit_event(Event::MilestoneApproved(project_key, key, now));
+                        Self::deposit_event(Event::MilestoneApproved(project_key, key.clone(), now));
                         <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                     }
                 }
@@ -975,7 +978,7 @@ impl<T: Config> Pallet<T> {
         let mut latest_round: Option<RoundOf<T>> = None;
         let mut latest_round_key = 0;
         for i in (0..round_key).rev() {
-            let round = <Rounds<T>>::get(i).unwrap();
+            let round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
             if !round.is_canceled
                 && round.start < now
                 && round.end > now
@@ -1009,7 +1012,7 @@ impl<T: Config> Pallet<T> {
 
         <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
 
-        let user_milestone_vote = <MilestoneVotes<T>>::get((project_key, milestone_key)).unwrap();
+        let user_milestone_vote = Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::KeyNotFound)?;
 
         if approve_milestone {
             let updated_vote = Vote {
@@ -1058,7 +1061,7 @@ impl<T: Config> Pallet<T> {
         for mut milestone in project.milestones.into_iter() {
             if milestone.milestone_key == milestone_key {
                 let vote_lookup_key = (project_key, milestone_key);
-                let vote = <MilestoneVotes<T>>::try_get(vote_lookup_key).unwrap();
+                let vote = Self::milestone_votes(vote_lookup_key).ok_or(Error::<T>::KeyNotFound)?;
                 let total_votes = vote.yay + vote.nay;
                 ensure!(
                     total_votes == total_contribution_amount,
