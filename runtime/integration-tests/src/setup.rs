@@ -1,7 +1,7 @@
 use common_runtime::Balance;
 pub use imbue_kusama_runtime::{AccountId, CurrencyId, Origin, Runtime, System};
 use frame_support::traits::GenesisBuild;
-
+use common_types::currency_decimals;
 /// Accounts
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
@@ -40,7 +40,7 @@ impl ExtBuilder {
         let mut t = frame_system::GenesisConfig::default()
             .build_storage::<Runtime>()
             .unwrap();
-        let native_currency_id = imbue_kusama_runtime::NativeToken::get();
+        let native_currency_id = imbue_kusama_runtime::CurrencyId::Native;
         pallet_balances::GenesisConfig::<Runtime> {
             balances: self
                 .balances
@@ -86,23 +86,23 @@ impl ExtBuilder {
 }
 
 pub fn native_amount(amount: Balance) -> Balance {
-    amount * dollar(CurrencyId::Native)
+    amount * dollar(currency_decimals::NATIVE)
 }
 
 pub fn ausd_amount(amount: Balance) -> Balance {
-    amount * dollar(CurrencyId::AUSD)
+    amount * dollar(currency_decimals::AUSD)
 }
 
 pub fn kar_amount(amount: Balance) -> Balance {
-    amount * dollar(CurrencyId::KAR)
+    amount * dollar(currency_decimals::KAR)
 }
 
 pub fn ksm_amount(amount: Balance) -> Balance {
-    amount * dollar(CurrencyId::KSM)
+    amount * dollar(currency_decimals::KSM)
 }
 
-pub fn dollar(currency_id: CurrencyId) -> Balance {
-    10u128.saturating_pow(currency_id.decimals().into())
+pub fn dollar(decimals: u32) -> Balance {
+	10u128.saturating_pow(decimals.into())
 }
 
 pub fn sibling_account() -> AccountId {
