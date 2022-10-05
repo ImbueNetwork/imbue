@@ -1,5 +1,5 @@
 use sp_runtime::traits::{Convert, Zero};
-use sp_std::{convert::TryInto, marker::PhantomData, prelude::*};
+use sp_std::{marker::PhantomData, prelude::*};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -24,12 +24,11 @@ use orml_xcm_support::{
 pub use common_runtime::{
     asset_registry::{AuthorityOrigin, CustomAssetProcessor},
     common_xcm::{general_key, FixedConversionRateProvider},
-    fee::WeightToFee,
     parachains,
-    xcm_fees::{default_per_second, ksm_per_second, native_per_second},
+    xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
     EnsureRootOr,
 };
-pub use common_types::{CurrencyId, CustomMetadata};
+pub use common_types::{CurrencyId, currency_decimals, CustomMetadata};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -45,15 +44,12 @@ use xcm_builder::{
 };
 use xcm_executor::XcmExecutor;
 
-use common_runtime::currency::IMBU;
 use pallet_collective::EnsureProportionAtLeast;
 use polkadot_parachain::primitives::Sibling;
 
 parameter_types! {
     // One XCM operation is 100_000_000 weight - almost certainly a conservative estimate.
     pub UnitWeightCost: Weight = 200_000_000;
-    // One ROC buys 1 second of weight.
-    pub const WeightPrice: (MultiLocation, u128) = (MultiLocation::parent(), IMBU);
     pub const MaxInstructions: u32 = 100;
 }
 
@@ -164,15 +160,15 @@ parameter_types! {
     pub CanonicalImbuePerSecond: (AssetId, u128) = (
         MultiLocation::new(
             0,
-            X1(GeneralKey(parachains::kusama::imbue::IMBUE_KEY.to_vec().try_into().unwrap())),
+            X1(general_key(parachains::kusama::imbue::IMBU_KEY)),
         ).into(),
         native_per_second(),
     );
 
-    pub ImbuePerSecond: (AssetId, u128) = (
+    pub ImbuPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(parachains::kusama::imbue::ID), GeneralKey(parachains::kusama::imbue::IMBUE_KEY.to_vec().try_into().unwrap()))
+            X2(Parachain(parachains::kusama::imbue::ID), general_key(parachains::kusama::imbue::IMBU_KEY))
         ).into(),
         native_per_second(),
     );
@@ -180,31 +176,31 @@ parameter_types! {
     pub MgxPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(parachains::kusama::mangata::ID), GeneralKey(parachains::kusama::mangata::MGX_KEY.to_vec().try_into().unwrap()))
+            X2(Parachain(parachains::kusama::mangata::ID), general_key(parachains::kusama::mangata::MGX_KEY))
         ).into(),
-        ksm_per_second() * 100
+		ksm_per_second() * 50
     );
 
     pub AUsdPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::AUSD_KEY.to_vec().try_into().unwrap()))
+            X2(Parachain(parachains::kusama::karura::ID), general_key(parachains::kusama::karura::AUSD_KEY))
         ).into(),
-        ksm_per_second() * 50
+		ksm_per_second() * 50
     );
 
     pub KarPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::KAR_KEY.to_vec().try_into().unwrap()))
+            X2(Parachain(parachains::kusama::karura::ID), general_key(parachains::kusama::karura::KAR_KEY))
         ).into(),
-        ksm_per_second() * 100
+		ksm_per_second() * 100
     );
 }
 
 pub type Trader = (
     FixedRateOfFungible<CanonicalImbuePerSecond, ToTreasury>,
-    FixedRateOfFungible<ImbuePerSecond, ToTreasury>,
+    FixedRateOfFungible<ImbuPerSecond, ToTreasury>,
     FixedRateOfFungible<KsmPerSecond, ToTreasury>,
     AssetRegistryTrader<
         FixedRateAssetRegistryTrader<FixedConversionRateProvider<OrmlAssetRegistry>>,
@@ -266,7 +262,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
                 parents: 0,
                 interior: X1(GeneralKey(key)),
             } => match &key[..] {
-                parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
+                parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
                 _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
             },
             MultiLocation {
@@ -276,16 +272,22 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
                 parachains::kusama::karura::ID => match &key[..] {
                     parachains::kusama::karura::AUSD_KEY => Some(CurrencyId::AUSD),
                     parachains::kusama::karura::KAR_KEY => Some(CurrencyId::KAR),
+                    parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
+                    _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                },
+                parachains::kusama::mangata::ID => match &key[..] {
+                    parachains::kusama::mangata::MGX_KEY => Some(CurrencyId::MGX),
+                    parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
                     _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
                 },
 
                 parachains::kusama::imbue::ID => match &key[..] {
-                    parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
+                    parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
                     _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
                 },
 
                 id if id == u32::from(ParachainInfo::get()) => match &key[..] {
-                    parachains::kusama::imbue::IMBUE_KEY => Some(CurrencyId::Native),
+                    parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
                     _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
                 },
                 _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
@@ -330,15 +332,21 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
                     general_key(parachains::kusama::karura::KAR_KEY),
                 ),
             )),
+            CurrencyId::MGX => Some(MultiLocation::new(
+                1,
+                X2(
+                    Parachain(parachains::kusama::mangata::ID),
+                    general_key(parachains::kusama::mangata::MGX_KEY),
+                ),
+            )),
             CurrencyId::Native => Some(MultiLocation::new(
                 1,
                 X2(
                     Parachain(ParachainInfo::get().into()),
-                    general_key(parachains::kusama::imbue::IMBUE_KEY),
+                    general_key(parachains::kusama::imbue::IMBU_KEY),
                 ),
             )),
             CurrencyId::ForeignAsset(_) => OrmlAssetRegistry::multilocation(&id).ok()?,
-            _ => None,
         }
     }
 }
@@ -380,12 +388,9 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-    pub ParachainMinFee: |location: MultiLocation| -> Option<u128> {
-        #[allow(clippy::match_ref_pats)] // false positive
-        match (location.parents, location.first_interior()) {
-            _ => Some(u128::MAX),
-        }
-    };
+	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+		None
+	};
 }
 
 pub struct AccountIdToMultiLocation;

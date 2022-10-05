@@ -1,4 +1,4 @@
-use common_runtime::Balance;
+use common_runtime::{Balance};
 pub use imbue_kusama_runtime::{AccountId, CurrencyId, Origin, Runtime, System};
 use frame_support::traits::GenesisBuild;
 use common_types::currency_decimals;
@@ -86,7 +86,7 @@ impl ExtBuilder {
 }
 
 pub fn native_amount(amount: Balance) -> Balance {
-    amount * dollar(currency_decimals::NATIVE)
+    amount * dollar(currency_decimals::Native)
 }
 
 pub fn ausd_amount(amount: Balance) -> Balance {
