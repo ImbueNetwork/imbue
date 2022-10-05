@@ -6,7 +6,12 @@ use common_types::CurrencyId;
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
 
-use frame_support::{pallet_prelude::*, transactional, PalletId, traits::ConstU32};
+use frame_support::{
+    pallet_prelude::*,
+    transactional,
+    PalletId, 
+    traits::ConstU32
+    };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -213,20 +218,20 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Step 1 (INITATOR)
+        /// Step 1 (INITATOR)r
         /// Create project
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn create_project(
             origin: OriginFor<T>,
-            name: Vec<u8>,
-            logo: Vec<u8>,
-            description: Vec<u8>,
-            website: Vec<u8>,
-            proposed_milestones: Vec<ProposedMilestone>,
+            name: BoundedStringField,
+            logo: BoundedStringField,
+            description: BoundedDescriptionField,
+            website: BoundedDescriptionField,
+            proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
+            let who = ensure_signed(origin)?;
             Self::new_project(
                 who,
                 name,
@@ -239,6 +244,7 @@ pub mod pallet {
             )
         }
 
+
         /// Step 1.5 (INITATOR)
         /// Add whitelist to a project
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
@@ -247,7 +253,7 @@ pub mod pallet {
             project_key: ProjectKey,
             whitelist_spots: BoundedWhitelistSpots<T>,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
+            let who = ensure_signed(origin)?;
             Self::ensure_initator(who, project_key)?;
             let mut project_whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>> =
                 Vec::new();
@@ -272,7 +278,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             project_key: ProjectKey,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
+            let who = ensure_signed(origin)?;
             Self::ensure_initator(who, project_key)?;
             <WhitelistSpots<T>>::remove(project_key);
             let now = <frame_system::Pallet<T>>::block_number();
@@ -507,9 +513,9 @@ impl<T: Config> Pallet<T> {
         who: T::AccountId,
         name: BoundedStringField,
         logo: BoundedStringField,
-        description: BoundedStringField,
-        website: BoundedStringField,
-        proposed_milestones: Vec<ProposedMilestone>,
+        description: BoundedDescriptionField,
+        website: BoundedDescriptionField,
+        proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
     ) -> DispatchResultWithPostInfo {
@@ -557,15 +563,10 @@ impl<T: Config> Pallet<T> {
         // Fill in the proposals structure in advance
         for milestone in proposed_milestones {
             //TODO:
-            // is this needed? probably not
-            ensure!(
-                milestone.name.len() <= MAX_STRING_FIELD_LENGTH.into(),
-                Error::<T>::ParamLimitExceed
-            );
             milestones.push(Milestone {
                 project_key,
                 milestone_key,
-                name: milestone.name,
+                name: milestone.name.to_vec(),
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             });
@@ -574,10 +575,10 @@ impl<T: Config> Pallet<T> {
 
         // Create a proposal
         let project = Project {
-            name: name.clone(),
-            logo,
-            description,
-            website,
+            name: name.clone().to_vec(),
+            logo: logo.to_vec(),
+            description: description.to_vec(),
+            website: website.to_vec(),
             milestones,
             contributions: Vec::new(),
             required_funds,
@@ -596,7 +597,7 @@ impl<T: Config> Pallet<T> {
 
         Self::deposit_event(Event::ProjectCreated(
             who,
-            name,
+            name.to_vec(),
             project_key,
             required_funds,
             currency_id,
@@ -1204,27 +1205,29 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-const MAX_DESC_FIELD_LENGTH: usize = 5000;
-type MaxStringFieldLen = ConstU8<u8::MAX>;
+// The Constants associated with the bounded parameters
+type MaxStringFieldLen = ConstU32<255>;
 type MaxProjectKeys =  ConstU32<1000>; 
 type MaxMileStoneKeys =  ConstU32<1000>; 
+type MaxProposedMilestones = ConstU32<255>;
+type MaxDescriptionField = ConstU32<5000>;
 
 pub type RoundKey = u32;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
-
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-// type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-
 type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
+// type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, <T as crate::Config>::MaxWhitelistPerProject>;
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMileStoneKeys>;
 type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
+type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
+type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub enum RoundType {
@@ -1279,7 +1282,7 @@ pub struct Contribution<AccountId, Balance> {
 /// The contribution users made to a proposal project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct ProposedMilestone {
-    name: Vec<u8>,
+    name: BoundedStringField,
     percentage_to_unlock: u32,
 }
 
