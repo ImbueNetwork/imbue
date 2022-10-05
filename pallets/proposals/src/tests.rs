@@ -16,16 +16,16 @@ fn create_a_test_project() {
         Proposals::create_project(
             Origin::signed(alice),
             //project name
-            str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec(),
+            b"Imbue's Awesome Initiative".to_vec().try_into().expect("input should be of decent length"),
             //project logo
-            str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
             //project description
-            str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec(),
+            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"),
             //website
-            str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec(),
+            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
             //milestone
-            vec![ProposedMilestone {
-                name: Vec::new(),
+            bounded_vec![ProposedMilestone {
+                name: bounded_vec![],
                 percentage_to_unlock: 100,
             }],
             //funds required
@@ -43,16 +43,16 @@ fn create_a_test_project_with_less_than_100_percent() {
         Proposals::create_project(
             Origin::signed(alice),
             //project name
-            str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec(),
+            b"Imbue's Awesome Initiative".to_vec().try_into().expect("input should be of decent length"),
             //project logo
-            str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
             //project description
-            str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec(), 
+            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"), 
             //website
-            str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec(),
+            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
             //milestone
-            vec![ProposedMilestone {
-                name: Vec::new(), percentage_to_unlock: 99
+            bounded_vec![ProposedMilestone {
+                name: bounded_vec![], percentage_to_unlock: 99
             }],
             //funds required
             1000000u64,
@@ -75,16 +75,16 @@ fn create_a_test_project_with_no_name() {
         Proposals::create_project(
             Origin::signed(alice),
             //project name
-            str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+            b"".to_vec().try_into().expect("input should be of decent length"),
             //project logo
-            str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
             //project description
-            str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec(), 
+            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"), 
             //website
-            str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec(),
+            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
             //milestone
-            vec![ProposedMilestone {
-                name: Vec::new(), percentage_to_unlock: 99
+            bounded_vec![ProposedMilestone {
+                name: bounded_vec![], percentage_to_unlock: 99
             }],
             //funds required
             1000000u64,
@@ -107,16 +107,16 @@ fn create_a_test_project_with_no_data() {
             Proposals::create_project(
                 Origin::signed(alice),
                 //project name
-                str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+                b"".to_vec().try_into().expect("input should be of decent length"),
                 //project logo
-                str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+                b"".to_vec().try_into().expect("input should be of decent length"),
                 //project description
-                str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+                b"".to_vec().try_into().expect("input should be of decent length"),
                 //website
-                str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+                b"".to_vec().try_into().expect("input should be of decent length"),
                 //milestone
-                vec![ProposedMilestone {
-                    name: Vec::new(),
+                bounded_vec![ProposedMilestone {
+                    name: bounded_vec![],
                     percentage_to_unlock: 99
                 }],
                 //funds required
@@ -940,16 +940,16 @@ fn test_finalize_a_milestone_without_voting() {
 
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1041,16 +1041,16 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1205,16 +1205,16 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1415,11 +1415,11 @@ fn submit_multiple_milestones() {
 
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1566,16 +1566,16 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1726,27 +1726,31 @@ fn create_project(alice: AccountId) {
     assert_ok!(Proposals::create_project(
         Origin::signed(alice),
         //project name
-        str::from_utf8(b"Farmer's Project Sudan")
-            .unwrap()
-            .as_bytes()
-            .to_vec(),
+        b"Farmer's Project Sudan"
+        .to_vec()
+        .try_into()
+        .expect("test bytes should be of decent length;"),
         //project logo
-        str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+        b"Imbue Logo"
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
         //project description
-        str::from_utf8(
-            b"This project is aimed at providing decentralised funding for a farming project."
-        )
-        .unwrap()
-        .as_bytes()
-        .to_vec(),
-        //website
-        str::from_utf8(b"https://farmers.network")
-            .unwrap()
-            .as_bytes()
-            .to_vec(),
+        
+        b"This project is aimed at providing decentralised funding for a farming project."
+        .to_vec()
+        .try_into()
+        .expect("test bytes should be of decent length;"),
+        
+            //website
+        b"https://farmers.network"
+        .to_vec()
+        .try_into()
+        .expect("test bytes should be of decent length;"),
+
         //milestone
-        vec![ProposedMilestone {
-            name: Vec::new(),
+        bounded_vec![ProposedMilestone {
+            name: bounded_vec![],
             percentage_to_unlock: 100
         }],
         //funds required
@@ -1762,26 +1766,30 @@ fn create_project_multiple_milestones(
     assert_ok!(Proposals::create_project(
         Origin::signed(alice),
         //project name
-        str::from_utf8(b"Farmer's Project Sudan")
-            .unwrap()
-            .as_bytes()
-            .to_vec(),
+        b"Farmer's Project Sudan"
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
         //project logo
-        str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+        b"Imbue Logo"
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
         //project description
-        str::from_utf8(
-            b"This project is aimed at providing decentralised funding for a farming project."
-        )
-        .unwrap()
-        .as_bytes()
-        .to_vec(),
+        
+        b"This project is aimed at providing decentralised funding for a farming project."
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
         //website
-        str::from_utf8(b"https://farmers.network")
-            .unwrap()
-            .as_bytes()
-            .to_vec(),
+        
+        b"https://farmers.network"
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
+        
         //milestone
-        proposed_milestones,
+        proposed_milestones.try_into().expect("proposed milestones are too long"),
         //funds required
         1000000u64,
         CurrencyId::Native
