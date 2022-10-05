@@ -203,7 +203,6 @@ impl pallet_timestamp::Config for Test {
 parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub const MaxWhitelistPerProject: u32 = 100_000u32;
 }
 impl proposals::Config for Test {
     type Event = Event;
@@ -213,7 +212,6 @@ impl proposals::Config for Test {
     type MaxProposalsPerRound = ConstU32<4>;
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
-    type MaxWhitelistPerProject = MaxWhitelistPerProject;
 }
 
 parameter_types! {

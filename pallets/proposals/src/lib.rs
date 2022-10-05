@@ -53,8 +53,6 @@ pub mod pallet {
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
 
         type WeightInfo: WeightInfo;
-
-        type MaxWhitelistPerProject: Get<u32>;
     }
 
 
@@ -562,7 +560,6 @@ impl<T: Config> Pallet<T> {
 
         // Fill in the proposals structure in advance
         for milestone in proposed_milestones {
-            //TODO:
             milestones.push(Milestone {
                 project_key,
                 milestone_key,
@@ -1211,6 +1208,7 @@ type MaxProjectKeys =  ConstU32<1000>;
 type MaxMileStoneKeys =  ConstU32<1000>; 
 type MaxProposedMilestones = ConstU32<255>;
 type MaxDescriptionField = ConstU32<5000>;
+type MaxWhitelistPerProject = ConstU32<10000>;
 
 pub type RoundKey = u32;
 pub type ProjectKey = u32;
@@ -1222,7 +1220,7 @@ type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 // type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
-type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, <T as crate::Config>::MaxWhitelistPerProject>;
+type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, MaxWhitelistPerProject>;
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMileStoneKeys>;
 type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
