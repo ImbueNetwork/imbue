@@ -59,8 +59,7 @@ use crate::sp_api_hidden_includes_IMPL_RUNTIME_APIS::sp_api::Encode;
 pub use common_runtime::{
     asset_registry::{AuthorityOrigin, CustomAssetProcessor},
     common_xcm::{general_key, FixedConversionRateProvider},
-    fee::WeightToFee,
-    xcm_fees::{default_per_second, ksm_per_second, native_per_second},
+    xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
 };
 pub use common_types::{CurrencyId, CustomMetadata};
 pub use pallet_balances::Call as BalancesCall;
@@ -95,7 +94,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 1,
-    spec_version: 1020,
+    spec_version: 1029,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
