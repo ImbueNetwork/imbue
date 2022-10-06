@@ -3,7 +3,7 @@ use crate::mock::*;
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::{
-    assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo,
+    assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo, bounded_vec
 };
 use sp_core::sr25519;
 use sp_std::str;
@@ -16,16 +16,16 @@ fn create_a_test_project() {
         Proposals::create_project(
             Origin::signed(alice),
             //project name
-            str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec(),
+            b"Imbue's Awesome Initiative".to_vec().try_into().expect("input should be of decent length"),
             //project logo
-            str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
             //project description
-            str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec(),
+            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"),
             //website
-            str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec(),
+            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
             //milestone
-            vec![ProposedMilestone {
-                name: Vec::new(),
+            bounded_vec![ProposedMilestone {
+                name: bounded_vec![],
                 percentage_to_unlock: 100,
             }],
             //funds required
@@ -43,16 +43,16 @@ fn create_a_test_project_with_less_than_100_percent() {
         Proposals::create_project(
             Origin::signed(alice),
             //project name
-            str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec(),
+            b"Imbue's Awesome Initiative".to_vec().try_into().expect("input should be of decent length"),
             //project logo
-            str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
             //project description
-            str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec(), 
+            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"), 
             //website
-            str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec(),
+            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
             //milestone
-            vec![ProposedMilestone {
-                name: Vec::new(), percentage_to_unlock: 99
+            bounded_vec![ProposedMilestone {
+                name: bounded_vec![], percentage_to_unlock: 99
             }],
             //funds required
             1000000u64,
@@ -75,16 +75,16 @@ fn create_a_test_project_with_no_name() {
         Proposals::create_project(
             Origin::signed(alice),
             //project name
-            str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+            b"".to_vec().try_into().expect("input should be of decent length"),
             //project logo
-            str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
             //project description
-            str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec(), 
+            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"), 
             //website
-            str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec(),
+            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
             //milestone
-            vec![ProposedMilestone {
-                name: Vec::new(), percentage_to_unlock: 99
+            bounded_vec![ProposedMilestone {
+                name: bounded_vec![], percentage_to_unlock: 99
             }],
             //funds required
             1000000u64,
@@ -107,16 +107,16 @@ fn create_a_test_project_with_no_data() {
             Proposals::create_project(
                 Origin::signed(alice),
                 //project name
-                str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+                b"".to_vec().try_into().expect("input should be of decent length"),
                 //project logo
-                str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+                b"".to_vec().try_into().expect("input should be of decent length"),
                 //project description
-                str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+                b"".to_vec().try_into().expect("input should be of decent length"),
                 //website
-                str::from_utf8(b"").unwrap().as_bytes().to_vec(),
+                b"".to_vec().try_into().expect("input should be of decent length"),
                 //milestone
-                vec![ProposedMilestone {
-                    name: Vec::new(),
+                bounded_vec![ProposedMilestone {
+                    name: bounded_vec![],
                     percentage_to_unlock: 99
                 }],
                 //funds required
@@ -144,7 +144,7 @@ fn create_a_test_project_and_add_whitelist() {
             who: alice,
             max_cap: max_cap,
         };
-        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, bounded_vec![whitelist.clone()])
             .unwrap();
 
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -171,7 +171,7 @@ fn create_a_test_project_and_add_whitelist_from_non_initatorfail() {
         };
 
         assert_noop!(
-            Proposals::add_project_whitelist(Origin::signed(bob), 0, vec![whitelist.clone()]),
+            Proposals::add_project_whitelist(Origin::signed(bob), 0, bounded_vec![whitelist.clone()]),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -211,7 +211,7 @@ fn create_a_test_project_and_schedule_round() {
             System::block_number(),
             System::block_number() + 1,
             //Project key starts with 0 for the first project submitted to the chain
-            vec![0],
+            bounded_vec![0],
             RoundType::ContributionRound
         )
         .unwrap();
@@ -230,7 +230,7 @@ fn schedule_round_invalid_project_key() {
                 System::block_number(),
                 System::block_number() + 1,
                 //Project key starts with 0 for the first project submitted to the chain
-                vec![1],
+                bounded_vec![1],
                 RoundType::ContributionRound
             ),
             DispatchErrorWithPostInfo {
@@ -256,7 +256,7 @@ fn schedule_round_invalid_end_block_no() {
                 System::block_number() + 6000,
                 System::block_number() + 3000,
                 //Project key starts with 0 for the first project submitted to the chain
-                vec![1],
+                bounded_vec![1],
                 RoundType::ContributionRound
             ),
             DispatchErrorWithPostInfo {
@@ -282,7 +282,7 @@ fn cancel_round_no_active_round() {
                 System::block_number() + 6000,
                 System::block_number() + 3000,
                 //Project key starts with 0 for the first project submitted to the chain
-                vec![1],
+                bounded_vec![1],
                 RoundType::ContributionRound
             ),
             DispatchErrorWithPostInfo {
@@ -313,7 +313,7 @@ fn cancel_round() {
     //create_project extrinsic
     ExtBuilder.build().execute_with(|| {
         create_project(alice);
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         //schedule_round extrinsic
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
@@ -330,7 +330,7 @@ fn cancel_round() {
 
         assert_eq!(
             exp_fundingroundcreated_event,
-            mock::Event::from(proposals::Event::FundingRoundCreated(0, project_keys))
+            mock::Event::from(proposals::Event::FundingRoundCreated(0, project_keys.to_vec()))
         );
 
         let round_index = 0;
@@ -362,7 +362,7 @@ fn test_canceling_started_round() {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -396,7 +396,7 @@ fn test_canceling_round_without_root_privilege() {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -426,7 +426,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
 
@@ -475,7 +475,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
         let max_cap = 1000000u64;
@@ -484,7 +484,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
             who: alice,
             max_cap: max_cap,
         };
-        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, bounded_vec![whitelist.clone()])
             .unwrap();
 
         //schedule_round extrinsic
@@ -533,7 +533,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
         let max_cap = 0u64;
@@ -542,7 +542,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
             who: alice,
             max_cap: max_cap,
         };
-        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, bounded_vec![whitelist.clone()])
             .unwrap();
 
         //schedule_round extrinsic
@@ -591,7 +591,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 60_000u64;
         let max_cap = 100_000u64;
@@ -600,7 +600,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
             who: alice,
             max_cap: max_cap,
         };
-        Proposals::add_project_whitelist(Origin::signed(alice), 0, vec![whitelist.clone()])
+        Proposals::add_project_whitelist(Origin::signed(alice), 0, bounded_vec![whitelist.clone()])
             .unwrap();
 
         //schedule_round extrinsic
@@ -642,7 +642,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key = 0;
         let contribution_amount = 1000000u64;
 
@@ -688,7 +688,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key = 0;
         let contribution_amount = 100000u64;
 
@@ -736,7 +736,7 @@ fn test_submit_milestone() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -753,8 +753,8 @@ fn test_submit_milestone() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
@@ -789,7 +789,7 @@ fn test_submit_milestone_without_approval() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -806,8 +806,8 @@ fn test_submit_milestone_without_approval() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
@@ -835,7 +835,7 @@ fn test_voting_on_a_milestone() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -852,8 +852,8 @@ fn test_voting_on_a_milestone() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
@@ -896,7 +896,7 @@ fn test_voting_on_a_canceled_round() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -940,16 +940,16 @@ fn test_finalize_a_milestone_without_voting() {
 
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -961,7 +961,7 @@ fn test_finalize_a_milestone_without_voting() {
         create_project_multiple_milestones(alice, proposed_milestones);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -978,9 +978,9 @@ fn test_finalize_a_milestone_without_voting() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
-        milestone_index.push(1);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
+        let _ = milestone_index.try_push(1);
 
         run_to_block(3);
 
@@ -1041,16 +1041,16 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1064,7 +1064,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         create_project_multiple_milestones(alice, proposed_milestones);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1087,9 +1087,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
-        milestone_index.push(1);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
+        let _ = milestone_index.try_push(1);
 
         run_to_block(3);
 
@@ -1205,16 +1205,16 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1228,7 +1228,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         create_project_multiple_milestones(alice, proposed_milestones);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1251,9 +1251,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
-        milestone_index.push(1);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
+        let _ = milestone_index.try_push(1);
 
         run_to_block(3);
 
@@ -1312,7 +1312,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         create_project(alice);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1329,8 +1329,8 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
             required_funds
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
@@ -1415,17 +1415,17 @@ fn submit_multiple_milestones() {
 
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
 
-    let project_keys: Vec<ProjectKey> = vec![0];
+    let project_keys: BoundedProjectKeys = bounded_vec![0];
 
     ExtBuilder.build().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
@@ -1450,9 +1450,9 @@ fn submit_multiple_milestones() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(milestone_index_1);
-        milestone_index.push(milestone_index_2);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(milestone_index_1);
+        let _ = milestone_index.try_push(milestone_index_2);
 
         run_to_block(3);
 
@@ -1499,7 +1499,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
         //create_project extrinsic
         create_project(alice);
 
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
         let contribution_amount = 2000u64;
 
@@ -1566,16 +1566,16 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 1").unwrap().as_bytes().to_vec(),
+        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 2").unwrap().as_bytes().to_vec(),
+        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: str::from_utf8(b"milestone 3").unwrap().as_bytes().to_vec(),
+        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1589,7 +1589,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         create_project_multiple_milestones(alice, proposed_milestones);
 
         let project_index = 0;
-        let project_keys: Vec<ProjectKey> = vec![0];
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         assert_ok!(<proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
@@ -1612,8 +1612,8 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             value
         ));
 
-        let mut milestone_index: Vec<MilestoneKey> = Vec::new();
-        milestone_index.push(0);
+        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
@@ -1715,7 +1715,7 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
             System::block_number(),
             System::block_number() + 1,
             // Empty keys is the test.
-            vec![],
+            bounded_vec![],
             RoundType::ContributionRound
         ), Error::<Test>::LengthMustExceedZero);
     });
@@ -1726,27 +1726,31 @@ fn create_project(alice: AccountId) {
     assert_ok!(Proposals::create_project(
         Origin::signed(alice),
         //project name
-        str::from_utf8(b"Farmer's Project Sudan")
-            .unwrap()
-            .as_bytes()
-            .to_vec(),
+        b"Farmer's Project Sudan"
+        .to_vec()
+        .try_into()
+        .expect("test bytes should be of decent length;"),
         //project logo
-        str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+        b"Imbue Logo"
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
         //project description
-        str::from_utf8(
-            b"This project is aimed at providing decentralised funding for a farming project."
-        )
-        .unwrap()
-        .as_bytes()
-        .to_vec(),
-        //website
-        str::from_utf8(b"https://farmers.network")
-            .unwrap()
-            .as_bytes()
-            .to_vec(),
+        
+        b"This project is aimed at providing decentralised funding for a farming project."
+        .to_vec()
+        .try_into()
+        .expect("test bytes should be of decent length;"),
+        
+            //website
+        b"https://farmers.network"
+        .to_vec()
+        .try_into()
+        .expect("test bytes should be of decent length;"),
+
         //milestone
-        vec![ProposedMilestone {
-            name: Vec::new(),
+        bounded_vec![ProposedMilestone {
+            name: bounded_vec![],
             percentage_to_unlock: 100
         }],
         //funds required
@@ -1762,26 +1766,30 @@ fn create_project_multiple_milestones(
     assert_ok!(Proposals::create_project(
         Origin::signed(alice),
         //project name
-        str::from_utf8(b"Farmer's Project Sudan")
-            .unwrap()
-            .as_bytes()
-            .to_vec(),
+        b"Farmer's Project Sudan"
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
         //project logo
-        str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec(),
+        b"Imbue Logo"
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
         //project description
-        str::from_utf8(
-            b"This project is aimed at providing decentralised funding for a farming project."
-        )
-        .unwrap()
-        .as_bytes()
-        .to_vec(),
+        
+        b"This project is aimed at providing decentralised funding for a farming project."
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
         //website
-        str::from_utf8(b"https://farmers.network")
-            .unwrap()
-            .as_bytes()
-            .to_vec(),
+        
+        b"https://farmers.network"
+        .to_vec()
+        .try_into()
+        .expect("input should be of decent length"),
+        
         //milestone
-        proposed_milestones,
+        proposed_milestones.try_into().expect("proposed milestones are too long"),
         //funds required
         1000000u64,
         CurrencyId::Native

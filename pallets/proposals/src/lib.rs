@@ -6,29 +6,33 @@ use common_types::CurrencyId;
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
 
-use frame_support::{pallet_prelude::*, transactional, PalletId};
+use frame_support::{
+    pallet_prelude::*,
+    transactional,
+    PalletId, 
+    traits::ConstU32
+    };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::convert::TryInto;
-use sp_std::prelude::*;
-use sp_std::vec;
+use sp_std::{
+    convert::TryInto,
+    prelude::*,
+    vec
+};
+use frame_system::pallet_prelude::*;
 #[cfg(test)]
 mod mock;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
 #[cfg(test)]
 mod tests;
 
 pub mod weights;
 pub use weights::*;
-
-use frame_system::pallet_prelude::*;
-
-const MAX_DESC_FIELD_LENGTH: usize = 5000;
-const MAX_STRING_FIELD_LENGTH: usize = 256;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -53,7 +57,7 @@ pub mod pallet {
 
 
     #[pallet::type_value]
-    pub fn InitialMilestoneVotingWindow<T: Config>() -> u32
+    pub fn InitialMilestoneVotingWindow() -> u32
     {
         100800u32
     }
@@ -116,7 +120,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn milestone_voting_window)]
-    pub type MilestoneVotingWindow<T> = StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow<T>>;
+    pub type MilestoneVotingWindow<T> = StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow>;
 
     #[pallet::storage]
     #[pallet::getter(fn withdrawal_expiration)]
@@ -212,20 +216,20 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Step 1 (INITATOR)
+        /// Step 1 (INITATOR)r
         /// Create project
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn create_project(
             origin: OriginFor<T>,
-            name: Vec<u8>,
-            logo: Vec<u8>,
-            description: Vec<u8>,
-            website: Vec<u8>,
-            proposed_milestones: Vec<ProposedMilestone>,
+            name: BoundedStringField,
+            logo: BoundedStringField,
+            description: BoundedDescriptionField,
+            website: BoundedDescriptionField,
+            proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
+            let who = ensure_signed(origin)?;
             Self::new_project(
                 who,
                 name,
@@ -238,15 +242,16 @@ pub mod pallet {
             )
         }
 
+
         /// Step 1.5 (INITATOR)
         /// Add whitelist to a project
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn add_project_whitelist(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>>,
+            whitelist_spots: BoundedWhitelistSpots<T>,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
+            let who = ensure_signed(origin)?;
             Self::ensure_initator(who, project_key)?;
             let mut project_whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>> =
                 Vec::new();
@@ -271,7 +276,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             project_key: ProjectKey,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
+            let who = ensure_signed(origin)?;
             Self::ensure_initator(who, project_key)?;
             <WhitelistSpots<T>>::remove(project_key);
             let now = <frame_system::Pallet<T>>::block_number();
@@ -287,7 +292,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             start: T::BlockNumber,
             end: T::BlockNumber,
-            project_keys: Vec<ProjectKey>,
+            project_keys: BoundedProjectKeys,
             round_type: RoundType
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
@@ -337,12 +342,12 @@ pub mod pallet {
 
         /// Step 4 (ADMIN)
         /// Approve project
-        /// If the project is approve, the project initator can withdraw funds for approved milestones
+        /// If the project is approved, the project initator can withdraw funds for approved milestones
         #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            milestone_keys: Option<Vec<MilestoneKey>>,
+            milestone_keys: Option<BoundedMilestoneKeys>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             Self::do_approve(project_key, milestone_keys)
@@ -504,11 +509,11 @@ impl<T: Config> Pallet<T> {
 
     fn new_project(
         who: T::AccountId,
-        name: Vec<u8>,
-        logo: Vec<u8>,
-        description: Vec<u8>,
-        website: Vec<u8>,
-        proposed_milestones: Vec<ProposedMilestone>,
+        name: BoundedStringField,
+        logo: BoundedStringField,
+        description: BoundedDescriptionField,
+        website: BoundedDescriptionField,
+        proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
     ) -> DispatchResultWithPostInfo {
@@ -547,23 +552,6 @@ impl<T: Config> Pallet<T> {
             Error::<T>::MilestonesTotalPercentageMustEqual100
         );
 
-        ensure!(
-            name.len() <= MAX_STRING_FIELD_LENGTH,
-            Error::<T>::ParamLimitExceed
-        );
-        ensure!(
-            logo.len() <= MAX_STRING_FIELD_LENGTH,
-            Error::<T>::ParamLimitExceed
-        );
-        ensure!(
-            description.len() <= MAX_DESC_FIELD_LENGTH,
-            Error::<T>::ParamLimitExceed
-        );
-        ensure!(
-            website.len() <= MAX_STRING_FIELD_LENGTH,
-            Error::<T>::ParamLimitExceed
-        );
-
         let project_key = ProjectCount::<T>::get();
         let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
@@ -572,14 +560,10 @@ impl<T: Config> Pallet<T> {
 
         // Fill in the proposals structure in advance
         for milestone in proposed_milestones {
-            ensure!(
-                milestone.name.len() <= MAX_STRING_FIELD_LENGTH,
-                Error::<T>::ParamLimitExceed
-            );
             milestones.push(Milestone {
                 project_key,
                 milestone_key,
-                name: milestone.name,
+                name: milestone.name.to_vec(),
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             });
@@ -588,10 +572,10 @@ impl<T: Config> Pallet<T> {
 
         // Create a proposal
         let project = Project {
-            name: name.clone(),
-            logo,
-            description,
-            website,
+            name: name.clone().to_vec(),
+            logo: logo.to_vec(),
+            description: description.to_vec(),
+            website: website.to_vec(),
             milestones,
             contributions: Vec::new(),
             required_funds,
@@ -610,7 +594,7 @@ impl<T: Config> Pallet<T> {
 
         Self::deposit_event(Event::ProjectCreated(
             who,
-            name,
+            name.to_vec(),
             project_key,
             required_funds,
             currency_id,
@@ -622,7 +606,7 @@ impl<T: Config> Pallet<T> {
     fn new_round(
         start: T::BlockNumber,
         end: T::BlockNumber,
-        project_keys: Vec<ProjectKey>,
+        project_keys: BoundedProjectKeys,
         round_type: RoundType
     ) -> DispatchResultWithPostInfo {
         let now = <frame_system::Pallet<T>>::block_number();
@@ -652,14 +636,14 @@ impl<T: Config> Pallet<T> {
         let round = RoundOf::<T>::new(
             start,
             end,
-            project_keys.clone(),
+            project_keys.clone().into(),
             round_type.clone(),
         );
 
         // Add proposal round to list
         <Rounds<T>>::insert(key, Some(round));
 
-        for project_key in project_keys.clone().into_iter() {
+        for project_key in project_keys.iter() {
             let project =
                 Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
@@ -686,8 +670,8 @@ impl<T: Config> Pallet<T> {
         }
 
         match round_type.clone() {
-            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys))}
-            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys))}
+            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))}
+            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))}
         }
         RoundCount::<T>::put(next_key);
 
@@ -828,7 +812,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn do_approve(
         project_key: ProjectKey,
-        milestone_keys: Option<Vec<MilestoneKey>>,
+        milestone_keys: Option<BoundedMilestoneKeys>,
     ) -> DispatchResultWithPostInfo {
         let round_key = RoundCount::<T>::get();
         // Find processing round
@@ -1218,16 +1202,30 @@ impl<T: Config> Pallet<T> {
     }
 }
 
+// The Constants associated with the bounded parameters
+type MaxStringFieldLen = ConstU32<255>;
+type MaxProjectKeys =  ConstU32<1000>; 
+type MaxMileStoneKeys =  ConstU32<1000>; 
+type MaxProposedMilestones = ConstU32<255>;
+type MaxDescriptionField = ConstU32<5000>;
+type MaxWhitelistPerProject = ConstU32<10000>;
+
 pub type RoundKey = u32;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
-
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-// type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-
 type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
+// type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+
+// These are the bounded types which are suitable for handling user input due to their restriction of vector length.
+type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, MaxWhitelistPerProject>;
+type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
+type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMileStoneKeys>;
+type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
+type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
+type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub enum RoundType {
@@ -1282,7 +1280,7 @@ pub struct Contribution<AccountId, Balance> {
 /// The contribution users made to a proposal project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct ProposedMilestone {
-    name: Vec<u8>,
+    name: BoundedStringField,
     percentage_to_unlock: u32,
 }
 
