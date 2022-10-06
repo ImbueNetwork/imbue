@@ -53,6 +53,9 @@ pub mod pallet {
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
 
         type WeightInfo: WeightInfo;
+
+        /// The amount of time given ,up to point of decision, when a vote of no confidence is held.
+        type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
     }
 
 
@@ -231,8 +234,8 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Step 1 (INITATOR)r
-        /// Create project
+        /// Step 1 (INITATOR)
+        /// Create project.
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn create_project(
             origin: OriginFor<T>,
@@ -410,6 +413,8 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             Self::new_withdrawal(who, project_key)
         }
+
+        // Root Extrinsics:
 
         /// Set max proposal count per round
         #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
@@ -660,7 +665,7 @@ impl<T: Config> Pallet<T> {
 
         for project_key in project_keys.iter() {
             let project =
-                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+                Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
             // Update project withdrawn funds
             let updated_project = Project {
@@ -684,9 +689,11 @@ impl<T: Config> Pallet<T> {
             <Projects<T>>::insert(project_key, updated_project);
         }
 
-        match round_type.clone() {
-            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))}
-            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))}
+        match round_type {
+            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))},
+            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))},
+            RoundType::VoteOfNoConfidence =>{}
+
         }
         RoundCount::<T>::put(next_key);
 
@@ -925,6 +932,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    // Take an approved project and submit an associated milestone.
     pub fn new_milestone_submission(
         who: T::AccountId,
         project_key: ProjectKey,
@@ -933,11 +941,13 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
+        // Ensure that only the initiator has submitted and the project has been approved. 
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitator);
         ensure!(
             project.funding_threshold_met,
             Error::<T>::OnlyApprovedProjectsCanSubmitMilestones
         );
+
         let end = now + MilestoneVotingWindow::<T>::get().into();
         let key = RoundCount::<T>::get();
         let round = RoundOf::<T>::new(now, end, vec![project_key], RoundType::VotingRound);
@@ -1215,6 +1225,14 @@ impl<T: Config> Pallet<T> {
 
         Ok(().into())
     }
+
+    pub fn refund_contributors() {
+
+    }
+
+    pub fn raise_no_confidence_round() {
+
+    }
 }
 
 // The Constants associated with the bounded parameters
@@ -1246,6 +1264,7 @@ type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
 pub enum RoundType {
     ContributionRound,
     VotingRound,
+    VoteOfNoConfidence,
 }
 
 /// Round struct
