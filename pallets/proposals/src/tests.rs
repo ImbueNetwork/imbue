@@ -1721,10 +1721,30 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
     });
 }
 
+#[test]
+fn test_schedule_round_works_multiproject() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+
+    ExtBuilder.build().execute_with(|| {
+        create_project(alice);
+
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 1,
+            // Empty keys is the test.
+            bounded_vec![0, 1],
+            RoundType::ContributionRound));
+    });
+}
+
+
+
 //common helper methods
-fn create_project(alice: AccountId) {
+fn create_project(account: AccountId) {
     assert_ok!(Proposals::create_project(
-        Origin::signed(alice),
+        Origin::signed(account),
         //project name
         b"Farmer's Project Sudan"
         .to_vec()
