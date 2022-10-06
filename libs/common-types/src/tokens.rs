@@ -17,7 +17,6 @@ pub enum CurrencyId {
     KAR,
     MGX,
     ForeignAsset(ForeignAssetId),
-
 }
 
 pub mod currency_decimals {

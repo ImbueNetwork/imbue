@@ -320,7 +320,7 @@ fn currency_id_convert_imbu() {
 
 	let imbu_location: MultiLocation = MultiLocation::new(
 		1,
-		X2(Parachain(2121), general_key(parachains::kusama::imbue::IMBUE_KEY)
+		X2(Parachain(parachains::kusama::imbue::ID), general_key(parachains::kusama::imbue::IMBU_KEY)
 	));
 
 	assert_eq!(
@@ -330,7 +330,7 @@ fn currency_id_convert_imbu() {
 
 	let imbu_location_2: MultiLocation = MultiLocation::new(
 		0,
-		X1(general_key(parachains::kusama::imbue::IMBUE_KEY)),
+		X1(general_key(parachains::kusama::imbue::IMBU_KEY)),
 	);
 
 	assert_eq!(
@@ -347,7 +347,6 @@ fn native_fee() -> Balance {
 	fee.div_euclid(10_000) * 8
 }
 
-
 // The fee associated with transferring AUSD tokens
 fn ausd_fee() -> Balance {
 	let (_asset, fee) = AUsdPerSecond::get();
@@ -361,7 +360,6 @@ fn kar_fee() -> Balance {
 	// NOTE: it is possible that in different machines this value may differ. We shall see.
 	fee.div_euclid(10_000) * 8
 }
-
 
 // The fee associated with transferring KSM tokens
 fn ksm_fee() -> Balance {
