@@ -166,20 +166,35 @@ pub mod pallet {
     // Errors inform users that something went wrong.
     #[pallet::error]
     pub enum Error<T> {
+        /// Contribution has exceeded the maximum capacity of the project.
         ContributionMustBeLowerThanMaxCap,
+        /// This block number must be later than the current. 
         EndBlockNumberInvalid,
+        /// The starting block number must be before the ending block number.
         EndTooEarly,
+        /// Required identity not found.
         IdentityNeeded,
+        /// Input parameter is invalid
         InvalidParam,
+        /// There are no avaliable funds to withdraw.
         NoAvailableFundsToWithdraw,
+        /// Your account does not have the correct authority.
         InvalidAccount,
+        /// Project does not exist.
         ProjectDoesNotExist,
+        /// Project name is a mandatory field. 
         ProjectNameIsMandatory,
+        /// Project name is a mandatory field. 
         LogoIsMandatory,
+        /// Project name is a mandatory field. 
         ProjectDescriptionIsMandatory,
+        /// Project name is a mandatory field. 
         WebsiteURLIsMandatory,
+        /// Milestones do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
+        /// Currently no active round to participate in.
         NoActiveRound,
+        /// TODO: NOT IN USE
         NoActiveProposal,
         /// There was an overflow.
         Overflow,
@@ -1310,6 +1325,7 @@ pub struct Project<AccountId, Balance, BlockNumber> {
     description: Vec<u8>,
     website: Vec<u8>,
     milestones: Vec<Milestone>,
+    /// A collection of the accounts which have contributed and their contributions.
     contributions: Vec<Contribution<AccountId, Balance>>,
     currency_id: common_types::CurrencyId,
     required_funds: Balance,
