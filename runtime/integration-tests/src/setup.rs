@@ -86,7 +86,7 @@ impl ExtBuilder {
 }
 
 pub fn native_amount(amount: Balance) -> Balance {
-    amount * dollar(currency_decimals::Native)
+    amount * dollar(currency_decimals::NATIVE)
 }
 
 pub fn ausd_amount(amount: Balance) -> Balance {

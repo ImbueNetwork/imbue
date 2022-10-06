@@ -6,7 +6,6 @@ use frame_support::{
     assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo, bounded_vec
 };
 use sp_core::sr25519;
-use sp_std::str;
 use sp_std::vec::Vec;
 
 #[test]
