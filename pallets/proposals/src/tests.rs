@@ -6,7 +6,6 @@ use frame_support::{
     assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo, bounded_vec
 };
 use sp_core::sr25519;
-use sp_std::str;
 use sp_std::vec::Vec;
 
 #[test]
@@ -1722,20 +1721,89 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
 }
 
 #[test]
-fn test_schedule_round_works_multiproject() {
+fn test_schedule_round_works_multi_project() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
 
     ExtBuilder.build().execute_with(|| {
         create_project(alice);
+        create_project(bob);
 
+        // Assert that we can schedule a round for both bob's and alice's project. 
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
             System::block_number() + 1,
-            // Empty keys is the test.
             bounded_vec![0, 1],
             RoundType::ContributionRound));
+        
+        // Assert that the round has been created with the alleged project keys.
+    });
+}
+
+
+#[test]
+fn test_we_can_cancel_a_specific_project_round() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+
+    ExtBuilder.build().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+        create_project(bob);
+
+        assert_eq!(RoundCount::<Test>::get(), 0u32);
+
+        // Assert that we can schedule a round for both bob's and alice's project. 
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 1,
+            System::block_number() + 100,
+            bounded_vec![0, 1],
+            RoundType::ContributionRound));
+        
+        assert!(RoundCount::<Test>::get() == 1u32);
+        // Alice's is now cancelled
+        assert_ok!(
+            Proposals::cancel_round(
+                Origin::root(),
+                RoundCount::<Test>::get() - 1
+            )
+        );
+
+        // Assert that the round has been created with the alleged project keys.
+    });
+}
+
+#[test]
+fn test_round_count_increments_correctly() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+
+    ExtBuilder.build().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+        create_project(bob);
+
+        // Assert state is zero and we can schedule a round for alice
+        assert_eq!(RoundCount::<Test>::get(), 0u32);
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 1,
+            System::block_number() + 100,
+            bounded_vec![0],
+            RoundType::ContributionRound));
+        
+        assert!(RoundCount::<Test>::get() == 1u32);
+
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 1,
+            System::block_number() + 100,
+            bounded_vec![1],
+            RoundType::ContributionRound));
+        
+            assert!(RoundCount::<Test>::get() == 2u32);
     });
 }
 
