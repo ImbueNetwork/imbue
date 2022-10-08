@@ -164,6 +164,7 @@ pub mod pallet {
         WhitelistAdded(ProjectKey, T::BlockNumber),
         WhitelistRemoved(ProjectKey, T::BlockNumber),
         ProjectLockedFundsRefunded(ProjectKey, BalanceOf<T>),
+        NoConfidenceRoundCreated(RoundKey, Vec<ProjectKey>),
     }
 
     // Errors inform users that something went wrong.
@@ -320,6 +321,8 @@ pub mod pallet {
         /// Step 2.5 (ADMIN)
         /// Cancel a round
         /// This round must have not started yet
+        /// TODO: BUG currently since we can have multpile projects in a round if root deletes a key with someone elses project in then both are deleted.
+        // WRITE TEST
         #[pallet::weight(<T as Config>::WeightInfo::cancel_round())]
         pub fn cancel_round(
             origin: OriginFor<T>,
@@ -660,6 +663,7 @@ impl<T: Config> Pallet<T> {
             round_type.clone(),
         );
 
+        //TODO: BUG:: key is used instead of next key. 
         // Add proposal round to list
         <Rounds<T>>::insert(key, Some(round));
 
@@ -667,7 +671,8 @@ impl<T: Config> Pallet<T> {
             let project =
                 Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-            // Update project withdrawn funds
+            //TODO: get explanation on this update. this will not work with vote of no confidence.
+                // Update project withdrawn funds
             let updated_project = Project {
                 name: project.name,
                 logo: project.logo,
@@ -692,9 +697,9 @@ impl<T: Config> Pallet<T> {
         match round_type {
             RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))},
             RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))},
-            RoundType::VoteOfNoConfidence =>{}
+            RoundType::VoteOfNoConfidence =>{Self::deposit_event(Event::NoConfidenceRoundCreated(key, project_keys.to_vec()))},
+            }
 
-        }
         RoundCount::<T>::put(next_key);
 
         Ok(().into())
@@ -987,6 +992,8 @@ impl<T: Config> Pallet<T> {
         let mut latest_round: Option<RoundOf<T>> = None;
         let mut latest_round_key = 0;
         for i in (0..round_key).rev() {
+
+            // TODO: expensive loop.
             let round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
             if !round.is_canceled
                 && round.start < now
@@ -1226,12 +1233,11 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn refund_contributors() {
-
-    }
-
-    pub fn raise_no_confidence_round() {
-
+    pub fn raise_no_confidence_vote(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+        //ensure that who is a contributor or root
+        //open a storage item for tracking the votes and who voted, use Vote struct.
+        //
+        Ok(().into())
     }
 }
 
@@ -1267,7 +1273,8 @@ pub enum RoundType {
     VoteOfNoConfidence,
 }
 
-/// Round struct
+/// The round struct contains all the data associated with a given round.
+/// A round may include multiple projects and are primarily defined by their start and end block.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Round<BlockNumber> {
     start: BlockNumber,
@@ -1293,7 +1300,8 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
         }
     }
 }
-// Proposal in round
+
+// TODO: what is a proposal.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Proposal<AccountId, Balance, BlockNumber> {
     project_key: ProjectKey,
@@ -1328,7 +1336,7 @@ pub struct Milestone {
     is_approved: bool,
 }
 
-/// The contribution users made to a proposal project.
+/// The vote struct is used to 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Vote<Balance> {
     yay: Balance,
@@ -1336,7 +1344,7 @@ pub struct Vote<Balance> {
     is_approved: bool,
 }
 
-/// Project struct
+/// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber> {
     name: Vec<u8>,
