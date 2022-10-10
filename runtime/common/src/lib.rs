@@ -73,11 +73,8 @@ pub mod currency {
     pub const IMBU: Balance = 1_000_000_000_000;
     pub const DOLLARS: Balance = IMBU;
     pub const CENTS: Balance = DOLLARS / 100;
-	pub const RELAY_CENTS: Balance = DOLLARS / 10_000;
     pub const MILLI_IMBU: Balance = CENTS / 10;
     pub const MICRO_IMBU: Balance = MILLI_IMBU / 1000;
-	pub const MILLI_CENTS: Balance = CENTS / 1000;
-
 
     pub const EXISTENTIAL_DEPOSIT: Balance = MICRO_IMBU;
 
@@ -95,8 +92,6 @@ pub mod currency {
 
 /// Common constants for all runtimes
 pub mod constants {
-    use super::currency::CENTS as CENTI_CURRENCY;
-    use super::types::Balance;
     use super::types::BlockNumber;
     use frame_support::weights::{constants::WEIGHT_PER_SECOND, Weight};
     use sp_runtime::Perbill;
@@ -128,9 +123,6 @@ pub mod constants {
     /// We allow for 0.5 seconds of compute with a 6 second average block time.
     pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 
-    pub fn base_tx_in_imbu() -> Balance {
-        CENTI_CURRENCY / 10
-    }
 }
 
 pub mod parachains {
@@ -143,11 +135,11 @@ pub mod parachains {
         }
         pub mod mangata {
             pub const ID: u32 = 2110;
-            pub const MGX_KEY: &[u8] = &[0];
+            pub const MGX_KEY: &[u8] = &[0, 0, 0, 0];
         }
         pub mod imbue {
             pub const ID: u32 = 2121;
-            pub const IMBUE_KEY: &[u8] = &[0, 150];
+            pub const IMBU_KEY: &[u8] = &[0, 150];
         }
     }
 
@@ -155,56 +147,24 @@ pub mod parachains {
 
 pub mod xcm_fees {
     use super::types::Balance;
+    use super::currency::CENTS;
     pub use common_types::{CurrencyId,currency_decimals};
-    use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND};
+    use smallvec::smallvec;
+    use sp_runtime::Perbill;
 
-    // The fee cost per second for transferring the native token in cents.
-    pub fn native_per_second() -> Balance {
-        default_per_second(currency_decimals::NATIVE)
-    }
-
-    pub fn ksm_per_second() -> Balance {
-        default_per_second(currency_decimals::KSM) / 50
-    }
-
-    pub fn default_per_second(decimals: u32) -> Balance {
-		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
-		let default_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
-		default_per_second * base_fee(decimals)
-	}
-
-    fn base_fee(decimals: u32) -> Balance {
-		dollar(decimals)
-			// cents
-			.saturating_div(100)
-			// a tenth of a cent
-			.saturating_div(10)
-	}
-
-	pub fn dollar(decimals: u32) -> Balance {
-		10u128.saturating_pow(decimals)
-	}
-}
-/// Fee-related
-pub mod fee {
-    use super::constants::base_tx_in_imbu;
-    use super::types::{Balance};
     use frame_support::{
         weights::{
             constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
             WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
         },
     };
-    use smallvec::smallvec;
-    use sp_runtime::Perbill;
-
 
     pub struct WeightToFee;
     impl WeightToFeePolynomial for WeightToFee {
         type Balance = Balance;
         fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
             // in Karura, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
-            let p = super::currency::RELAY_CENTS;
+            let p = base_tx_in_imbu();
             let q = Balance::from(ExtrinsicBaseWeight::get());
             smallvec![WeightToFeeCoefficient {
                 degree: 1,
@@ -215,23 +175,36 @@ pub mod fee {
         }
     }
 
+    // The fee cost per second for transferring the native token in cents.
+    pub fn native_per_second() -> Balance {
+        default_per_second()
+    }
+
+    pub fn ksm_per_second() -> Balance {
+        default_per_second() / 50
+    }
+
     pub fn kar_per_second() -> u128 {
-        let base_weight = Balance::from(ExtrinsicBaseWeight::get());
-        let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
-        base_tx_per_second * base_tx_in_imbu()
+        default_per_second()
     }
 
-
-    pub fn ksm_per_second() -> u128 {
-        kar_per_second() / 50
+    pub fn base_tx_in_imbu() -> Balance {
+        CENTS / 10
     }
+
+    pub fn default_per_second() -> Balance {
+		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
+		let default_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+		default_per_second * base_tx_in_imbu()
+	}
+    
 }
 
 /// AssetRegistry's AssetProcessor
 pub mod asset_registry {
     use super::types::{AccountId, Balance};
 	use common_types::{CurrencyId, CustomMetadata};
-	use codec::{Decode, Encode, MaxEncodedLen};
+	use codec::{Decode, Encode};
 	use frame_support::{
 		dispatch::RawOrigin,
 		sp_std::marker::PhantomData,
@@ -242,7 +215,7 @@ pub mod asset_registry {
 	use sp_runtime::DispatchError;
 
 	#[derive(
-		Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+		Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo,
 	)]
 	pub struct CustomAssetProcessor;
 
@@ -325,7 +298,7 @@ pub mod common_xcm {
 				.additional
 				.xcm
 				.fee_per_second
-				.or_else(|| Some(default_per_second(metadata.decimals)))
+				.or_else(|| Some(default_per_second()))
 		}
 	}
 
