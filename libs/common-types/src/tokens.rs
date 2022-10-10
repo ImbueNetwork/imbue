@@ -17,13 +17,14 @@ pub enum CurrencyId {
     KAR,
     MGX,
     ForeignAsset(ForeignAssetId),
-
 }
 
 pub mod currency_decimals {
     pub const NATIVE: u32 = 12;
     pub const AUSD: u32 = 12;
+    pub const KAR: u32 = 12;
     pub const KSM: u32 = 12;
+    pub const MGX: u32 = 18;
 }
 
 impl Default for CurrencyId {

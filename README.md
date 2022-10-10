@@ -167,9 +167,9 @@ The flow of creating a proposal and getting funded is shown below step by step u
 
 1) Creating a project: The first step is to create the project, i.e. submitting the proposal, the given signature of the extrinsic is shown below. From the UI select the pallet which is our imbueProposals pallet and then select the function below.
 
-  ```javascript
-  create_project(origin: OriginFor<T>, name: Vec<u8>, logo: Vec<u8>, description: Vec<u8>, website: Vec<u8>, proposed_milestones: Vec<ProposedMilestone>, required_funds: BalanceOf<T>)
-  ```
+```rust
+create_project(origin: OriginFor<T>, name: Vec<u8>, logo: Vec<u8>, description: Vec<u8>, website: Vec<u8>, proposed_milestones: Vec<ProposedMilestone>, required_funds: BalanceOf<T>)
+```
 
   To create a project we need to pass the following parameters
   
@@ -190,9 +190,9 @@ From the UI select the our imbueProposals pallet and then select the function be
 
 Please note this is a Sudo call so you need to use an account with Sudo access. In the testnet this is the `Alice` account
 
-    ```javascript
-    schedule_round(origin: OriginFor<T>, start: T::BlockNumber, end: T::BlockNumber, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>)
-    ```
+```rust
+schedule_round(origin: OriginFor<T>, start: T::BlockNumber, end: T::BlockNumber, project_key: ProjectIndex, milestone_indexes: Vec<MilestoneIndex>)
+```
    
   To schedule a round for milestone/s we need to pass the following parameters to the extrinsics
 
@@ -207,9 +207,9 @@ Please note this is a Sudo call so you need to use an account with Sudo access. 
 
 3) Contributing to the project: Using this extrinsic, the community can contribute to the proposals they think have good potential.From the UI select the our imbueProposals pallet and then select the function below.  
    
-  ```javascript
-  contribute(origin: OriginFor<T>, project_key: ProjectIndex, value: BalanceOf<T>)
-  ```
+```rust
+contribute(origin: OriginFor<T>, project_key: ProjectIndex, value: BalanceOf<T>)
+```
 
   To contribute to the proposal we need to pass the following parameters to the extrinsics
 
@@ -223,9 +223,9 @@ Please note this is a Sudo call so you need to use an account with Sudo access. 
 
 4) Vote on a specific milestone: This extrinsic allows community members to vote for specific milestone for a given proposal. They can either approve or disapprove by passing yes or no. From the UI select the our imbueProposals pallet and then select the function below. 
 
- ```javascript
-  vote_on_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_index: MilestoneIndex, approve_milestone: bool)
-  ```
+```rust
+vote_on_milestone(origin: OriginFor<T>, project_key: ProjectIndex, milestone_index: MilestoneIndex, approve_milestone: bool)
+```
 
   To vote on a milestone we need to pass the following parameters to the extrinsic
 
@@ -239,9 +239,9 @@ Please note this is a Sudo call so you need to use an account with Sudo access. 
 
  5) Approve the project proposal: This extrinsic is called to approve a project proposal with the milestones that is being approved. From the UI select the our imbueProposals pallet and then select the function below. 
 
-  ```javascript
-   approve(origin: OriginFor<T>, round_index: RoundIndex, project_key: ProjectIndex, milestone_indexes:  Vec<MilestoneIndex>)
-  ```
+```rust
+approve(origin: OriginFor<T>, round_index: RoundIndex, project_key: ProjectIndex, milestone_indexes:  Vec<MilestoneIndex>)
+```
     
   To approve a project we need to pass the following parameters
 
