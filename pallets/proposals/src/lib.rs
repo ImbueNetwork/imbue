@@ -1233,8 +1233,13 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn raise_no_confidence_vote(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+    pub fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+        
         //ensure that who is a contributor or root
+        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        ensure!(project.contributions.iter().any(|c|{ c.account_id == who}), Error::<T>::InvalidAccount);
+
+
         //open a storage item for tracking the votes and who voted, use Vote struct.
         //
         Ok(().into())
@@ -1274,7 +1279,7 @@ pub enum RoundType {
 }
 
 /// The round struct contains all the data associated with a given round.
-/// A round may include multiple projects and are primarily defined by their start and end block.
+/// A round may include multiple projects.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Round<BlockNumber> {
     start: BlockNumber,
