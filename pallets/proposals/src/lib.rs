@@ -422,6 +422,13 @@ pub mod pallet {
             Self::new_withdrawal(who, project_key)
         }
 
+        // TODO: BENCHMARK
+        #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+        pub fn raise_vote_of_no_confidence(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::raise_no_confidence_round(who, project_key)
+        }
+
         // Root Extrinsics:
 
         /// Set max proposal count per round

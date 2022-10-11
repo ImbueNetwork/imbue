@@ -1806,49 +1806,34 @@ fn test_round_count_increments_correctly() {
             assert!(RoundCount::<Test>::get() == 2u32);
     });
 }
+
 #[test]
-fn test_errors_gracefully_when_contributed_to_project_without_approval() {
+fn test_raising_a_vote_of_no_confidence() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+
     ExtBuilder.build().execute_with(|| {
-        //create_project extrinsic
+        // Create a project for both alice and bob.
         create_project(alice);
-        
+
+    // schedule a round to allow for contributions.
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
-            System::block_number() + 1,
+            System::block_number()
             System::block_number() + 100,
             bounded_vec![0],
-            RoundType::VotingRound));
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key: u32 = 0;
-        let contribution_amount = 2000u64;
-
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = 10_000;
-
-        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
-
-        run_to_block(4);
-        //contribute extrinsic
-        assert_noop!(Proposals::contribute(Origin::signed(alice), project_key, contribution_amount), Error::<Test>::RoundNotProcessing);
-
-        //contribute success event
-        let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_contributedtoproject_event,
-            mock::Event::from(proposals::Event::ContributeSucceeded(
-                alice,
-                project_key,
-                contribution_amount,
-                CurrencyId::Native,
-                4
-            ))
-        );
+            RoundType::ContributionRound));
+        
     });
+    // Deposit funds and contribute.
+    let _ = Currencies::deposit(CurrencyId::Native, &alice, 10_000_000.into());
+    run_to_block(4);
+    Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
+
+    // Call a vote of no confidence and assert it will pass.
+    assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), 0));
+
+    // Assert that you cannot raise the vote twice.
+    assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), 0), Error::<Test>::RoundStarted);
 }
 
 
