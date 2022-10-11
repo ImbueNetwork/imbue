@@ -108,7 +108,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn no_confidence_votes)]
     pub(super) type NoConfidenceVotes<T: Config> =
-        StorageMap<_, Identity, ProjectKey, Vec<Vote<BalanceOf<T>>>, OptionQuery>;
+        StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
     
 
     #[pallet::storage]
@@ -429,6 +429,13 @@ pub mod pallet {
             Self::raise_no_confidence_round(who, project_key)
         }
 
+         // TODO: BENCHMARK
+         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+         pub fn vote_on_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
+             let who = ensure_signed(origin)?;
+             Self::add_vote_no_confidence(who, project_key, is_yay)
+         }
+
         // Root Extrinsics:
 
         /// Set max proposal count per round
@@ -675,7 +682,6 @@ impl<T: Config> Pallet<T> {
             round_type.clone(),
         );
 
-        //TODO: BUG:: key is used instead of next key. 
         // Add proposal round to list
         <Rounds<T>>::insert(key, Some(round));
 
@@ -1252,20 +1258,16 @@ impl<T: Config> Pallet<T> {
 
         //ensure that who is a contributor or root
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let maybe_contributor: Vec<&Contribution<T::AccountId, BalanceOf<T>>> = 
-        project.contributions
-        .iter()
-        .filter(|acc| acc.account_id == who)
-        .collect();
-        ensure!(maybe_contributor.len() == 1, Error::<T>::InvalidAccount);
+        let contributor = Self::ensure_contributor_of(&project, &who)?;
 
         // Also ensure that a vote has not already been raised.
         ensure!(!NoConfidenceVotes::<T>::contains_key(project_key), Error::<T>::RoundStarted);
 
         // Create the accosiated vote struct, index can be used as an ensure on length has been called.
         let vote = Vote {
-            yay: maybe_contributor[0].value,
+            yay: contributor.value,
             nay: Default::default(),
+            // not using this so approved will be false.
             is_approved: false,
         };
         let now = frame_system::Pallet::<T>::block_number();
@@ -1277,22 +1279,62 @@ impl<T: Config> Pallet<T> {
             RoundType::VoteOfNoConfidence,
         );
 
-        // Insert the new round and votes into storage and update the RoundCount.
-        NoConfidenceVotes::<T>::insert(project_key, vec![vote]);
-        Rounds::<T>::insert(RoundCount::<T>::get(), Some(round));
+        let round_key = RoundCount::<T>::get();
+        // Insert the new round and votes into storage and update the RoundCount and UserVotes.
+        NoConfidenceVotes::<T>::insert(project_key, vote);
+        Rounds::<T>::insert(round_key, Some(round));
         RoundCount::<T>::mutate(|c| {*c += 1u32});
+        UserVotes::<T>::insert((who, project_key, 0, round_key), true);
 
         Ok(()).into()
     }
     
+    // This function allows a contributer to agree or disagree with a vote of no confidence.
+    // Additional contributions after the vote is set are not counted and cannot be voted on again, todo?
+    fn add_vote_no_confidence(who: T::AccountId, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
+        // Ensure that who is a contributor or root.
+        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let contributor = Self::ensure_contributor_of(&project, &who)?;
 
-    fn vote_on_no_confidence_round() -> DispatchResult {
+        // somehow get the round key
+        let round_key = 0;
+
+        // Ensure they have not already voted.
+        ensure!(UserVotes::<T>::get((&who, project_key, 0, round_key)).is_none(), Error::<T>::VoteAlreadyExists);
+
+        // Also ensure that the vote has been raised.
+        ensure!(NoConfidenceVotes::<T>::contains_key(project_key), Error::<T>::NoActiveRound);
+        
+        // Mutate storage to update votes and user votes.
+        NoConfidenceVotes::<T>::mutate(project_key, |v| {
+            if let Some(vote) = v {
+                if is_yay {
+                    vote.yay += contributor.value 
+                } else {
+                    vote.nay += contributor.value
+                }
+            }
+        });
+        UserVotes::<T>::insert((who, project_key, 0, round_key), true);
+
         Ok(()).into()
     }
 
     fn finalise_no_confindence_voting() -> DispatchResult {
         Ok(()).into()
     } 
+    
+    // a method that ensures that an account is is a contributor to a project.
+    fn ensure_contributor_of<'a>(project: &'a Project<T::AccountId, BalanceOf<T>, T::BlockNumber>, account_id: &'a T::AccountId) -> Result<&'a Contribution<T::AccountId, BalanceOf<T>>, Error<T>> {
+        let maybe_contributor: Vec<&Contribution<T::AccountId, BalanceOf<T>>> = 
+        project.contributions
+        .iter()
+        .filter(|acc| &acc.account_id == account_id)
+        .collect();
+        ensure!(maybe_contributor.len() == 1, Error::<T>::InvalidAccount);
+
+        Ok(maybe_contributor[0])
+    }
 
 }
 
