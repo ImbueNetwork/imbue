@@ -106,6 +106,12 @@ pub mod pallet {
         StorageMap<_, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, OptionQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn no_confidence_votes)]
+    pub(super) type NoConfidenceVotes<T: Config> =
+        StorageMap<_, Identity, ProjectKey, Vec<Vote<BalanceOf<T>>>, OptionQuery>;
+    
+
+    #[pallet::storage]
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
 
@@ -188,13 +194,13 @@ pub mod pallet {
         ProjectDoesNotExist,
         /// Project name is a mandatory field. 
         ProjectNameIsMandatory,
-        /// Project name is a mandatory field. 
+        /// Project logo is a mandatory field. 
         LogoIsMandatory,
-        /// Project name is a mandatory field. 
+        /// Project description is a mandatory field. 
         ProjectDescriptionIsMandatory,
-        /// Project name is a mandatory field. 
+        /// Website url is a mandatory field. 
         WebsiteURLIsMandatory,
-        /// Milestones do not add up to 100%.
+        /// Milestones totals do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
         /// Currently no active round to participate in.
         NoActiveRound,
@@ -212,6 +218,7 @@ pub mod pallet {
         ProposalWithdrawn,
         ProposalApproved,
         ParamLimitExceed,
+        /// Round has already started and cannot be modified.
         RoundStarted,
         RoundNotEnded,
         RoundNotProcessing,
@@ -321,8 +328,6 @@ pub mod pallet {
         /// Step 2.5 (ADMIN)
         /// Cancel a round
         /// This round must have not started yet
-        /// TODO: BUG currently since we can have multpile projects in a round if root deletes a key with someone elses project in then both are deleted.
-        // WRITE TEST
         #[pallet::weight(<T as Config>::WeightInfo::cancel_round())]
         pub fn cancel_round(
             origin: OriginFor<T>,
@@ -1116,7 +1121,7 @@ impl<T: Config> Pallet<T> {
             funding_threshold_met: project.funding_threshold_met,
             cancelled: project.cancelled,
         };
-        // Add proposal to list
+        // Add project to list
         <Projects<T>>::insert(project_key, updated_project);
 
         Ok(().into())
@@ -1167,7 +1172,7 @@ impl<T: Config> Pallet<T> {
             funding_threshold_met: project.funding_threshold_met,
             cancelled: project.cancelled,
         };
-        // Add proposal to list
+        // Add project to list
         <Projects<T>>::insert(project_key, updated_project);
         Self::deposit_event(Event::ProjectFundsWithdrawn(
             who,
@@ -1233,17 +1238,55 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
-        
+    /// This function raises a vote of no confidence.
+    /// This round can only be called once and there after can only be voted on.
+    /// The person calling it must be a contributor.
+    fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+
         //ensure that who is a contributor or root
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        ensure!(project.contributions.iter().any(|c|{ c.account_id == who}), Error::<T>::InvalidAccount);
+        let maybe_contributor: Vec<&Contribution<T::AccountId, BalanceOf<T>>> = 
+        project.contributions
+        .iter()
+        .filter(|acc| acc.account_id == who)
+        .collect();
+        ensure!(maybe_contributor.len() == 1, Error::<T>::InvalidAccount);
 
+        // Also ensure that a vote has not already been raised.
+        ensure!(!NoConfidenceVotes::<T>::contains_key(project_key), Error::<T>::RoundStarted);
 
-        //open a storage item for tracking the votes and who voted, use Vote struct.
-        //
-        Ok(().into())
+        // Create the accosiated vote struct, index can be used as an ensure on length has been called.
+        let vote = Vote {
+            yay: maybe_contributor[0].value,
+            nay: Default::default(),
+            is_approved: false,
+        };
+        let now = frame_system::Pallet::<T>::block_number();
+        // Create the accosiated round.
+        let round = RoundOf::<T>::new(
+            now,
+            now + T::NoConfidenceTimeLimit::get(),
+            vec![project_key],
+            RoundType::VoteOfNoConfidence,
+        );
+
+        // Insert the new round and votes into storage and update the RoundCount.
+        NoConfidenceVotes::<T>::insert(project_key, vec![vote]);
+        Rounds::<T>::insert(RoundCount::<T>::get(), Some(round));
+        RoundCount::<T>::mutate(|c| {*c += 1u32});
+
+        Ok(()).into()
     }
+    
+
+    fn vote_on_no_confidence_round() -> DispatchResult {
+        Ok(()).into()
+    }
+
+    fn finalise_no_confindence_voting() -> DispatchResult {
+        Ok(()).into()
+    } 
+
 }
 
 // The Constants associated with the bounded parameters
