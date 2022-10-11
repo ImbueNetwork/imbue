@@ -1296,7 +1296,7 @@ impl<T: Config> Pallet<T> {
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contributor = Self::ensure_contributor_of(&project, &who)?;
 
-        // somehow get the round key
+        // somehow get the round key todo:
         let round_key = 0;
 
         // Ensure they have not already voted.
@@ -1321,6 +1321,8 @@ impl<T: Config> Pallet<T> {
     }
 
     fn finalise_no_confindence_voting() -> DispatchResult {
+
+
         Ok(()).into()
     } 
     
@@ -1331,7 +1333,7 @@ impl<T: Config> Pallet<T> {
         .iter()
         .filter(|acc| &acc.account_id == account_id)
         .collect();
-        ensure!(maybe_contributor.len() == 1, Error::<T>::InvalidAccount);
+        ensure!(maybe_contributor.len() > 0, Error::<T>::InvalidAccount);
 
         Ok(maybe_contributor[0])
     }

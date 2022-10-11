@@ -1810,6 +1810,8 @@ fn test_round_count_increments_correctly() {
 #[test]
 fn test_raising_a_vote_of_no_confidence() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+
     let project_key = 0u32;
 
     ExtBuilder.build().execute_with(|| {
@@ -1828,10 +1830,22 @@ fn test_raising_a_vote_of_no_confidence() {
         let _ = Currencies::deposit(CurrencyId::Native, &alice, 10_000_000u64);
         run_to_block(4);
         Proposals::contribute(Origin::signed(alice), project_key, 10_000u64).unwrap();
+        
+        // Assert that Bob cannot raise the vote as he is not a contributor.
+        assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_key), Error::<Test>::InvalidAccount);
 
         // Call a vote of no confidence and assert it will pass.
         assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), project_key));
 
+        let vote = NoConfidenceVotes::<Test>::get(project_key).unwrap();
+        let round_count = RoundCount::<Test>::get(); 
+        
+        // Assert that storage has been mutated corretly
+        assert!(vote.yay == 10_000u64 && vote.nay == 0u64);
+        assert!(UserVotes::<Test>::get((alice, project_key, 0, round_count - 1)) == Some(true));
+        dbg!(&round_count);
+        assert!(round_count == 2u32);
+        
         // Assert that you cannot raise the vote twice.
         assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), project_key), Error::<Test>::RoundStarted);
     });
