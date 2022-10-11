@@ -1810,30 +1810,31 @@ fn test_round_count_increments_correctly() {
 #[test]
 fn test_raising_a_vote_of_no_confidence() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let project_key = 0u32;
 
     ExtBuilder.build().execute_with(|| {
         // Create a project for both alice and bob.
         create_project(alice);
 
-    // schedule a round to allow for contributions.
+        //schedule a round to allow for contributions.
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
-            System::block_number()
+            System::block_number(),
             System::block_number() + 100,
-            bounded_vec![0],
+            bounded_vec![project_key],
             RoundType::ContributionRound));
-        
+            
+        // Deposit funds and contribute.
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, 10_000_000u64);
+        run_to_block(4);
+        Proposals::contribute(Origin::signed(alice), project_key, 10_000u64).unwrap();
+
+        // Call a vote of no confidence and assert it will pass.
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), project_key));
+
+        // Assert that you cannot raise the vote twice.
+        assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), project_key), Error::<Test>::RoundStarted);
     });
-    // Deposit funds and contribute.
-    let _ = Currencies::deposit(CurrencyId::Native, &alice, 10_000_000.into());
-    run_to_block(4);
-    Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
-
-    // Call a vote of no confidence and assert it will pass.
-    assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), 0));
-
-    // Assert that you cannot raise the vote twice.
-    assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), 0), Error::<Test>::RoundStarted);
 }
 
 
