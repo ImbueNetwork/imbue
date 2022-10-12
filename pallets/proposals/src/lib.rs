@@ -1292,13 +1292,16 @@ impl<T: Config> Pallet<T> {
     // This function allows a contributer to agree or disagree with a vote of no confidence.
     // Additional contributions after the vote is set are not counted and cannot be voted on again, todo?
     fn add_vote_no_confidence(who: T::AccountId, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
-        // Ensure that who is a contributor or root.
+        // Ensure that who is a contributor.
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contributor = Self::ensure_contributor_of(&project, &who)?;
 
+        // Ensure that the vote has been raised.
+        ensure!(NoConfidenceVotes::<T>::contains_key(project_key), Error::<T>::NoActiveRound);
+       
+        // We need to find the round key and the only current way is finding the round.
         let mut round_key = 0u32;
         let mut round: Option<RoundOf<T>> = None;
-
         let round_count = RoundCount::<T>::get();
 
         for i in (0..round_count).rev() {
@@ -1322,9 +1325,6 @@ impl<T: Config> Pallet<T> {
         // Ensure they have not already voted.
         ensure!(UserVotes::<T>::get((&who, project_key, 0, round_key)).is_none(), Error::<T>::VoteAlreadyExists);
 
-        // Also ensure that the vote has been raised.
-        ensure!(NoConfidenceVotes::<T>::contains_key(project_key), Error::<T>::NoActiveRound);
-        
         // Mutate storage to update votes and user votes.
         NoConfidenceVotes::<T>::mutate(project_key, |v| {
             if let Some(vote) = v {
@@ -1347,7 +1347,10 @@ impl<T: Config> Pallet<T> {
     } 
     
     // a method that ensures that an account is is a contributor to a project.
-    fn ensure_contributor_of<'a>(project: &'a Project<T::AccountId, BalanceOf<T>, T::BlockNumber>, account_id: &'a T::AccountId) -> Result<&'a Contribution<T::AccountId, BalanceOf<T>>, Error<T>> {
+    fn ensure_contributor_of<'a>(
+        project: &'a Project<T::AccountId, BalanceOf<T>,T::BlockNumber>,
+        account_id: &'a T::AccountId
+    ) -> Result<&'a Contribution<T::AccountId, BalanceOf<T>>, Error<T>> {
         let maybe_contributor: Vec<&Contribution<T::AccountId, BalanceOf<T>>> = 
         project.contributions
         .iter()
