@@ -1340,7 +1340,10 @@ impl<T: Config> Pallet<T> {
         Ok(()).into()
     }
 
-    fn finalise_no_confindence_voting() -> DispatchResult {
+    /// This function will finalise the voting process.
+    /// It should automatically finalise if the the end date passed or if {percent}% of votes have passed.
+    /// This percent can be changed in the parameters.  
+    fn finalise_no_confindence_voting(project_key: ProjectKey, majority_required: u8) -> DispatchResult {
         
 
         Ok(()).into()
@@ -1404,7 +1407,6 @@ pub struct Round<BlockNumber> {
     project_keys: Vec<ProjectKey>,
     round_type: RoundType,
     is_canceled: bool,
-    round_id: RoundKey
 }
 
 impl<BlockNumber: From<u32>> Round<BlockNumber> {
