@@ -1776,38 +1776,6 @@ fn test_we_can_cancel_a_specific_project_round() {
 }
 
 #[test]
-fn test_round_count_increments_correctly() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-
-    ExtBuilder.build().execute_with(|| {
-        // Create a project for both alice and bob.
-        create_project(alice);
-        create_project(bob);
-
-        // Assert state is zero and we can schedule a round for alice
-        assert_eq!(RoundCount::<Test>::get(), 0u32);
-        assert_ok!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 100,
-            bounded_vec![0],
-            RoundType::ContributionRound));
-        
-        assert!(RoundCount::<Test>::get() == 1u32);
-
-        assert_ok!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 100,
-            bounded_vec![1],
-            RoundType::ContributionRound));
-        
-            assert!(RoundCount::<Test>::get() == 2u32);
-    });
-}
-
-#[test]
 fn test_raising_a_vote_of_no_confidence() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
@@ -1818,7 +1786,7 @@ fn test_raising_a_vote_of_no_confidence() {
         // Create a project for both alice and bob.
         create_project(alice);
 
-        //schedule a round to allow for contributions.
+        // Schedule a round to allow for contributions.
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
@@ -1841,14 +1809,64 @@ fn test_raising_a_vote_of_no_confidence() {
         let round_count = RoundCount::<Test>::get(); 
         
         // Assert that storage has been mutated correctly.
-        assert!(vote.yay == 10_000u64 && vote.nay == 0u64);
+        assert!(vote.nay == 10_000u64 && vote.yay == 0u64);
         assert!(UserVotes::<Test>::get((alice, project_key, 0, round_count - 1)) == Some(true));
-        dbg!(&round_count);
         assert!(round_count == 2u32);
         
         // Assert that you cannot raise the vote twice.
         assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), project_key), Error::<Test>::RoundStarted);
     });
+
+    #[test]
+    fn test_adding_vote_of_no_confidence() {
+        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+        let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+        let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
+
+        let project_key = 0u32;
+
+        ExtBuilder.build().execute_with(|| {
+            // Create a project for both alice and bob.
+            create_project(alice);
+
+            //schedule a round to allow for contributions.
+            assert_ok!(Proposals::schedule_round(
+                Origin::root(),
+                System::block_number(),
+                System::block_number() + 100,
+                bounded_vec![project_key],
+                RoundType::ContributionRound));
+                
+            // Deposit funds and contribute.
+            let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
+            let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
+            run_to_block(4);
+
+            // Setup required state to start voting: must have contributed and round must have started.
+            Proposals::contribute(Origin::signed(charlie), project_key, 10_000u64).unwrap();
+            Proposals::contribute(Origin::signed(bob), project_key, 20_000u64).unwrap();
+            assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
+
+            // Charlie has raised a vote of no confidence, now Bob is gonna disagree!
+            assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, true));
+
+            // Assert Bob cannot game the system.
+            assert_noop!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, true), Error::<Test>::VoteAlreadyExists);
+            assert_noop!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, false), Error::<Test>::VoteAlreadyExists);
+
+            // Assert the state of the system is as it should be.
+
+            let vote = NoConfidenceVotes::<Test>::get(project_key).unwrap();
+            let round_count = RoundCount::<Test>::get(); 
+            
+            // Assert that storage has been mutated correctly.
+            assert!(vote.nay == 10_000u64 && vote.yay == 20_000u64);
+            assert!(UserVotes::<Test>::get((alice, project_key, 0, round_count - 1)) == Some(true));
+            assert!(UserVotes::<Test>::get((bob, project_key, 0, round_count - 1)) == Some(true));
+            
+            assert!(round_count == 2u32);
+        });
+    }
 }
 
 
