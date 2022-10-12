@@ -1840,7 +1840,7 @@ fn test_raising_a_vote_of_no_confidence() {
         let vote = NoConfidenceVotes::<Test>::get(project_key).unwrap();
         let round_count = RoundCount::<Test>::get(); 
         
-        // Assert that storage has been mutated corretly
+        // Assert that storage has been mutated correctly.
         assert!(vote.yay == 10_000u64 && vote.nay == 0u64);
         assert!(UserVotes::<Test>::get((alice, project_key, 0, round_count - 1)) == Some(true));
         dbg!(&round_count);

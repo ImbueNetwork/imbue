@@ -1265,8 +1265,8 @@ impl<T: Config> Pallet<T> {
 
         // Create the accosiated vote struct, index can be used as an ensure on length has been called.
         let vote = Vote {
-            yay: contributor.value,
-            nay: Default::default(),
+            yay: Default::default(),
+            nay: contributor.value,
             // not using this so approved will be false.
             is_approved: false,
         };
@@ -1296,8 +1296,28 @@ impl<T: Config> Pallet<T> {
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contributor = Self::ensure_contributor_of(&project, &who)?;
 
-        // somehow get the round key todo:
-        let round_key = 0;
+        let mut round_key = 0u32;
+        let mut round: Option<RoundOf<T>> = None;
+
+        let round_count = RoundCount::<T>::get();
+
+        for i in (0..round_count).rev() {
+            // Get the current round and check that both the key exists and the value under the key is some.
+            let current_round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
+
+            if !current_round.is_canceled 
+            && current_round.project_keys.contains(&project_key) 
+            && current_round.round_type == RoundType::VoteOfNoConfidence
+            && current_round.end <= frame_system::Pallet::<T>::block_number()
+            {
+                round = Some(current_round);
+                round_key = i;
+                break;
+            }
+        }
+
+        // Ensure a round has been found.
+        ensure!(round.is_some(), Error::<T>::NoActiveRound);
 
         // Ensure they have not already voted.
         ensure!(UserVotes::<T>::get((&who, project_key, 0, round_key)).is_none(), Error::<T>::VoteAlreadyExists);
@@ -1321,7 +1341,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn finalise_no_confindence_voting() -> DispatchResult {
-
+        
 
         Ok(()).into()
     } 
@@ -1381,6 +1401,7 @@ pub struct Round<BlockNumber> {
     project_keys: Vec<ProjectKey>,
     round_type: RoundType,
     is_canceled: bool,
+    round_id: RoundKey
 }
 
 impl<BlockNumber: From<u32>> Round<BlockNumber> {
