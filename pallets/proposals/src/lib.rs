@@ -5,23 +5,13 @@ use common_types::CurrencyId;
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
-
-use frame_support::{
-    pallet_prelude::*,
-    transactional,
-    PalletId, 
-    traits::ConstU32
-    };
+use frame_support::{pallet_prelude::*, traits::ConstU32, transactional, PalletId};
+use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::{
-    convert::TryInto,
-    prelude::*,
-    vec
-};
-use frame_system::pallet_prelude::*;
+use sp_std::{convert::TryInto, prelude::*, vec};
 #[cfg(test)]
 mod mock;
 
@@ -55,10 +45,10 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
     }
 
-
+    // SBP-M2 review: I do not like passing value this way.
+    // I prefer #[pallet::constant]
     #[pallet::type_value]
-    pub fn InitialMilestoneVotingWindow() -> u32
-    {
+    pub fn InitialMilestoneVotingWindow() -> u32 {
         100800u32
     }
 
@@ -120,7 +110,8 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn milestone_voting_window)]
-    pub type MilestoneVotingWindow<T> = StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow>;
+    pub type MilestoneVotingWindow<T> =
+        StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow>;
 
     #[pallet::storage]
     #[pallet::getter(fn withdrawal_expiration)]
@@ -242,7 +233,6 @@ pub mod pallet {
             )
         }
 
-
         /// Step 1.5 (INITATOR)
         /// Add whitelist to a project
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
@@ -258,13 +248,16 @@ pub mod pallet {
 
             let whitelist_exists = WhitelistSpots::<T>::contains_key(project_key);
             if whitelist_exists {
-                let existing_spots = Self::whitelist_spots(project_key).ok_or(Error::<T>::KeyNotFound)?;
+                let existing_spots =
+                    Self::whitelist_spots(project_key).ok_or(Error::<T>::KeyNotFound)?;
                 project_whitelist_spots.extend(existing_spots);
             }
 
             project_whitelist_spots.extend(whitelist_spots);
             <WhitelistSpots<T>>::insert(project_key, project_whitelist_spots);
             let now = <frame_system::Pallet<T>>::block_number();
+            // SBP-M2 review: events are emitted in a block - you can find its number
+            // Providing block number in an event is an example of data duplication
             Self::deposit_event(Event::WhitelistAdded(project_key, now));
             Ok(().into())
         }
@@ -280,6 +273,7 @@ pub mod pallet {
             Self::ensure_initator(who, project_key)?;
             <WhitelistSpots<T>>::remove(project_key);
             let now = <frame_system::Pallet<T>>::block_number();
+            // SBP-M2 review: same comment about `now` in event.
             Self::deposit_event(Event::WhitelistRemoved(project_key, now));
             Ok(().into())
         }
@@ -293,8 +287,12 @@ pub mod pallet {
             start: T::BlockNumber,
             end: T::BlockNumber,
             project_keys: BoundedProjectKeys,
-            round_type: RoundType
+            round_type: RoundType,
         ) -> DispatchResultWithPostInfo {
+            // SBP-M2 review: get rid of sudo calls
+            // It should be handled by mechanism like a council
+            // Sudo calls are strongly not recommended in production code
+            // It denies true decentralization
             ensure_root(origin)?;
             Self::new_round(start, end, project_keys, round_type)
         }
@@ -307,6 +305,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             round_key: RoundKey,
         ) -> DispatchResultWithPostInfo {
+            // SBP-M2 review: same as above
             ensure_root(origin)?;
             let now = <frame_system::Pallet<T>>::block_number();
             let count = RoundCount::<T>::get();
@@ -320,6 +319,7 @@ pub mod pallet {
             round.is_canceled = true;
             <Rounds<T>>::insert(round_key, Some(round));
 
+            // SBP-M2: missing feature
             // TODO loop through projects and refund contributers
 
             Self::deposit_event(Event::RoundCancelled(count - 1));
@@ -349,6 +349,7 @@ pub mod pallet {
             project_key: ProjectKey,
             milestone_keys: Option<BoundedMilestoneKeys>,
         ) -> DispatchResultWithPostInfo {
+            // SBP-M2: same comment about sudo call
             ensure_root(origin)?;
             Self::do_approve(project_key, milestone_keys)
         }
@@ -391,7 +392,10 @@ pub mod pallet {
         /// Step 8 (INITATOR)
         /// Withdraw
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
-        pub fn withdraw(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
+        pub fn withdraw(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::new_withdrawal(who, project_key)
         }
@@ -402,6 +406,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             max_proposal_count_per_round: u32,
         ) -> DispatchResultWithPostInfo {
+            // SBP-M2 review: same comment about sudo call
             ensure_root(origin)?;
             ensure!(
                 max_proposal_count_per_round > 0
@@ -413,13 +418,13 @@ pub mod pallet {
             Ok(().into())
         }
 
-
         /// Set milestone voting window
         #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
         pub fn set_milestone_voting_window(
             origin: OriginFor<T>,
             new_milestone_voting_window: u32,
         ) -> DispatchResultWithPostInfo {
+            // SBP-M2 review: same comment about sudo call
             ensure_root(origin)?;
             ensure!(
                 new_milestone_voting_window > 0,
@@ -430,14 +435,13 @@ pub mod pallet {
             Ok(().into())
         }
 
-
-
         /// Set withdrawal expiration
         #[pallet::weight(<T as Config>::WeightInfo::set_withdrawal_expiration())]
         pub fn set_withdrawal_expiration(
             origin: OriginFor<T>,
             withdrawal_expiration: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
+            // SBP-M2 review: same comment about sudo call
             ensure_root(origin)?;
             ensure!(
                 withdrawal_expiration > (0_u32).into(),
@@ -454,6 +458,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             is_identity_required: bool,
         ) -> DispatchResultWithPostInfo {
+            // SBP-M2 review: same comment about sudo call
             ensure_root(origin)?;
             IsIdentityRequired::<T>::put(is_identity_required);
 
@@ -465,6 +470,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
             //ensure only admin can perform refund
+            // SBP-M2 review: same comment about sudo call
             ensure_root(origin)?;
             Self::do_refund(project_key)
         }
@@ -492,7 +498,9 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_sub_account_truncating(key)
     }
 
-    pub fn get_project(project_key: u32) -> Result<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>, Error<T>> {
+    pub fn get_project(
+        project_key: u32,
+    ) -> Result<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>, Error<T>> {
         Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)
     }
 
@@ -502,11 +510,13 @@ impl<T: Config> Pallet<T> {
         let mut total_contribution_amount: BalanceOf<T> = (0_u32).into();
         for contribution in project.contributions.iter() {
             let contribution_value = contribution.value;
+            // SBP-M2 review: think about possible overflow
             total_contribution_amount += contribution_value;
         }
         Ok(total_contribution_amount)
     }
 
+    // SBP-M2 review: too long function
     fn new_project(
         who: T::AccountId,
         name: BoundedStringField,
@@ -518,6 +528,7 @@ impl<T: Config> Pallet<T> {
         currency_id: common_types::CurrencyId,
     ) -> DispatchResultWithPostInfo {
         // Check if identity is required
+        // SBP-M2 review: I would separate a function for this check
         let is_identity_needed = IsIdentityRequired::<T>::get();
         if is_identity_needed {
             let identity = pallet_identity::Pallet::<T>::identity(who.clone())
@@ -571,6 +582,8 @@ impl<T: Config> Pallet<T> {
         }
 
         // Create a proposal
+        // SBP-M2 review: how about providing a function that returns a proposal
+        // With default parameters hidden in the implementation
         let project = Project {
             name: name.clone().to_vec(),
             logo: logo.to_vec(),
@@ -603,11 +616,13 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    // SBP-M2 review: I would move parameters verification to extrinsic functions
+    // It would be easier for code reader to discover proper values
     fn new_round(
         start: T::BlockNumber,
         end: T::BlockNumber,
         project_keys: BoundedProjectKeys,
-        round_type: RoundType
+        round_type: RoundType,
     ) -> DispatchResultWithPostInfo {
         let now = <frame_system::Pallet<T>>::block_number();
         // The number of items cannot exceed the maximum
@@ -615,14 +630,25 @@ impl<T: Config> Pallet<T> {
         // The end block must be greater than the start block
         ensure!(end > start, Error::<T>::EndTooEarly);
         // Both the starting block number and the ending block number must be greater than the current number of blocks
+
+        // SBP-M2 review: missing check for start > now;
+        // When provided, end > now is redundant
         ensure!(end > now, Error::<T>::EndBlockNumberInvalid);
 
         // project_key should be smaller than project count
         let project_count = ProjectCount::<T>::get();
 
         // Ensure that the project keys will never be empty, this is done as it is an extrinsic parameter.
-        ensure!(project_keys.len() > 0usize, Error::<T>::LengthMustExceedZero);
-        let last_project = project_keys.last().expect("project keys length is validated; qed");
+        ensure!(
+            project_keys.len() > 0usize,
+            Error::<T>::LengthMustExceedZero
+        );
+
+        // SBP-M2 review: pallet code should not panic
+        // Always return an error
+        let last_project = project_keys
+            .last()
+            .expect("project keys length is validated; qed");
 
         ensure!(
             last_project < &project_count,
@@ -633,17 +659,17 @@ impl<T: Config> Pallet<T> {
         let key = RoundCount::<T>::get();
 
         let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
-        let round = RoundOf::<T>::new(
-            start,
-            end,
-            project_keys.clone().into(),
-            round_type.clone(),
-        );
+        let round = RoundOf::<T>::new(start, end, project_keys.clone().into(), round_type.clone());
 
         // Add proposal round to list
         <Rounds<T>>::insert(key, Some(round));
 
+        // SBP-M2 review: potential long lasting operation
+        // That can exceed block time
+        // Length of project keys should be properly verified
         for project_key in project_keys.iter() {
+            // SBP-M2 review: consider `try_mutate`
+            // https://paritytech.github.io/substrate/master/frame_support/storage/trait.StorageMap.html#tymethod.try_mutate
             let project =
                 Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
@@ -670,8 +696,12 @@ impl<T: Config> Pallet<T> {
         }
 
         match round_type.clone() {
-            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))}
-            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))}
+            RoundType::VotingRound => {
+                Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))
+            }
+            RoundType::ContributionRound => {
+                Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))
+            }
         }
         RoundCount::<T>::put(next_key);
 
@@ -694,8 +724,9 @@ impl<T: Config> Pallet<T> {
         let mut project_exists_in_round = false;
         // Find processing round
         let mut processing_round: Option<RoundOf<T>> = None;
+        // SBP-M2 review: try to avoid loops when possible
+        // With huge data collections, iteration + action over loop's items can exceed block time
         for i in (0..round_key).rev() {
-
             let round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
             if !round.is_canceled && round.start < now && round.end > now {
                 // Find proposal by key
@@ -729,7 +760,10 @@ impl<T: Config> Pallet<T> {
         // Find whitelist if exists
         if WhitelistSpots::<T>::contains_key(project_key) {
             let mut contributer_is_whitelisted = false;
-            let whitelist_spots = Self::whitelist_spots(project_key).ok_or(Error::<T>::KeyNotFound)?;
+            let whitelist_spots =
+                Self::whitelist_spots(project_key).ok_or(Error::<T>::KeyNotFound)?;
+            // SBP-M2 review: another loop in the same extrinsic call...
+            // It may be dangerous for block time
             for whitelist_spot in whitelist_spots.clone().into_iter() {
                 if whitelist_spot.who == who {
                     contributer_is_whitelisted = true;
@@ -759,6 +793,7 @@ impl<T: Config> Pallet<T> {
 
         <Rounds<T>>::insert(round_key - 1, Some(round));
 
+        // SBP-M2 review: same comment about `now` in event
         Self::deposit_event(Event::ContributeSucceeded(
             who.clone(),
             project_key,
@@ -787,6 +822,8 @@ impl<T: Config> Pallet<T> {
         }
 
         // Update project withdrawn funds
+        // SBP-M2: `updated_project` has same values as `project`
+        // I cannot see any sense of creating `updated_project`
         let updated_project = Project {
             name: project.name,
             logo: project.logo,
@@ -819,6 +856,7 @@ impl<T: Config> Pallet<T> {
         let mut latest_round: Option<RoundOf<T>> = None;
         let mut project_exists_in_round = false;
 
+        // SBP-M2 review: is there any way to get rid of these loops?
         for i in (0..round_key).rev() {
             // Get the current round and check that both the key exists and the value under the key is some.
             let current_round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
@@ -843,7 +881,6 @@ impl<T: Config> Pallet<T> {
         let total_contribution_amount: BalanceOf<T> =
             Self::get_total_project_contributions(project_key)?;
 
-
         let funds_matched = total_contribution_amount >= project.required_funds;
         if !funds_matched {
             // If the funds have not been matched then check if the round is over
@@ -858,7 +895,12 @@ impl<T: Config> Pallet<T> {
         if milestone_keys.is_some() {
             milestones = Vec::new();
             for mut milestone in project.milestones.into_iter() {
-                for key in milestone_keys.as_ref().expect("is_some has been called; qed").iter() {
+                for key in milestone_keys
+                    .as_ref()
+                    // SBP-M2 review: avoid panic in extrinsics
+                    .expect("is_some has been called; qed")
+                    .iter()
+                {
                     if &milestone.milestone_key == key {
                         let vote_lookup_key = (project_key, *key);
                         let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
@@ -870,7 +912,10 @@ impl<T: Config> Pallet<T> {
                         };
                         milestone.is_approved = true;
                         if votes_exist {
-                            let vote = <MilestoneVotes<T>>::get(vote_lookup_key).expect("milestone votes contains key has been called; qed");
+                            let vote = <MilestoneVotes<T>>::get(vote_lookup_key)
+                                // SBP-M2 review: another panic...
+                                .expect("milestone votes contains key has been called; qed");
+                            // SBP-M2 review: `updated_vote` state mutation can be handled in a better way without `mut`
                             updated_vote = Vote {
                                 yay: vote.yay,
                                 nay: vote.nay,
@@ -878,7 +923,13 @@ impl<T: Config> Pallet<T> {
                             };
                         }
 
-                        Self::deposit_event(Event::MilestoneApproved(project.initiator.clone(), project_key, *key, now));
+                        Self::deposit_event(Event::MilestoneApproved(
+                            project.initiator.clone(),
+                            project_key,
+                            *key,
+                            // SBP-M2 review: same comment about `now` in event
+                            now,
+                        ));
                         <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                     }
                 }
@@ -888,6 +939,7 @@ impl<T: Config> Pallet<T> {
         <Rounds<T>>::insert(round_key, Some(round));
 
         // Update project milestones
+        // SBP-M2 review: can be done with `try_mutate` without copying the whole struct
         let updated_project = Project {
             name: project.name,
             logo: project.logo,
@@ -928,6 +980,9 @@ impl<T: Config> Pallet<T> {
         let round = RoundOf::<T>::new(now, end, vec![project_key], RoundType::VotingRound);
         let next_key = key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
+        // SBP-M2 review: I've seen it before
+        // You can implement `new` function for creating `Vote` with default parameters
+        // Or implement Default trait
         let vote = Vote {
             yay: (0_u32).into(),
             nay: (0_u32).into(),
@@ -943,6 +998,8 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    // SBP-M2 review: many loops in single fuction
+    // Too long function
     pub fn new_milestone_vote(
         who: T::AccountId,
         project_key: ProjectKey,
@@ -996,7 +1053,8 @@ impl<T: Config> Pallet<T> {
 
         <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
 
-        let user_milestone_vote = Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::KeyNotFound)?;
+        let user_milestone_vote =
+            Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::KeyNotFound)?;
 
         if approve_milestone {
             let updated_vote = Vote {
@@ -1020,6 +1078,7 @@ impl<T: Config> Pallet<T> {
             project_key,
             milestone_key,
             approve_milestone,
+            // SBP-M2 review: another comment about `now`
             now,
         ));
 
@@ -1032,6 +1091,7 @@ impl<T: Config> Pallet<T> {
         milestone_key: MilestoneKey,
     ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        // SBP-M2 review: extracting `ensure_initiator` function would be beneficial
         ensure!(
             project.initiator == who,
             Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone
@@ -1059,7 +1119,13 @@ impl<T: Config> Pallet<T> {
                         is_approved: true,
                     };
                     let now = <frame_system::Pallet<T>>::block_number();
-                    Self::deposit_event(Event::MilestoneApproved(project.initiator.clone(), project_key, milestone_key, now));
+                    Self::deposit_event(Event::MilestoneApproved(
+                        project.initiator.clone(),
+                        project_key,
+                        milestone_key,
+                        // SBP-M2 review: another `now` comment
+                        now,
+                    ));
 
                     <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                 }
@@ -1068,6 +1134,9 @@ impl<T: Config> Pallet<T> {
         }
 
         // Update project milestones
+        // SBP-M2 review: I've seen this cloning multiple times in this file...
+        // Use `try_mutate`
+        // The only thing that mutates is `milestones`
         let updated_project = Project {
             name: project.name,
             logo: project.logo,
@@ -1090,7 +1159,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn new_withdrawal(who: T::AccountId, project_key: ProjectKey) -> DispatchResultWithPostInfo {
+    pub fn new_withdrawal(
+        who: T::AccountId,
+        project_key: ProjectKey,
+    ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         let total_contribution_amount: BalanceOf<T> =
@@ -1101,6 +1173,7 @@ impl<T: Config> Pallet<T> {
             if milestone.is_approved {
                 unlocked_funds += (total_contribution_amount
                     * milestone.percentage_to_unlock.into())
+                    // SBP-M2 review: magic const value; should be self-explained
                     / 100u32.into();
             }
         }
@@ -1119,6 +1192,8 @@ impl<T: Config> Pallet<T> {
         )?;
 
         // Update project withdrawn funds
+        // SBP-M2 review: another small modification...
+        // Use `try_mutate`
         let updated_project = Project {
             name: project.name,
             logo: project.logo,
@@ -1203,13 +1278,16 @@ impl<T: Config> Pallet<T> {
 }
 
 // The Constants associated with the bounded parameters
+// SBP-M2 review: I would move it to Runtime configutation
 type MaxStringFieldLen = ConstU32<255>;
-type MaxProjectKeys =  ConstU32<1000>; 
-type MaxMileStoneKeys =  ConstU32<1000>; 
+type MaxProjectKeys = ConstU32<1000>;
+type MaxMileStoneKeys = ConstU32<1000>;
 type MaxProposedMilestones = ConstU32<255>;
 type MaxDescriptionField = ConstU32<5000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
 
+// SBP-M2 review: I would move these type definitions to the top of this file
+// It would simplify reading this code
 pub type RoundKey = u32;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
@@ -1220,7 +1298,8 @@ type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 // type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
-type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, MaxWhitelistPerProject>;
+type BoundedWhitelistSpots<T> =
+    BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, MaxWhitelistPerProject>;
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMileStoneKeys>;
 type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;

@@ -251,6 +251,7 @@ impl pallet_transaction_payment::Config for Runtime {
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
+// SBP-M2 review: it is not recommended to have pallet sudo on Polkadot/Kusama
 impl pallet_sudo::Config for Runtime {
     type Call = Call;
     type Event = Event;

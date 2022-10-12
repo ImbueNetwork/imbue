@@ -28,7 +28,7 @@ pub use common_runtime::{
     xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
     EnsureRootOr,
 };
-pub use common_types::{CurrencyId, currency_decimals, CustomMetadata};
+pub use common_types::{currency_decimals, CurrencyId, CustomMetadata};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -149,6 +149,7 @@ impl TakeRevenue for ToTreasury {
             fun: Fungible(_amount),
         } = revenue
         {
+            // SBP-M2 review: #TODO
             // TODO(sam): implement this
         }
     }
@@ -178,7 +179,7 @@ parameter_types! {
             1,
             X2(Parachain(parachains::kusama::mangata::ID), general_key(parachains::kusama::mangata::MGX_KEY))
         ).into(),
-		ksm_per_second() * 50
+        ksm_per_second() * 50
     );
 
     pub AUsdPerSecond: (AssetId, u128) = (
@@ -186,7 +187,7 @@ parameter_types! {
             1,
             X2(Parachain(parachains::kusama::karura::ID), general_key(parachains::kusama::karura::AUSD_KEY))
         ).into(),
-		ksm_per_second() * 50
+        ksm_per_second() * 50
     );
 
     pub KarPerSecond: (AssetId, u128) = (
@@ -194,7 +195,7 @@ parameter_types! {
             1,
             X2(Parachain(parachains::kusama::karura::ID), general_key(parachains::kusama::karura::KAR_KEY))
         ).into(),
-		ksm_per_second() * 100
+        ksm_per_second() * 100
     );
 }
 
@@ -388,9 +389,9 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
-		None
-	};
+    pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+        None
+    };
 }
 
 pub struct AccountIdToMultiLocation;

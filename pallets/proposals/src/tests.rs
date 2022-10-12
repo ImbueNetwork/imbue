@@ -3,7 +3,8 @@ use crate::mock::*;
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::{
-    assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, weights::PostDispatchInfo, bounded_vec
+    assert_noop, assert_ok, bounded_vec, dispatch::DispatchErrorWithPostInfo,
+    weights::PostDispatchInfo,
 };
 use sp_core::sr25519;
 use sp_std::vec::Vec;
@@ -15,13 +16,25 @@ fn create_a_test_project() {
         Proposals::create_project(
             Origin::signed(alice),
             //project name
-            b"Imbue's Awesome Initiative".to_vec().try_into().expect("input should be of decent length"),
+            b"Imbue's Awesome Initiative"
+                .to_vec()
+                .try_into()
+                .expect("input should be of decent length"),
             //project logo
-            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
+            b"Imbue Logo"
+                .to_vec()
+                .try_into()
+                .expect("input should be of decent length"),
             //project description
-            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"),
+            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding."
+                .to_vec()
+                .try_into()
+                .expect("input should be of decent length"),
             //website
-            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
+            b"https://imbue.network"
+                .to_vec()
+                .try_into()
+                .expect("input should be of decent length"),
             //milestone
             bounded_vec![ProposedMilestone {
                 name: bounded_vec![],
@@ -29,8 +42,9 @@ fn create_a_test_project() {
             }],
             //funds required
             1000000u64,
-            CurrencyId::Native
-        ).unwrap();
+            CurrencyId::Native,
+        )
+        .unwrap();
     });
 }
 
@@ -98,6 +112,11 @@ fn create_a_test_project_with_no_name() {
     });
 }
 
+// SBP-M2 review: This test has no sense...
+// My comment from M1 has not been applied
+// In that test you only check if project name is valid
+// The rest does not matter
+// And has been verified in previous tests
 #[test]
 fn create_a_test_project_with_no_data() {
     ExtBuilder.build().execute_with(|| {
@@ -106,13 +125,21 @@ fn create_a_test_project_with_no_data() {
             Proposals::create_project(
                 Origin::signed(alice),
                 //project name
-                b"".to_vec().try_into().expect("input should be of decent length"),
+                b"".to_vec()
+                    .try_into()
+                    .expect("input should be of decent length"),
                 //project logo
-                b"".to_vec().try_into().expect("input should be of decent length"),
+                b"".to_vec()
+                    .try_into()
+                    .expect("input should be of decent length"),
                 //project description
-                b"".to_vec().try_into().expect("input should be of decent length"),
+                b"".to_vec()
+                    .try_into()
+                    .expect("input should be of decent length"),
                 //website
-                b"".to_vec().try_into().expect("input should be of decent length"),
+                b"".to_vec()
+                    .try_into()
+                    .expect("input should be of decent length"),
                 //milestone
                 bounded_vec![ProposedMilestone {
                     name: bounded_vec![],
@@ -170,7 +197,11 @@ fn create_a_test_project_and_add_whitelist_from_non_initatorfail() {
         };
 
         assert_noop!(
-            Proposals::add_project_whitelist(Origin::signed(bob), 0, bounded_vec![whitelist.clone()]),
+            Proposals::add_project_whitelist(
+                Origin::signed(bob),
+                0,
+                bounded_vec![whitelist.clone()]
+            ),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -199,6 +230,7 @@ fn create_a_test_project_remove_whitelist() {
     });
 }
 
+// SBP-M2 review: test without any check?
 #[test]
 fn create_a_test_project_and_schedule_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
@@ -211,7 +243,7 @@ fn create_a_test_project_and_schedule_round() {
             System::block_number() + 1,
             //Project key starts with 0 for the first project submitted to the chain
             bounded_vec![0],
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
     });
@@ -269,6 +301,7 @@ fn schedule_round_invalid_end_block_no() {
     });
 }
 
+// SBP-M2 review: Why do you check `EndTooEarly` while it is checked in previous test?
 #[test]
 fn cancel_round_no_active_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
@@ -327,9 +360,15 @@ fn cancel_round() {
             .expect("Expected at least one EventRecord to be found")
             .event;
 
+        // SBP-M2 review: you do not need to check if that works
+        // There should be a dedicated test for it
+        // In this test you should assume that it works
         assert_eq!(
             exp_fundingroundcreated_event,
-            mock::Event::from(proposals::Event::FundingRoundCreated(0, project_keys.to_vec()))
+            mock::Event::from(proposals::Event::FundingRoundCreated(
+                0,
+                project_keys.to_vec()
+            ))
         );
 
         let round_index = 0;
@@ -436,7 +475,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -493,7 +532,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -551,7 +590,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -609,7 +648,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -652,7 +691,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -698,7 +737,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -724,6 +763,10 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
     });
 }
 
+// SBP-M2 review: as I commented before
+// You should have only dedicated check for test case
+// Initalization actions should be verified in other test cases
+// And you need to assume that it works
 #[test]
 fn test_submit_milestone() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
@@ -939,16 +982,25 @@ fn test_finalize_a_milestone_without_voting() {
 
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 1"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 2"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 3"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1040,16 +1092,25 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 1"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 2"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 3"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1204,16 +1265,25 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 1"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 2"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 3"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1414,11 +1484,17 @@ fn submit_multiple_milestones() {
 
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 1"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 2"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1509,7 +1585,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
             project_keys,
-            RoundType::ContributionRound
+            RoundType::ContributionRound,
         )
         .unwrap();
 
@@ -1519,25 +1595,19 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
 
         run_to_block(4);
         //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
+        Proposals::contribute(Origin::signed(alice), project_key, contribution_amount).unwrap();
 
         //ensuring alice's balance has reduced after contribution
         let alice_balance_post_contribute: u64 = 8_000;
-        assert_eq!(alice_balance_post_contribute,Balances::free_balance(&alice));
+        assert_eq!(
+            alice_balance_post_contribute,
+            Balances::free_balance(&alice)
+        );
 
-        Proposals::refund(
-            Origin::root(),
-            project_key
-        )
-        .unwrap();
+        Proposals::refund(Origin::root(), project_key).unwrap();
 
         //ensuring the refunded amount was transferred back successfully
-        assert_eq!(additional_amount,Balances::free_balance(&alice));
+        assert_eq!(additional_amount, Balances::free_balance(&alice));
 
         //contribute success event
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
@@ -1565,16 +1635,25 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 1"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 2"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 30,
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 3".to_vec().try_into().expect("input should be of decent length"),
+        name: b"milestone 3"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1636,10 +1715,10 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
 
         run_to_block(5);
         //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob),project_index, 0, true,).ok();
+        Proposals::vote_on_milestone(Origin::signed(bob), project_index, 0, true).ok();
 
         //Charlie voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(charlie),project_index, 0, true,).ok();
+        Proposals::vote_on_milestone(Origin::signed(charlie), project_index, 0, true).ok();
 
         assert_ok!(Proposals::finalise_milestone_voting(
             Origin::signed(alice),
@@ -1653,13 +1732,20 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         ));
 
         //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw:u32 = proposed_milestones1.get(0).unwrap().percentage_to_unlock;
+        let total_percentage_to_withdraw: u32 =
+            proposed_milestones1.get(0).unwrap().percentage_to_unlock;
 
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
         //checking that Alice now has 10.2m
-        assert_ne!(Balances::free_balance(&alice), additional_amount + required_funds);
-        assert_eq!(Balances::free_balance(&alice), additional_amount + required_funds * (total_percentage_to_withdraw as u64)/100);
+        assert_ne!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds
+        );
+        assert_eq!(
+            Balances::free_balance(&alice),
+            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
+        );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -1668,24 +1754,31 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(alice, 0, 200000u64,CurrencyId::Native))
+            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
+                alice,
+                0,
+                200000u64,
+                CurrencyId::Native
+            ))
         );
 
         //validating contributor current balance
         let contributor_balance_pre_refund: u64 = 9_500_000;
-        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&bob));
-        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&charlie));
+        assert_eq!(contributor_balance_pre_refund, Balances::free_balance(&bob));
+        assert_eq!(
+            contributor_balance_pre_refund,
+            Balances::free_balance(&charlie)
+        );
 
-        Proposals::refund(
-            Origin::root(),
-            project_index
-        )
-        .unwrap();
+        Proposals::refund(Origin::root(), project_index).unwrap();
 
         //ensuring the refunded amount was transferred back successfully
         let contributor_balance_pre_refund: u64 = 9_900_000;
-        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&bob));
-        assert_eq!(contributor_balance_pre_refund,Balances::free_balance(&charlie));
+        assert_eq!(contributor_balance_pre_refund, Balances::free_balance(&bob));
+        assert_eq!(
+            contributor_balance_pre_refund,
+            Balances::free_balance(&charlie)
+        );
 
         //contribute success event
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
@@ -1699,7 +1792,6 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
                 800000u64
             ))
         );
-
     })
 }
 
@@ -1709,14 +1801,17 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
     ExtBuilder.build().execute_with(|| {
         create_project(alice);
 
-        assert_noop!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number(),
-            System::block_number() + 1,
-            // Empty keys is the test.
-            bounded_vec![],
-            RoundType::ContributionRound
-        ), Error::<Test>::LengthMustExceedZero);
+        assert_noop!(
+            Proposals::schedule_round(
+                Origin::root(),
+                System::block_number(),
+                System::block_number() + 1,
+                // Empty keys is the test.
+                bounded_vec![],
+                RoundType::ContributionRound
+            ),
+            Error::<Test>::LengthMustExceedZero
+        );
     });
 }
 
@@ -1726,27 +1821,24 @@ fn create_project(alice: AccountId) {
         Origin::signed(alice),
         //project name
         b"Farmer's Project Sudan"
-        .to_vec()
-        .try_into()
-        .expect("test bytes should be of decent length;"),
+            .to_vec()
+            .try_into()
+            .expect("test bytes should be of decent length;"),
         //project logo
         b"Imbue Logo"
-        .to_vec()
-        .try_into()
-        .expect("input should be of decent length"),
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         //project description
-        
         b"This project is aimed at providing decentralised funding for a farming project."
-        .to_vec()
-        .try_into()
-        .expect("test bytes should be of decent length;"),
-        
-            //website
+            .to_vec()
+            .try_into()
+            .expect("test bytes should be of decent length;"),
+        //website
         b"https://farmers.network"
-        .to_vec()
-        .try_into()
-        .expect("test bytes should be of decent length;"),
-
+            .to_vec()
+            .try_into()
+            .expect("test bytes should be of decent length;"),
         //milestone
         bounded_vec![ProposedMilestone {
             name: bounded_vec![],
@@ -1766,29 +1858,28 @@ fn create_project_multiple_milestones(
         Origin::signed(alice),
         //project name
         b"Farmer's Project Sudan"
-        .to_vec()
-        .try_into()
-        .expect("input should be of decent length"),
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         //project logo
         b"Imbue Logo"
-        .to_vec()
-        .try_into()
-        .expect("input should be of decent length"),
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         //project description
-        
         b"This project is aimed at providing decentralised funding for a farming project."
-        .to_vec()
-        .try_into()
-        .expect("input should be of decent length"),
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         //website
-        
         b"https://farmers.network"
-        .to_vec()
-        .try_into()
-        .expect("input should be of decent length"),
-        
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
         //milestone
-        proposed_milestones.try_into().expect("proposed milestones are too long"),
+        proposed_milestones
+            .try_into()
+            .expect("proposed milestones are too long"),
         //funds required
         1000000u64,
         CurrencyId::Native
