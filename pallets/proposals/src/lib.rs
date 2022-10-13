@@ -110,7 +110,11 @@ pub mod pallet {
     pub(super) type NoConfidenceVotes<T: Config> =
         StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
     
-
+    #[pallet::storage]
+    #[pallet::getter(fn round_ending_on)]
+    pub(super) type RoundEndingOn<T: Config> =
+        StorageMap<_, Identity, T::BlockNumber, Vec<RoundKey>, OptionQuery>;
+        
     #[pallet::storage]
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
@@ -138,6 +142,8 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn is_identity_required)]
     pub type IsIdentityRequired<T> = StorageValue<_, bool, ValueQuery>;
+
+
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -235,7 +241,13 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_initialize(n: T::BlockNumber) -> Weight {
+            
+            
+            0u64
+        }
+    }
 
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
@@ -1285,6 +1297,13 @@ impl<T: Config> Pallet<T> {
         Rounds::<T>::insert(round_key, Some(round));
         RoundCount::<T>::mutate(|c| {*c += 1u32});
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
+        RoundEndingOn::<T>::mutate(now + T::NoConfidenceTimeLimit::get(), |v| {
+            if let Some(vec) = v {
+                vec.push(round_key);
+            } else {
+                return Some(vec![round_key])
+            }
+        });
 
         Ok(()).into()
     }
@@ -1311,7 +1330,7 @@ impl<T: Config> Pallet<T> {
             if !current_round.is_canceled 
             && current_round.project_keys.contains(&project_key) 
             && current_round.round_type == RoundType::VoteOfNoConfidence
-            && current_round.end <= frame_system::Pallet::<T>::block_number()
+            && current_round.end >= frame_system::Pallet::<T>::block_number()
             {
                 round = Some(current_round);
                 round_key = i;
@@ -1320,7 +1339,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Ensure a round has been found.
-        ensure!(round.is_some(), Error::<T>::NoActiveRound);
+        ensure!(round.is_some(), Error::<T>::RoundNotProcessing);
 
         // Ensure they have not already voted.
         ensure!(UserVotes::<T>::get((&who, project_key, 0, round_key)).is_none(), Error::<T>::VoteAlreadyExists);
@@ -1336,16 +1355,38 @@ impl<T: Config> Pallet<T> {
             }
         });
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
-
         Ok(()).into()
     }
 
-    /// This function will finalise the voting process.
-    /// It should automatically finalise if the the end date passed or if {percent}% of votes have passed.
-    /// This percent can be changed in the parameters.  
-    fn finalise_no_confindence_voting(project_key: ProjectKey, majority_required: u8) -> DispatchResult {
-        
+    fn call_finalise_no_confidence_vote(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+        // find the round, 
+        // find the vote, 
+        // ensure threshhold has been reached.
+        // if so   
+        // finalise logic if majority reached etc.
+        // refund users.
+        // clean up storage.
+    }
 
+    /// This function will finalise the voting process on a no confidence round in a given block.
+    /// An idea to be used in the on_initialize fn for automatic finalisation.
+    fn auto_finalise_no_confindence_voting(block_number: T::BlockNumber, majority_required: u8) -> Weight {
+        let mut weight: Weight = 0;
+        // Find the rounds ending on this block
+        let maybe_rounds: Option<Vec<RoundKey>> = RoundEndingOn::<T>::get(block_number);
+        if let Some(vec) = maybe_rounds {
+            vec.iter().map(|round_key| {
+                // Get the round for these possible round keys.
+                let r = Rounds::<T>::get(round_key);
+                weight += 10_000u64;
+                if let Some(round) = r {
+                    weight += 10_000u64;
+                    // finalise logic if majority reached etc.
+                    // refund users.
+                    // clean up storage.
+                }
+            })
+        } 
         Ok(()).into()
     } 
     
