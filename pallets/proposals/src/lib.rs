@@ -1316,8 +1316,8 @@ impl<T: Config> Pallet<T> {
         let contributor = Self::ensure_contributor_of(&project, &who)?;
 
         // Ensure that the vote has been raised.
-        ensure!(NoConfidenceVotes::<T>::contains_key(project_key), Error::<T>::NoActiveRound);
-       
+        let mut vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound);
+
         // We need to find the round key and the only current way is finding the round.
         let mut round_key = 0u32;
         let mut round: Option<RoundOf<T>> = None;
@@ -1337,29 +1337,29 @@ impl<T: Config> Pallet<T> {
                 break;
             }
         }
-
-        // Ensure a round has been found.
+        // Ensure a round has been found + that they have not already voted.
         ensure!(round.is_some(), Error::<T>::RoundNotProcessing);
-
-        // Ensure they have not already voted.
         ensure!(UserVotes::<T>::get((&who, project_key, 0, round_key)).is_none(), Error::<T>::VoteAlreadyExists);
 
-        // Mutate storage to update votes and user votes.
-        NoConfidenceVotes::<T>::mutate(project_key, |v| {
-            if let Some(vote) = v {
-                if is_yay {
-                    vote.yay += contributor.value 
-                } else {
-                    vote.nay += contributor.value
-                }
-            }
-        });
+        // Update the vote.
+        if is_yay {
+            vote.yay += contributor.value 
+        } else {
+            vote.nay += contributor.value
+        }
+
+        // Insert the new vote and person who has voted.
+        NoConfidenceVotes::<T>::insert(project_key, vote)
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
         Ok(()).into()
     }
 
     fn call_finalise_no_confidence_vote(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+
+        // Ensure that the caller is a contributor and that the vote has been raised.
         let _ = ensure_contributor_of(project_key, who)?;
+        let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)
+       
         // find the round, 
         // find the vote, 
         // ensure threshhold has been reached.
@@ -1369,6 +1369,7 @@ impl<T: Config> Pallet<T> {
             // clean up storage.
     }
 
+    /// Psuedo code for automatic finalisation of rounds with a vote.
     /// This function will finalise the voting process on a no confidence round in a given block.
     /// An idea to be used in the on_initialize fn for automatic finalisation.
     fn auto_finalise_no_confindence_voting(block_number: T::BlockNumber, majority_required: u8) -> Weight {
@@ -1405,7 +1406,6 @@ impl<T: Config> Pallet<T> {
 
         Ok(maybe_contributor[0])
     }
-
 }
 
 // The Constants associated with the bounded parameters
