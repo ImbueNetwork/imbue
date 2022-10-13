@@ -696,26 +696,13 @@ impl<T: Config> Pallet<T> {
             let project =
                 Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-            //TODO: get explanation on this update. this will not work with vote of no confidence.
-                // Update project withdrawn funds
+            // Update project as approved for funding, assuming only RoundType::Contribution will be used.
             let updated_project = Project {
-                name: project.name,
-                logo: project.logo,
-                description: project.description,
-                website: project.website,
-                milestones: project.milestones,
-                contributions: project.contributions.clone(),
-                required_funds: project.required_funds,
-                currency_id: project.currency_id,
-                withdrawn_funds: project.withdrawn_funds,
-                initiator: project.initiator,
-                create_block_number: project.create_block_number,
                 approved_for_funding: true,
-                funding_threshold_met: project.funding_threshold_met,
-                cancelled: project.cancelled,
+                ..project
             };
 
-            // Add proposal to list
+            // Update storage with the new project.
             <Projects<T>>::insert(project_key, updated_project);
         }
 
@@ -838,7 +825,7 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        // Add proposal to list
+        // Update storage item to include the new contributions.
         <Projects<T>>::insert(project_key, project);
 
         Ok(().into())
@@ -1305,9 +1292,10 @@ impl<T: Config> Pallet<T> {
         }
         ensure!(round.is_some(), Error::<T>::RoundNotProcessing);
 
+        // The nay vote must >= minimum threshold required for the vote to pass.
         let total_contribute = Self::get_total_project_contributions(project_key)?;
         
-        // 100 Threshold =  (total_contribute * majority_required)/100
+        // Threshold =  (total_contribute * majority_required)/100
         let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into();
 
         if vote.nay * 100u8.into() >= threshold_votes {
