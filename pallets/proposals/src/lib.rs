@@ -1359,13 +1359,14 @@ impl<T: Config> Pallet<T> {
     }
 
     fn call_finalise_no_confidence_vote(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+        let _ = ensure_contributor_of(project_key, who)?;
         // find the round, 
         // find the vote, 
         // ensure threshhold has been reached.
         // if so   
         // finalise logic if majority reached etc.
         // refund users.
-        // clean up storage.
+            // clean up storage.
     }
 
     /// This function will finalise the voting process on a no confidence round in a given block.
