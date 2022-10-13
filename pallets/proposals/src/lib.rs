@@ -838,26 +838,8 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        // Update project withdrawn funds
-        let updated_project = Project {
-            name: project.name,
-            logo: project.logo,
-            description: project.description,
-            website: project.website,
-            milestones: project.milestones,
-            contributions: project.contributions.clone(),
-            required_funds: project.required_funds,
-            currency_id: project.currency_id,
-            withdrawn_funds: project.withdrawn_funds,
-            initiator: project.initiator,
-            create_block_number: project.create_block_number,
-            approved_for_funding: project.approved_for_funding,
-            funding_threshold_met: project.funding_threshold_met,
-            cancelled: project.cancelled,
-        };
-
         // Add proposal to list
-        <Projects<T>>::insert(project_key, updated_project);
+        <Projects<T>>::insert(project_key, project);
 
         Ok(().into())
     }
@@ -941,20 +923,8 @@ impl<T: Config> Pallet<T> {
 
         // Update project milestones
         let updated_project = Project {
-            name: project.name,
-            logo: project.logo,
-            description: project.description,
-            website: project.website,
             milestones,
-            contributions: project.contributions,
-            required_funds: project.required_funds,
-            currency_id: project.currency_id,
-            withdrawn_funds: project.withdrawn_funds,
-            initiator: project.initiator,
-            create_block_number: project.create_block_number,
-            approved_for_funding: project.approved_for_funding,
-            funding_threshold_met: project.funding_threshold_met,
-            cancelled: project.cancelled,
+            ..project
         };
         // Add proposal to list
         <Projects<T>>::insert(project_key, updated_project);
@@ -1259,15 +1229,15 @@ impl<T: Config> Pallet<T> {
         Ok(()).into()
     }
     
-    // This function allows a contributer to agree or disagree with a vote of no confidence.
-    // Additional contributions after the vote is set are not counted and cannot be voted on again, todo?
+    /// Allows a contributer to agree or disagree with a vote of no confidence.
+    /// Additional contributions after the vote is set are not counted and cannot be voted on again, todo?
     fn add_vote_no_confidence(who: T::AccountId, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
         // Ensure that who is a contributor.
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contributor = Self::ensure_contributor_of(&project, &who)?;
 
         // Ensure that the vote has been raised.
-        let mut vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound);
+        let mut vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
         // We need to find the round key and the only current way is finding the round.
         let mut round_key = 0u32;
@@ -1293,31 +1263,30 @@ impl<T: Config> Pallet<T> {
         ensure!(UserVotes::<T>::get((&who, project_key, 0, round_key)).is_none(), Error::<T>::VoteAlreadyExists);
 
         // Update the vote
-        if let Ok(v) = vote {
             if is_yay {
-                v.yay += contributor.value 
+                vote.yay += contributor.value 
             } else {
-                v.nay += contributor.value
+                vote.nay += contributor.value
             }
+        
             // Insert new vote.
-            NoConfidenceVotes::<T>::insert(project_key, v);
-        }
+        NoConfidenceVotes::<T>::insert(project_key, vote);
 
         // Insert person who has voted.
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
         Ok(()).into()
     }
 
-    // This method is used when a contributor wants to finalise a vote of no confidence.
-    // Votes for the vote of no confidence must reach the majority requred for the vote to pass.
+    /// Called when a contributor wants to finalise a vote of no confidence.
+    /// Votes for the vote of no confidence must reach the majority requred for the vote to pass.
     fn call_finalise_no_confidence_vote(who: T::AccountId, project_key: ProjectKey, majority_required: u8) -> DispatchResult {
+        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         // Ensure that the caller is a contributor and that the vote has been raised.
-        let _ = Self::ensure_contributor_of(&project_key, &who)?;
-        let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound);
+        let _ = Self::ensure_contributor_of(&project, &who)?;
+        let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
         
         // We need to find the round key and the only current way is finding the round.
-        let mut round_key = 0u32;
         let mut round: Option<RoundOf<T>> = None;
         let round_count = RoundCount::<T>::get();
         
@@ -1331,29 +1300,29 @@ impl<T: Config> Pallet<T> {
             && current_round.end >= frame_system::Pallet::<T>::block_number()
             {
                 round = Some(current_round);
-                round_key = i;
                 break;
             }
         }
         ensure!(round.is_some(), Error::<T>::RoundNotProcessing);
 
-        let total_contribute = Self::get_total_project_contributions(project_key);
+        let total_contribute = Self::get_total_project_contributions(project_key)?;
         
         // 100 Threshold =  (total_contribute * majority_required)/100
-        let threshold_votes: u32 = total_contribute * majority_required as u64;
+        let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into();
 
-        if vote.nay * 100 >= threshold_votes {
+        if vote.nay * 100u8.into() >= threshold_votes {
             // Vote of no confidence has passed alas refund. 
-            let _ = Self::refund(project_key)?;
+            Self::do_refund(project_key);
         } else {
             // end the round
         }
         NoConfidenceVotes::<T>::remove(project_key);
         // refund users.
             // clean up storage.
+        Ok(())
     }
 
-    // a method that ensures that an account is is a contributor to a project.
+    // Called to ensure that an account is is a contributor to a project.
     fn ensure_contributor_of<'a>(
         project: &'a Project<T::AccountId, BalanceOf<T>,T::BlockNumber>,
         account_id: &'a T::AccountId
