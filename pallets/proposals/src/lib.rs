@@ -1307,7 +1307,6 @@ impl<T: Config> Pallet<T> {
             if !current_round.is_canceled 
             && current_round.project_keys.contains(&project_key) 
             && current_round.round_type == RoundType::VoteOfNoConfidence
-            && current_round.end >= frame_system::Pallet::<T>::block_number()
             {
                 round = Some(current_round);
                 round_key = i;
@@ -1320,9 +1319,10 @@ impl<T: Config> Pallet<T> {
         let total_contribute = Self::get_total_project_contributions(project_key)?;
         
         // Threshold =  (total_contribute * majority_required)/100
-        let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into();
+        let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into() / 100u32.into();
+        dbg!(&threshold_votes);
 
-        if vote.nay * 100u8.into() >= threshold_votes {
+        if vote.nay >= threshold_votes {
             // Vote of no confidence has passed alas refund. 
             round.as_mut().expect("is_some() has been called; qed").is_canceled = true;
 
