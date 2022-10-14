@@ -56,6 +56,9 @@ pub mod pallet {
 
         /// The amount of time given ,up to point of decision, when a vote of no confidence is held.
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
+
+        /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
+        type PercentRequiredForVoteToPass: Get<u8>;
     }
 
 
@@ -433,15 +436,23 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn raise_vote_of_no_confidence(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::raise_no_confidence_round(who, project_key)
+            Self::call_raise_no_confidence_round(who, project_key)
         }
 
          // TODO: BENCHMARK
          #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
          pub fn vote_on_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
              let who = ensure_signed(origin)?;
-             Self::add_vote_no_confidence(who, project_key, is_yay)
+             Self::call_add_vote_no_confidence(who, project_key, is_yay)
          }
+
+          // TODO: BENCHMARK
+          #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+          pub fn finalise_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResult {
+              let who = ensure_signed(origin)?;
+              //todo: config item for majority
+              Self::call_finalise_no_confidence_vote(who, project_key, T::PercentRequiredForVoteToPass::get())
+          }
 
         // Root Extrinsics:
 
@@ -1182,7 +1193,7 @@ impl<T: Config> Pallet<T> {
     /// This function raises a vote of no confidence.
     /// This round can only be called once and there after can only be voted on.
     /// The person calling it must be a contributor.
-    fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+    fn call_raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
 
         //ensure that who is a contributor or root
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
@@ -1218,7 +1229,7 @@ impl<T: Config> Pallet<T> {
     
     /// Allows a contributer to agree or disagree with a vote of no confidence.
     /// Additional contributions after the vote is set are not counted and cannot be voted on again, todo?
-    fn add_vote_no_confidence(who: T::AccountId, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
+    fn call_add_vote_no_confidence(who: T::AccountId, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
         // Ensure that who is a contributor.
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contributor = Self::ensure_contributor_of(&project, &who)?;
@@ -1258,6 +1269,7 @@ impl<T: Config> Pallet<T> {
         
             // Insert new vote.
         NoConfidenceVotes::<T>::insert(project_key, vote);
+        // update round?
 
         // Insert person who has voted.
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);

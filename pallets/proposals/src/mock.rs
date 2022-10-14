@@ -204,6 +204,7 @@ parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
+    pub PercentRequiredForVoteToPass: u8 = 75u8;
 }
 impl proposals::Config for Test {
     type Event = Event;
@@ -214,6 +215,7 @@ impl proposals::Config for Test {
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
+    type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
 }
 
 parameter_types! {
