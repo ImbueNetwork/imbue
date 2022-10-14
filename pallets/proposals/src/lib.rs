@@ -745,7 +745,11 @@ impl<T: Config> Pallet<T> {
         for i in (0..round_key).rev() {
 
             let round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
-            if !round.is_canceled && round.start < now && round.end > now {
+            if !round.is_canceled 
+            && round.start < now 
+            && round.end > now
+            && round.round_type == RoundType::ContributionRound
+            {
                 // Find proposal by key
                 for current_project_key in round.project_keys.iter() {
                     if current_project_key == &project_key {
@@ -805,7 +809,7 @@ impl<T: Config> Pallet<T> {
             value,
         )?;
 
-        <Rounds<T>>::insert(round_key - 1, Some(round));
+        <Rounds<T>>::insert(round_key, Some(round));
 
         Self::deposit_event(Event::ContributeSucceeded(
             who.clone(),
@@ -1249,7 +1253,6 @@ impl<T: Config> Pallet<T> {
         for i in (0..round_count).rev() {
             // Get the current round and check that both the key exists and the value under the key is some.
             let current_round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
-
             if !current_round.is_canceled 
             && current_round.project_keys.contains(&project_key) 
             && current_round.round_type == RoundType::VoteOfNoConfidence
@@ -1307,6 +1310,7 @@ impl<T: Config> Pallet<T> {
             if !current_round.is_canceled 
             && current_round.project_keys.contains(&project_key) 
             && current_round.round_type == RoundType::VoteOfNoConfidence
+            && current_round.end >= frame_system::Pallet::<T>::block_number()
             {
                 round = Some(current_round);
                 round_key = i;
@@ -1318,11 +1322,10 @@ impl<T: Config> Pallet<T> {
         // The nay vote must >= minimum threshold required for the vote to pass.
         let total_contribute = Self::get_total_project_contributions(project_key)?;
         
-        // Threshold =  (total_contribute * majority_required)/100
-        let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into() / 100u32.into();
-        dbg!(&threshold_votes);
+        // 100 * Threshold =  (total_contribute * majority_required)/100
+        let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into();
 
-        if vote.nay >= threshold_votes {
+        if vote.nay * 100u8.into() >= threshold_votes {
             // Vote of no confidence has passed alas refund. 
             round.as_mut().expect("is_some() has been called; qed").is_canceled = true;
 
