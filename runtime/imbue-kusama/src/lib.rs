@@ -752,6 +752,7 @@ parameter_types! {
     pub const MaxProposalsPerRound: u32 = 256;
     pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
     pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
+    pub const PercentRequiredForVoteToPass: u8 = 75;
 }
 
 parameter_types! {
@@ -811,6 +812,7 @@ impl proposals::Config for Runtime {
     type MaxProposalsPerRound = MaxProposalsPerRound;
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
+    type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type WeightInfo = ();
 }
 
