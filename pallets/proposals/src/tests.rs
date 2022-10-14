@@ -2001,7 +2001,7 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
         let event = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
         assert_eq!(event.event, 
             mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
-                3,
+                4,
                 project_keys[3]
             ))
         );
