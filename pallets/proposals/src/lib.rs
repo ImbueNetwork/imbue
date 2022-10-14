@@ -448,7 +448,6 @@ pub mod pallet {
           #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
           pub fn finalise_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
               let who = ensure_signed(origin)?;
-              //todo: config item for majority
               Self::call_finalise_no_confidence_vote(who, project_key, T::PercentRequiredForVoteToPass::get())
           }
 
@@ -986,7 +985,6 @@ impl<T: Config> Pallet<T> {
         let mut latest_round_key = 0;
         for i in (0..round_key).rev() {
 
-            // TODO: expensive loop.
             let round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
             if !round.is_canceled
                 && round.start < now
@@ -1419,7 +1417,7 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
     }
 }
 
-// TODO: what is a proposal.
+/// A proposal is the preliminary project, before it is scheduled by root.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Proposal<AccountId, Balance, BlockNumber> {
     project_key: ProjectKey,
