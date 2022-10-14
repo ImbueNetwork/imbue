@@ -737,7 +737,7 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
 
         // round list must be not none
-        let round_key = RoundCount::<T>::get();
+        let mut round_key = RoundCount::<T>::get();
         ensure!(round_key > 0, Error::<T>::NoActiveRound);
         let mut project_exists_in_round = false;
         // Find processing round
@@ -808,8 +808,6 @@ impl<T: Config> Pallet<T> {
             &Self::project_account_id(project_key),
             value,
         )?;
-
-        <Rounds<T>>::insert(round_key, Some(round));
 
         Self::deposit_event(Event::ContributeSucceeded(
             who.clone(),
