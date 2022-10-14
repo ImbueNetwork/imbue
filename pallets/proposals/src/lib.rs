@@ -174,7 +174,12 @@ pub mod pallet {
         WhitelistAdded(ProjectKey, T::BlockNumber),
         WhitelistRemoved(ProjectKey, T::BlockNumber),
         ProjectLockedFundsRefunded(ProjectKey, BalanceOf<T>),
-        NoConfidenceRoundCreated(RoundKey, Vec<ProjectKey>),
+        /// You have created a vote of no confidence.
+        NoConfidenceRoundCreated(RoundKey, ProjectKey),
+        /// You have voted upon a round of no confidence.
+        NoConfidenceRoundVotedUpon(RoundKey, ProjectKey),
+        /// You have finalised a vote of no confidence.
+        NoConfidenceRoundFinalised(RoundKey, ProjectKey),
     }
 
     // Errors inform users that something went wrong.
@@ -236,15 +241,8 @@ pub mod pallet {
         KeyNotFound,
         /// The input vector must exceed length zero.
         LengthMustExceedZero,
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_initialize(n: T::BlockNumber) -> Weight {
-            
-            
-            0u64
-        }
+        /// The voting threshold has not been met.
+        VoteThresholdNotMet,
     }
 
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -720,8 +718,8 @@ impl<T: Config> Pallet<T> {
         match round_type {
             RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))},
             RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))},
-            RoundType::VoteOfNoConfidence =>{Self::deposit_event(Event::NoConfidenceRoundCreated(key, project_keys.to_vec()))},
-            }
+            _ => {}
+        }
 
         RoundCount::<T>::put(next_key);
 
@@ -1224,6 +1222,12 @@ impl<T: Config> Pallet<T> {
         Rounds::<T>::insert(round_key, Some(round));
         RoundCount::<T>::mutate(|c| {*c += 1u32});
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
+        
+        Self::deposit_event(Event::NoConfidenceRoundCreated(
+            round_key,
+            project_key,
+        ));
+
         Ok(()).into()
     }
     
@@ -1267,12 +1271,17 @@ impl<T: Config> Pallet<T> {
                 vote.nay += contributor.value
             }
         
-            // Insert new vote.
+        // Insert new vote.
         NoConfidenceVotes::<T>::insert(project_key, vote);
-        // update round?
 
         // Insert person who has voted.
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
+
+        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(
+            round_key,
+            project_key,
+        ));
+
         Ok(()).into()
     }
 
@@ -1288,6 +1297,8 @@ impl<T: Config> Pallet<T> {
         // We need to find the round key and the only current way is finding the round.
         let mut round: Option<RoundOf<T>> = None;
         let round_count = RoundCount::<T>::get();
+        // This does not have to be an option as round is.
+        let mut round_key: RoundKey = 0;
         
         for i in (0..round_count).rev() {
             // Get the current round and check that both the key exists and the value under the key is some.
@@ -1299,6 +1310,7 @@ impl<T: Config> Pallet<T> {
             && current_round.end >= frame_system::Pallet::<T>::block_number()
             {
                 round = Some(current_round);
+                round_key = i;
                 break;
             }
         }
@@ -1312,13 +1324,21 @@ impl<T: Config> Pallet<T> {
 
         if vote.nay * 100u8.into() >= threshold_votes {
             // Vote of no confidence has passed alas refund. 
+            round.as_mut().expect("is_some() has been called; qed").is_canceled = true;
+
+            // Set Round to is cancelled, remove the vote from NoConfidenceVotes, and do the refund.
+            NoConfidenceVotes::<T>::remove(project_key);
+            Rounds::<T>::insert(round_key, round);
             Self::do_refund(project_key);
+
+            Self::deposit_event(Event::NoConfidenceRoundFinalised(
+                round_key,
+                project_key,
+            ));
+
         } else {
-            // end the round
+            return Err(Error::<T>::VoteThresholdNotMet.into())
         }
-        NoConfidenceVotes::<T>::remove(project_key);
-        // refund users.
-            // clean up storage.
         Ok(())
     }
 
