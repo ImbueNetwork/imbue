@@ -1997,6 +1997,7 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
 
         assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(steve), project_keys[3], false));
         assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(steve), project_keys[3]));  
+
         let event = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
         assert_eq!(event.event, 
             mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
