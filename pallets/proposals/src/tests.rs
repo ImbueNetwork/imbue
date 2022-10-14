@@ -1896,7 +1896,7 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
         Proposals::contribute(Origin::signed(charlie), project_key, 10_000u64).unwrap();
         Proposals::contribute(Origin::signed(bob), project_key, 20_000u64).unwrap();
         assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
-        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, true));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, false));
 
         // Assert that steve who is not a contributor cannot finalise the same goes for the initiator.
         assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(steve), project_key), Error::<Test>::InvalidAccount);
@@ -1905,6 +1905,8 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
         assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(bob), 2), Error::<Test>::ProjectDoesNotExist);  
         // Assert that bob, a contrbutor, can finalise
         assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_key));  
+
+
     });
 }
 
@@ -1916,9 +1918,11 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
     let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
     let steve = get_account_id_from_seed::<sr25519::Public>("steve");
 
-    let project_keys = bounded_vec![0u32, 1u32];
+    let project_keys: BoundedProjectKeys = bounded_vec![0u32, 1u32, 2u32, 3u32];
     ExtBuilder.build().execute_with(|| {
         // Create a project for both alice and bob.
+        create_project(alice);
+        create_project(alice);
         create_project(alice);
         create_project(alice);
         
@@ -1927,7 +1931,7 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
             Origin::root(),
             System::block_number(),
             System::block_number() + 100,
-            project_keys,
+            project_keys.clone(),
             RoundType::ContributionRound));
             
         // Deposit funds and contribute.
@@ -1938,7 +1942,7 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
         
         // 1: in this case bob is 4/5 of the total and charlie 1/5.
         Proposals::contribute(Origin::signed(charlie), project_keys[0], 10_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), project_keys[0], 30_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[0], 40_000u64).unwrap();
         
         // 2: in this case bob is 3/4 of the total and charlie 1/4.
         Proposals::contribute(Origin::signed(charlie), project_keys[1], 10_000u64).unwrap();
@@ -1950,28 +1954,48 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
         
         // 4: in this case bob is 1/2 of the total and charlie 1/2.
         Proposals::contribute(Origin::signed(charlie), project_keys[3], 10_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), project_keys[3], 30_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[3], 10_000u64).unwrap();
 
         // 1
         assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_keys[0]));
-        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[0], true));
-        // 1
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[0], false));
+        // 2
         assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_keys[1]));
-        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[1], true));
-        
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[1], false));
+        // 3
         assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_keys[2]));
-        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[2], true)); 
-        
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[2], false)); 
+        // 4
         assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_keys[3]));
-        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[3], true));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[3], false));
+        
+        // finalise passing rounds.
+        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_keys[0]));  
+        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(charlie), project_keys[1]));  
+        
+        // assert the events
+        let event1 = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
+        let event2 = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
+        assert_eq!(event1.event, 
+            mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
+                2,
+                project_keys[1]
+            ))
+        );
+        assert_eq!(event2.event, 
+            mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
+                1,
+                project_keys[0]
+            ))
+        );
+        
+        // Assert that the finalisations missing the threshold have not passed.
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_keys[2]), Error::<Test>::VoteThresholdNotMet);  
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(charlie), project_keys[3]), Error::<Test>::VoteThresholdNotMet);
 
-        // Assert that bob, a contrbutor, can finalise
-        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_key));  
+        // Asser that after more contributions the finalisation can pass
     });
 }
-
-
-
 
 //common helper methods
 fn create_project(account: AccountId) {
