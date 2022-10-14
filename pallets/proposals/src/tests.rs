@@ -1993,19 +1993,17 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
 
         // Assert that after more contributions the finalisation can pass.
         // Steve will now contribute and then vote.
-        Proposals::contribute(Origin::signed(steve), project_keys[3], 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(steve), project_keys[3], 20_000u64).unwrap();
 
-        let r = Rounds::<Test>::get(4);
-        dbg!(&r);
         assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(steve), project_keys[3], false));
         assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(steve), project_keys[3]));  
-        //let event2 = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
-        //assert_eq!(event2.event, 
-        //    mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
-        //        3,
-        //        project_keys[3]
-        //    ))
-        //);
+        let event = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
+        assert_eq!(event.event, 
+            mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
+                3,
+                project_keys[3]
+            ))
+        );
     });
 }
 
