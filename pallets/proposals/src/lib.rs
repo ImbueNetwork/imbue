@@ -446,7 +446,7 @@ pub mod pallet {
 
           // TODO: BENCHMARK
           #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
-          pub fn finalise_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResult {
+          pub fn finalise_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
               let who = ensure_signed(origin)?;
               //todo: config item for majority
               Self::call_finalise_no_confidence_vote(who, project_key, T::PercentRequiredForVoteToPass::get())
@@ -737,7 +737,7 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
 
         // round list must be not none
-        let mut round_key = RoundCount::<T>::get();
+        let round_key = RoundCount::<T>::get();
         ensure!(round_key > 0, Error::<T>::NoActiveRound);
         let mut project_exists_in_round = false;
         // Find processing round
@@ -760,7 +760,7 @@ impl<T: Config> Pallet<T> {
                 }
             }
         }
-        let round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
+        let _round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
         ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
         let mut project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
@@ -1288,7 +1288,7 @@ impl<T: Config> Pallet<T> {
 
     /// Called when a contributor wants to finalise a vote of no confidence.
     /// Votes for the vote of no confidence must reach the majority requred for the vote to pass.
-    fn call_finalise_no_confidence_vote(who: T::AccountId, project_key: ProjectKey, majority_required: u8) -> DispatchResult {
+    fn call_finalise_no_confidence_vote(who: T::AccountId, project_key: ProjectKey, majority_required: u8) -> DispatchResultWithPostInfo {
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         // Ensure that the caller is a contributor and that the vote has been raised.
@@ -1330,7 +1330,7 @@ impl<T: Config> Pallet<T> {
             // Set Round to is cancelled, remove the vote from NoConfidenceVotes, and do the refund.
             NoConfidenceVotes::<T>::remove(project_key);
             Rounds::<T>::insert(round_key, round);
-            Self::do_refund(project_key);
+            let _ = Self::do_refund(project_key)?;
 
             Self::deposit_event(Event::NoConfidenceRoundFinalised(
                 round_key,
@@ -1340,7 +1340,7 @@ impl<T: Config> Pallet<T> {
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into())
         }
-        Ok(())
+        Ok(().into())
     }
 
     // Called to ensure that an account is is a contributor to a project.
