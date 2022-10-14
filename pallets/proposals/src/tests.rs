@@ -1868,6 +1868,109 @@ fn test_adding_vote_of_no_confidence() {
     });
 }
 
+#[test]
+fn test_finalise_vote_of_no_confidence_with_threshold_met() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
+    let steve = get_account_id_from_seed::<sr25519::Public>("steve");
+
+    let project_key = 0u32;
+    ExtBuilder.build().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+        
+        //schedule a round to allow for contributions.
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![project_key],
+            RoundType::ContributionRound));
+            
+        // Deposit funds and contribute.
+        let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
+        // Setup required state to start voting: must have contributed and round must have started.
+        run_to_block(4);
+        Proposals::contribute(Origin::signed(charlie), project_key, 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_key, 20_000u64).unwrap();
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, true));
+
+        // Assert that steve who is not a contributor cannot finalise the same goes for the initiator.
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(steve), project_key), Error::<Test>::InvalidAccount);
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(alice), project_key), Error::<Test>::InvalidAccount);
+        // And we might aswell assert that you cannot call finalise on a project key that doesnt exist.
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(bob), 2), Error::<Test>::ProjectDoesNotExist);  
+        // Assert that bob, a contrbutor, can finalise
+        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_key));  
+    });
+}
+
+// This test assumes that the PercentRequiredForVoteToPass is set to 75 in the config. 
+#[test]
+fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
+    let steve = get_account_id_from_seed::<sr25519::Public>("steve");
+
+    let project_keys = bounded_vec![0u32, 1u32];
+    ExtBuilder.build().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+        create_project(alice);
+        
+        //schedule a round to allow for contributions.
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            project_keys,
+            RoundType::ContributionRound));
+            
+        // Deposit funds and contribute.
+        let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
+        // Setup required state to start voting: must have contributed and round must have started.
+        run_to_block(4);
+        
+        // 1: in this case bob is 4/5 of the total and charlie 1/5.
+        Proposals::contribute(Origin::signed(charlie), project_keys[0], 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[0], 30_000u64).unwrap();
+        
+        // 2: in this case bob is 3/4 of the total and charlie 1/4.
+        Proposals::contribute(Origin::signed(charlie), project_keys[1], 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[1], 30_000u64).unwrap();
+        
+        // 3: in this case bob is 2/3 of the total and charlie 1/3.
+        Proposals::contribute(Origin::signed(charlie), project_keys[2], 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[2], 20_000u64).unwrap();
+        
+        // 4: in this case bob is 1/2 of the total and charlie 1/2.
+        Proposals::contribute(Origin::signed(charlie), project_keys[3], 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[3], 30_000u64).unwrap();
+
+        // 1
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_keys[0]));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[0], true));
+        // 1
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_keys[1]));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[1], true));
+        
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_keys[2]));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[2], true)); 
+        
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_keys[3]));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_keys[3], true));
+
+        // Assert that bob, a contrbutor, can finalise
+        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_key));  
+    });
+}
+
+
 
 
 //common helper methods
