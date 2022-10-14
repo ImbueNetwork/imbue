@@ -1905,8 +1905,6 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
         assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(bob), 2), Error::<Test>::ProjectDoesNotExist);  
         // Assert that bob, a contrbutor, can finalise
         assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_key));  
-
-
     });
 }
 
@@ -1916,6 +1914,7 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
+    let steve = get_account_id_from_seed::<sr25519::Public>("Steve");
 
     let project_keys: BoundedProjectKeys = bounded_vec![0u32, 1u32, 2u32, 3u32];
     ExtBuilder.build().execute_with(|| {
@@ -1936,6 +1935,8 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
         // Deposit funds and contribute.
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &steve, 20_000_000u64);
+
         // Setup required state to start voting: must have contributed and round must have started.
         run_to_block(4);
         
@@ -1987,10 +1988,24 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
         );
         
         // Assert that the finalisations missing the threshold have not passed.
-        //assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_keys[2]), Error::<Test>::VoteThresholdNotMet);  
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_keys[2]), Error::<Test>::VoteThresholdNotMet);  
         assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(charlie), project_keys[3]), Error::<Test>::VoteThresholdNotMet);
 
-        // Asser that after more contributions the finalisation can pass
+        // Assert that after more contributions the finalisation can pass.
+        // Steve will now contribute and then vote.
+        Proposals::contribute(Origin::signed(steve), project_keys[3], 10_000u64).unwrap();
+
+        let r = Rounds::<Test>::get(4);
+        dbg!(&r);
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(steve), project_keys[3], false));
+        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(steve), project_keys[3]));  
+        //let event2 = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
+        //assert_eq!(event2.event, 
+        //    mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
+        //        3,
+        //        project_keys[3]
+        //    ))
+        //);
     });
 }
 
