@@ -1722,10 +1722,298 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
     });
 }
 
+#[test]
+fn test_schedule_round_works_multi_project() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+
+    ExtBuilder.build().execute_with(|| {
+        create_project(alice);
+        create_project(bob);
+
+        // Assert that we can schedule a round for both bob's and alice's project. 
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 1,
+            bounded_vec![0, 1],
+            RoundType::ContributionRound));
+        
+        // Assert that the round has been created with the alleged project keys.
+    });
+}
+
+
+#[test]
+fn test_we_can_cancel_a_specific_project_round() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+
+    ExtBuilder.build().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+        create_project(bob);
+
+        assert_eq!(RoundCount::<Test>::get(), 0u32);
+
+        // Assert that we can schedule a round for both bob's and alice's project. 
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 1,
+            System::block_number() + 100,
+            bounded_vec![0, 1],
+            RoundType::ContributionRound));
+        
+        assert!(RoundCount::<Test>::get() == 1u32);
+        // Alice's is now cancelled
+        assert_ok!(
+            Proposals::cancel_round(
+                Origin::root(),
+                RoundCount::<Test>::get() - 1
+            )
+        );
+
+        // Assert that the round has been created with the alleged project keys.
+    });
+}
+
+#[test]
+fn test_raising_a_vote_of_no_confidence() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+
+    let project_key = 0u32;
+
+    ExtBuilder.build().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+
+        // Schedule a round to allow for contributions.
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![project_key],
+            RoundType::ContributionRound));
+            
+        // Deposit funds and contribute.
+        let _ = Currencies::deposit(CurrencyId::Native, &alice, 10_000_000u64);
+        run_to_block(4);
+        Proposals::contribute(Origin::signed(alice), project_key, 10_000u64).unwrap();
+        
+        // Assert that Bob cannot raise the vote as he is not a contributor.
+        assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_key), Error::<Test>::InvalidAccount);
+
+        // Call a vote of no confidence and assert it will pass.
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), project_key));
+
+        let vote = NoConfidenceVotes::<Test>::get(project_key).unwrap();
+        let round_count = RoundCount::<Test>::get(); 
+        
+        // Assert that storage has been mutated correctly.
+        assert!(vote.nay == 10_000u64 && vote.yay == 0u64);
+        assert!(UserVotes::<Test>::get((alice, project_key, 0, round_count - 1)) == Some(true));
+        assert!(round_count == 2u32);
+        assert!(NoConfidenceVotes::<Test>::contains_key(project_key));
+        
+        // Assert that you cannot raise the vote twice.
+        assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(alice), project_key), Error::<Test>::RoundStarted);
+    });
+}
+
+
+#[test]
+fn test_adding_vote_of_no_confidence() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
+    let project_key = 0u32;
+    ExtBuilder.build().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+        
+        //schedule a round to allow for contributions.
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![project_key],
+            RoundType::ContributionRound));
+            
+        // Deposit funds and contribute.
+        let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
+        run_to_block(4);
+        
+        // Setup required state to start voting: must have contributed and round must have started.
+        Proposals::contribute(Origin::signed(charlie), project_key, 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_key, 20_000u64).unwrap();
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
+        
+        // Charlie has raised a vote of no confidence, now Bob is gonna disagree!
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, true));
+        
+        // Assert Bob cannot game the system.
+        assert_noop!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, true), Error::<Test>::VoteAlreadyExists);
+        assert_noop!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, false), Error::<Test>::VoteAlreadyExists);
+        
+        // Assert the state of the system is as it should be.
+        let vote = NoConfidenceVotes::<Test>::get(project_key).unwrap();
+        let round_count = RoundCount::<Test>::get(); 
+        
+        // Assert that storage has been mutated correctly.
+        assert!(vote.nay == 10_000u64 && vote.yay == 20_000u64);
+        assert!(UserVotes::<Test>::get((charlie, project_key, 0, round_count - 1)) == Some(true));
+        assert!(UserVotes::<Test>::get((bob, project_key, 0, round_count - 1)) == Some(true));
+        
+        assert!(round_count == 2u32);
+    });
+}
+
+#[test]
+fn test_finalise_vote_of_no_confidence_with_threshold_met() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
+    let steve = get_account_id_from_seed::<sr25519::Public>("steve");
+
+    let project_key = 0u32;
+    ExtBuilder.build().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+        
+        //schedule a round to allow for contributions.
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![project_key],
+            RoundType::ContributionRound));
+            
+        // Deposit funds and contribute.
+        let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
+        // Setup required state to start voting: must have contributed and round must have started.
+        run_to_block(4);
+        Proposals::contribute(Origin::signed(charlie), project_key, 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_key, 20_000u64).unwrap();
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), project_key, false));
+
+        // Assert that steve who is not a contributor cannot finalise the same goes for the initiator.
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(steve), project_key), Error::<Test>::InvalidAccount);
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(alice), project_key), Error::<Test>::InvalidAccount);
+        // And we might aswell assert that you cannot call finalise on a project key that doesnt exist.
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(bob), 2), Error::<Test>::ProjectDoesNotExist);  
+        // Assert that bob, a contrbutor, can finalise
+        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_key));  
+    });
+}
+
+// This test assumes that the PercentRequiredForVoteToPass is set to 75 in the config. 
+#[test]
+fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
+    let steve = get_account_id_from_seed::<sr25519::Public>("Steve");
+
+    let project_keys: BoundedProjectKeys = bounded_vec![0u32, 1u32, 2u32, 3u32];
+    ExtBuilder.build().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+        create_project(alice);
+        create_project(alice);
+        create_project(alice);
+        
+        //schedule a round to allow for contributions.
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            project_keys.clone(),
+            RoundType::ContributionRound));
+            
+        // Deposit funds and contribute.
+        let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &steve, 20_000_000u64);
+
+        // Setup required state to start voting: must have contributed and round must have started.
+        run_to_block(4);
+        
+        // 1: in this case bob is 4/5 of the total and charlie 1/5.
+        Proposals::contribute(Origin::signed(charlie), project_keys[0], 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[0], 40_000u64).unwrap();
+        
+        // 2: in this case bob is 3/4 of the total and charlie 1/4.
+        Proposals::contribute(Origin::signed(charlie), project_keys[1], 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[1], 30_000u64).unwrap();
+        
+        // 3: in this case bob is 2/3 of the total and charlie 1/3.
+        Proposals::contribute(Origin::signed(charlie), project_keys[2], 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[2], 20_000u64).unwrap();
+        
+        // 4: in this case bob is 1/2 of the total and charlie 1/2.
+        Proposals::contribute(Origin::signed(charlie), project_keys[3], 10_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), project_keys[3], 10_000u64).unwrap();
+
+        // 1 - pass
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_keys[0]));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(charlie), project_keys[0], true));
+        // 2 - pass
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_keys[1]));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(charlie), project_keys[1], true));
+        // 3 - fail
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_keys[2]));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(charlie), project_keys[2], true)); 
+        // 4 - fail
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_keys[3]));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(charlie), project_keys[3], true));
+        
+        // finalise passing rounds.
+        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_keys[0]));  
+        let event1 = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
+        assert_eq!(event1.event, 
+            mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
+                1,
+                project_keys[0]
+            ))
+        );
+        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(charlie), project_keys[1]));  
+        let event2 = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
+        assert_eq!(event2.event, 
+            mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
+                2,
+                project_keys[1]
+            ))
+        );
+        
+        // Assert that the finalisations missing the threshold have not passed.
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(bob), project_keys[2]), Error::<Test>::VoteThresholdNotMet);  
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(charlie), project_keys[3]), Error::<Test>::VoteThresholdNotMet);
+
+        // Assert that after more contributions the finalisation can pass.
+        // Steve will now contribute and then vote.
+        Proposals::contribute(Origin::signed(steve), project_keys[3], 20_000u64).unwrap();
+
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(steve), project_keys[3], false));
+        assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(steve), project_keys[3]));  
+
+        let event = <frame_system::Pallet<Test>>::events().pop().expect("deffo should be an event here");
+        assert_eq!(event.event, 
+            mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
+                4,
+                project_keys[3]
+            ))
+        );
+    });
+}
+
 //common helper methods
-fn create_project(alice: AccountId) {
+fn create_project(account: AccountId) {
     assert_ok!(Proposals::create_project(
-        Origin::signed(alice),
+        Origin::signed(account),
         //project name
         b"Farmer's Project Sudan"
         .to_vec()

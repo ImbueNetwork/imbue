@@ -53,6 +53,12 @@ pub mod pallet {
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
 
         type WeightInfo: WeightInfo;
+
+        /// The amount of time given ,up to point of decision, when a vote of no confidence is held.
+        type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
+
+        /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
+        type PercentRequiredForVoteToPass: Get<u8>;
     }
 
 
@@ -103,6 +109,11 @@ pub mod pallet {
         StorageMap<_, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, OptionQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn no_confidence_votes)]
+    pub(super) type NoConfidenceVotes<T: Config> =
+        StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
+    
+    #[pallet::storage]
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
 
@@ -129,6 +140,8 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn is_identity_required)]
     pub type IsIdentityRequired<T> = StorageValue<_, bool, ValueQuery>;
+
+
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -161,25 +174,46 @@ pub mod pallet {
         WhitelistAdded(ProjectKey, T::BlockNumber),
         WhitelistRemoved(ProjectKey, T::BlockNumber),
         ProjectLockedFundsRefunded(ProjectKey, BalanceOf<T>),
+        /// You have created a vote of no confidence.
+        NoConfidenceRoundCreated(RoundKey, ProjectKey),
+        /// You have voted upon a round of no confidence.
+        NoConfidenceRoundVotedUpon(RoundKey, ProjectKey),
+        /// You have finalised a vote of no confidence.
+        NoConfidenceRoundFinalised(RoundKey, ProjectKey),
     }
 
     // Errors inform users that something went wrong.
     #[pallet::error]
     pub enum Error<T> {
+        /// Contribution has exceeded the maximum capacity of the project.
         ContributionMustBeLowerThanMaxCap,
+        /// This block number must be later than the current. 
         EndBlockNumberInvalid,
+        /// The starting block number must be before the ending block number.
         EndTooEarly,
+        /// Required identity not found.
         IdentityNeeded,
+        /// Input parameter is invalid
         InvalidParam,
+        /// There are no avaliable funds to withdraw.
         NoAvailableFundsToWithdraw,
+        /// Your account does not have the correct authority.
         InvalidAccount,
+        /// Project does not exist.
         ProjectDoesNotExist,
+        /// Project name is a mandatory field. 
         ProjectNameIsMandatory,
+        /// Project logo is a mandatory field. 
         LogoIsMandatory,
+        /// Project description is a mandatory field. 
         ProjectDescriptionIsMandatory,
+        /// Website url is a mandatory field. 
         WebsiteURLIsMandatory,
+        /// Milestones totals do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
+        /// Currently no active round to participate in.
         NoActiveRound,
+        /// TODO: NOT IN USE
         NoActiveProposal,
         /// There was an overflow.
         Overflow,
@@ -193,6 +227,7 @@ pub mod pallet {
         ProposalWithdrawn,
         ProposalApproved,
         ParamLimitExceed,
+        /// Round has already started and cannot be modified.
         RoundStarted,
         RoundNotEnded,
         RoundNotProcessing,
@@ -206,18 +241,17 @@ pub mod pallet {
         KeyNotFound,
         /// The input vector must exceed length zero.
         LengthMustExceedZero,
+        /// The voting threshold has not been met.
+        VoteThresholdNotMet,
     }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Step 1 (INITATOR)r
-        /// Create project
+        /// Step 1 (INITATOR)
+        /// Create project.
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn create_project(
             origin: OriginFor<T>,
@@ -395,6 +429,29 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             Self::new_withdrawal(who, project_key)
         }
+
+        // TODO: BENCHMARK
+        #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+        pub fn raise_vote_of_no_confidence(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::call_raise_no_confidence_round(who, project_key)
+        }
+
+         // TODO: BENCHMARK
+         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+         pub fn vote_on_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
+             let who = ensure_signed(origin)?;
+             Self::call_add_vote_no_confidence(who, project_key, is_yay)
+         }
+
+          // TODO: BENCHMARK
+          #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+          pub fn finalise_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
+              let who = ensure_signed(origin)?;
+              Self::call_finalise_no_confidence_vote(who, project_key, T::PercentRequiredForVoteToPass::get())
+          }
+
+        // Root Extrinsics:
 
         /// Set max proposal count per round
         #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
@@ -645,34 +702,24 @@ impl<T: Config> Pallet<T> {
 
         for project_key in project_keys.iter() {
             let project =
-                Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+                Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-            // Update project withdrawn funds
+            // Update project as approved for funding, assuming only RoundType::Contribution will be used.
             let updated_project = Project {
-                name: project.name,
-                logo: project.logo,
-                description: project.description,
-                website: project.website,
-                milestones: project.milestones,
-                contributions: project.contributions.clone(),
-                required_funds: project.required_funds,
-                currency_id: project.currency_id,
-                withdrawn_funds: project.withdrawn_funds,
-                initiator: project.initiator,
-                create_block_number: project.create_block_number,
                 approved_for_funding: true,
-                funding_threshold_met: project.funding_threshold_met,
-                cancelled: project.cancelled,
+                ..project
             };
 
-            // Add proposal to list
+            // Update storage with the new project.
             <Projects<T>>::insert(project_key, updated_project);
         }
 
-        match round_type.clone() {
-            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))}
-            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))}
+        match round_type {
+            RoundType::VotingRound => {Self::deposit_event(Event::VotingRoundCreated(key, project_keys.to_vec()))},
+            RoundType::ContributionRound => {Self::deposit_event(Event::FundingRoundCreated(key, project_keys.to_vec()))},
+            _ => {}
         }
+
         RoundCount::<T>::put(next_key);
 
         Ok(().into())
@@ -697,7 +744,11 @@ impl<T: Config> Pallet<T> {
         for i in (0..round_key).rev() {
 
             let round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
-            if !round.is_canceled && round.start < now && round.end > now {
+            if !round.is_canceled 
+            && round.start < now 
+            && round.end > now
+            && round.round_type == RoundType::ContributionRound
+            {
                 // Find proposal by key
                 for current_project_key in round.project_keys.iter() {
                     if current_project_key == &project_key {
@@ -708,7 +759,7 @@ impl<T: Config> Pallet<T> {
                 }
             }
         }
-        let round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
+        let _round = processing_round.ok_or(Error::<T>::RoundNotProcessing)?;
         ensure!(project_exists_in_round, Error::<T>::ProjectNotInRound);
         let mut project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
@@ -757,8 +808,6 @@ impl<T: Config> Pallet<T> {
             value,
         )?;
 
-        <Rounds<T>>::insert(round_key - 1, Some(round));
-
         Self::deposit_event(Event::ContributeSucceeded(
             who.clone(),
             project_key,
@@ -786,26 +835,8 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        // Update project withdrawn funds
-        let updated_project = Project {
-            name: project.name,
-            logo: project.logo,
-            description: project.description,
-            website: project.website,
-            milestones: project.milestones,
-            contributions: project.contributions.clone(),
-            required_funds: project.required_funds,
-            currency_id: project.currency_id,
-            withdrawn_funds: project.withdrawn_funds,
-            initiator: project.initiator,
-            create_block_number: project.create_block_number,
-            approved_for_funding: project.approved_for_funding,
-            funding_threshold_met: project.funding_threshold_met,
-            cancelled: project.cancelled,
-        };
-
-        // Add proposal to list
-        <Projects<T>>::insert(project_key, updated_project);
+        // Update storage item to include the new contributions.
+        <Projects<T>>::insert(project_key, project);
 
         Ok(().into())
     }
@@ -889,20 +920,8 @@ impl<T: Config> Pallet<T> {
 
         // Update project milestones
         let updated_project = Project {
-            name: project.name,
-            logo: project.logo,
-            description: project.description,
-            website: project.website,
             milestones,
-            contributions: project.contributions,
-            required_funds: project.required_funds,
-            currency_id: project.currency_id,
-            withdrawn_funds: project.withdrawn_funds,
-            initiator: project.initiator,
-            create_block_number: project.create_block_number,
-            approved_for_funding: project.approved_for_funding,
-            funding_threshold_met: project.funding_threshold_met,
-            cancelled: project.cancelled,
+            ..project
         };
         // Add proposal to list
         <Projects<T>>::insert(project_key, updated_project);
@@ -910,6 +929,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    // Take an approved project and submit an associated milestone.
     pub fn new_milestone_submission(
         who: T::AccountId,
         project_key: ProjectKey,
@@ -918,11 +938,13 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
+        // Ensure that only the initiator has submitted and the project has been approved. 
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitator);
         ensure!(
             project.funding_threshold_met,
             Error::<T>::OnlyApprovedProjectsCanSubmitMilestones
         );
+
         let end = now + MilestoneVotingWindow::<T>::get().into();
         let key = RoundCount::<T>::get();
         let round = RoundOf::<T>::new(now, end, vec![project_key], RoundType::VotingRound);
@@ -962,6 +984,7 @@ impl<T: Config> Pallet<T> {
         let mut latest_round: Option<RoundOf<T>> = None;
         let mut latest_round_key = 0;
         for i in (0..round_key).rev() {
+
             let round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
             if !round.is_canceled
                 && round.start < now
@@ -1069,22 +1092,10 @@ impl<T: Config> Pallet<T> {
 
         // Update project milestones
         let updated_project = Project {
-            name: project.name,
-            logo: project.logo,
-            description: project.description,
-            website: project.website,
             milestones,
-            contributions: project.contributions,
-            required_funds: project.required_funds,
-            currency_id: project.currency_id,
-            withdrawn_funds: project.withdrawn_funds,
-            initiator: project.initiator,
-            create_block_number: project.create_block_number,
-            approved_for_funding: project.approved_for_funding,
-            funding_threshold_met: project.funding_threshold_met,
-            cancelled: project.cancelled,
+            ..project
         };
-        // Add proposal to list
+        // Add project to list
         <Projects<T>>::insert(project_key, updated_project);
 
         Ok(().into())
@@ -1120,22 +1131,10 @@ impl<T: Config> Pallet<T> {
 
         // Update project withdrawn funds
         let updated_project = Project {
-            name: project.name,
-            logo: project.logo,
-            description: project.description,
-            website: project.website,
-            milestones: project.milestones,
-            contributions: project.contributions,
-            required_funds: project.required_funds,
-            currency_id: project.currency_id,
             withdrawn_funds: available_funds + project.withdrawn_funds,
-            initiator: project.initiator,
-            create_block_number: project.create_block_number,
-            approved_for_funding: project.approved_for_funding,
-            funding_threshold_met: project.funding_threshold_met,
-            cancelled: project.cancelled,
+            ..project
         };
-        // Add proposal to list
+        // Add project to list
         <Projects<T>>::insert(project_key, updated_project);
         Self::deposit_event(Event::ProjectFundsWithdrawn(
             who,
@@ -1176,20 +1175,8 @@ impl<T: Config> Pallet<T> {
 
         // Update project cancellation status
         let updated_project = Project {
-            name: project.name,
-            logo: project.logo,
-            description: project.description,
-            website: project.website,
-            milestones: project.milestones,
-            contributions: project.contributions,
-            required_funds: project.required_funds,
-            currency_id: project.currency_id,
-            withdrawn_funds: project.withdrawn_funds,
-            initiator: project.initiator,
-            create_block_number: project.create_block_number,
-            approved_for_funding: project.approved_for_funding,
-            funding_threshold_met: project.funding_threshold_met,
             cancelled: true,
+            ..project
         };
         // Updated new project status to chain
         <Projects<T>>::insert(project_key, updated_project);
@@ -1199,6 +1186,174 @@ impl<T: Config> Pallet<T> {
         ));
 
         Ok(().into())
+    }
+
+    /// This function raises a vote of no confidence.
+    /// This round can only be called once and there after can only be voted on.
+    /// The person calling it must be a contributor.
+    fn call_raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+
+        //ensure that who is a contributor or root
+        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let contributor = Self::ensure_contributor_of(&project, &who)?;
+
+        // Also ensure that a vote has not already been raised.
+        ensure!(!NoConfidenceVotes::<T>::contains_key(project_key), Error::<T>::RoundStarted);
+
+        // Create the accosiated vote struct, index can be used as an ensure on length has been called.
+        let vote = Vote {
+            yay: Default::default(),
+            nay: contributor.value,
+            // not using this so approved will be false.
+            is_approved: false,
+        };
+        let now = frame_system::Pallet::<T>::block_number();
+        // Create the accosiated round.
+        let round = RoundOf::<T>::new(
+            now,
+            now + T::NoConfidenceTimeLimit::get(),
+            vec![project_key],
+            RoundType::VoteOfNoConfidence,
+        );
+
+        let round_key = RoundCount::<T>::get();
+        // Insert the new round and votes into storage and update the RoundCount and UserVotes.
+        NoConfidenceVotes::<T>::insert(project_key, vote);
+        Rounds::<T>::insert(round_key, Some(round));
+        RoundCount::<T>::mutate(|c| {*c += 1u32});
+        UserVotes::<T>::insert((who, project_key, 0, round_key), true);
+        
+        Self::deposit_event(Event::NoConfidenceRoundCreated(
+            round_key,
+            project_key,
+        ));
+
+        Ok(()).into()
+    }
+    
+    /// Allows a contributer to agree or disagree with a vote of no confidence.
+    /// Additional contributions after the vote is set are not counted and cannot be voted on again, todo?
+    fn call_add_vote_no_confidence(who: T::AccountId, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
+        // Ensure that who is a contributor.
+        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let contributor = Self::ensure_contributor_of(&project, &who)?;
+
+        // Ensure that the vote has been raised.
+        let mut vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
+
+        // We need to find the round key and the only current way is finding the round.
+        let mut round_key = 0u32;
+        let mut round: Option<RoundOf<T>> = None;
+        let round_count = RoundCount::<T>::get();
+
+        for i in (0..round_count).rev() {
+            // Get the current round and check that both the key exists and the value under the key is some.
+            let current_round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
+            if !current_round.is_canceled 
+            && current_round.project_keys.contains(&project_key) 
+            && current_round.round_type == RoundType::VoteOfNoConfidence
+            && current_round.end >= frame_system::Pallet::<T>::block_number()
+            {
+                round = Some(current_round);
+                round_key = i;
+                break;
+            }
+        }
+        // Ensure a round has been found + that they have not already voted.
+        ensure!(round.is_some(), Error::<T>::RoundNotProcessing);
+        ensure!(UserVotes::<T>::get((&who, project_key, 0, round_key)).is_none(), Error::<T>::VoteAlreadyExists);
+
+        // Update the vote
+            if is_yay {
+                vote.yay += contributor.value 
+            } else {
+                vote.nay += contributor.value
+            }
+        
+        // Insert new vote.
+        NoConfidenceVotes::<T>::insert(project_key, vote);
+
+        // Insert person who has voted.
+        UserVotes::<T>::insert((who, project_key, 0, round_key), true);
+
+        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(
+            round_key,
+            project_key,
+        ));
+
+        Ok(()).into()
+    }
+
+    /// Called when a contributor wants to finalise a vote of no confidence.
+    /// Votes for the vote of no confidence must reach the majority requred for the vote to pass.
+    fn call_finalise_no_confidence_vote(who: T::AccountId, project_key: ProjectKey, majority_required: u8) -> DispatchResultWithPostInfo {
+        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
+        // Ensure that the caller is a contributor and that the vote has been raised.
+        let _ = Self::ensure_contributor_of(&project, &who)?;
+        let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
+        
+        // We need to find the round key and the only current way is finding the round.
+        let mut round: Option<RoundOf<T>> = None;
+        let round_count = RoundCount::<T>::get();
+        // This does not have to be an option as round is.
+        let mut round_key: RoundKey = 0;
+        
+        for i in (0..round_count).rev() {
+            // Get the current round and check that both the key exists and the value under the key is some.
+            let current_round = Self::rounds(i).ok_or(Error::<T>::KeyNotFound)?;
+
+            if !current_round.is_canceled 
+            && current_round.project_keys.contains(&project_key) 
+            && current_round.round_type == RoundType::VoteOfNoConfidence
+            && current_round.end >= frame_system::Pallet::<T>::block_number()
+            {
+                round = Some(current_round);
+                round_key = i;
+                break;
+            }
+        }
+        ensure!(round.is_some(), Error::<T>::RoundNotProcessing);
+
+        // The nay vote must >= minimum threshold required for the vote to pass.
+        let total_contribute = Self::get_total_project_contributions(project_key)?;
+        
+        // 100 * Threshold =  (total_contribute * majority_required)/100
+        let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into();
+
+        if vote.nay * 100u8.into() >= threshold_votes {
+            // Vote of no confidence has passed alas refund. 
+            round.as_mut().expect("is_some() has been called; qed").is_canceled = true;
+
+            // Set Round to is cancelled, remove the vote from NoConfidenceVotes, and do the refund.
+            NoConfidenceVotes::<T>::remove(project_key);
+            Rounds::<T>::insert(round_key, round);
+            let _ = Self::do_refund(project_key)?;
+
+            Self::deposit_event(Event::NoConfidenceRoundFinalised(
+                round_key,
+                project_key,
+            ));
+
+        } else {
+            return Err(Error::<T>::VoteThresholdNotMet.into())
+        }
+        Ok(().into())
+    }
+
+    // Called to ensure that an account is is a contributor to a project.
+    fn ensure_contributor_of<'a>(
+        project: &'a Project<T::AccountId, BalanceOf<T>,T::BlockNumber>,
+        account_id: &'a T::AccountId
+    ) -> Result<&'a Contribution<T::AccountId, BalanceOf<T>>, Error<T>> {
+        let maybe_contributor: Vec<&Contribution<T::AccountId, BalanceOf<T>>> = 
+        project.contributions
+        .iter()
+        .filter(|acc| &acc.account_id == account_id)
+        .collect();
+        ensure!(maybe_contributor.len() > 0, Error::<T>::InvalidAccount);
+
+        Ok(maybe_contributor[0])
     }
 }
 
@@ -1231,9 +1386,11 @@ type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
 pub enum RoundType {
     ContributionRound,
     VotingRound,
+    VoteOfNoConfidence,
 }
 
-/// Round struct
+/// The round struct contains all the data associated with a given round.
+/// A round may include multiple projects.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Round<BlockNumber> {
     start: BlockNumber,
@@ -1259,7 +1416,8 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
         }
     }
 }
-// Proposal in round
+
+/// A proposal is the preliminary project, before it is scheduled by root.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Proposal<AccountId, Balance, BlockNumber> {
     project_key: ProjectKey,
@@ -1294,7 +1452,7 @@ pub struct Milestone {
     is_approved: bool,
 }
 
-/// The contribution users made to a proposal project.
+/// The vote struct is used to 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Vote<Balance> {
     yay: Balance,
@@ -1302,7 +1460,7 @@ pub struct Vote<Balance> {
     is_approved: bool,
 }
 
-/// Project struct
+/// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber> {
     name: Vec<u8>,
@@ -1310,6 +1468,7 @@ pub struct Project<AccountId, Balance, BlockNumber> {
     description: Vec<u8>,
     website: Vec<u8>,
     milestones: Vec<Milestone>,
+    /// A collection of the accounts which have contributed and their contributions.
     contributions: Vec<Contribution<AccountId, Balance>>,
     currency_id: common_types::CurrencyId,
     required_funds: Balance,
