@@ -222,10 +222,10 @@ parameter_types! {
     pub const MaxAdditionalFields: u32 = 2;
     pub const MaxRegistrars: u32 = 20;
 }
-ord_parameter_types! {
-    pub const One: u64 = 1;
-    pub const Two: u64 = 2;
-}
+//ord_parameter_types! {
+//    pub const One: u64 = 1;
+//    pub const Two: u64 = 2;
+//}
 
 impl pallet_identity::Config for Test {
     type Event = Event;
@@ -261,16 +261,11 @@ parameter_types! {
     pub const MaxInstructions: u32 = 100;
 }
 
-pub struct ExtBuilder;
-
-impl ExtBuilder {
-    pub fn build(self) -> sp_io::TestExternalities {
-        let t = frame_system::GenesisConfig::default()
-            .build_storage::<Test>()
-            .unwrap();
-        let mut ext = sp_io::TestExternalities::new(t);
-
-        ext.execute_with(|| System::set_block_number(1));
-        ext
-    }
+pub fn build_test_externality() -> sp_io::TestExternalities {
+    let t = frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap();
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
 }
