@@ -1,5 +1,6 @@
 use crate as proposals;
 use crate::mock::*;
+
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::{
@@ -8,9 +9,10 @@ use frame_support::{
 use sp_core::sr25519;
 use sp_std::vec::Vec;
 
+
 #[test]
 fn create_a_test_project() {
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         Proposals::create_project(
             Origin::signed(alice),
@@ -36,7 +38,7 @@ fn create_a_test_project() {
 
 #[test]
 fn create_a_test_project_with_less_than_100_percent() {
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
         Proposals::create_project(
@@ -68,7 +70,7 @@ fn create_a_test_project_with_less_than_100_percent() {
 
 #[test]
 fn create_a_test_project_with_no_name() {
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
         Proposals::create_project(
@@ -100,7 +102,7 @@ fn create_a_test_project_with_no_name() {
 
 #[test]
 fn create_a_test_project_with_no_data() {
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
             Proposals::create_project(
@@ -137,7 +139,7 @@ fn create_a_test_project_with_no_data() {
 fn create_a_test_project_and_add_whitelist() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let max_cap = 1_000_000u64;
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
         let whitelist = Whitelist {
             who: alice,
@@ -162,7 +164,7 @@ fn create_a_test_project_and_add_whitelist_from_non_initatorfail() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let max_cap = 1000000u64;
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
         let whitelist = Whitelist {
             who: alice,
@@ -185,7 +187,7 @@ fn create_a_test_project_and_add_whitelist_from_non_initatorfail() {
 #[test]
 fn create_a_test_project_remove_whitelist() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
         Proposals::remove_project_whitelist(Origin::signed(alice), 0).unwrap();
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -202,7 +204,7 @@ fn create_a_test_project_remove_whitelist() {
 #[test]
 fn create_a_test_project_and_schedule_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
 
         Proposals::schedule_round(
@@ -220,7 +222,7 @@ fn create_a_test_project_and_schedule_round() {
 #[test]
 fn schedule_round_invalid_project_key() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
 
         assert_noop!(
@@ -246,7 +248,7 @@ fn schedule_round_invalid_project_key() {
 #[test]
 fn schedule_round_invalid_end_block_no() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
 
         assert_noop!(
@@ -272,7 +274,7 @@ fn schedule_round_invalid_end_block_no() {
 #[test]
 fn cancel_round_no_active_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
 
         assert_noop!(
@@ -310,7 +312,7 @@ fn cancel_round_no_active_round() {
 fn cancel_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     //create_project extrinsic
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         //schedule_round extrinsic
@@ -357,7 +359,7 @@ fn test_canceling_started_round() {
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let additional_amount = 100000000u64;
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
@@ -391,7 +393,7 @@ fn test_canceling_round_without_root_privilege() {
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let additional_amount = 100000000u64;
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
@@ -421,7 +423,7 @@ fn test_canceling_round_without_root_privilege() {
 #[test]
 fn create_a_test_project_and_schedule_round_and_contribute() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         //create_project extrinsic
         create_project(alice);
 
@@ -470,7 +472,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
 #[test]
 fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contribute() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         //create_project extrinsic
         create_project(alice);
 
@@ -528,7 +530,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
 #[test]
 fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap_and_contribute() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         //create_project extrinsic
         create_project(alice);
 
@@ -586,7 +588,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
 #[test]
 fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_over_capfail() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         //create_project extrinsic
         create_project(alice);
 
@@ -637,7 +639,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
 #[test]
 fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         //create_project extrinsic
         create_project(alice);
 
@@ -683,7 +685,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
 //negative test case - Approve fails because contribution amount has not met the project required funds
 fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         //create_project extrinsic
         create_project(alice);
 
@@ -730,7 +732,7 @@ fn test_submit_milestone() {
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let additional_amount = 100000000u64;
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
@@ -783,7 +785,7 @@ fn test_submit_milestone_without_approval() {
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let additional_amount = 100000000u64;
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
@@ -829,7 +831,7 @@ fn test_voting_on_a_milestone() {
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let additional_amount = 100000000u64;
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
@@ -890,7 +892,7 @@ fn test_voting_on_a_canceled_round() {
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let additional_amount = 100000000u64;
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
@@ -955,7 +957,7 @@ fn test_finalize_a_milestone_without_voting() {
     proposed_milestones.push(milestone2);
     proposed_milestones.push(milestone3);
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project_multiple_milestones(alice, proposed_milestones);
 
@@ -1057,7 +1059,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
     proposed_milestones.push(milestone3);
     let proposed_milestones1 = proposed_milestones.clone();
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, additional_amount);
         create_project_multiple_milestones(alice, proposed_milestones);
@@ -1221,7 +1223,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
     proposed_milestones.push(milestone3);
     let proposed_milestones1 = proposed_milestones.clone();
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, additional_amount);
         create_project_multiple_milestones(alice, proposed_milestones);
@@ -1306,7 +1308,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let additional_amount = 100000000u64;
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
@@ -1386,7 +1388,7 @@ fn test_withdraw_from_non_initiator_account() {
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let additional_amount = 100000000u64;
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project(alice);
 
@@ -1426,7 +1428,7 @@ fn submit_multiple_milestones() {
 
     let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         create_project_multiple_milestones(alice, proposed_milestones);
 
@@ -1494,7 +1496,7 @@ fn submit_multiple_milestones() {
 #[test]
 fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         //create_project extrinsic
         create_project(alice);
 
@@ -1582,7 +1584,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     proposed_milestones.push(milestone3);
     let proposed_milestones1 = proposed_milestones.clone();
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, additional_amount);
         create_project_multiple_milestones(alice, proposed_milestones);
@@ -1706,7 +1708,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
 #[test]
 fn test_schedule_round_fails_gracefully_with_empty_vec() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
 
         assert_noop!(Proposals::schedule_round(
