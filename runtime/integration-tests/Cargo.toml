@@ -30,7 +30,7 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "releas
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.26" }
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.26" }
 
-# Orml pallets
+# Orml pallets  
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
