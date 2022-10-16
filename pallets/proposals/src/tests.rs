@@ -1727,7 +1727,7 @@ fn test_schedule_round_works_multi_project() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         create_project(alice);
         create_project(bob);
 
@@ -1749,7 +1749,7 @@ fn test_we_can_cancel_a_specific_project_round() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         // Create a project for both alice and bob.
         create_project(alice);
         create_project(bob);
@@ -1784,7 +1784,7 @@ fn test_raising_a_vote_of_no_confidence() {
 
     let project_key = 0u32;
 
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         // Create a project for both alice and bob.
         create_project(alice);
 
@@ -1828,7 +1828,7 @@ fn test_adding_vote_of_no_confidence() {
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
     let project_key = 0u32;
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         // Create a project for both alice and bob.
         create_project(alice);
         
@@ -1878,7 +1878,7 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
     let steve = get_account_id_from_seed::<sr25519::Public>("steve");
 
     let project_key = 0u32;
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         // Create a project for both alice and bob.
         create_project(alice);
         
@@ -1919,7 +1919,7 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
     let steve = get_account_id_from_seed::<sr25519::Public>("Steve");
 
     let project_keys: BoundedProjectKeys = bounded_vec![0u32, 1u32, 2u32, 3u32];
-    ExtBuilder.build().execute_with(|| {
+    build_test_externality().execute_with(|| {
         // Create a project for both alice and bob.
         create_project(alice);
         create_project(alice);
