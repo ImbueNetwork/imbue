@@ -3,9 +3,10 @@
   "id": "imbue-kusama",
   "chainType": "Live",
   "bootNodes": [
-    "/ip4/3.15.181.11/tcp/31033/p2p/12D3KooWDNNQ3AUxoguk4sawmrUtqB6s9L6DN1wR1Khymp78hoWb",
-    "/ip4/3.16.45.222/tcp/31033/p2p/12D3KooWHTM5HoiBri5pWvufQmEKeX9gLADFXenJPR2XmSGnAAJj",
-    "/ip4/3.144.76.3/tcp/31033/p2p/12D3KooWSHSFM9YaX9rNrszmZcQbP3NPfXzBgwppgftpMbjTSuvE"
+    "/ip4/3.128.235.130/tcp/30333/p2p/12D3KooWRSbBCZjDN21CNW2LrkG3heL9pXceRu2dt8bUH4brrHBc",
+    "/ip4/3.15.85.44/tcp/31033/p2p/12D3KooWHmhEMjDXRCEQW4mkfZVwnzx2PvjtifwCTZ4MKLMoqtiE",
+    "/ip4/3.144.76.3/tcp/31033/p2p/12D3KooWRLfYqU1kvwxGQh9A2EMw5cZK1LnjfM5ns5Nv9PkiioYi",
+    "/ip4/3.15.181.11/tcp/31033/p2p/12D3KooWDNNQ3AUxoguk4sawmrUtqB6s9L6DN1wR1Khymp78hoWb"
   ],
   "telemetryEndpoints": [
     [
