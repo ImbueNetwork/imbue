@@ -251,6 +251,8 @@ pub mod pallet {
         LengthMustExceedZero,
         /// The voting threshold has not been met.
         VoteThresholdNotMet,
+        /// The project must be approved.
+        ProjectApprovalRequired,
     }
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.

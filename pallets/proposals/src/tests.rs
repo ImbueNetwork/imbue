@@ -2049,6 +2049,7 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
 }
 
 #[test]
+<<<<<<< HEAD
 fn test_schedule_round_works_multi_project() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
@@ -2103,9 +2104,13 @@ fn test_we_can_cancel_a_specific_project_round() {
 }
 
 #[test]
+=======
+>>>>>>> d948b9a (fixed raise vote and vote on, No confidence round)
 fn test_raising_a_vote_of_no_confidence() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
+
 
     let project_key = 0u32;
 
@@ -2123,6 +2128,7 @@ fn test_raising_a_vote_of_no_confidence() {
         ));
 
         // Deposit funds and contribute.
+<<<<<<< HEAD
         let _ = Currencies::deposit(CurrencyId::Native, &alice, 10_000_000u64);
         run_to_block(4);
         Proposals::contribute(Origin::signed(alice), None, project_key, 10_000u64).unwrap();
@@ -2138,21 +2144,40 @@ fn test_raising_a_vote_of_no_confidence() {
             Origin::signed(alice),
             project_key
         ));
+=======
+        let _ = Currencies::deposit(CurrencyId::Native, &bob, 10_000_000u64);
+        run_to_block(System::block_number() + 3);
+        
+        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 1_000_000u64).unwrap();
+        run_to_block(System::block_number() + 101);
+        
+        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));
+
+        // Assert that Bob cannot raise the vote as he is not a contributor.
+        assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key), Error::<Test>::OnlyContributorsCanVote);
+
+        // Call a vote of no confidence and assert it will pass.
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_key));
+>>>>>>> d948b9a (fixed raise vote and vote on, No confidence round)
 
         let vote = NoConfidenceVotes::<Test>::get(project_key).unwrap();
         let round_count = RoundCount::<Test>::get();
 
         // Assert that storage has been mutated correctly.
-        assert!(vote.nay == 10_000u64 && vote.yay == 0u64);
-        assert!(UserVotes::<Test>::get((alice, project_key, 0, round_count)) == Some(true));
+        assert!(vote.nay == 1_000_000u64 && vote.yay == 0u64);
+        assert!(UserVotes::<Test>::get((bob, project_key, 0, round_count)) == Some(true));
         assert!(round_count == 2u32);
         assert!(NoConfidenceVotes::<Test>::contains_key(project_key));
 
         // Assert that you cannot raise the vote twice.
+<<<<<<< HEAD
         assert_noop!(
             Proposals::raise_vote_of_no_confidence(Origin::signed(alice), project_key),
             Error::<Test>::RoundStarted
         );
+=======
+        assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_key), Error::<Test>::RoundStarted);
+>>>>>>> d948b9a (fixed raise vote and vote on, No confidence round)
     });
 }
 
@@ -2178,6 +2203,7 @@ fn test_adding_vote_of_no_confidence() {
         // Deposit funds and contribute.
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
+<<<<<<< HEAD
         run_to_block(4);
 
         // Setup required state to start voting: must have contributed and round must have started.
@@ -2188,6 +2214,21 @@ fn test_adding_vote_of_no_confidence() {
             project_key
         ));
 
+=======
+        run_to_block(System::block_number() + 3);
+        
+        // Setup required state to start voting: must have contributed and round must have started.
+        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 500_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 500_000u64).unwrap();
+
+        run_to_block(System::block_number() + 101);
+
+        // Assert that threshold has been met
+        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));   
+
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
+        
+>>>>>>> d948b9a (fixed raise vote and vote on, No confidence round)
         // Charlie has raised a vote of no confidence, now Bob is gonna disagree!
         assert_ok!(Proposals::vote_on_no_confidence_round(
             Origin::signed(bob),
@@ -2211,7 +2252,7 @@ fn test_adding_vote_of_no_confidence() {
         let round_count = RoundCount::<Test>::get();
 
         // Assert that storage has been mutated correctly.
-        assert!(vote.nay == 10_000u64 && vote.yay == 20_000u64);
+        assert!(vote.nay == 500_000u64 && vote.yay == 500_000u64);
         assert!(UserVotes::<Test>::get((charlie, project_key, 0, round_count)) == Some(true));
         assert!(UserVotes::<Test>::get((bob, project_key, 0, round_count)) == Some(true));
 
@@ -2243,7 +2284,9 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
         // Deposit funds and contribute.
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
+        run_to_block(System::block_number() + 3);
         // Setup required state to start voting: must have contributed and round must have started.
+<<<<<<< HEAD
         run_to_block(4);
         Proposals::contribute(Origin::signed(charlie), None, project_key, 10_000u64).unwrap();
         Proposals::contribute(Origin::signed(bob), None, project_key, 20_000u64).unwrap();
@@ -2257,6 +2300,15 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
             project_key,
             false
         ));
+=======
+        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
+        run_to_block(System::block_number() + 101);
+        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));
+
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, false));
+>>>>>>> d948b9a (fixed raise vote and vote on, No confidence round)
 
         // Assert that steve who is not a contributor cannot finalise the same goes for the initiator.
         assert_noop!(
@@ -2281,6 +2333,18 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
     });
 }
 
+<<<<<<< HEAD
+=======
+// I Realised that i have already tested for thresholds on the mark and therefore above
+#[test]
+fn test_finalise_vote_of_no_confidence_below_threshold() {
+    build_test_externality().execute_with(|| {
+
+    });
+}
+
+
+>>>>>>> d948b9a (fixed raise vote and vote on, No confidence round)
 // TODO. Alot going on here, let's split this into multiple tests, maybe 4 tests?
 // This test assumes that the PercentRequiredForVoteToPass is set to 75 in the config.
 #[test]
@@ -2295,9 +2359,13 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
         // Create a project for both alice and bob.
         create_project(alice);
         create_project(alice);
+<<<<<<< HEAD
         create_project(alice);
         create_project(alice);
 
+=======
+        
+>>>>>>> d948b9a (fixed raise vote and vote on, No confidence round)
         //schedule a round to allow for contributions.
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
@@ -2316,6 +2384,7 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
         run_to_block(4);
 
         // 1: in this case bob is 4/5 of the total and charlie 1/5.
+<<<<<<< HEAD
         Proposals::contribute(Origin::signed(charlie), None, project_keys[0], 10_000u64).unwrap();
         Proposals::contribute(Origin::signed(bob), None, project_keys[0], 40_000u64).unwrap();
 
@@ -2323,6 +2392,15 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
         Proposals::contribute(Origin::signed(charlie), None, project_keys[1], 10_000u64).unwrap();
         Proposals::contribute(Origin::signed(bob), None, project_keys[1], 30_000u64).unwrap();
 
+=======
+        Proposals::contribute(Origin::signed(charlie), None, project_keys[0], 200_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), None, project_keys[0], 800_000u64).unwrap();
+        
+        // 2: in this case bob is 3/4 of the total and charlie 1/4.
+        Proposals::contribute(Origin::signed(charlie), None, project_keys[1], 100_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), None, project_keys[1], 300_000u64).unwrap();
+        
+>>>>>>> d948b9a (fixed raise vote and vote on, No confidence round)
         // 3: in this case bob is 2/3 of the total and charlie 1/3.
         Proposals::contribute(Origin::signed(charlie), None, project_keys[2], 10_000u64).unwrap();
         Proposals::contribute(Origin::signed(bob), None, project_keys[2], 20_000u64).unwrap();
@@ -2387,6 +2465,7 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
             ))
         );
 
+<<<<<<< HEAD
         // 3 - fail
         assert_ok!(Proposals::raise_vote_of_no_confidence(
             Origin::signed(bob),
@@ -2415,6 +2494,9 @@ fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
             true
         ));
 
+=======
+        
+>>>>>>> d948b9a (fixed raise vote and vote on, No confidence round)
         // Assert that the finalisations missing the threshold have not passed.
         assert_noop!(
             Proposals::finalise_no_confidence_round(Origin::signed(charlie), None, project_keys[3]),
@@ -2461,7 +2543,7 @@ fn create_project(account: AccountId) {
             percentage_to_unlock: 100
         }],
         //funds required
-        1000000u64,
+        1_000_000u64,
         CurrencyId::Native
     ));
 }
