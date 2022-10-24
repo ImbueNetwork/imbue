@@ -748,7 +748,7 @@ impl pallet_identity::Config for Runtime {
 
 parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub const MaxProposalsPerRound: u32 = 256;
+    pub const MaxProjectsPerRound: u32 = 256;
     pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
     pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
     pub const PercentRequiredForVoteToPass: u8 = 75;
@@ -808,7 +808,8 @@ impl proposals::Config for Runtime {
     type Event = Event;
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Currencies;
-    type MaxProposalsPerRound = MaxProposalsPerRound;
+    type AuthorityOrigin = AdminOrigin;
+    type MaxProjectsPerRound = MaxProjectsPerRound;
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
