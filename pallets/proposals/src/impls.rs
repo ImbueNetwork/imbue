@@ -1,7 +1,7 @@
 
 use crate::*;
 use pallet_identity::Judgement;
-use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*, vec};
+use sp_std::{collections::btree_map::BTreeMap, vec};
 pub const MAX_PERCENTAGE: u32 = 100u32;
 
 impl<T: Config> Pallet<T> {

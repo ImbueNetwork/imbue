@@ -14,7 +14,7 @@ use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*, vec};
+use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
 #[cfg(test)]
 mod mock;
