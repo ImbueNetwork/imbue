@@ -2223,132 +2223,50 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
 }
 
 // I Realised that i have already tested for thresholds on the mark and therefore above
+// Alas i should test below the threshold
 #[test]
 fn test_finalise_vote_of_no_confidence_below_threshold() {
-    build_test_externality().execute_with(|| {
-
-    });
-}
-
-
-// TODO. Alot going on here, let's split this into multiple tests, maybe 4 tests?
-// This test assumes that the PercentRequiredForVoteToPass is set to 75 in the config.
-#[test]
-fn test_finalise_vote_of_no_confidence_with_varied_threshold_met() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
-    let steve = get_account_id_from_seed::<sr25519::Public>("Steve");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
 
-    let project_keys: BoundedProjectKeys = bounded_vec![0u32, 1u32, 2u32, 3u32];
+    let project_key = 0u32;
     build_test_externality().execute_with(|| {
         // Create a project for both alice and bob.
         create_project(alice);
-        create_project(alice);
-        
+
         //schedule a round to allow for contributions.
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
             System::block_number() + 100,
-            project_keys.clone(),
+            bounded_vec![project_key],
             RoundType::ContributionRound
         ));
 
         // Deposit funds and contribute.
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
-        let _ = Currencies::deposit(CurrencyId::Native, &steve, 20_000_000u64);
-
+        run_to_block(System::block_number() + 3);
+        
         // Setup required state to start voting: must have contributed and round must have started.
-        run_to_block(4);
+        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 500_000u64).unwrap();
+        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 500_000u64).unwrap();
 
-        // 1: in this case bob is 4/5 of the total and charlie 1/5.
-        Proposals::contribute(Origin::signed(charlie), None, project_keys[0], 200_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), None, project_keys[0], 800_000u64).unwrap();
-        
-        // 2: in this case bob is 3/4 of the total and charlie 1/4.
-        Proposals::contribute(Origin::signed(charlie), None, project_keys[1], 100_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), None, project_keys[1], 300_000u64).unwrap();
-        
-        // 3: in this case bob is 2/3 of the total and charlie 1/3.
-        Proposals::contribute(Origin::signed(charlie), None, project_keys[2], 10_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), None, project_keys[2], 20_000u64).unwrap();
+        run_to_block(System::block_number() + 101);
 
-        // 4: in this case bob is 1/2 of the total and charlie 1/2.
-        Proposals::contribute(Origin::signed(charlie), None, project_keys[3], 10_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), None, project_keys[3], 10_000u64).unwrap();
+        // Assert that threshold has been met
+        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));   
 
-        // 1 - pass
-        assert_ok!(Proposals::raise_vote_of_no_confidence(
-            Origin::signed(bob),
-            project_keys[0]
-        ));
-        assert_ok!(Proposals::vote_on_no_confidence_round(
-            Origin::signed(charlie),
-            None,
-            project_keys[0],
-            true
-        ));
+        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
+        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), Some(2), project_key, true));
 
-        // finalise passing rounds.
-        assert_ok!(Proposals::finalise_no_confidence_round(
-            Origin::signed(bob),
-            None,
-            project_keys[0]
-        ));
-        let event1 = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("deffo should be an event here");
-        assert_eq!(
-            event1.event,
-            mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
-                2,
-                project_keys[0]
-            ))
-        );
+        for i in 0..5 {
+            dbg!(i);
+            dbg!(Rounds::<Test>::get(i));
+        }
 
-        // 2 - pass
-        assert_ok!(Proposals::raise_vote_of_no_confidence(
-            Origin::signed(bob),
-            project_keys[1]
-        ));
-        assert_ok!(Proposals::vote_on_no_confidence_round(
-            Origin::signed(charlie),
-            None,
-            project_keys[1],
-            true
-        ));
-        assert_ok!(Proposals::finalise_no_confidence_round(
-            Origin::signed(bob),
-            None,
-            project_keys[1]
-        ));
-        let event2 = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("deffo should be an event here");
-        assert_eq!(
-            event2.event,
-            mock::Event::from(proposals::Event::NoConfidenceRoundFinalised(
-                3,
-                project_keys[1]
-            ))
-        );
-
-        
-        // Assert that the finalisations missing the threshold have not passed.
-        assert_noop!(
-            Proposals::finalise_no_confidence_round(Origin::signed(charlie), None, project_keys[3]),
-            Error::<Test>::VoteThresholdNotMet
-        );
-
-        // TODO: Why is Steve contributing here?
-        // Assert that after more contributions the finalisation can pass.
-        // Steve will now contribute and then vote.
-        // Proposals::contribute(Origin::signed(steve), project_keys[3], None, 20_000u64).unwrap();
-
-        // assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(steve), project_keys[3], false));
-        // assert_ok!(Proposals::finalise_no_confidence_round(Origin::signed(steve), project_keys[3]));
+        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(charlie), Some(2), project_key), Error::<Test>::VoteThresholdNotMet);
     });
 }
 
