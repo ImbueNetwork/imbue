@@ -5,23 +5,17 @@ use common_types::CurrencyId;
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
-
 use frame_support::{
-    pallet_prelude::*,
-    transactional,
-    PalletId, 
-    traits::ConstU32
-    };
+    pallet_prelude::*,  storage::bounded_btree_map::BoundedBTreeMap, traits::{ConstU32, EnsureOrigin},
+    transactional, PalletId,
+};
+use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::{
-    convert::TryInto,
-    prelude::*,
-    vec
-};
-use frame_system::pallet_prelude::*;
+use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
+
 #[cfg(test)]
 mod mock;
 
@@ -33,7 +27,6 @@ mod tests;
 
 pub mod weights;
 pub use weights::*;
-
 
 pub mod impls;
 pub use impls::*;
@@ -50,9 +43,11 @@ pub mod pallet {
 
         type PalletId: Get<PalletId>;
 
+        type AuthorityOrigin: EnsureOrigin<Self::Origin>;
+
         type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-        type MaxProposalsPerRound: Get<u32>;
+        type MaxProjectsPerRound: Get<u32>;
 
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
 
@@ -65,10 +60,8 @@ pub mod pallet {
         type PercentRequiredForVoteToPass: Get<u8>;
     }
 
-
     #[pallet::type_value]
-    pub fn InitialMilestoneVotingWindow() -> u32
-    {
+    pub fn InitialMilestoneVotingWindow() -> u32 {
         100800u32
     }
 
@@ -89,13 +82,8 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn whitelist_spots)]
-    pub type WhitelistSpots<T: Config> = StorageMap<
-        _,
-        Identity,
-        ProjectKey,
-        Vec<Whitelist<T::AccountId, BalanceOf<T>>>,
-        OptionQuery,
-    >;
+    pub type WhitelistSpots<T: Config> =
+        StorageMap<_, Identity, ProjectKey, BTreeMap<T::AccountId, BalanceOf<T>>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn user_votes)]
@@ -116,7 +104,7 @@ pub mod pallet {
     #[pallet::getter(fn no_confidence_votes)]
     pub(super) type NoConfidenceVotes<T: Config> =
         StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
-    
+
     #[pallet::storage]
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
@@ -130,12 +118,13 @@ pub mod pallet {
     pub type RoundCount<T> = StorageValue<_, RoundKey, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn max_proposal_count_per_round)]
-    pub type MaxProposalCountPerRound<T> = StorageValue<_, u32, ValueQuery>;
+    #[pallet::getter(fn max_project_count_per_round)]
+    pub type MaxProjectCountPerRound<T> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn milestone_voting_window)]
-    pub type MilestoneVotingWindow<T> = StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow>;
+    pub type MilestoneVotingWindow<T> =
+        StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow>;
 
     #[pallet::storage]
     #[pallet::getter(fn withdrawal_expiration)]
@@ -144,8 +133,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn is_identity_required)]
     pub type IsIdentityRequired<T> = StorageValue<_, bool, ValueQuery>;
-
-
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -191,7 +178,7 @@ pub mod pallet {
     pub enum Error<T> {
         /// Contribution has exceeded the maximum capacity of the project.
         ContributionMustBeLowerThanMaxCap,
-        /// This block number must be later than the current. 
+        /// This block number must be later than the current.
         EndBlockNumberInvalid,
         /// The starting block number must be before the ending block number.
         EndTooEarly,
@@ -205,41 +192,58 @@ pub mod pallet {
         InvalidAccount,
         /// Project does not exist.
         ProjectDoesNotExist,
-        /// Project name is a mandatory field. 
+        /// Project name is a mandatory field.
         ProjectNameIsMandatory,
-        /// Project logo is a mandatory field. 
+        /// Project logo is a mandatory field.
         LogoIsMandatory,
-        /// Project description is a mandatory field. 
+        /// Project description is a mandatory field.
         ProjectDescriptionIsMandatory,
-        /// Website url is a mandatory field. 
+        /// Website url is a mandatory field.
         WebsiteURLIsMandatory,
         /// Milestones totals do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
+        MilestoneDoesNotExist,
         /// Currently no active round to participate in.
         NoActiveRound,
-        /// TODO: NOT IN USE
-        NoActiveProposal,
+        // TODO: NOT IN USE
+        NoActiveProject,
         /// There was an overflow.
         Overflow,
+        /// A project must be approved before the submission of milestones.
         OnlyApprovedProjectsCanSubmitMilestones,
+        /// Only contributors can vote.
         OnlyContributorsCanVote,
+        /// You do not have permission to do this.
         UserIsNotInitator,
+        /// You do not have permission to do this.
         OnlyInitiatorOrAdminCanApproveMilestone,
+        /// You do not have permission to do this.
         OnlyWhitelistedAccountsCanContribute,
-        ProposalAmountExceed,
+        // TODO: not in use
+        ProjectAmountExceed,
+        /// The selected project does not exist in the round.
         ProjectNotInRound,
-        ProposalWithdrawn,
-        ProposalApproved,
+        // TODO: not in use.
+        ProjectWithdrawn,
+        // TODO: not in use.
+        ProjectApproved,
+        /// Parameter limit exceeded.
         ParamLimitExceed,
         /// Round has already started and cannot be modified.
         RoundStarted,
+        /// Round stll in progress.
         RoundNotEnded,
+        /// There was a processing error when finding the round.
         RoundNotProcessing,
+        /// Round has been cancelled.
         RoundCanceled,
-        /// Errors should have helpful documentation associated with them.
+        // TODO: not in use.
         StartBlockNumberTooSmall,
+        /// You have already voted on this round.
         VoteAlreadyExists,
+        /// The voting threshhold has not been met.
         MilestoneVotingNotComplete,
+        // TODO: not in use
         WithdrawalExpirationExceed,
         /// The given key must exist in storage.
         KeyNotFound,
@@ -247,8 +251,9 @@ pub mod pallet {
         LengthMustExceedZero,
         /// The voting threshold has not been met.
         VoteThresholdNotMet,
+        /// The project must be approved.
+        ProjectApprovalRequired,
     }
-
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
@@ -280,32 +285,25 @@ pub mod pallet {
             )
         }
 
-
         /// Step 1.5 (INITATOR)
         /// Add whitelist to a project
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn add_project_whitelist(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            whitelist_spots: BoundedWhitelistSpots<T>,
+            new_whitelist_spots: BoundedWhitelistSpots<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::ensure_initator(who, project_key)?;
-            let mut project_whitelist_spots: Vec<Whitelist<AccountIdOf<T>, BalanceOf<T>>> =
-                Vec::new();
-
-            let whitelist_exists = WhitelistSpots::<T>::contains_key(project_key);
-            if whitelist_exists {
-                let existing_spots = Self::whitelist_spots(project_key).ok_or(Error::<T>::KeyNotFound)?;
-                project_whitelist_spots.extend(existing_spots);
-            }
-
-            project_whitelist_spots.extend(whitelist_spots);
+            let mut project_whitelist_spots =
+                WhitelistSpots::<T>::get(project_key).unwrap_or(BTreeMap::new());
+            project_whitelist_spots.extend(new_whitelist_spots);
             <WhitelistSpots<T>>::insert(project_key, project_whitelist_spots);
             let now = <frame_system::Pallet<T>>::block_number();
             Self::deposit_event(Event::WhitelistAdded(project_key, now));
             Ok(().into())
         }
+
 
         /// Step 1.5 (INITATOR)
         /// Remove a whitelist
@@ -324,16 +322,28 @@ pub mod pallet {
 
         /// Step 2 (ADMIN)
         /// Schedule a round
-        /// proposal_keys: the proposals were selected for this round
-        #[pallet::weight(<T as Config>::WeightInfo::schedule_round(MaxProposalCountPerRound::<T>::get()))]
+        /// project_keys: the projects were selected for this round
+        #[pallet::weight(<T as Config>::WeightInfo::schedule_round(MaxProjectCountPerRound::<T>::get()))]
         pub fn schedule_round(
             origin: OriginFor<T>,
             start: T::BlockNumber,
             end: T::BlockNumber,
             project_keys: BoundedProjectKeys,
-            round_type: RoundType
+            round_type: RoundType,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            T::AuthorityOrigin::ensure_origin(origin)?;
+            let now = <frame_system::Pallet<T>>::block_number();
+            // The number of items cannot exceed the maximum
+            // ensure!(project_keyes.len() as u32 <= MaxProjectCountPerRound::<T>::get(), Error::<T>::ProjectAmountExceed);
+            // The end block must be greater than the start block
+            ensure!(end > start, Error::<T>::EndTooEarly);
+            // Both the starting block number and the ending block number must be greater than the current number of blocks
+            ensure!(end > now, Error::<T>::EndBlockNumberInvalid);
+            ensure!(!project_keys.is_empty(), Error::<T>::LengthMustExceedZero);
+
+            // Project keys is bounded to 5 projects maximum.
+            let max_project_key = project_keys.iter().max().unwrap();
+            Projects::<T>::get(&max_project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             Self::new_round(start, end, project_keys, round_type)
         }
 
@@ -345,9 +355,8 @@ pub mod pallet {
             origin: OriginFor<T>,
             round_key: RoundKey,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            T::AuthorityOrigin::ensure_origin(origin)?;
             let now = <frame_system::Pallet<T>>::block_number();
-            let count = RoundCount::<T>::get();
             let mut round = <Rounds<T>>::get(round_key).ok_or(Error::<T>::NoActiveRound)?;
 
             // Ensure current round is not started
@@ -358,24 +367,24 @@ pub mod pallet {
             round.is_canceled = true;
             <Rounds<T>>::insert(round_key, Some(round));
 
-            // TODO loop through projects and refund contributers
-
-            Self::deposit_event(Event::RoundCancelled(count - 1));
+            Self::deposit_event(Event::RoundCancelled(round_key));
 
             Ok(().into())
         }
 
         /// Step 3 (CONTRIBUTOR/FUNDER)
-        /// Contribute to a proposal
+        /// Contribute to a project
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
         #[transactional]
         pub fn contribute(
             origin: OriginFor<T>,
+            round_key: Option<RoundKey>,
             project_key: ProjectKey,
             value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::new_contribution(who, project_key, value)
+            let contribution_round_key = round_key.unwrap_or(RoundCount::<T>::get());
+            Self::new_contribution(who, contribution_round_key, project_key, value)
         }
 
         /// Step 4 (ADMIN)
@@ -384,11 +393,13 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
+            round_key: Option<RoundKey>,
             project_key: ProjectKey,
             milestone_keys: Option<BoundedMilestoneKeys>,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            Self::do_approve(project_key, milestone_keys)
+            T::AuthorityOrigin::ensure_origin(origin)?;
+            let approval_round_key = round_key.unwrap_or(RoundCount::<T>::get());
+            Self::do_approve(project_key, approval_round_key, milestone_keys)
         }
 
         /// Step 5 (INITATOR)
@@ -409,10 +420,18 @@ pub mod pallet {
             origin: OriginFor<T>,
             project_key: ProjectKey,
             milestone_key: MilestoneKey,
+            round_key: Option<RoundKey>,
             approve_milestone: bool,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::new_milestone_vote(who, project_key, milestone_key, approve_milestone)
+            let voting_round_key = round_key.unwrap_or(RoundCount::<T>::get());
+            Self::new_milestone_vote(
+                who,
+                project_key,
+                milestone_key,
+                voting_round_key,
+                approve_milestone,
+            )
         }
 
         /// Step 7 (INITATOR)
@@ -429,59 +448,80 @@ pub mod pallet {
         /// Step 8 (INITATOR)
         /// Withdraw
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
-        pub fn withdraw(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
+        pub fn withdraw(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::new_withdrawal(who, project_key)
         }
 
         // TODO: BENCHMARK
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
-        pub fn raise_vote_of_no_confidence(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResult {
+        pub fn raise_vote_of_no_confidence(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::call_raise_no_confidence_round(who, project_key)
+            Self::raise_no_confidence_round(who, project_key)
         }
 
-         // TODO: BENCHMARK
-         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
-         pub fn vote_on_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey, is_yay: bool) -> DispatchResult {
-             let who = ensure_signed(origin)?;
-             Self::call_add_vote_no_confidence(who, project_key, is_yay)
-         }
+        // TODO: BENCHMARK
+        #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+        pub fn vote_on_no_confidence_round(
+            origin: OriginFor<T>,
+            round_key: Option<RoundKey>,
+            project_key: ProjectKey,
+            is_yay: bool,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            let voting_round_key = round_key.unwrap_or(RoundCount::<T>::get());
+            Self::add_vote_no_confidence(who, voting_round_key, project_key, is_yay)
+        }
 
-          // TODO: BENCHMARK
-          #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
-          pub fn finalise_no_confidence_round(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
-              let who = ensure_signed(origin)?;
-              Self::call_finalise_no_confidence_vote(who, project_key, T::PercentRequiredForVoteToPass::get())
-          }
+        // TODO: BENCHMARK
+        #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
+        pub fn finalise_no_confidence_round(
+            origin: OriginFor<T>,
+            round_key: Option<RoundKey>,
+            project_key: ProjectKey,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let voting_round_key = round_key.unwrap_or(RoundCount::<T>::get());
+            Self::call_finalise_no_confidence_vote(
+                who,
+                voting_round_key,
+                project_key,
+                T::PercentRequiredForVoteToPass::get(),
+            )
+        }
 
         // Root Extrinsics:
 
-        /// Set max proposal count per round
-        #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
-        pub fn set_max_proposal_count_per_round(
+        /// Set max project count per round
+        #[pallet::weight(<T as Config>::WeightInfo::set_max_project_count_per_round(T::MaxProjectsPerRound::get()))]
+        pub fn set_max_project_count_per_round(
             origin: OriginFor<T>,
-            max_proposal_count_per_round: u32,
+            max_project_count_per_round: u32,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            T::AuthorityOrigin::ensure_origin(origin)?;
             ensure!(
-                max_proposal_count_per_round > 0
-                    || max_proposal_count_per_round <= T::MaxProposalsPerRound::get(),
+                max_project_count_per_round > 0
+                    || max_project_count_per_round <= T::MaxProjectsPerRound::get(),
                 Error::<T>::ParamLimitExceed
             );
-            MaxProposalCountPerRound::<T>::put(max_proposal_count_per_round);
+            MaxProjectCountPerRound::<T>::put(max_project_count_per_round);
 
             Ok(().into())
         }
 
-
         /// Set milestone voting window
-        #[pallet::weight(<T as Config>::WeightInfo::set_max_proposal_count_per_round(T::MaxProposalsPerRound::get()))]
+        #[pallet::weight(<T as Config>::WeightInfo::set_max_project_count_per_round(T::MaxProjectsPerRound::get()))]
         pub fn set_milestone_voting_window(
             origin: OriginFor<T>,
             new_milestone_voting_window: u32,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            T::AuthorityOrigin::ensure_origin(origin)?;
             ensure!(
                 new_milestone_voting_window > 0,
                 Error::<T>::ParamLimitExceed
@@ -491,15 +531,13 @@ pub mod pallet {
             Ok(().into())
         }
 
-
-
         /// Set withdrawal expiration
         #[pallet::weight(<T as Config>::WeightInfo::set_withdrawal_expiration())]
         pub fn set_withdrawal_expiration(
             origin: OriginFor<T>,
             withdrawal_expiration: T::BlockNumber,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            T::AuthorityOrigin::ensure_origin(origin)?;
             ensure!(
                 withdrawal_expiration > (0_u32).into(),
                 Error::<T>::InvalidParam
@@ -515,7 +553,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             is_identity_required: bool,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            T::AuthorityOrigin::ensure_origin(origin)?;
             IsIdentityRequired::<T>::put(is_identity_required);
 
             Ok(().into())
@@ -526,7 +564,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
             //ensure only admin can perform refund
-            ensure_root(origin)?;
+            T::AuthorityOrigin::ensure_origin(origin)?;
             Self::do_refund(project_key)
         }
     }
@@ -534,9 +572,9 @@ pub mod pallet {
 
 // The Constants associated with the bounded parameters
 type MaxStringFieldLen = ConstU32<255>;
-type MaxProjectKeys =  ConstU32<1000>; 
-type MaxMileStoneKeys =  ConstU32<1000>; 
-type MaxProposedMilestones = ConstU32<255>;
+type MaxProjectKeys = ConstU32<1000>;
+type MaxMilestoneKeys = ConstU32<100>;
+type MaxProposedMilestones = ConstU32<100>;
 type MaxDescriptionField = ConstU32<5000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
 
@@ -545,14 +583,15 @@ pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
+// type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 // type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
-type BoundedWhitelistSpots<T> = BoundedVec<Whitelist<AccountIdOf<T>, BalanceOf<T>>, MaxWhitelistPerProject>;
+type BoundedWhitelistSpots<T> =
+    BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, MaxWhitelistPerProject>;
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
-type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMileStoneKeys>;
+type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
 type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
 type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
 type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
@@ -592,32 +631,14 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
     }
 }
 
-/// A proposal is the preliminary project, before it is scheduled by root.
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Proposal<AccountId, Balance, BlockNumber> {
-    project_key: ProjectKey,
-    contributions: Vec<Contribution<AccountId, Balance>>,
-    is_approved: bool,
-    is_canceled: bool,
-    is_withdrawn: bool,
-    withdrawal_expiration: BlockNumber,
-}
-
-/// The contribution users made to a proposal project.
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Contribution<AccountId, Balance> {
-    account_id: AccountId,
-    value: Balance,
-}
-
-/// The contribution users made to a proposal project.
+/// The contribution users made to a project project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct ProposedMilestone {
     name: BoundedStringField,
     percentage_to_unlock: u32,
 }
 
-/// The contribution users made to a proposal project.
+/// The contribution users made to a project project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Milestone {
     project_key: ProjectKey,
@@ -627,7 +648,7 @@ pub struct Milestone {
     is_approved: bool,
 }
 
-/// The vote struct is used to 
+/// The vote struct is used to
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Vote<Balance> {
     yay: Balance,
@@ -642,12 +663,13 @@ pub struct Project<AccountId, Balance, BlockNumber> {
     logo: Vec<u8>,
     description: Vec<u8>,
     website: Vec<u8>,
-    milestones: Vec<Milestone>,
+    milestones: BTreeMap<MilestoneKey, Milestone>,
     /// A collection of the accounts which have contributed and their contributions.
-    contributions: Vec<Contribution<AccountId, Balance>>,
+    contributions: BTreeMap<AccountId, Balance>,
     currency_id: common_types::CurrencyId,
     required_funds: Balance,
     withdrawn_funds: Balance,
+    raised_funds: Balance,
     /// The account that will receive the funds if the campaign is successful
     initiator: AccountId,
     create_block_number: BlockNumber,
@@ -656,7 +678,13 @@ pub struct Project<AccountId, Balance, BlockNumber> {
     cancelled: bool,
 }
 
-/// White struct
+/// The contribution users made to a proposal project.
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+pub struct Contribution<AccountId, Balance> {
+    account_id: AccountId,
+    value: Balance,
+}
+
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
