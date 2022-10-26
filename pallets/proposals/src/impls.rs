@@ -1,11 +1,10 @@
-
 use crate::*;
 use pallet_identity::Judgement;
+use sp_runtime::traits::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, vec};
 pub const MAX_PERCENTAGE: u32 = 100u32;
 
 impl<T: Config> Pallet<T> {
-
     /// The account ID of the fund pot.
     ///
     /// This actually does computation. If you need to keep using it, then make sure you cache the
@@ -28,7 +27,8 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_project(
         project_key: u32,
-    ) -> Result<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>, Error<T>> {
+    ) -> Result<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>, Error<T>>
+    {
         Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)
     }
 
@@ -186,12 +186,15 @@ impl<T: Config> Pallet<T> {
         let mut project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-        let default_contribution_value: BalanceOf<T> = (0u32).into();
-        let new_contribution_value: BalanceOf<T> = *project
+        let default_contribution_value = Contribution {
+            value: BalanceOf::<T>::default(),
+            timestamp: TimestampOf::<T>::default(),
+        };
+
+        let old_contribution = project
             .contributions
             .get(&who.clone())
-            .unwrap_or(&default_contribution_value)
-            + value;
+            .unwrap_or(&default_contribution_value);
 
         // Find whitelist if exists
         if WhitelistSpots::<T>::contains_key(project_key) {
@@ -207,7 +210,7 @@ impl<T: Config> Pallet<T> {
                 .unwrap_or(&default_max_cap);
 
             ensure!(
-                max_cap == default_max_cap || max_cap >= new_contribution_value.clone(),
+                max_cap == default_max_cap || max_cap >= old_contribution.value.clone(),
                 Error::<T>::ContributionMustBeLowerThanMaxCap
             );
         }
@@ -228,9 +231,15 @@ impl<T: Config> Pallet<T> {
             now,
         ));
 
-        project
-            .contributions
-            .insert(who.clone(), new_contribution_value.clone());
+        let timestamp = <pallet_timestamp::Pallet<T>>::get();
+
+        project.contributions.insert(
+            who.clone(),
+            Contribution {
+                value: old_contribution.value.saturating_add(value),
+                timestamp,
+            },
+        );
         project.raised_funds = project.raised_funds + value;
 
         // Update storage item to include the new contributions.
@@ -521,8 +530,9 @@ impl<T: Config> Pallet<T> {
 
         // TODO: How can we refund all contributions without looping?
         for (who, contribution) in project.contributions.iter() {
-            let refund_amount: BalanceOf<T> =
-                (*contribution * locked_milestone_percentage.into()) / MAX_PERCENTAGE.into();
+            let refund_amount: BalanceOf<T> = ((*contribution).value
+                * locked_milestone_percentage.into())
+                / MAX_PERCENTAGE.into();
 
             T::MultiCurrency::transfer(
                 project.currency_id,
@@ -677,12 +687,12 @@ impl<T: Config> Pallet<T> {
 
     // Called to ensure that an account is is a contributor to a project.
     fn ensure_contributor_of<'a>(
-        project: &'a Project<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+        project: &'a Project<T::AccountId, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>,
         account_id: &'a T::AccountId,
     ) -> Result<BalanceOf<T>, Error<T>> {
         let contribution = project.contributions.get(&account_id);
         match contribution {
-            Some(value) => Ok(*value),
+            Some(value) => Ok((*value).value),
             _ => Err(Error::<T>::OnlyContributorsCanVote),
         }
     }
