@@ -273,6 +273,24 @@ pub mod pallet {
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
+            // Validation
+            ensure!(!name.is_empty(), Error::<T>::ProjectNameIsMandatory);
+            ensure!(!logo.is_empty(), Error::<T>::LogoIsMandatory);
+            ensure!(
+                !description.is_empty(),
+                Error::<T>::ProjectDescriptionIsMandatory
+            );
+            ensure!(!website.is_empty(), Error::<T>::WebsiteURLIsMandatory);
+
+            let mut total_percentage = 0;
+            for milestone in proposed_milestones.iter() {
+                total_percentage += milestone.percentage_to_unlock;
+            }
+            ensure!(
+                total_percentage == 100,
+                Error::<T>::MilestonesTotalPercentageMustEqual100
+            );
+
             Self::new_project(
                 who,
                 name,
