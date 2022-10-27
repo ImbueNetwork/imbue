@@ -10,7 +10,11 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, Pair, Public, H256};
 
-use sp_std::{convert::{TryFrom, TryInto}, vec::Vec, str };
+use sp_std::{
+    convert::{TryFrom, TryInto},
+    str,
+    vec::Vec,
+};
 
 use sp_runtime::{
     testing::{Header, TestXt},
@@ -93,7 +97,7 @@ impl orml_tokens::Config for Test {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 parameter_types! {
