@@ -9,7 +9,7 @@ use frame_support::{
     pallet_prelude::*,
     storage::bounded_btree_map::BoundedBTreeMap,
     traits::{ConstU32, EnsureOrigin},
-    transactional, PalletId,
+    transactional, PalletId, 
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
@@ -33,11 +33,36 @@ pub use weights::*;
 pub mod impls;
 pub use impls::*;
 
+// The Constants associated with the bounded parameters
+type MaxStringFieldLen = ConstU32<255>;
+type MaxProjectKeys = ConstU32<1000>;
+type MaxMilestoneKeys = ConstU32<100>;
+type MaxProposedMilestones = ConstU32<100>;
+type MaxDescriptionField = ConstU32<5000>;
+type MaxWhitelistPerProject = ConstU32<10000>;
+
+pub type RoundKey = u32;
+pub type ProjectKey = u32;
+pub type MilestoneKey = u32;
+type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
+type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
+
+// These are the bounded types which are suitable for handling user input due to their restriction of vector length.
+type BoundedWhitelistSpots<T> =
+    BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, MaxWhitelistPerProject>;
+type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
+type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
+type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
+type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
+type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
+
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
 
-    /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
     pub trait Config:
         frame_system::Config + pallet_identity::Config + pallet_timestamp::Config
@@ -591,30 +616,6 @@ pub mod pallet {
     }
 }
 
-// The Constants associated with the bounded parameters
-type MaxStringFieldLen = ConstU32<255>;
-type MaxProjectKeys = ConstU32<1000>;
-type MaxMilestoneKeys = ConstU32<100>;
-type MaxProposedMilestones = ConstU32<100>;
-type MaxDescriptionField = ConstU32<5000>;
-type MaxWhitelistPerProject = ConstU32<10000>;
-
-pub type RoundKey = u32;
-pub type ProjectKey = u32;
-pub type MilestoneKey = u32;
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
-type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
-
-// These are the bounded types which are suitable for handling user input due to their restriction of vector length.
-type BoundedWhitelistSpots<T> =
-    BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, MaxWhitelistPerProject>;
-type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
-type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
-type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
-type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
-type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub enum RoundType {
@@ -674,6 +675,16 @@ pub struct Vote<Balance> {
     yay: Balance,
     nay: Balance,
     is_approved: bool,
+}
+
+impl<Balance: From<u32>> Default for Vote<Balance> {
+    fn default() -> Self {
+        Self {
+            yay: (0_u32).into(),
+            nay: (0_u32).into(),
+            is_approved: false,
+        }
+    }
 }
 
 /// The struct that holds the descriptive properties of a project.

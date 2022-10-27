@@ -267,11 +267,7 @@ impl<T: Config> Pallet<T> {
                     if let Some(vote) = maybe_vote {
                         vote.is_approved = true;
                     } else {
-                        *maybe_vote = Some( Vote {
-                            yay: Default::default(),
-                            nay : Default::default(),
-                            is_approved: false,
-                        });
+                        *maybe_vote = Some(Vote::default())
                     }
 
                     Ok::<(), Error<T>>(())
@@ -314,11 +310,7 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::Overflow)?;
         let round = RoundOf::<T>::new(now, end, vec![project_key], RoundType::VotingRound);
 
-        let vote = Vote {
-            yay: (0_u32).into(),
-            nay: (0_u32).into(),
-            is_approved: false,
-        };
+        let vote = Vote::default();
         let vote_lookup_key = (project_key, milestone_key);
         <MilestoneVotes<T>>::insert(vote_lookup_key, vote);
         Self::deposit_event(Event::MilestoneSubmitted(who, project_key, milestone_key));
@@ -494,7 +486,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn do_refund(project_key: ProjectKey) -> DispatchResultWithPostInfo {
-        let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         //getting the locked milestone percentage - these are also milestones that have not been approved
         let mut refunded_funds: BalanceOf<T> = 0_u32.into();
@@ -520,19 +512,15 @@ impl<T: Config> Pallet<T> {
 
             refunded_funds += refund_amount;
         }
+        
+        // Updated new project status to cancelled
+        project.cancelled = true;
+        <Projects<T>>::insert(project_key, project);
 
-        // Update project cancellation status
-        let updated_project = Project {
-            cancelled: true,
-            ..project
-        };
-        // Updated new project status to chain
-        <Projects<T>>::insert(project_key, updated_project);
         Self::deposit_event(Event::ProjectLockedFundsRefunded(
             project_key,
             refunded_funds,
         ));
-
         Ok(().into())
     }
 
