@@ -47,24 +47,7 @@ impl<T: Config> Pallet<T> {
             let _ = Self::ensure_identity_is_decent(&who)?;
         }
 
-        // Validation
-        ensure!(!name.is_empty(), Error::<T>::ProjectNameIsMandatory);
-        ensure!(!logo.is_empty(), Error::<T>::LogoIsMandatory);
-        ensure!(
-            !description.is_empty(),
-            Error::<T>::ProjectDescriptionIsMandatory
-        );
-        ensure!(!website.is_empty(), Error::<T>::WebsiteURLIsMandatory);
-
-        let mut total_percentage = 0;
-        for milestone in proposed_milestones.iter() {
-            total_percentage += milestone.percentage_to_unlock;
-        }
-        ensure!(
-            total_percentage == 100,
-            Error::<T>::MilestonesTotalPercentageMustEqual100
-        );
-
+        
         let project_key = ProjectCount::<T>::get();
         let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
@@ -274,21 +257,20 @@ impl<T: Config> Pallet<T> {
                 milestone.is_approved = true;
 
                 let vote_lookup_key = (project_key, milestone_key);
-                let votes_exist = MilestoneVotes::<T>::contains_key(vote_lookup_key);
-                let mut updated_vote = Vote {
-                    yay: (0_u32).into(),
-                    nay: (0_u32).into(),
-                    is_approved: true,
-                };
-                if votes_exist {
-                    let vote = <MilestoneVotes<T>>::get(vote_lookup_key)
-                        .expect("milestone votes contains key has been called; qed");
-                    updated_vote = Vote {
-                        yay: vote.yay,
-                        nay: vote.nay,
-                        is_approved: true,
-                    };
-                }
+
+                let _ = MilestoneVotes::<T>::try_mutate(vote_lookup_key, |maybe_vote| {
+                    if let Some(vote) = maybe_vote {
+                        vote.is_approved = true;
+                    } else {
+                        *maybe_vote = Some( Vote {
+                            yay: Default::default(),
+                            nay : Default::default(),
+                            is_approved: false,
+                        });
+                    }
+
+                    Ok::<(), Error<T>>(())
+                })?;
 
                 Self::deposit_event(Event::MilestoneApproved(
                     project.initiator.clone(),
@@ -296,7 +278,6 @@ impl<T: Config> Pallet<T> {
                     milestone_key,
                     now,
                 ));
-                <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
                 project.milestones.insert(milestone_key, milestone.clone());
             }
         }

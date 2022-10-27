@@ -2261,11 +2261,6 @@ fn test_finalise_vote_of_no_confidence_below_threshold() {
         assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
         assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), Some(2), project_key, true));
 
-        for i in 0..5 {
-            dbg!(i);
-            dbg!(Rounds::<Test>::get(i));
-        }
-
         assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(charlie), Some(2), project_key), Error::<Test>::VoteThresholdNotMet);
     });
 }
