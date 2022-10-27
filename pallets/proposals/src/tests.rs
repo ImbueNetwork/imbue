@@ -84,73 +84,60 @@ fn create_a_test_project_with_less_than_100_percent() {
 #[test]
 fn create_a_test_project_with_no_name() {
     build_test_externality().execute_with(|| {
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
-        Proposals::create_project(
-            Origin::signed(alice),
-            //project name
-            b"".to_vec().try_into().expect("input should be of decent length"),
-            //project logo
-            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
-            //project description
-            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"), 
-            //website
-            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
-            //milestone
-            bounded_vec![ProposedMilestone {
-                name: bounded_vec![], percentage_to_unlock: 99
-            }],
-            //funds required
-            1000000u64,
-            CurrencyId::Native
-        ),DispatchErrorWithPostInfo {
-            post_info: PostDispatchInfo {
-                actual_weight: None,
-                pays_fee: Pays::Yes,
-            },
-            error: Error::<Test>::ProjectNameIsMandatory.into()
-        });
-    });
-}
-
-#[test]
-fn create_a_test_project_with_no_data() {
-    build_test_externality().execute_with(|| {
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        assert_noop!(
-            Proposals::create_project(
-                Origin::signed(alice),
-                //project name
-                b"".to_vec()
-                    .try_into()
-                    .expect("input should be of decent length"),
-                //project logo
-                b"".to_vec()
-                    .try_into()
-                    .expect("input should be of decent length"),
-                //project description
-                b"".to_vec()
-                    .try_into()
-                    .expect("input should be of decent length"),
-                //website
-                b"".to_vec()
-                    .try_into()
-                    .expect("input should be of decent length"),
-                //milestone
-                bounded_vec![ProposedMilestone {
-                    name: bounded_vec![],
-                    percentage_to_unlock: 99
-                }],
-                //funds required
-                1000000u64,
-                CurrencyId::Native
-            ),
+            create_projects_with_inputs("", "logo", "description", "website", 100_000u64), 
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
                     pays_fee: Pays::Yes,
                 },
                 error: Error::<Test>::ProjectNameIsMandatory.into()
+            }
+        );
+    });
+}
+#[test]
+fn create_a_test_project_with_no_logo() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(
+            create_projects_with_inputs("name", "", "description", "website", 100_000u64), 
+            DispatchErrorWithPostInfo {
+                post_info: PostDispatchInfo {
+                    actual_weight: None,
+                    pays_fee: Pays::Yes,
+                },
+                error: Error::<Test>::LogoIsMandatory.into()
+            }
+        );
+    });
+}
+#[test]
+fn create_a_test_project_with_no_description() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(
+            create_projects_with_inputs("name", "logo", "", "website", 100_000u64), 
+            DispatchErrorWithPostInfo {
+                post_info: PostDispatchInfo {
+                    actual_weight: None,
+                    pays_fee: Pays::Yes,
+                },
+                error: Error::<Test>::ProjectDescriptionIsMandatory.into()
+            }
+        );
+    });
+}
+
+#[test]
+fn create_a_test_project_with_no_website() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(
+            create_projects_with_inputs("name", "logo", "description", "", 100_000u64), 
+            DispatchErrorWithPostInfo {
+                post_info: PostDispatchInfo {
+                    actual_weight: None,
+                    pays_fee: Pays::Yes,
+                },
+                error: Error::<Test>::WebsiteURLIsMandatory.into()
             }
         );
     });
@@ -224,15 +211,14 @@ fn create_a_test_project_and_schedule_round() {
     build_test_externality().execute_with(|| {
         create_project(alice);
 
-        Proposals::schedule_round(
+        assert_ok!(Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
             System::block_number() + 1,
             //Project key starts with 0 for the first project submitted to the chain
             bounded_vec![0],
             RoundType::ContributionRound,
-        )
-        .unwrap();
+        ));
     });
 }
 
@@ -294,22 +280,14 @@ fn cancel_round_no_active_round() {
     build_test_externality().execute_with(|| {
         create_project(alice);
 
-        assert_noop!(
+        assert_ok!(
             Proposals::schedule_round(
                 Origin::root(),
-                System::block_number() + 6000,
                 System::block_number() + 3000,
-                //Project key starts with 0 for the first project submitted to the chain
-                bounded_vec![1],
+                System::block_number() + 6000,
+                bounded_vec![0],
                 RoundType::ContributionRound
             ),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::EndTooEarly.into()
-            }
         );
 
         assert_noop!(
@@ -326,13 +304,13 @@ fn cancel_round_no_active_round() {
 }
 
 #[test]
-fn cancel_round() {
+fn test_funding_round_is_created_on_schedule_round() {
+    let project_keys: BoundedProjectKeys = bounded_vec![0u32];
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     //create_project extrinsic
     build_test_externality().execute_with(|| {
         create_project(alice);
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        //schedule_round extrinsic
+        
         assert_ok!(Proposals::schedule_round(
             Origin::root(),
             System::block_number() + 1,
@@ -353,6 +331,24 @@ fn cancel_round() {
                 project_keys.to_vec()
             ))
         );
+    });
+}
+
+#[test]
+fn cancel_round() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    //create_project extrinsic
+    build_test_externality().execute_with(|| {
+        create_project(alice);
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
+        //schedule_round extrinsic
+        assert_ok!(Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 1,
+            System::block_number() + 2,
+            project_keys.clone(),
+            RoundType::ContributionRound
+        ));
 
         let round_index = 1;
 
@@ -2334,6 +2330,41 @@ fn create_project_multiple_milestones(
         1_000_000u64,
         CurrencyId::Native
     ));
+}
+
+fn create_projects_with_inputs(name: &str, logo: &str, description: &str, website: &str, funds_required: u64) -> DispatchResultWithPostInfo {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    Proposals::create_project(
+        Origin::signed(alice),
+        //project name
+        name.as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        //project logo
+        logo.as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        //project description
+        description.as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        //website
+        website.as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        //milestone
+        bounded_vec![ProposedMilestone {
+            name: bounded_vec![],
+            percentage_to_unlock: 100
+        }],
+        //funds required
+        funds_required,
+        CurrencyId::Native
+    )
 }
 
 fn deposit_initial_balance(alice: &AccountId, bob: &AccountId, additional_amount: u64) {
