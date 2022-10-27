@@ -104,24 +104,24 @@ You can manually launch a relaychain and parachain then register the parachain d
 #### Create local chain spec
 
 ```bash
-# Generate westend-local spec file
-./target/release/polkadot build-spec --chain westend-local --raw --disable-default-bootnode > westend-local.json
+# Generate rococo-local spec file
+./target/release/polkadot build-spec --chain rococo-local --raw --disable-default-bootnode > rococo-local.json
 ```
 
 #### Start relay chain validators
 
 ```bash
 # Start Alice
-./target/release/polkadot --alice --validator --base-path cumulus_relay/alice --chain westend-local.json --port 30444 --ws-port 9944
+./target/release/polkadot --alice --validator --base-path cumulus_relay/alice --chain rococo-local.json --port 30444 --ws-port 9944
 
 # Start Bob
-./target/release/polkadot --bob --validator --base-path cumulus_relay/bob --chain westend-local.json --port 30555 --ws-port 9955
+./target/release/polkadot --bob --validator --base-path cumulus_relay/bob --chain rococo-local.json --port 30555 --ws-port 9955
 
 # Start Charlie
-./target/release/polkadot --charlie --validator --base-path cumulus_relay/charlie --chain westend-local.json --port 30666 --ws-port 9966
+./target/release/polkadot --charlie --validator --base-path cumulus_relay/charlie --chain rococo-local.json --port 30666 --ws-port 9966
 
 # Start Dave
-./target/release/polkadot --dave --validator --base-path cumulus_relay/dave --chain westend-local.json --port 30777 --ws-port 9977
+./target/release/polkadot --dave --validator --base-path cumulus_relay/dave --chain rococo-local.json --port 30777 --ws-port 9977
 ```
 
 #### Create genesis & WASM files
@@ -139,10 +139,10 @@ cd imbue
 #### Start a collator
 
 ```bash
-# Customize the --chain flag for the path to your 'westend-local.json' file
-./target/release/imbue --alice --collator --force-authoring --parachain-id 2000 --base-path cumulus_relay/collator-alice --port 40333 --ws-port 8844 -- --execution wasm --chain <path to 'westend-local.json' file> --port 30343 --ws-port 9942
+# Customize the --chain flag for the path to your 'rococo-local.json' file
+./target/release/imbue --alice --collator --force-authoring --parachain-id 2000 --base-path cumulus_relay/collator-alice --port 40333 --ws-port 8844 -- --execution wasm --chain <path to 'rococo-local.json' file> --port 30343 --ws-port 9942
 
-./target/release/imbue --bob --collator --force-authoring --parachain-id 2013 --base-path cumulus_relay/collator-bob --port 40334 --ws-port 8845 -- --execution wasm --chain <path to 'westend-local.json' file> --port 30344 --ws-port 9943
+./target/release/imbue --bob --collator --force-authoring --parachain-id 2013 --base-path cumulus_relay/collator-bob --port 40334 --ws-port 8845 -- --execution wasm --chain <path to 'rococo-local.json' file> --port 30344 --ws-port 9943
 
 ```
 
