@@ -186,15 +186,11 @@ impl<T: Config> Pallet<T> {
         let mut project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-        let default_contribution_value = Contribution {
-            value: BalanceOf::<T>::default(),
-            timestamp: TimestampOf::<T>::default(),
-        };
-
-        let old_contribution = project
-            .contributions
-            .get(&who.clone())
-            .unwrap_or(&default_contribution_value);
+        let new_amount = match project.contributions.get(&who) {
+            Some(contribution) => contribution.value,
+            None => BalanceOf::<T>::default(),
+        }
+        .saturating_add(value);
 
         // Find whitelist if exists
         if WhitelistSpots::<T>::contains_key(project_key) {
@@ -210,7 +206,7 @@ impl<T: Config> Pallet<T> {
                 .unwrap_or(&default_max_cap);
 
             ensure!(
-                max_cap == default_max_cap || max_cap >= old_contribution.value.clone(),
+                max_cap == default_max_cap || max_cap >= new_amount,
                 Error::<T>::ContributionMustBeLowerThanMaxCap
             );
         }
@@ -236,7 +232,7 @@ impl<T: Config> Pallet<T> {
         project.contributions.insert(
             who.clone(),
             Contribution {
-                value: old_contribution.value.saturating_add(value),
+                value: new_amount,
                 timestamp,
             },
         );
