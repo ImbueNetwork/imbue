@@ -6,7 +6,9 @@ use common_types::CurrencyId;
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
 use frame_support::{
-    pallet_prelude::*,  storage::bounded_btree_map::BoundedBTreeMap, traits::{ConstU32, EnsureOrigin},
+    pallet_prelude::*,
+    storage::bounded_btree_map::BoundedBTreeMap,
+    traits::{ConstU32, EnsureOrigin},
     transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -37,7 +39,9 @@ pub mod pallet {
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_identity::Config {
+    pub trait Config:
+        frame_system::Config + pallet_identity::Config + pallet_timestamp::Config
+    {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -76,7 +80,7 @@ pub mod pallet {
         _,
         Identity,
         ProjectKey,
-        Project<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+        Project<T::AccountId, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>,
         OptionQuery,
     >;
 
@@ -303,7 +307,6 @@ pub mod pallet {
             Self::deposit_event(Event::WhitelistAdded(project_key, now));
             Ok(().into())
         }
-
 
         /// Step 1.5 (INITATOR)
         /// Remove a whitelist
@@ -583,9 +586,8 @@ pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-// type ContributionOf<T> = Contribution<AccountIdOf<T>, BalanceOf<T>>;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
-// type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedWhitelistSpots<T> =
@@ -658,14 +660,14 @@ pub struct Vote<Balance> {
 
 /// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Project<AccountId, Balance, BlockNumber> {
+pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     name: Vec<u8>,
     logo: Vec<u8>,
     description: Vec<u8>,
     website: Vec<u8>,
     milestones: BTreeMap<MilestoneKey, Milestone>,
     /// A collection of the accounts which have contributed and their contributions.
-    contributions: BTreeMap<AccountId, Balance>,
+    contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
     currency_id: common_types::CurrencyId,
     required_funds: Balance,
     withdrawn_funds: Balance,
@@ -680,9 +682,11 @@ pub struct Project<AccountId, Balance, BlockNumber> {
 
 /// The contribution users made to a proposal project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Contribution<AccountId, Balance> {
-    account_id: AccountId,
+pub struct Contribution<Balance, Timestamp> {
+    /// Contribution value
     value: Balance,
+    /// Timestamp of the last contribution
+    timestamp: Timestamp,
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
