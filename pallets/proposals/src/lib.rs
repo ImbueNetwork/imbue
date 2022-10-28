@@ -30,6 +30,8 @@ mod tests;
 pub mod weights;
 pub use weights::*;
 
+pub mod migration;
+
 pub mod impls;
 pub use impls::*;
 
@@ -163,6 +165,11 @@ pub mod pallet {
     #[pallet::getter(fn is_identity_required)]
     pub type IsIdentityRequired<T> = StorageValue<_, bool, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn storage_version)]
+    pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+
+
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
     #[pallet::event]
@@ -283,6 +290,36 @@ pub mod pallet {
         /// The project must be approved.
         ProjectApprovalRequired,
     }
+    
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            if StorageVersion::<T>::get() == Release::V0 {
+				weight += migration::v1::migrate::<T>();
+                StorageVersion::<T>::set(Release::V1);
+            }
+            weight
+        }
+    }
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config>(core::marker::PhantomData<T>);
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self(core::marker::PhantomData)
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            StorageVersion::<T>::put(Release::V1);
+        }
+    }
+
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
@@ -622,6 +659,20 @@ pub enum RoundType {
     ContributionRound,
     VotingRound,
     VoteOfNoConfidence,
+}
+
+#[derive(Encode, Decode, TypeInfo, PartialEq)]
+#[repr(u32)]
+pub enum Release {
+    V0,
+    V1,
+    V2,
+}
+
+impl Default for Release {
+    fn default() -> Self {
+        Self::V0
+    }
 }
 
 /// The round struct contains all the data associated with a given round.
