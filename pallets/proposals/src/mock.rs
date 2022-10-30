@@ -1,7 +1,7 @@
 use super::*;
 use crate as proposals;
 use frame_support::{
-    ord_parameter_types, parameter_types,
+    parameter_types,
     traits::{ConstU32, Nothing},
     weights::{ConstantMultiplier, IdentityFee, Weight},
     PalletId,
@@ -10,7 +10,11 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, Pair, Public, H256};
 
-use sp_std::{convert::{TryFrom, TryInto}, vec::Vec, str };
+use sp_std::{
+    convert::{TryFrom, TryInto},
+    str,
+    vec::Vec,
+};
 
 use sp_runtime::{
     testing::{Header, TestXt},
@@ -93,7 +97,7 @@ impl orml_tokens::Config for Test {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 parameter_types! {
@@ -209,9 +213,10 @@ parameter_types! {
 impl proposals::Config for Test {
     type Event = Event;
     type PalletId = ProposalsPalletId;
+    type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Currencies;
     type WeightInfo = ();
-    type MaxProposalsPerRound = ConstU32<4>;
+    type MaxProjectsPerRound = ConstU32<4>;
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
