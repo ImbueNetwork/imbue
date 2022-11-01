@@ -14,38 +14,13 @@ use sp_std::vec::Vec;
 fn create_a_test_project() {
     build_test_externality().execute_with(|| {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        Proposals::create_project(
-            Origin::signed(alice),
-            //project name
-            b"Imbue's Awesome Initiative"
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //project logo
-            b"Imbue Logo"
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //project description
-            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding."
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //website
-            b"https://imbue.network"
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //milestone
-            bounded_vec![ProposedMilestone {
-                name: bounded_vec![],
-                percentage_to_unlock: 100,
-            }],
-            //funds required
-            1000000u64,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        assert_ok!(create_projects_with_inputs(
+            "Imbue's Awesome Initiative",
+            "Imbue Logo",
+            "This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.",
+            "https://imbue.network",
+            100_000u64
+        ));
     });
 }
 
@@ -280,14 +255,12 @@ fn cancel_round_no_active_round() {
     build_test_externality().execute_with(|| {
         create_project(alice);
 
-        assert_ok!(
-            Proposals::schedule_round(
-                Origin::root(),
-                System::block_number() + 3000,
-                System::block_number() + 6000,
-                bounded_vec![0],
-                RoundType::ContributionRound
-            ),
+        let _ = Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 3000,
+            System::block_number() + 6000,
+            bounded_vec![0],
+            RoundType::ContributionRound
         );
 
         assert_noop!(
@@ -311,13 +284,13 @@ fn test_funding_round_is_created_on_schedule_round() {
     build_test_externality().execute_with(|| {
         create_project(alice);
         
-        assert_ok!(Proposals::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
             project_keys.clone(),
             RoundType::ContributionRound
-        ));
+        );
 
         let exp_fundingroundcreated_event = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -342,13 +315,13 @@ fn cancel_round() {
         create_project(alice);
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         //schedule_round extrinsic
-        assert_ok!(Proposals::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
             project_keys.clone(),
             RoundType::ContributionRound
-        ));
+        );
 
         let round_index = 1;
 
@@ -381,13 +354,13 @@ fn test_cancelling_started_round() {
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        <proposals::Pallet<Test>>::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        );
 
         let round_key = 1;
 
