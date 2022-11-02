@@ -13,39 +13,13 @@ use sp_std::vec::Vec;
 #[test]
 fn create_a_test_project() {
     build_test_externality().execute_with(|| {
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        Proposals::create_project(
-            Origin::signed(alice),
-            //project name
-            b"Imbue's Awesome Initiative"
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //project logo
-            b"Imbue Logo"
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //project description
-            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding."
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //website
-            b"https://imbue.network"
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //milestone
-            bounded_vec![ProposedMilestone {
-                name: bounded_vec![],
-                percentage_to_unlock: 100,
-            }],
-            //funds required
-            1000000u64,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        assert_ok!(create_projects_with_inputs(
+            "Imbue's Awesome Initiative",
+            "Imbue Logo",
+            "This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.",
+            "https://imbue.network",
+            100_000u64
+        ));
     });
 }
 
@@ -280,14 +254,12 @@ fn cancel_round_no_active_round() {
     build_test_externality().execute_with(|| {
         create_project(alice);
 
-        assert_ok!(
-            Proposals::schedule_round(
-                Origin::root(),
-                System::block_number() + 3000,
-                System::block_number() + 6000,
-                bounded_vec![0],
-                RoundType::ContributionRound
-            ),
+        let _ = Proposals::schedule_round(
+            Origin::root(),
+            System::block_number() + 3000,
+            System::block_number() + 6000,
+            bounded_vec![0],
+            RoundType::ContributionRound
         );
 
         assert_noop!(
@@ -311,13 +283,13 @@ fn test_funding_round_is_created_on_schedule_round() {
     build_test_externality().execute_with(|| {
         create_project(alice);
         
-        assert_ok!(Proposals::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
             project_keys.clone(),
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let exp_fundingroundcreated_event = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -342,13 +314,13 @@ fn cancel_round() {
         create_project(alice);
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         //schedule_round extrinsic
-        assert_ok!(Proposals::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
             project_keys.clone(),
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let round_index = 1;
 
@@ -381,18 +353,18 @@ fn test_cancelling_started_round() {
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let round_key = 1;
 
         assert_noop!(
-            <proposals::Pallet<Test>>::cancel_round(Origin::root(), round_key),
+            Proposals::cancel_round(Origin::root(), round_key),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -417,16 +389,16 @@ fn test_cancelling_round_without_root_privilege() {
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+       Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
         let round_key = 1;
         assert_noop!(
-            <proposals::Pallet<Test>>::cancel_round(Origin::signed(alice), round_key),
+            Proposals::cancel_round(Origin::signed(alice), round_key),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -802,28 +774,28 @@ fn test_submit_milestone() {
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
             value
-        ));
+        ).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
+        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
 
         assert_ok!(Proposals::submit_milestone(
             Origin::signed(alice),
@@ -859,16 +831,16 @@ fn test_submit_milestone_without_approval() {
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        assert_ok!(Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
@@ -906,21 +878,21 @@ fn test_voting_on_a_milestone() {
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
             value
-        ));
+        ).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
@@ -970,13 +942,13 @@ fn test_voting_on_a_cancelled_round() {
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![project_key];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         assert_ok!(<proposals::Pallet<Test>>::cancel_round(
             Origin::root(),
@@ -1055,21 +1027,21 @@ fn test_finalize_a_milestone_without_voting() {
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
             value
-        ));
+        ).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
@@ -1077,13 +1049,14 @@ fn test_finalize_a_milestone_without_voting() {
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(
+        Proposals::approve(
             Origin::root(),
             None,
             project_key,
             Some(milestone_index)
-        ));
+        ).unwrap();
 
+        // Test you can submit a milestone whenever.
         assert_ok!(Proposals::submit_milestone(
             Origin::signed(alice),
             project_key,
@@ -1168,16 +1141,16 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let bob_contribution = 200_000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        assert_ok!(Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
@@ -1186,7 +1159,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
 
         // Second contribution to give Bob majority
         let bob_second_contribution = 400_000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        assert_ok!(Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
@@ -1194,7 +1167,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
         ));
 
         let charlie_contribution = 500_000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        assert_ok!(Proposals::contribute(
             Origin::signed(charlie),
             None,
             project_key,
@@ -1298,28 +1271,28 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let value = 500000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
             value
-        ));
+        ).unwrap();
 
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        Proposals::contribute(
             Origin::signed(charlie),
             None,
             project_key,
             value
-        ));
+        ).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(milestone1_key);
@@ -1327,19 +1300,19 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
+        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
 
-        assert_ok!(Proposals::submit_milestone(
+        Proposals::submit_milestone(
             Origin::signed(alice),
             project_key,
             milestone1_key
-        ));
+        ).unwrap();
 
-        assert_ok!(Proposals::submit_milestone(
+        Proposals::submit_milestone(
             Origin::signed(alice),
             project_key,
             milestone2_key
-        ));
+        ).ok();
 
         run_to_block(5);
         //Bob voting on the submitted milestone
@@ -1497,27 +1470,27 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let value = 500000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
             value
-        ));
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        ).unwrap();
+        Proposals::contribute(
             Origin::signed(charlie),
             None,
             project_key,
             value
-        ));
+        ).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
@@ -1525,12 +1498,12 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(
+        Proposals::approve(
             Origin::root(),
             None,
             project_key,
             Some(milestone_index)
-        ));
+        ).unwrap();
 
         assert_ok!(<proposals::Pallet<Test>>::withdraw(
             Origin::signed(alice),
@@ -1584,51 +1557,51 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let required_funds = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
             required_funds
-        ));
+        ).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
+        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
 
-        assert_ok!(Proposals::submit_milestone(
+        Proposals::submit_milestone(
             Origin::signed(alice),
             project_key,
             0
-        ));
+        ).unwrap();
 
         run_to_block(5);
-        assert_ok!(Proposals::vote_on_milestone(
+        Proposals::vote_on_milestone(
             Origin::signed(bob),
             project_key,
             milestone1_key,
             None,
             true
-        ));
+        ).unwrap();
 
-        assert_ok!(Proposals::finalise_milestone_voting(
+        Proposals::finalise_milestone_voting(
             Origin::signed(alice),
             project_key,
             milestone1_key
-        ));
+        ).unwrap();
 
-        assert_ok!(<proposals::Pallet<Test>>::withdraw(
+        assert_ok!(Proposals::withdraw(
             Origin::signed(alice),
             project_key
         ));
@@ -1714,21 +1687,21 @@ fn submit_multiple_milestones() {
         let milestone_index_1 = 0;
         let milestone_index_2 = 1;
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
             value
-        ));
+        ).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(milestone_index_1);
@@ -1736,13 +1709,13 @@ fn submit_multiple_milestones() {
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
+        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
 
-        assert_ok!(Proposals::submit_milestone(
+        Proposals::submit_milestone(
             Origin::signed(alice),
             project_key,
             milestone_index_1
-        ));
+        ).unwrap();
 
         let voting_round_event_1 = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -1888,39 +1861,39 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         let milestone1_key = 0;
         let milestone2_key = 1;
 
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number() - 1,
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         let value = 500000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        Proposals::contribute(
             Origin::signed(bob),
             None,
             project_key,
             value
-        ));
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
+        ).unwrap();
+        Proposals::contribute(
             Origin::signed(charlie),
             None,
             project_key,
             value
-        ));
+        ).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(
+        Proposals::approve(
             Origin::root(),
             None,
             project_key,
             Some(milestone_index)
-        ));
+        ).unwrap();
 
         assert_ok!(Proposals::submit_milestone(
             Origin::signed(alice),
@@ -2058,13 +2031,13 @@ fn test_raising_a_vote_of_no_confidence() {
         create_project(alice);
 
         // Schedule a round to allow for contributions.
-        assert_ok!(Proposals::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![project_key],
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         // Deposit funds and contribute.
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 10_000_000u64);
@@ -2073,7 +2046,7 @@ fn test_raising_a_vote_of_no_confidence() {
         Proposals::contribute(Origin::signed(bob), Some(1), project_key, 1_000_000u64).unwrap();
         run_to_block(System::block_number() + 101);
         
-        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));
+        Proposals::approve(Origin::root(), Some(1), project_key, None).unwrap();
 
         // Assert that Bob cannot raise the vote as he is not a contributor.
         assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key), Error::<Test>::OnlyContributorsCanVote);
@@ -2106,13 +2079,13 @@ fn test_adding_vote_of_no_confidence() {
         create_project(alice);
 
         //schedule a round to allow for contributions.
-        assert_ok!(Proposals::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![project_key],
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         // Deposit funds and contribute.
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
@@ -2174,13 +2147,13 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
         create_project(alice);
 
         //schedule a round to allow for contributions.
-        assert_ok!(Proposals::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![project_key],
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         // Deposit funds and contribute.
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
@@ -2190,7 +2163,7 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
         Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_000u64).unwrap();
         Proposals::contribute(Origin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
         run_to_block(System::block_number() + 101);
-        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));
+        Proposals::approve(Origin::root(), Some(1), project_key, None).unwrap();
 
         assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
         assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, false));
@@ -2232,13 +2205,13 @@ fn test_finalise_vote_of_no_confidence_below_threshold() {
         create_project(alice);
 
         //schedule a round to allow for contributions.
-        assert_ok!(Proposals::schedule_round(
+        Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![project_key],
             RoundType::ContributionRound
-        ));
+        ).unwrap();
 
         // Deposit funds and contribute.
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
