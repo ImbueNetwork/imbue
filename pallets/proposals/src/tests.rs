@@ -13,7 +13,6 @@ use sp_std::vec::Vec;
 #[test]
 fn create_a_test_project() {
     build_test_externality().execute_with(|| {
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_ok!(create_projects_with_inputs(
             "Imbue's Awesome Initiative",
             "Imbue Logo",
@@ -290,7 +289,7 @@ fn test_funding_round_is_created_on_schedule_round() {
             System::block_number() + 2,
             project_keys.clone(),
             RoundType::ContributionRound
-        );
+        ).unwrap();
 
         let exp_fundingroundcreated_event = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -321,7 +320,7 @@ fn cancel_round() {
             System::block_number() + 2,
             project_keys.clone(),
             RoundType::ContributionRound
-        );
+        ).unwrap();
 
         let round_index = 1;
 
@@ -838,7 +837,7 @@ fn test_submit_milestone_without_approval() {
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound
-        );
+        ).unwrap();
 
         let value = 100u64;
         assert_ok!(Proposals::contribute(
@@ -893,7 +892,7 @@ fn test_voting_on_a_milestone() {
             None,
             project_key,
             value
-        );
+        ).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
@@ -1055,7 +1054,7 @@ fn test_finalize_a_milestone_without_voting() {
             None,
             project_key,
             Some(milestone_index)
-        );
+        ).unwrap();
 
         // Test you can submit a milestone whenever.
         assert_ok!(Proposals::submit_milestone(
