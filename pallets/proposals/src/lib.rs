@@ -406,7 +406,7 @@ pub mod pallet {
         /// Step 2 (ADMIN)
         /// Schedule a round
         /// project_keys: the projects were selected for this round
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::schedule_round())]
         pub fn schedule_round(
             origin: OriginFor<T>,
             start: T::BlockNumber,
@@ -416,8 +416,6 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AuthorityOrigin::ensure_origin(origin)?;
             let now = <frame_system::Pallet<T>>::block_number();
-            // The number of items cannot exceed the maximum
-            // ensure!(project_keyes.len() as u32 <= MaxProjectCountPerRound::<T>::get(), Error::<T>::ProjectAmountExceed);
             // The end block must be greater than the start block
             ensure!(end > start, Error::<T>::EndTooEarly);
             // Both the starting block number and the ending block number must be greater than the current number of blocks
