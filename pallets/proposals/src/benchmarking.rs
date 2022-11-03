@@ -9,12 +9,9 @@ use frame_support::{
     traits::{Currency, Get},
 };
 use sp_std::str;
-use sp_std::vec::Vec;
-use sp_runtime::traits::UniqueSaturatedFrom;
 
-const CONTRIBUTION: u32 = 100;
+const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
-
 
 //accumulate_dummy {
 //    let b in 1 .. 1000;
@@ -41,13 +38,27 @@ benchmarks! {
 
         let required_funds: BalanceOf<T> = u32::MAX.into();
         let currency_id = CurrencyId::Native;
-        let caller: T::AccountId = whitelisted_caller();
 
-    }: _(RawOrigin::Signed(caller.clone()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f.clone(), bounded_desc_f.clone(), milestones, required_funds, CurrencyId::Native)
+    }: _(RawOrigin::Signed(whitelisted_caller()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f.clone(), bounded_desc_f.clone(), milestones, required_funds, CurrencyId::Native)
     verify {
         assert_last_event::<T>(Event::ProjectCreated(caller, bounded_str_f.clone().to_vec(), 0, required_funds, CurrencyId::Native).into());
     }
+
+    add_project_whitelist {
+        let caller = create_project_common::<T>(100_000u32.into());
+        let mut bbt : BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
+
+        for i in 0..<MaxWhitelistPerProject as Get<u32>>::get() {
+            bbt.try_insert(whitelisted_caller(), 100u32.into()).unwrap();
+        }
+
+    }: _(RawOrigin::Signed(caller), 0, bbt)
+    verify {
+        assert_last_event::<T>(Event::WhitelistAdded(0, 1u32.into()).into());
+    }
+
 }
+
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event)
 where
@@ -60,27 +71,26 @@ where
     assert_eq!(event, &system_event);
 }
 //
-//fn create_project_common<T: Config>(contribution: u32) {
-//        let _caller: T::AccountId = whitelisted_caller();
-//        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
-//        let project_name: BoundedStringField = str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec();
-//        let project_logo: BoundedStringField = str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec();
-//        let project_description: BoundedDescriptionField<u8> = str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec();
-//        let website: BoundedStringField = str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec();
-//        let milestones: Vec<ProposedMilestone> = vec![ProposedMilestone {
-//            name: Vec::new(),
-//            percentage_to_unlock: 100,
-//        }];
-//
-//        let required_funds: BalanceOf<T> = contribution.into();
-//        let currency_id = CurrencyId::Native;
-//        
-//        let _start_block: T::BlockNumber = 0u32.into();
-//
-//        let _ =Proposals::<T>::create_project(RawOrigin::Signed(bob.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id);
-//        
-//}
-//
+fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
+        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
+        let project_name: BoundedStringField = b"Imbue's Awesome Initiative".to_vec().try_into().unwrap();
+        let project_logo: BoundedStringField = b"Imbue Logo".to_vec().try_into().unwrap();
+        let project_description: BoundedDescriptionField = b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().unwrap();
+        let website: BoundedDescriptionField = b"https://imbue.network".to_vec().try_into().unwrap();
+        let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
+            name: project_logo.clone(),
+            percentage_to_unlock: 100,
+        }].try_into().unwrap();
+
+        let required_funds: BalanceOf<T> = contribution.into();
+        let currency_id = CurrencyId::Native;
+        
+        let _start_block: T::BlockNumber = 0u32.into();
+
+        let _ = Proposals::<T>::create_project(RawOrigin::Signed(bob.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id);
+        bob
+    }
+
 fn run_to_block<T: Config>(new_block: <T as frame_system::Config>::BlockNumber) {
     frame_system::Pallet::<T>::set_block_number(new_block);
 }
