@@ -20,7 +20,8 @@ const SEED: u32 = 0;
 //
 
 benchmarks! {
-    where_clause { where
+    where_clause { 
+        where
         T::AccountId: AsRef<[u8]>,
     }
 
@@ -45,7 +46,7 @@ benchmarks! {
     }
 
     add_project_whitelist {
-        let caller = create_project_common::<T>(100_000u32.into());
+        let caller = create_project_common::<T>(u32::MAX.into());
         let mut bbt : BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
 
         for i in 0..<MaxWhitelistPerProject as Get<u32>>::get() {
@@ -55,6 +56,21 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), 0, bbt)
     verify {
         assert_last_event::<T>(Event::WhitelistAdded(0, 1u32.into()).into());
+    }
+
+    remove_project_whitelist {
+        // Create a project and add max whitelists.
+        let caller = create_project_common::<T>(u32::MAX.into());
+        let mut bbt : BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
+        
+        for i in 0..<MaxWhitelistPerProject as Get<u32>>::get() {
+            bbt.try_insert(whitelisted_caller(), 100u32.into()).unwrap();
+        }
+        let _ = Proposals::<T>::add_project_whitelist(RawOrigin::Signed(caller.clone()).into(), 0, bbt);
+
+    }: _(RawOrigin::Signed(caller), 0)
+    verify {
+        assert_last_event::<T>(Event::WhitelistRemoved(0, 1u32.into()).into());
     }
 
 }
