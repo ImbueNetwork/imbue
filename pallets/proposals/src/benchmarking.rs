@@ -27,35 +27,27 @@ benchmarks! {
         T::AccountId: AsRef<[u8]>,
     }
 
-    create_project{
-        let a in 1 .. <MaxStringFieldLen as Get<u32>>::get();
-        let b in 1.. <MaxDescriptionField as Get<u32>>::get();
-        let n in 1.. <MaxProposedMilestones as Get<u32>>::get();
-        let d in 1..u32::MAX;
-
-        let max_proposed_milestones : BoundedProposedMilestones =
-        vec![
-            ProposedMilestone {
-            name: "a".repeat(<MaxStringFieldLen as Get<u32>>::get() as usize),
-            percentage_to_unlock: u32::MAX,
-        }; n.into()]
-        .try_into()
-        .unwrap();
-
-        let bounded_string_field = vec![
-            u8::MAX;
-            a.into()
-        ].try_into().unwrap(); 
-
-
+    create_project {
         let caller: T::AccountId = whitelisted_caller();
 
-    }: _(RawOrigin::Signed(caller.clone()), a.into(), a.into(), b.into(), b.into(), max_proposed_milestones.into(), d.into(), CurrencyId::Native)
+        let bounded_str_f: BoundedStringField = "a".repeat(<MaxStringFieldLen as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
+        
+        let bounded_desc_f: BoundedDescriptionField = "b".repeat(<MaxDescriptionField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
+        
+        let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
+            name: bounded_str_f.clone(),
+            percentage_to_unlock: 1,
+        }; 100].try_into().unwrap();
+
+        let required_funds: BalanceOf<T> = u32::MAX.into();
+        let currency_id = CurrencyId::Native;
+        let caller: T::AccountId = whitelisted_caller();
+
+    }: _(RawOrigin::Signed(caller.clone()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f.clone(), bounded_desc_f.clone(), milestones, required_funds, CurrencyId::Native)
     verify {
-        assert_last_event::<T>(Event::ProjectCreated(caller, ..).into());
+        assert_last_event::<T>(Event::ProjectCreated(caller, bounded_str_f.clone().to_vec(), 0, required_funds, CurrencyId::Native).into());
     }
 }
-
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event)
 where
@@ -67,28 +59,28 @@ where
     let EventRecord { event, .. } = &events[events.len() - 1];
     assert_eq!(event, &system_event);
 }
-
-fn create_project_common<T: Config>(contribution: u32) {
-        let _caller: T::AccountId = whitelisted_caller();
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
-        let project_name: Vec<u8> = str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec();
-        let project_logo: Vec<u8> = str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec();
-        let project_description: Vec<u8> = str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec();
-        let website: Vec<u8> = str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec();
-        let milestones: Vec<ProposedMilestone> = vec![ProposedMilestone {
-            name: Vec::new(),
-            percentage_to_unlock: 100,
-        }];
-
-        let required_funds: BalanceOf<T> = contribution.into();
-        let currency_id = CurrencyId::Native;
-        
-        let _start_block: T::BlockNumber = 0u32.into();
-
-        let _ =Proposals::<T>::create_project(RawOrigin::Signed(bob.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id);
-        
-}
-
+//
+//fn create_project_common<T: Config>(contribution: u32) {
+//        let _caller: T::AccountId = whitelisted_caller();
+//        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
+//        let project_name: BoundedStringField = str::from_utf8(b"Imbue's Awesome Initiative").unwrap().as_bytes().to_vec();
+//        let project_logo: BoundedStringField = str::from_utf8(b"Imbue Logo").unwrap().as_bytes().to_vec();
+//        let project_description: BoundedDescriptionField<u8> = str::from_utf8(b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.").unwrap().as_bytes().to_vec();
+//        let website: BoundedStringField = str::from_utf8(b"https://imbue.network").unwrap().as_bytes().to_vec();
+//        let milestones: Vec<ProposedMilestone> = vec![ProposedMilestone {
+//            name: Vec::new(),
+//            percentage_to_unlock: 100,
+//        }];
+//
+//        let required_funds: BalanceOf<T> = contribution.into();
+//        let currency_id = CurrencyId::Native;
+//        
+//        let _start_block: T::BlockNumber = 0u32.into();
+//
+//        let _ =Proposals::<T>::create_project(RawOrigin::Signed(bob.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id);
+//        
+//}
+//
 fn run_to_block<T: Config>(new_block: <T as frame_system::Config>::BlockNumber) {
     frame_system::Pallet::<T>::set_block_number(new_block);
 }
@@ -103,6 +95,5 @@ fn create_funded_user<T: Config>(
 	let _ = T::Currency::make_free_balance_be(&user, balance);
 	user
 }
-
 
 impl_benchmark_test_suite!(Proposals, crate::mock::build_test_externality(), crate::mock::Test);
