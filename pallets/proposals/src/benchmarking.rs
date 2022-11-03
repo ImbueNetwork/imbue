@@ -2,11 +2,11 @@
 use super::*;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::{EventRecord, RawOrigin};
-
 use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_support::{
     traits::{Currency, Get},
+    bounded_vec
 };
 use sp_std::str;
 
@@ -73,6 +73,19 @@ benchmarks! {
         assert_last_event::<T>(Event::WhitelistRemoved(0, 1u32.into()).into());
     }
 
+    schedule_round {
+        // Create a project and add max whitelists.
+        let mut project_keys: BoundedProjectKeys = bounded_vec![];
+
+        for i in 0..<MaxProjectKeys as Get<u32>>::get() {
+            let caller = create_project_common::<T>(u32::MAX.into());
+            let _ = project_keys.try_push(i).unwrap();
+        }
+
+    }: _(RawOrigin::Root, 1u32.into(), 100u32.into(), project_keys.clone(), RoundType::ContributionRound)
+    verify {
+        assert_last_event::<T>(Event::FundingRoundCreated(1, project_keys.to_vec()).into());
+    }
 }
 
 
