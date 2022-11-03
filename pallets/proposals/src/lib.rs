@@ -390,7 +390,7 @@ pub mod pallet {
 
         /// Step 1.5 (INITATOR)
         /// Remove a whitelist
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_project_whitelist())]
         pub fn remove_project_whitelist(
             origin: OriginFor<T>,
             project_key: ProjectKey,
