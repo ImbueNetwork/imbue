@@ -37,7 +37,7 @@ pub use impls::*;
 
 // The Constants associated with the bounded parameters
 type MaxStringFieldLen = ConstU32<255>;
-type MaxProjectKeys = ConstU32<1000>;
+type MaxProjectKeysPerRound = ConstU32<1000>;
 type MaxMilestoneKeys = ConstU32<100>;
 type MaxProposedMilestones = ConstU32<100>;
 type MaxDescriptionField = ConstU32<5000>;
@@ -54,7 +54,7 @@ type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedWhitelistSpots<T> =
     BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, MaxWhitelistPerProject>;
-type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
+type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
 type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
 type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
@@ -131,6 +131,7 @@ pub mod pallet {
     pub(super) type MilestoneVotes<T: Config> =
         StorageMap<_, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, OptionQuery>;
 
+    /// This holds the votes when a no confidence round is raised.
     #[pallet::storage]
     #[pallet::getter(fn no_confidence_votes)]
     pub(super) type NoConfidenceVotes<T: Config> =
@@ -175,6 +176,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
+        /// You have created a project.
         ProjectCreated(
             T::AccountId,
             Vec<u8>,
@@ -182,9 +184,13 @@ pub mod pallet {
             BalanceOf<T>,
             common_types::CurrencyId,
         ),
+        /// A funding round has been created.
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
+        /// A voting round has been created.
         VotingRoundCreated(RoundKey, Vec<ProjectKey>),
+        /// You have submitted a milestone.
         MilestoneSubmitted(T::AccountId, ProjectKey, MilestoneKey),
+        /// Contribution has succeded.
         ContributeSucceeded(
             T::AccountId,
             ProjectKey,
@@ -192,13 +198,21 @@ pub mod pallet {
             common_types::CurrencyId,
             T::BlockNumber,
         ),
+        /// A project has been cancelled.
         ProjectCancelled(RoundKey, ProjectKey),
+        /// Successfully withdrawn funds from the project.
         ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyId),
+        /// A project has been approved.
         ProjectApproved(RoundKey, ProjectKey),
+        /// A round has been cancelled.
         RoundCancelled(RoundKey),
+        /// Vote submited successfully.
         VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
+        /// A milestone has been approved.
         MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, T::BlockNumber),
+        /// A white list has been added.
         WhitelistAdded(ProjectKey, T::BlockNumber),
+        /// A white list has been removed.
         WhitelistRemoved(ProjectKey, T::BlockNumber),
         ProjectLockedFundsRefunded(ProjectKey, BalanceOf<T>),
         /// You have created a vote of no confidence.
@@ -431,7 +445,7 @@ pub mod pallet {
         /// Step 2.5 (ADMIN)
         /// Cancel a round
         /// This round must have not started yet
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_round())]
         pub fn cancel_round(
             origin: OriginFor<T>,
             round_key: RoundKey,
@@ -455,7 +469,7 @@ pub mod pallet {
 
         /// Step 3 (CONTRIBUTOR/FUNDER)
         /// Contribute to a project
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::contribute())]
         #[transactional]
         pub fn contribute(
             origin: OriginFor<T>,

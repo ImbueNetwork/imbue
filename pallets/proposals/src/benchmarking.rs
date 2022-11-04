@@ -1,7 +1,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 use super::*;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_system::{EventRecord, RawOrigin};
+use frame_system::{Pallet as System, EventRecord, RawOrigin};
 use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_support::{
@@ -59,7 +59,6 @@ benchmarks! {
     }
 
     remove_project_whitelist {
-        // Create a project and add max whitelists.
         let caller = create_project_common::<T>(u32::MAX.into());
         let mut bbt : BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
         
@@ -74,11 +73,10 @@ benchmarks! {
     }
 
     schedule_round {
-        // Create a project and add max whitelists.
         let mut project_keys: BoundedProjectKeys = bounded_vec![];
 
-        for i in 0..<MaxProjectKeys as Get<u32>>::get() {
-            let caller = create_project_common::<T>(u32::MAX.into());
+        for i in 0..<MaxProjectKeysPerRound as Get<u32>>::get() {
+            let _caller = create_project_common::<T>(u32::MAX.into());
             let _ = project_keys.try_push(i).unwrap();
         }
 
@@ -86,7 +84,48 @@ benchmarks! {
     verify {
         assert_last_event::<T>(Event::FundingRoundCreated(1, project_keys.to_vec()).into());
     }
+
+    cancel_round {
+        let caller: T::AccountId = whitelisted_caller();
+        let mut project_keys: BoundedProjectKeys = bounded_vec![];
+        for i in 0..<MaxProjectKeysPerRound as Get<u32>>::get() {
+            let _caller = create_project_common::<T>(u32::MAX.into());
+            let _ = project_keys.try_push(i).unwrap();
+        }
+        //schedule round
+        let _ = Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), project_keys, RoundType::ContributionRound);
+    
+        // Round key starts at 1
+    }: _(RawOrigin::Root, 1)
+    verify {
+       assert_last_event::<T>(Event::RoundCancelled(1).into());
+    }
+
+    contribute {
+        let a in 0 .. <MaxProjectKeysPerRound as Get<u32>>::get() - 1;
+
+        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 100_000);
+        let caller: T::AccountId = whitelisted_caller();
+        let mut project_keys: BoundedProjectKeys = bounded_vec![];
+        for i in 0..<MaxProjectKeysPerRound as Get<u32>>::get() {
+            let _caller = create_project_common::<T>(u32::MAX.into());
+            let _ = project_keys.try_push(i).unwrap();
+        }
+
+        //schedule round
+        let _ = Proposals::<T>::schedule_round(RawOrigin::Root.into(), 3u32.into(), 10u32.into(), project_keys, RoundType::ContributionRound);
+        
+        //Progress the blocks to allow contribution.
+        run_to_block::<T>(5u32.into());
+        dbg!(RoundCount::<T>::get());
+    }: _(RawOrigin::Signed(alice.clone()), Some(1u32), a.into(), 10_000u32.into())
+    verify {
+        assert_last_event::<T>(Event::ContributeSucceeded(alice, a.into(), 10_000u32.into(), CurrencyId::Native, 5u32.into()).into());
+    }
+
 }
+
+
 
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event)
@@ -120,10 +159,18 @@ fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
         bob
     }
 
-fn run_to_block<T: Config>(new_block: <T as frame_system::Config>::BlockNumber) {
-    frame_system::Pallet::<T>::set_block_number(new_block);
+fn run_to_block<T: Config>(n: T::BlockNumber) {
+    while System::<T>::block_number() < n {
+        if System::<T>::block_number() > 1u32.into() {
+            Proposals::<T>::on_finalize(System::<T>::block_number());
+            System::<T>::on_finalize(System::<T>::block_number());
+        }
+        System::<T>::set_block_number(System::<T>::block_number() + 1u32.into());
+        System::<T>::on_initialize(System::<T>::block_number());
+        Proposals::<T>::on_initialize(System::<T>::block_number());
+    }
 }
-
+        
 fn create_funded_user<T: Config>(
 	string: &'static str,
 	n: u32,

@@ -2187,7 +2187,7 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
         run_to_block(System::block_number() + 3);
         // Setup required state to start voting: must have contributed and round must have started.
-        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_000u64).unwrap();
+        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_001u64).unwrap();
         Proposals::contribute(Origin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
         run_to_block(System::block_number() + 101);
         assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));
