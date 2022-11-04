@@ -15,6 +15,7 @@ pub trait WeightInfo {
     fn schedule_round() -> Weight;
     fn cancel_round() -> Weight;
     fn contribute() -> Weight;
+    fn approve() -> Weight;
 }
 
 
@@ -51,6 +52,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
+    fn approve() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+    }
 }
 
 // For backwards compatibility and tests
@@ -81,6 +87,11 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn contribute() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(RocksDbWeight::get().reads(4_u64))
+            .saturating_add(RocksDbWeight::get().writes(2_u64))
+    }
+    fn approve() -> Weight {
         (66_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
