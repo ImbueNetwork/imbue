@@ -13,10 +13,12 @@ pub trait WeightInfo {
     fn add_project_whitelist() -> Weight; 
     fn remove_project_whitelist() -> Weight; 
     fn schedule_round() -> Weight;
+    fn cancel_round() -> Weight;
+    fn contribute() -> Weight;
 }
 
 
-/// Weights for pallet_quadratic_funding using the Substrate node and recommended hardware.
+/// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn create_project() -> Weight {
@@ -35,6 +37,16 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn schedule_round() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+    }
+    fn cancel_round() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+    }
+    fn contribute() -> Weight {
         (66_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
@@ -59,6 +71,16 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn schedule_round() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(RocksDbWeight::get().reads(4_u64))
+            .saturating_add(RocksDbWeight::get().writes(2_u64))
+    }
+    fn cancel_round() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(RocksDbWeight::get().reads(4_u64))
+            .saturating_add(RocksDbWeight::get().writes(2_u64))
+    }
+    fn contribute() -> Weight {
         (66_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
