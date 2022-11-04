@@ -161,7 +161,6 @@ impl<T: Config> Pallet<T> {
                 && round.end > now,
             Error::<T>::RoundNotProcessing
         );
-        dbg!(&project_key);
 
         ensure!(
             round.project_keys.contains(&project_key),

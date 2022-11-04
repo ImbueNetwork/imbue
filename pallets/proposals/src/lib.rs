@@ -485,7 +485,7 @@ pub mod pallet {
         /// Step 4 (ADMIN)
         /// Approve project
         /// If the project is approved, the project initator can withdraw funds for approved milestones
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
             round_key: Option<RoundKey>,

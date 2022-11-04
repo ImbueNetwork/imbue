@@ -5,11 +5,10 @@ use frame_system::{Pallet as System, EventRecord, RawOrigin};
 use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_support::{
+    assert_ok,
     traits::{Currency, Get},
-    bounded_vec
 };
 use sp_std::str;
-
 const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
 
@@ -40,9 +39,9 @@ benchmarks! {
         let required_funds: BalanceOf<T> = u32::MAX.into();
         let currency_id = CurrencyId::Native;
 
-    }: _(RawOrigin::Signed(whitelisted_caller()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f.clone(), bounded_desc_f.clone(), milestones, required_funds, CurrencyId::Native)
+    }: _(RawOrigin::Signed(whitelisted_caller()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f.clone(), bounded_desc_f, milestones, required_funds, CurrencyId::Native)
     verify {
-        assert_last_event::<T>(Event::ProjectCreated(caller, bounded_str_f.clone().to_vec(), 0, required_funds, CurrencyId::Native).into());
+        assert_last_event::<T>(Event::ProjectCreated(caller, bounded_str_f.to_vec(), 0, required_funds, CurrencyId::Native).into());
     }
 
     add_project_whitelist {
@@ -73,7 +72,7 @@ benchmarks! {
     }
 
     schedule_round {
-        let mut project_keys: BoundedProjectKeys = bounded_vec![];
+        let mut project_keys: BoundedProjectKeys = vec![].try_into().unwrap();
 
         for i in 0..<MaxProjectKeysPerRound as Get<u32>>::get() {
             let _caller = create_project_common::<T>(u32::MAX.into());
@@ -87,12 +86,11 @@ benchmarks! {
 
     cancel_round {
         let caller: T::AccountId = whitelisted_caller();
-        let mut project_keys: BoundedProjectKeys = bounded_vec![];
+        let mut project_keys: BoundedProjectKeys = vec![].try_into().unwrap();
         for i in 0..<MaxProjectKeysPerRound as Get<u32>>::get() {
             let _caller = create_project_common::<T>(u32::MAX.into());
             let _ = project_keys.try_push(i).unwrap();
         }
-        //schedule round
         let _ = Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), project_keys, RoundType::ContributionRound);
     
         // Round key starts at 1
@@ -106,27 +104,42 @@ benchmarks! {
 
         let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 100_000);
         let caller: T::AccountId = whitelisted_caller();
-        let mut project_keys: BoundedProjectKeys = bounded_vec![];
+        let mut project_keys: BoundedProjectKeys = vec![].try_into().unwrap();
         for i in 0..<MaxProjectKeysPerRound as Get<u32>>::get() {
             let _caller = create_project_common::<T>(u32::MAX.into());
             let _ = project_keys.try_push(i).unwrap();
         }
-
-        //schedule round
         let _ = Proposals::<T>::schedule_round(RawOrigin::Root.into(), 3u32.into(), 10u32.into(), project_keys, RoundType::ContributionRound);
         
-        //Progress the blocks to allow contribution.
+        // Progress the blocks to allow contribution.
         run_to_block::<T>(5u32.into());
-        dbg!(RoundCount::<T>::get());
     }: _(RawOrigin::Signed(alice.clone()), Some(1u32), a.into(), 10_000u32.into())
     verify {
         assert_last_event::<T>(Event::ContributeSucceeded(alice, a.into(), 10_000u32.into(), CurrencyId::Native, 5u32.into()).into());
     }
 
+    approve {        
+        let a in 0 .. <MaxProjectKeysPerRound as Get<u32>>::get() - 1;
+        //create a funded user for contribution
+        let contribution = 100_000u32;
+        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, contribution);
+        let mut project_keys: BoundedProjectKeys = vec![].try_into().unwrap();
+        for i in 0..<MaxProjectKeysPerRound as Get<u32>>::get() {
+            let _caller = create_project_common::<T>(100_000u32.into());
+            let _ = project_keys.try_push(i).unwrap();
+        }
+        let milestone_keys: BoundedMilestoneKeys = (0.. <MaxProposedMilestones as Get<u32>>::get()).collect::<Vec<u32>>().try_into().unwrap();
+
+        //schedule round
+        let _ = Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), project_keys, RoundType::ContributionRound);
+        run_to_block::<T>(5u32.into());
+        let _ = Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1u32), a.into(), contribution.into());
+        
+    }: _(RawOrigin::Root, Some(1), a.into(), Some(milestone_keys))
+    verify {
+       assert_last_event::<T>(Event::ProjectApproved(1, a.into()).into());
+    }
 }
-
-
-
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event)
 where
@@ -140,22 +153,24 @@ where
 }
 //
 fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
+        
+    let milestone_max_count = <MaxProposedMilestones as Get<u32>>::get() as usize;
+    let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
         let project_name: BoundedStringField = b"Imbue's Awesome Initiative".to_vec().try_into().unwrap();
         let project_logo: BoundedStringField = b"Imbue Logo".to_vec().try_into().unwrap();
         let project_description: BoundedDescriptionField = b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().unwrap();
         let website: BoundedDescriptionField = b"https://imbue.network".to_vec().try_into().unwrap();
         let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
             name: project_logo.clone(),
-            percentage_to_unlock: 100,
-        }].try_into().unwrap();
+            percentage_to_unlock: 100 / milestone_max_count as u32,
+        }; milestone_max_count].try_into().unwrap();
 
         let required_funds: BalanceOf<T> = contribution.into();
         let currency_id = CurrencyId::Native;
         
         let _start_block: T::BlockNumber = 0u32.into();
 
-        let _ = Proposals::<T>::create_project(RawOrigin::Signed(bob.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id);
+        assert_ok!(Proposals::<T>::create_project(RawOrigin::Signed(bob.clone()).into(), project_name.clone(), project_logo, project_description, website, milestones, required_funds, currency_id));
         bob
     }
 
