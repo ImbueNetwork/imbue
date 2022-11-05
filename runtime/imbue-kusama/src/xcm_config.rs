@@ -49,7 +49,7 @@ use polkadot_parachain::primitives::Sibling;
 
 parameter_types! {
     // One XCM operation is 100_000_000 weight - almost certainly a conservative estimate.
-    pub UnitWeightCost: Weight = 200_000_000;
+    pub UnitWeightCost: u64 = 200_000_000;
     pub const MaxInstructions: u32 = 100;
 }
 
@@ -362,7 +362,7 @@ pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNet
 
 parameter_types! {
     //TODO(Sam): we may need to fine tune this value later on
-    pub const BaseXcmWeight: Weight = 100_000_000;
+    pub const BaseXcmWeight: u64 = 100_000_000;
     pub const MaxAssetsForTransfer: usize = 2;
 }
 

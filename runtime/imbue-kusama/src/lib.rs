@@ -113,7 +113,7 @@ pub fn native_version() -> NativeVersion {
 /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
 /// by  Operational  extrinsics.
 /// We allow for .5 seconds of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
 
 pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 
@@ -230,7 +230,7 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = NativeTokenTransferFee;
     /// The means of storing the balances of an account.
     type AccountStore = System;
-    type WeightInfo = weights::pallet_balances::SubstrateWeight<Self>;
+    type WeightInfo = pallet_balances::weights::SubstrateWeight<Self>;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
@@ -257,8 +257,8 @@ impl pallet_sudo::Config for Runtime {
 }
 
 parameter_types! {
-    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {

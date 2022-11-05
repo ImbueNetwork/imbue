@@ -3,7 +3,7 @@ use crate as proposals;
 use frame_support::{
     parameter_types,
     traits::{ConstU32, Nothing},
-    weights::{ConstantMultiplier, IdentityFee, Weight},
+    weights::{ConstantMultiplier, IdentityFee},
     PalletId,
 };
 
@@ -115,8 +115,6 @@ impl pallet_transaction_payment::Config for Test {
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(1024);
 }
 
 impl frame_system::Config for Test {
@@ -266,7 +264,7 @@ where
 }
 
 parameter_types! {
-    pub const UnitWeightCost: Weight = 10;
+    pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
 
