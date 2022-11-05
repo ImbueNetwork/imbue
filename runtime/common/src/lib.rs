@@ -121,7 +121,7 @@ pub mod constants {
     pub const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
     /// We allow for 0.5 seconds of compute with a 6 second average block time.
-    pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+    pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
 
 }
 
@@ -165,7 +165,7 @@ pub mod xcm_fees {
         fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
             // in Karura, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
             let p = base_tx_in_imbu();
-            let q = Balance::from(ExtrinsicBaseWeight::get());
+            let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
             smallvec![WeightToFeeCoefficient {
                 degree: 1,
                 negative: false,
@@ -193,8 +193,8 @@ pub mod xcm_fees {
     }
 
     pub fn default_per_second() -> Balance {
-		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
-		let default_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+        let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
+		let default_per_second = (WEIGHT_PER_SECOND.ref_time() as u128) / base_weight;
 		default_per_second * base_tx_in_imbu()
 	}
     
