@@ -498,7 +498,7 @@ pub mod pallet {
         }
 
         /// Step 5 (INITATOR)
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
             project_key: ProjectKey,

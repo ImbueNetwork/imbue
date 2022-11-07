@@ -613,6 +613,8 @@ impl<T: Config> Pallet<T> {
 
     /// Called when a contributor wants to finalise a vote of no confidence.
     /// Votes for the vote of no confidence must reach the majority requred for the vote to pass.
+    /// As defined in the config.
+    /// This also calls a refund of funds to the users.
     pub fn call_finalise_no_confidence_vote(
         who: T::AccountId,
         round_key: RoundKey,

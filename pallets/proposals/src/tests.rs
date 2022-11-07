@@ -2261,6 +2261,59 @@ fn test_finalise_vote_of_no_confidence_below_threshold() {
     });
 }
 
+#[test]
+fn test_finalise_vote_of_no_confidence_refunds_contributors() {
+    // The project creator.
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    // The contributors.
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
+
+    let project_key = 0u32;
+    build_test_externality().execute_with(|| {
+        // Create a project for both alice and bob.
+        create_project(alice);
+        //schedule a round to allow for contributions.
+        let _ = Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![project_key],
+            RoundType::ContributionRound
+        ).unwrap();
+
+        // Deposit funds and contribute.
+        let _ = Currencies::deposit(CurrencyId::Native, &charlie, 1_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &bob, 1_000_000u64);
+        run_to_block(System::block_number() + 3);
+        // Setup required state to start voting: must have contributed and round must have started.
+        let _ = Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_000u64).unwrap();
+        let _ = Proposals::contribute(Origin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
+        run_to_block(System::block_number() + 101);
+
+        // assert that the voters have had their funds transferred.
+        assert!(Currencies::free_balance(CurrencyId::Native, &charlie) == 250_000u64);
+        assert!(Currencies::free_balance(CurrencyId::Native, &bob) == 750_000u64);
+
+        // approve and raise votees
+        let _ = Proposals::approve(Origin::root(), Some(1), project_key, None).unwrap();
+        let _ = Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key).unwrap();
+        let _ = Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, false).unwrap();
+
+        // Assert that bob, a contrbutor, can finalise
+        assert_ok!(Proposals::finalise_no_confidence_round(
+            Origin::signed(bob),
+            None,
+            project_key
+        ));
+        // assert that the voters have had their funds refunded.
+        assert!(Currencies::free_balance(CurrencyId::Native, &charlie) == 1_000_000u64);
+        assert!(Currencies::free_balance(CurrencyId::Native, &bob) == 1_000_000u64);
+    });
+
+
+}
+
 //common helper methods
 fn create_project(account: AccountId) {
     assert_ok!(Proposals::create_project(
