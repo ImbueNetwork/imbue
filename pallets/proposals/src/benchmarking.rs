@@ -159,6 +159,27 @@ benchmarks! {
        assert_last_event::<T>(Event::VotingRoundCreated(2, vec![0]).into());
     }
 
+    vote_on_milestone { 
+        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
+        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
+
+        let contribution_amount = 10_000u32;
+        let milestone_keys: BoundedMilestoneKeys = vec![0].try_into().unwrap();
+
+        create_project_common::<T>(contribution_amount.into());
+        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
+        run_to_block::<T>(5u32.into());
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1), 0, contribution_amount.into())?;
+        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
+        Proposals::<T>::submit_milestone(RawOrigin::Signed(bob.clone()).into(), 0, 0)?;
+        
+        run_to_block::<T>(11u32.into());
+        // (Voter, ProjectKey, MilestoneKey, Option<RoundKey>, is_approved)
+    }: _(RawOrigin::Signed(alice.clone()), 0, 0, Some(2), true)
+    verify {
+        assert_last_event::<T>(Event::VoteComplete(alice, 0, 0, true, 11u32.into()).into());
+    }
+
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event)

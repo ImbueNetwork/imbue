@@ -352,7 +352,7 @@ impl<T: Config> Pallet<T> {
         let contribution_amount = Self::ensure_contributor_of(&project, &who)?;
         let vote_lookup_key = (who.clone(), project_key, milestone_key, round_key);
 
-        let vote_exists = UserVotes::<T>::contains_key(vote_lookup_key.clone());
+        let vote_exists = UserVotes::<T>::contains_key(&vote_lookup_key);
         ensure!(!vote_exists, Error::<T>::VoteAlreadyExists);
 
         <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);

@@ -498,7 +498,7 @@ pub mod pallet {
         }
 
         /// Step 5 (INITATOR)
-        #[pallet::weight(<T as Config>::WeightInfo::approve())]
+        #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
             project_key: ProjectKey,
@@ -510,7 +510,7 @@ pub mod pallet {
 
         /// Step 6 (CONTRIBUTOR/FUNDER)
         /// Vote on a milestone
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::vote_on_milestone())]
         pub fn vote_on_milestone(
             origin: OriginFor<T>,
             project_key: ProjectKey,
