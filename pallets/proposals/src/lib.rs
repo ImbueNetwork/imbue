@@ -530,7 +530,8 @@ pub mod pallet {
         }
 
         /// Step 7 (INITATOR)
-        #[pallet::weight(10)]
+        /// Finalise the voting on a milestone.
+        #[pallet::weight(<T as Config>::WeightInfo::finalise_milestone_voting())]
         pub fn finalise_milestone_voting(
             origin: OriginFor<T>,
             project_key: ProjectKey,
@@ -541,8 +542,8 @@ pub mod pallet {
         }
 
         /// Step 8 (INITATOR)
-        /// Withdraw
-        #[pallet::weight(10)]
+        /// Withdraw some avaliable funds from the project.
+        #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
             project_key: ProjectKey,
