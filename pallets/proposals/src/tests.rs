@@ -2286,6 +2286,7 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 1_000_000u64);
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 1_000_000u64);
         run_to_block(System::block_number() + 3);
+        
         // Setup required state to start voting: must have contributed and round must have started.
         let _ = Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_000u64).unwrap();
         let _ = Proposals::contribute(Origin::signed(bob), Some(1), project_key, 250_000u64).unwrap();

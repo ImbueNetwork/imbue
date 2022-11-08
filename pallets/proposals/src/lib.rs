@@ -565,8 +565,9 @@ pub mod pallet {
             Self::raise_no_confidence_round(who, project_key)
         }
 
-        // TODO: BENCHMARK
-        #[pallet::weight(10)]
+        /// Vote on an already existing "Vote of no condidence" round.
+        /// is_yay = vote FOR the vote of no confidence, and AGAINST the project's continuation.
+        #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         pub fn vote_on_no_confidence_round(
             origin: OriginFor<T>,
             round_key: Option<RoundKey>,
