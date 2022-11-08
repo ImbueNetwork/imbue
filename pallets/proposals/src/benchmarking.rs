@@ -232,6 +232,24 @@ benchmarks! {
     verify {
         assert_last_event::<T>(Event::ProjectFundsWithdrawn(bob, 0, (10_000u32 * milestone_keys.len() as u32).into(), CurrencyId::Native).into());
     }
+
+    raise_vote_of_no_confidence { 
+        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
+        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
+        let contribution_amount = 10_000u32;
+        let milestone_keys: BoundedMilestoneKeys = vec![0].try_into().unwrap();
+        // Setup state: Approved project.
+        create_project_common::<T>(contribution_amount.into());
+        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
+        run_to_block::<T>(5u32.into());
+        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1), 0, contribution_amount.into())?;
+        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
+        
+        // (Initiator, ProjectKey)
+    }: _(RawOrigin::Signed(alice.clone()) , 0)
+    verify {
+        assert_last_event::<T>(Event::NoConfidenceRoundCreated(2, 0).into());
+    }
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event)
