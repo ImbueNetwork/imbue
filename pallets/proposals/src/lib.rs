@@ -437,8 +437,8 @@ pub mod pallet {
             ensure!(!project_keys.is_empty(), Error::<T>::LengthMustExceedZero);
 
             // Project keys is bounded to 5 projects maximum.
-            let max_project_key = project_keys.iter().max().unwrap();
-            Projects::<T>::get(&max_project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            let max_project_key = project_keys.iter().max().ok_or(Error::<T>::LengthMustExceedZero)?;
+            Projects::<T>::get(max_project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             Self::new_round(start, end, project_keys, round_type)
         }
 
@@ -498,6 +498,7 @@ pub mod pallet {
         }
 
         /// Step 5 (INITATOR)
+        //
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
@@ -552,8 +553,10 @@ pub mod pallet {
             Self::new_withdrawal(who, project_key)
         }
 
-        // TODO: BENCHMARK
-        #[pallet::weight(10)]
+        /// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
+        /// This will start a round which each contributor can vote on.
+        /// The round will last as long as set in the Config, and the threshold must be met.
+        #[pallet::weight(<T as Config>::WeightInfo::raise_vote_of_no_confidence())]
         pub fn raise_vote_of_no_confidence(
             origin: OriginFor<T>,
             project_key: ProjectKey,
