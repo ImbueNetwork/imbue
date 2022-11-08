@@ -555,7 +555,7 @@ pub mod pallet {
 
         /// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
         /// This will start a round which each contributor can vote on.
-        /// The round will last as long as set in the Config, and the threshold must be met.
+        /// The round will last as long as set in the Config.
         #[pallet::weight(<T as Config>::WeightInfo::raise_vote_of_no_confidence())]
         pub fn raise_vote_of_no_confidence(
             origin: OriginFor<T>,
@@ -566,7 +566,7 @@ pub mod pallet {
         }
 
         /// Vote on an already existing "Vote of no condidence" round.
-        /// is_yay = vote FOR the vote of no confidence, and AGAINST the project's continuation.
+        /// If is_yay this will vote FOR the vote of no confidence, and AGAINST the project's continuation.
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         pub fn vote_on_no_confidence_round(
             origin: OriginFor<T>,
@@ -579,8 +579,9 @@ pub mod pallet {
             Self::add_vote_no_confidence(who, voting_round_key, project_key, is_yay)
         }
 
-        // TODO: BENCHMARK
-        #[pallet::weight(10)]
+        /// Finalise a "vote of no condidence" round.
+        /// Votes must pass a threshold as defined in the config trait for the vote to succeed.
+        #[pallet::weight(<T as Config>::WeightInfo::finalise_no_confidence_round())]
         pub fn finalise_no_confidence_round(
             origin: OriginFor<T>,
             round_key: Option<RoundKey>,
@@ -780,9 +781,9 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
 /// The contribution users made to a proposal project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Contribution<Balance, Timestamp> {
-    /// Contribution value
+    /// Contribution value.
     value: Balance,
-    /// Timestamp of the last contribution
+    /// Timestamp of the last contribution.
     timestamp: Timestamp,
 }
 
