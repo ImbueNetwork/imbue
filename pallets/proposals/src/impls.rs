@@ -218,7 +218,7 @@ impl<T: Config> Pallet<T> {
                 timestamp,
             },
         );
-        project.raised_funds = project.raised_funds + value;
+        project.raised_funds = project.raised_funds.saturating_add(value);
 
         // Update storage item to include the new contributions.
         <Projects<T>>::insert(project_key, project.clone());
