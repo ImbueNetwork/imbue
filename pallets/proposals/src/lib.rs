@@ -9,7 +9,7 @@ use frame_support::{
     pallet_prelude::*,
     storage::bounded_btree_map::BoundedBTreeMap,
     traits::{ConstU32, EnsureOrigin},
-    transactional, PalletId, 
+    transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
@@ -40,6 +40,7 @@ type MaxStringFieldLen = ConstU32<255>;
 type MaxProjectKeys = ConstU32<1000>;
 type MaxMilestoneKeys = ConstU32<100>;
 type MaxProposedMilestones = ConstU32<100>;
+type MaxWebsiteUrlField = ConstU32<2048>;
 type MaxDescriptionField = ConstU32<5000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
 
@@ -58,8 +59,8 @@ type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeys>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
 type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
 type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
+type BoundedWebsiteUrlField = BoundedVec<u8, MaxWebsiteUrlField>;
 type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
-
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -168,7 +169,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
-
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -290,13 +290,13 @@ pub mod pallet {
         /// The project must be approved.
         ProjectApprovalRequired,
     }
-    
+
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             if StorageVersion::<T>::get() == Release::V0 {
-				weight += migration::v1::migrate::<T>();
+                weight += migration::v1::migrate::<T>();
                 StorageVersion::<T>::set(Release::V1);
             }
             weight
@@ -333,7 +333,7 @@ pub mod pallet {
             name: BoundedStringField,
             logo: BoundedStringField,
             description: BoundedDescriptionField,
-            website: BoundedDescriptionField,
+            website: BoundedWebsiteUrlField,
             proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
             currency_id: common_types::CurrencyId,
@@ -652,7 +652,6 @@ pub mod pallet {
         }
     }
 }
-
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub enum RoundType {

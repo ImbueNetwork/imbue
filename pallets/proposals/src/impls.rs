@@ -37,7 +37,7 @@ impl<T: Config> Pallet<T> {
         name: BoundedStringField,
         logo: BoundedStringField,
         description: BoundedDescriptionField,
-        website: BoundedDescriptionField,
+        website: BoundedWebsiteUrlField,
         proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
@@ -47,7 +47,6 @@ impl<T: Config> Pallet<T> {
             let _ = Self::ensure_identity_is_decent(&who)?;
         }
 
-        
         let project_key = ProjectCount::<T>::get();
         let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
@@ -486,7 +485,8 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn do_refund(project_key: ProjectKey) -> DispatchResultWithPostInfo {
-        let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project =
+            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         //getting the locked milestone percentage - these are also milestones that have not been approved
         let mut refunded_funds: BalanceOf<T> = 0_u32.into();
@@ -512,7 +512,7 @@ impl<T: Config> Pallet<T> {
 
             refunded_funds += refund_amount;
         }
-        
+
         // Updated new project status to cancelled
         project.cancelled = true;
         <Projects<T>>::insert(project_key, project);
