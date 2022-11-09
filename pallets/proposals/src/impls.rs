@@ -13,11 +13,11 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_account_truncating()
     }
 
-    pub fn ensure_initator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>> {
+    pub fn ensure_initiator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>> {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         match project.initiator == who {
             true => Ok(()),
-            false => Err(Error::<T>::UserIsNotInitator),
+            false => Err(Error::<T>::UserIsNotInitiator),
         }
     }
 
@@ -297,7 +297,7 @@ impl<T: Config> Pallet<T> {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         // Ensure that only the initiator has submitted and the project has been approved.
-        ensure!(project.initiator == who, Error::<T>::UserIsNotInitator);
+        ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
         ensure!(
             project.funding_threshold_met,
             Error::<T>::OnlyApprovedProjectsCanSubmitMilestones

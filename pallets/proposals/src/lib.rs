@@ -250,7 +250,7 @@ pub mod pallet {
         /// Only contributors can vote.
         OnlyContributorsCanVote,
         /// You do not have permission to do this.
-        UserIsNotInitator,
+        UserIsNotInitiator,
         /// You do not have permission to do this.
         OnlyInitiatorOrAdminCanApproveMilestone,
         /// You do not have permission to do this.
@@ -325,7 +325,7 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Step 1 (INITATOR)
+        /// Step 1 (INITIATOR)
         /// Create project.
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn create_project(
@@ -369,7 +369,7 @@ pub mod pallet {
             )
         }
 
-        /// Step 1.5 (INITATOR)
+        /// Step 1.5 (INITIATOR)
         /// Add whitelist to a project
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn add_project_whitelist(
@@ -378,7 +378,7 @@ pub mod pallet {
             new_whitelist_spots: BoundedWhitelistSpots<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::ensure_initator(who, project_key)?;
+            Self::ensure_initiator(who, project_key)?;
             let mut project_whitelist_spots =
                 WhitelistSpots::<T>::get(project_key).unwrap_or(BTreeMap::new());
             project_whitelist_spots.extend(new_whitelist_spots);
@@ -388,7 +388,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Step 1.5 (INITATOR)
+        /// Step 1.5 (INITIATOR)
         /// Remove a whitelist
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn remove_project_whitelist(
@@ -396,7 +396,7 @@ pub mod pallet {
             project_key: ProjectKey,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::ensure_initator(who, project_key)?;
+            Self::ensure_initiator(who, project_key)?;
             <WhitelistSpots<T>>::remove(project_key);
             let now = <frame_system::Pallet<T>>::block_number();
             Self::deposit_event(Event::WhitelistRemoved(project_key, now));
@@ -472,7 +472,7 @@ pub mod pallet {
 
         /// Step 4 (ADMIN)
         /// Approve project
-        /// If the project is approved, the project initator can withdraw funds for approved milestones
+        /// If the project is approved, the project initiator can withdraw funds for approved milestones
         #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
@@ -485,7 +485,7 @@ pub mod pallet {
             Self::do_approve(project_key, approval_round_key, milestone_keys)
         }
 
-        /// Step 5 (INITATOR)
+        /// Step 5 (INITIATOR)
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
@@ -517,7 +517,7 @@ pub mod pallet {
             )
         }
 
-        /// Step 7 (INITATOR)
+        /// Step 7 (INITIATOR)
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn finalise_milestone_voting(
             origin: OriginFor<T>,
@@ -528,7 +528,7 @@ pub mod pallet {
             Self::do_finalise_milestone_voting(who, project_key, milestone_key)
         }
 
-        /// Step 8 (INITATOR)
+        /// Step 8 (INITIATOR)
         /// Withdraw
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
