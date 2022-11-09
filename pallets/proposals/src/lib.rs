@@ -84,7 +84,7 @@ pub mod pallet {
 
         type WeightInfo: WeightInfo;
 
-        /// The amount of time given ,up to point of decision, when a vote of no confidence is held.
+        /// The amount of time given, up to point of decision, when a vote of no confidence is held.
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
 
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
@@ -600,15 +600,14 @@ pub mod pallet {
         // Root Extrinsics:
 
         /// Set max project count per round
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_max_project_count_per_round(
             origin: OriginFor<T>,
             max_project_count_per_round: u32,
         ) -> DispatchResultWithPostInfo {
             T::AuthorityOrigin::ensure_origin(origin)?;
             ensure!(
-                max_project_count_per_round > 0
-                    || max_project_count_per_round <= T::MaxProjectsPerRound::get(),
+                max_project_count_per_round > 0,
                 Error::<T>::ParamLimitExceed
             );
             MaxProjectCountPerRound::<T>::put(max_project_count_per_round);
@@ -617,7 +616,7 @@ pub mod pallet {
         }
 
         /// Set milestone voting window
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_milestone_voting_window(
             origin: OriginFor<T>,
             new_milestone_voting_window: u32,
@@ -633,7 +632,7 @@ pub mod pallet {
         }
 
         /// Set withdrawal expiration
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_withdrawal_expiration(
             origin: OriginFor<T>,
             withdrawal_expiration: T::BlockNumber,
@@ -649,7 +648,7 @@ pub mod pallet {
         }
 
         /// set is_identity_required
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_is_identity_required(
             origin: OriginFor<T>,
             is_identity_required: bool,
