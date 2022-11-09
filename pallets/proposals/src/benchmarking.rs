@@ -272,6 +272,8 @@ benchmarks! {
         assert_last_event::<T>(Event::NoConfidenceRoundVotedUpon(2, 0).into());
     }
 
+
+    // MUST BE CHANGED TO INCLUDE WEIGHT FROM do_refund.
     finalise_no_confidence_round { 
         let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
@@ -289,6 +291,12 @@ benchmarks! {
     }: _(RawOrigin::Signed(alice), Some(2u32), 0u32)
     verify {
         assert_last_event::<T>(Event::NoConfidenceRoundFinalised(2, 0).into());
+    }
+
+    set_storage_variable {
+    }: set_max_project_count_per_round(RawOrigin::Root, u32::MAX)
+    verify {
+        assert!(true);
     }
 }
 
