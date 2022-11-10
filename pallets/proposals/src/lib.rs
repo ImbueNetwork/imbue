@@ -420,7 +420,7 @@ pub mod pallet {
             // The end block must be greater than the start block
             ensure!(end > start, Error::<T>::EndTooEarly);
             // Both the starting block number and the ending block number must be greater than the current number of blocks
-            ensure!(start > now, Error::<T>::StartBlockNumberInvalid);
+            ensure!(start >= now, Error::<T>::StartBlockNumberInvalid);
             ensure!(end > now, Error::<T>::EndBlockNumberInvalid);
             ensure!(!project_keys.is_empty(), Error::<T>::LengthMustExceedZero);
 
