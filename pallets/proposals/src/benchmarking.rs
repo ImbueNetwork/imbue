@@ -273,9 +273,8 @@ benchmarks! {
     }
 
 
-    // MUST BE CHANGED TO INCLUDE WEIGHT FROM do_refund.
+    // Uses refund under hood so we need to account for maximum number of contributors.
     finalise_no_confidence_round { 
-        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
         let contribution_amount = 10_000u32;
         let milestone_keys: BoundedMilestoneKeys = vec![0].try_into().unwrap();
@@ -283,9 +282,14 @@ benchmarks! {
         create_project_common::<T>(contribution_amount.into());
         Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
         run_to_block::<T>(5u32.into());
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1), 0, contribution_amount.into())?;
+        for i in T::MaximumContributorsPerProject::get() {
+            let acc = create_funded_user::<T>(i.as_bytes(), 1, 100_000);
+            Proposals::<T>::contribute(RawOrigin::Signed(acc.clone()).into(), Some(1), 0, contribution_amount.into())?;
+            if i == T::MaximumContributorsPerProject::get() - 1 {
+                Proposals::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(acc.clone()).into() , 0)?;
+            }
+        }
         Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
-        Proposals::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(alice.clone()).into() , 0)?;
         
         // (Initiator, RoundKey, ProjectKey)
     }: _(RawOrigin::Signed(alice), Some(2u32), 0u32)
@@ -297,6 +301,28 @@ benchmarks! {
     }: set_max_project_count_per_round(RawOrigin::Root, u32::MAX)
     verify {
         assert!(true);
+    }
+
+    refund {
+        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
+        let contribution_amount = 10_000u32;
+        let milestone_keys: BoundedMilestoneKeys = vec![0].try_into().unwrap();
+        // Setup state: Approved project.
+        create_project_common::<T>(contribution_amount.into());
+        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
+        run_to_block::<T>(5u32.into());
+        for i in T::MaximumContributorsPerProject::get() {
+            let acc = create_funded_user::<T>(i.as_bytes(), 1, 100_000);
+            Proposals::<T>::contribute(RawOrigin::Signed(acc.clone()).into(), Some(1), 0, contribution_amount.into())?;
+            if i == T::MaximumContributorsPerProject::get() - 1 {
+                Proposals::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(acc.clone()).into() , 0)?;
+            }
+        }
+        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
+        
+    }:_(RawOrigin::Root, 0)
+     verify {
+        assert_last_event(ProjectFundsAddedToRefundQueue(0, (contribution_amount * T::MaximumContributorsPerProject::get()).into()))
     }
 }
 
