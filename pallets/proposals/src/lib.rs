@@ -93,6 +93,10 @@ pub mod pallet {
 
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
+
+        /// Defines the amount of refunds that occur in the on initialise method.
+        /// Does not include the remaining refunds that may occur in the on_idle hook.
+        type RefundsPerBlock: Get<u8>;
     }
 
     #[pallet::type_value]
@@ -178,7 +182,7 @@ pub mod pallet {
     /// The queue will be sent to the hooks which will inturn actually carry out the 
     #[pallet::storage]
     #[pallet::getter(fn refund_queue)]
-    pub type RefundQueue<T> = StorageValue<_, Blake2xConcat128, Vec<(T::AccountId, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>, ValueQuery>;
+    pub type RefundQueue<T> = StorageValue<_, Vec<(AccountIdOf<T>, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>, ValueQuery>;
 
 
     // Pallets use events to inform users when important changes are made.
@@ -283,7 +287,7 @@ pub mod pallet {
         ProjectAmountExceed,
         /// The selected project does not exist in the round.
         ProjectNotInRound,
-        // TODO: not in use.
+        /// The project has been cancelled.
         ProjectWithdrawn,
         // TODO: not in use.
         ProjectApproved,
@@ -322,6 +326,56 @@ pub mod pallet {
             if StorageVersion::<T>::get() == Release::V0 {
 				weight += migration::v1::migrate::<T>();
                 StorageVersion::<T>::set(Release::V1);
+            }
+            weight
+        }
+
+        fn on_initialize(_b: T::BlockNumber) -> Weight {
+            let mut weight = Weight::default();
+
+            let mut refunds = RefundQueue::<T>::get();
+            weight += T::DbWeight::get().reads(1);
+
+            let mut c = 0usize;
+            let _ = (0..T::RefundsPerBlock::get()).map(|i| {
+                if let Some(rf) = refunds.get(i as usize) {
+                    // CANNOT PANIC HERE, WILL BRICK CHAIN
+                    let can_withraw: DispatchResult = T::MultiCurrency::ensure_can_withdraw(
+                        // Currency
+                        rf.3, 
+                        // From
+                        &rf.1,
+                        // Amount
+                        rf.2
+                    );
+                    if can_withraw.is_ok() {
+                        // this should pass now, but i will not return early
+                        let _ = T::MultiCurrency::transfer(
+                            // Currency
+                            rf.3,
+                            // From
+                            &rf.1,
+                            // To
+                            &rf.0,
+                            // Amount
+                            rf.2,
+                        );
+                    }
+                    
+                    weight += T::DbWeight::get().reads_writes(2, 2);
+                    c += 1;
+                    ()
+                } else {
+                    return ();
+                }
+            }).collect::<Vec<_>>();
+
+            // Split the vec and put the storage value back ready for extrinsics to use.
+            // split_off panics when at > len: 
+            // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
+            if c > 0usize && c <= refunds.len() {
+                RefundQueue::<T>::put(refunds.split_off(c));
+                weight += T::DbWeight::get().reads_writes(1, 1);
             }
             weight
         }

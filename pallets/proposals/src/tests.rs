@@ -1833,7 +1833,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
             .event;
         assert_eq!(
             exp_projectfundsrefunded_event,
-            mock::Event::from(proposals::Event::ProjectLockedFundsRefunded(
+            mock::Event::from(proposals::Event::ProjectFundsAddedToRefundQueue(
                 project_key,
                 contribution_amount
             ))
@@ -2016,7 +2016,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             .event;
         assert_eq!(
             exp_projectfundsrefunded_event,
-            mock::Event::from(proposals::Event::ProjectLockedFundsRefunded(
+            mock::Event::from(proposals::Event::ProjectFundsAddedToRefundQueue(
                 project_key,
                 800000u64
             ))
@@ -2273,7 +2273,6 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
     build_test_externality().execute_with(|| {
         // Create a project for both alice and bob.
         create_project(alice);
-        //schedule a round to allow for contributions.
         let _ = Proposals::schedule_round(
             Origin::root(),
             System::block_number(),
@@ -2281,13 +2280,9 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
             bounded_vec![project_key],
             RoundType::ContributionRound
         ).unwrap();
-
-        // Deposit funds and contribute.
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 1_000_000u64);
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 1_000_000u64);
         run_to_block(System::block_number() + 3);
-        
-        // Setup required state to start voting: must have contributed and round must have started.
         let _ = Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_000u64).unwrap();
         let _ = Proposals::contribute(Origin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
         run_to_block(System::block_number() + 101);

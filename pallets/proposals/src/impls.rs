@@ -21,7 +21,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    pub fn project_account_id(key: ProjectKey) -> ProjectAccountId {
+    pub fn project_account_id(key: ProjectKey) -> ProjectAccountId<T> {
         T::PalletId::get().into_sub_account_truncating(key)
     }
 
@@ -444,7 +444,10 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
     ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
+        ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
+        
         let total_contribution_amount: BalanceOf<T> = project.raised_funds;
 
         let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
@@ -486,6 +489,8 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+
+    /// Appends a list of refunds to the queue to be used by the hooks.
     pub fn add_refunds_to_queue(project_key: ProjectKey) -> DispatchResultWithPostInfo {
         let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
@@ -501,14 +506,14 @@ impl<T: Config> Pallet<T> {
         let mut current_refunds = RefundQueue::<T>::get();
 
         // TODO: How can we refund all contributions without looping?
-        for (who, contribution) in project.contributions.into_iter() {
-            let project_account_id = &Self::project_account_id(project_key),
+        for (who, contribution) in project.contributions.iter() {
+            let project_account_id = Self::project_account_id(project_key);
             
-            let refund_amount: BalanceOf<T> = ((*contribution).value
+            let refund_amount: BalanceOf<T> = ((contribution).value
                 * locked_milestone_percentage.into())
                 / MAX_PERCENTAGE.into();
 
-            current_refunds.push(who, project_account_id, refund_amount, project.currency_id)
+            current_refunds.push((who.clone(), project_account_id.clone(), refund_amount, project.currency_id));
             refunded_funds += refund_amount;
         }
         
