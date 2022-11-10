@@ -335,9 +335,9 @@ pub mod pallet {
 
             let mut refunds = RefundQueue::<T>::get();
             weight += T::DbWeight::get().reads(1);
-
+            // A counter is used to know how many elements to split off.
             let mut c = 0usize;
-            let _ = (0..T::RefundsPerBlock::get()).map(|i| {
+            for i in 0..T::RefundsPerBlock::get(){
                 if let Some(rf) = refunds.get(i as usize) {
                     // CANNOT PANIC HERE, WILL BRICK CHAIN
                     let can_withraw: DispatchResult = T::MultiCurrency::ensure_can_withdraw(
@@ -364,11 +364,11 @@ pub mod pallet {
                     
                     weight += T::DbWeight::get().reads_writes(2, 2);
                     c += 1;
-                    ()
                 } else {
-                    return ();
+                    // We can break here as there will be no more items.
+                    break;
                 }
-            }).collect::<Vec<_>>();
+            }
 
             // Split the vec and put the storage value back ready for extrinsics to use.
             // split_off panics when at > len: 
