@@ -1823,10 +1823,6 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
 
         Proposals::refund(Origin::root(), project_key).unwrap();
 
-        //ensuring the refunded amount was transferred back successfully
-        assert_eq!(additional_amount, Balances::free_balance(&alice));
-
-        //contribute success event
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
             .pop()
             .expect("Expected at least one EventRecord to be found")
@@ -1838,6 +1834,13 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
                 contribution_amount
             ))
         );
+
+        // wait some blocks
+        run_to_block(System::block_number() + 1);
+
+        //ensuring the refunded amount was transferred back successfully
+        assert_eq!(additional_amount, Balances::free_balance(&alice));
+        
     });
 }
 
@@ -2001,15 +2004,6 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
 
         Proposals::refund(Origin::root(), project_key).unwrap();
 
-        //ensuring the refunded amount was transferred back successfully
-        let contributor_balance_pre_refund: u64 = 9_900_000;
-        assert_eq!(contributor_balance_pre_refund, Balances::free_balance(&bob));
-        assert_eq!(
-            contributor_balance_pre_refund,
-            Balances::free_balance(&charlie)
-        );
-
-        //contribute success event
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
             .pop()
             .expect("Expected at least one EventRecord to be found")
@@ -2020,6 +2014,17 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
                 project_key,
                 800000u64
             ))
+        );
+
+        // Wait a block so refunds occur in hook.
+        run_to_block(System::block_number() + 1);
+
+        //ensuring the refunded amount was transferred back successfully
+        let contributor_balance_pre_refund: u64 = 9_900_000;
+        assert_eq!(contributor_balance_pre_refund, Balances::free_balance(&bob));
+        assert_eq!(
+            contributor_balance_pre_refund,
+            Balances::free_balance(&charlie)
         );
     })
 }
@@ -2302,6 +2307,9 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
             None,
             project_key
         ));
+
+        // Wait a block so that refunds occur;
+        run_to_block(System::block_number() + 1);
         // assert that the voters have had their funds refunded.
         assert!(Currencies::free_balance(CurrencyId::Native, &charlie) == 1_000_000u64);
         assert!(Currencies::free_balance(CurrencyId::Native, &bob) == 1_000_000u64);
