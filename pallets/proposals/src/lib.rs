@@ -50,6 +50,7 @@ type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
+pub type ProjectAccountId<T> = <T as frame_system::Config>::AccountId;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedWhitelistSpots<T> =
@@ -89,6 +90,9 @@ pub mod pallet {
 
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<u8>;
+
+        /// Maximum number of contributors per project.
+        type MaximumContributorsPerProject: Get<u32>;
     }
 
     #[pallet::type_value]
@@ -170,6 +174,12 @@ pub mod pallet {
     #[pallet::getter(fn storage_version)]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
+    /// The refund queue is used to store the list of accounts that have been involved in a do_refund call.
+    /// The queue will be sent to the hooks which will inturn actually carry out the 
+    #[pallet::storage]
+    #[pallet::getter(fn refund_queue)]
+    pub type RefundQueue<T> = StorageValue<_, Blake2xConcat128, Vec<(T::AccountId, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>, ValueQuery>;
+
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -214,7 +224,7 @@ pub mod pallet {
         WhitelistAdded(ProjectKey, T::BlockNumber),
         /// A white list has been removed.
         WhitelistRemoved(ProjectKey, T::BlockNumber),
-        ProjectLockedFundsRefunded(ProjectKey, BalanceOf<T>),
+        ProjectFundsAddedToRefundQueue(ProjectKey, BalanceOf<T>),
         /// You have created a vote of no confidence.
         NoConfidenceRoundCreated(RoundKey, ProjectKey),
         /// You have voted upon a round of no confidence.
@@ -662,11 +672,11 @@ pub mod pallet {
 
         /// Ad Hoc Step (ADMIN)
         /// Refund
-        #[pallet::weight(10)]
+        #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
             //ensure only admin can perform refund
             T::AuthorityOrigin::ensure_origin(origin)?;
-            Self::do_refund(project_key)
+            Self::add_refunds_to_queue(project_key)
         }
     }
 }
