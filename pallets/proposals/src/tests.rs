@@ -2288,7 +2288,6 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         assert!(Currencies::free_balance(CurrencyId::Native, &bob) == 1_000_000u64);
     });
 
-
 }
 
 //common helper methods
