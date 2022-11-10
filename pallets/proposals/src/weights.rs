@@ -24,6 +24,7 @@ pub trait WeightInfo {
     fn vote_on_no_confidence_round() -> Weight;
     fn finalise_no_confidence_round() -> Weight;
     fn set_storage_variable() -> Weight;
+    fn refund() -> Weight;
 }
 
 
@@ -105,6 +106,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
+    fn refund() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+    }
 }
 
 // For backwards compatibility and tests
@@ -180,6 +186,11 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn set_storage_variable() -> Weight {
+        (66_000_000_u64)
+            .saturating_add(RocksDbWeight::get().reads(4_u64))
+            .saturating_add(RocksDbWeight::get().writes(2_u64))
+    }
+    fn refund() -> Weight {
         (66_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
