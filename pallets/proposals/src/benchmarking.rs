@@ -324,7 +324,6 @@ benchmarks! {
                 Proposals::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(acc.clone()).into() , 0)?;
             }
         }
-        //Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
         
     }:_(RawOrigin::Root, 0)
      verify {

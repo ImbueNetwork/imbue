@@ -25,16 +25,22 @@ pub trait WeightInfo {
     fn finalise_no_confidence_round() -> Weight;
     fn set_storage_variable() -> Weight;
     fn refund() -> Weight;
+    fn fund() -> Weight;
 }
 
 
 /// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+    fn fund() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
+    }
     fn create_project() -> Weight {
-        (25_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        Weight::from_ref_time(25_000_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn add_project_whitelist() -> Weight {
         (66_000_000_u64)
@@ -82,9 +88,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn withdraw() -> Weight {
-        (66_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(4_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        Weight::from_ref_time(66_000_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn raise_vote_of_no_confidence() -> Weight {
         (66_000_000_u64)
@@ -107,18 +113,23 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn refund() -> Weight {
-        (66_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(4_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        Weight::from_ref_time(66_000_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
+    fn fund() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(1 as u64))
+            .saturating_add(RocksDbWeight::get().writes(1 as u64))
+    }
     fn create_project() -> Weight {
-        (25_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(2_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        Weight::from_ref_time(25_000_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(2 as u64))
+            .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn add_project_whitelist() -> Weight {
         (66_000_000_u64)
@@ -166,9 +177,9 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn withdraw() -> Weight {
-        (66_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(4_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        Weight::from_ref_time(66_000_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(4 as u64))
+            .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn raise_vote_of_no_confidence() -> Weight {
         (66_000_000_u64)
@@ -191,8 +202,8 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn refund() -> Weight {
-        (66_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(4_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        Weight::from_ref_time(66_000_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(4 as u64))
+            .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
 }

@@ -3,9 +3,8 @@
   "id": "imbue-rococo-dev-testnet",
   "chainType": "Live",
   "bootNodes": [ 
-    "/ip4/13.59.92.128/tcp/30333/p2p/12D3KooWJp6SAVLsc2aoEAwP3D9ETEcBKW9tvV1ZvfDqXBUw74zQ",
-    "/ip4/3.13.1.191/tcp/30333/p2p/12D3KooWS9zjsa3GMzxX3AueGrRZCHvCsSJwVd91r5kHxUgXReww",
-    "/ip4/3.135.76.127/tcp/30333/p2p/12D3KooWDC3eSCQ9adtSdPUnWLGA1qxS7Th8Ab4NDMnQ8iB3ZdkX",
+    "/ip4/18.218.142.154/tcp/30333/p2p/12D3KooWFKCEBWzyJf56fGH4ob7nbw1peVnY3qwwxRUKdQMCf3jC",
+    "/ip4/18.220.239.245/tcp/30333/p2p/12D3KooWD15fPBR9einRtMPQhuGdoXbcJc6ghB2HsXKWkyZj8aza",
     "/ip4/3.139.96.49/tcp/30333/p2p/12D3KooWReR5YCFw7cbS1bVVEr6H1fkbZMNC5S9thuaXz1wizLS1"],
   "telemetryEndpoints": [
     [
