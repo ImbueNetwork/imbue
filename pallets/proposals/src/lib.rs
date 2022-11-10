@@ -630,7 +630,8 @@ pub mod pallet {
         }
 
         /// Vote on an already existing "Vote of no condidence" round.
-        /// If is_yay this will vote FOR the vote of no confidence, and AGAINST the project's continuation.
+        /// is_yay is FOR the project's continuation.
+        /// so is_yay = false == against the project from continuing perhaps should be flipped.
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         pub fn vote_on_no_confidence_round(
             origin: OriginFor<T>,
