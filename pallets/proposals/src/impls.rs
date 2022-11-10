@@ -21,7 +21,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    pub fn project_account_id(key: ProjectKey) -> T::AccountId {
+    pub fn project_account_id(key: ProjectKey) -> ProjectAccountId {
         T::PalletId::get().into_sub_account_truncating(key)
     }
 
@@ -486,7 +486,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn do_refund(project_key: ProjectKey) -> DispatchResultWithPostInfo {
+    pub fn add_refunds_to_queue(project_key: ProjectKey) -> DispatchResultWithPostInfo {
         let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         //getting the locked milestone percentage - these are also milestones that have not been approved
@@ -498,27 +498,26 @@ impl<T: Config> Pallet<T> {
             }
         }
 
+        let mut current_refunds = RefundQueue::<T>::get();
+
         // TODO: How can we refund all contributions without looping?
-        for (who, contribution) in project.contributions.iter() {
+        for (who, contribution) in project.contributions.into_iter() {
+            let project_account_id = &Self::project_account_id(project_key),
+            
             let refund_amount: BalanceOf<T> = ((*contribution).value
                 * locked_milestone_percentage.into())
                 / MAX_PERCENTAGE.into();
 
-            T::MultiCurrency::transfer(
-                project.currency_id,
-                &Self::project_account_id(project_key),
-                &who,
-                refund_amount,
-            )?;
-
+            current_refunds.push(who, project_account_id, refund_amount, project.currency_id)
             refunded_funds += refund_amount;
         }
         
         // Updated new project status to cancelled
         project.cancelled = true;
         <Projects<T>>::insert(project_key, project);
+        RefundQueue::<T>::put(current_refunds);
 
-        Self::deposit_event(Event::ProjectLockedFundsRefunded(
+        Self::deposit_event(Event::ProjectFundsAddedToRefundQueue(
             project_key,
             refunded_funds,
         ));
@@ -644,7 +643,7 @@ impl<T: Config> Pallet<T> {
             // Set Round to is cancelled, remove the vote from NoConfidenceVotes, and do the refund.
             NoConfidenceVotes::<T>::remove(project_key);
             Rounds::<T>::insert(round_key, Some(round));
-            let _ = Self::do_refund(project_key)?;
+            let _ = Self::add_refunds_to_queue(project_key)?;
 
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {
