@@ -282,8 +282,9 @@ benchmarks! {
         create_project_common::<T>(contribution_amount.into());
         Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
         run_to_block::<T>(5u32.into());
-        for i in T::MaximumContributorsPerProject::get() {
-            let acc = create_funded_user::<T>(i.as_bytes(), 1, 100_000);
+        
+        for i in 0..T::MaximumContributorsPerProject::get() {
+            let acc = create_funded_user::<T>("contributor", i, 100_000);
             Proposals::<T>::contribute(RawOrigin::Signed(acc.clone()).into(), Some(1), 0, contribution_amount.into())?;
             if i == T::MaximumContributorsPerProject::get() - 1 {
                 Proposals::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(acc.clone()).into() , 0)?;
@@ -292,7 +293,7 @@ benchmarks! {
         Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
         
         // (Initiator, RoundKey, ProjectKey)
-    }: _(RawOrigin::Signed(alice), Some(2u32), 0u32)
+    }: _(RawOrigin::Signed(bob), Some(2u32), 0u32)
     verify {
         assert_last_event::<T>(Event::NoConfidenceRoundFinalised(2, 0).into());
     }
@@ -311,8 +312,8 @@ benchmarks! {
         create_project_common::<T>(contribution_amount.into());
         Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
         run_to_block::<T>(5u32.into());
-        for i in T::MaximumContributorsPerProject::get() {
-            let acc = create_funded_user::<T>(i.as_bytes(), 1, 100_000);
+        for i in 0..T::MaximumContributorsPerProject::get() {
+            let acc = create_funded_user::<T>("contributor", i, 100_000);
             Proposals::<T>::contribute(RawOrigin::Signed(acc.clone()).into(), Some(1), 0, contribution_amount.into())?;
             if i == T::MaximumContributorsPerProject::get() - 1 {
                 Proposals::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(acc.clone()).into() , 0)?;
@@ -322,7 +323,7 @@ benchmarks! {
         
     }:_(RawOrigin::Root, 0)
      verify {
-        assert_last_event(ProjectFundsAddedToRefundQueue(0, (contribution_amount * T::MaximumContributorsPerProject::get()).into()))
+        assert_last_event::<T>(Event::ProjectFundsAddedToRefundQueue(0, (contribution_amount * T::MaximumContributorsPerProject::get()).into()).into());
     }
 }
 
