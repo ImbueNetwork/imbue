@@ -319,6 +319,7 @@ pub mod pallet {
         ProjectApprovalRequired,
     }
     
+
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
@@ -330,54 +331,57 @@ pub mod pallet {
             weight
         }
 
-        fn on_initialize(_b: T::BlockNumber) -> Weight {
+        fn on_initialize(_b: T::BlockNumber) -> {
+            // Perhaps if some theshold is met the we can start to use the on initialise as a backup?
             let mut weight = Weight::default();
 
             let mut refunds = RefundQueue::<T>::get();
-            weight += T::DbWeight::get().reads(1);
-            // A counter is used to know how many elements to split off.
+            weight += T::DbWeight::get().reads(2);
+            
+                // A counter is used to know how many elements to split off.
             let mut c = 0usize;
             for i in 0..T::RefundsPerBlock::get(){
                 if let Some(rf) = refunds.get(i as usize) {
-                    // CANNOT PANIC HERE, WILL BRICK CHAIN
-                    let can_withraw: DispatchResult = T::MultiCurrency::ensure_can_withdraw(
-                        // Currency
-                        rf.3, 
-                        // From
-                        &rf.1,
-                        // Amount
-                        rf.2
-                    );
-                    if can_withraw.is_ok() {
-                        // this should pass now, but i will not return early
-                        let _ = T::MultiCurrency::transfer(
-                            // Currency
-                            rf.3,
-                            // From
-                            &rf.1,
-                            // To
-                            &rf.0,
-                            // Amount
-                            rf.2,
-                        );
-                    }
-                    
-                    weight += T::DbWeight::get().reads_writes(2, 2);
+                    Self::refund_item_in_queue(rf.1, rf.0, rf.2, rf.3);                    
+                    weight.saturating_add(T::DbWeight::refund_item_in_queue())
+                   
                     c += 1;
                 } else {
-                    // We can break here as there will be no more items.
                     break;
                 }
             }
 
-            // Split the vec and put the storage value back ready for extrinsics to use.
-            // split_off panics when at > len: 
-            // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
-            if c > 0usize && c <= refunds.len() {
-                RefundQueue::<T>::put(refunds.split_off(c));
-                weight += T::DbWeight::get().reads_writes(1, 1);
-            }
+            Self::split_off_refunds(refunds, c);
+            weight.saturating_add(T::Dbweight::split_off_refunds());
+
             weight
+        }
+
+
+        fn on_idle(_b: T::BlockNumber, remaining_weight: Weight) -> Weight {
+            let mut refunds = RefundQueue::<T>::get();
+            remaining_weight.saturating_sub(T::DbWeight::get().reads(2));
+
+            let weight_required_to_finish_hook = T::DbWeight::refund_item_in_queue() + T::DbWeight::split_off_refunds();
+            // A counter is used to know how many elements to split off.
+            let mut c = 0usize;
+
+            // While the weight has enough weight to finish off the 
+            while remaining_weight > weight_required_to_finish_hook {
+                if let Some(rf) = refunds.get(i as usize) {
+                    let _ = Self::refund_item_in_queue(rf.1, rf.0, rf.2, rf.3);
+                } else {
+                    break
+                }
+
+                remaining_weight.saturating_sub(T::DbWeight::refund_item_in_queue())
+                c += 1
+            }
+
+            Self::split_off_refunds(refunds, c);
+            remaining_weight.saturating_sub(T::Dbweight::split_off_refunds())
+            
+            remaining_weight
         }
     }
 
