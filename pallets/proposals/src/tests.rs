@@ -357,7 +357,7 @@ fn test_cancelling_started_round() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -394,7 +394,7 @@ fn test_cancelling_round_without_root_privilege() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -780,7 +780,7 @@ fn test_submit_milestone() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -833,7 +833,7 @@ fn test_submit_milestone_without_approval() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -881,7 +881,7 @@ fn test_voting_on_a_milestone() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -1027,7 +1027,7 @@ fn test_finalize_a_milestone_without_voting() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -1132,7 +1132,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -1263,7 +1263,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -1445,7 +1445,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -1518,7 +1518,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -1629,7 +1629,7 @@ fn submit_multiple_milestones() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
@@ -1795,7 +1795,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
 
         Proposals::schedule_round(
             Origin::root(),
-            System::block_number() - 1,
+            System::block_number(),
             System::block_number() + 1,
             project_keys,
             RoundType::ContributionRound,
