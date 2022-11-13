@@ -529,6 +529,50 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    /// Using the parameters provided (which should be from the refund queue), 
+    /// Process a refund. 
+    /// Used in hooks so cannot error.
+    pub fn refund_item_in_queue(from, &T::AccountId, to: &T::AccountId, amount: BalanceOf<T>, currency_id, CurrencyId) -> bool {
+        let can_withraw: DispatchResult = T::MultiCurrency::ensure_can_withdraw(
+            currency_id 
+            from
+            amount
+        );
+        if can_withraw.is_ok() {
+            // this should pass now, but i will not return early
+            let _ = T::MultiCurrency::transfer(
+                currency_id,
+                from,
+                to,
+                amount,
+            );
+            return true
+        } else {
+            return false
+        }
+    }
+
+    /// Split off an amount of refunds off the vector and place into refund storage.
+    /// Returns a boolean if a split off has succeeded.
+    /// Used in hooks so cannot error.
+    pub fn split_off_refunds(refunds: Vec<_>, c: u32) -> bool {
+        // split_off panics when at > len: 
+        // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
+        // If the length is zero do nothing
+        if c == 0 return false
+
+        if c <= refunds.len() {
+            // If its a legitimate operation, split off.
+            RefundQueue::<T>::put(refunds.split_off(c));
+            return true
+        } else  {
+            // panic case we will place in an empty vec as the counter is wrong.
+            RefundQueue::<T>::put(vec![]);
+            return false
+        }
+    }
+
+
     /// This function raises a vote of no confidence.
     /// This round can only be called once and there after can only be voted on.
     /// The person calling it must be a contributor.
