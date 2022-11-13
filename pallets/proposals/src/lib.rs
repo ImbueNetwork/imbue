@@ -51,7 +51,7 @@ type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 pub type ProjectAccountId<T> = <T as frame_system::Config>::AccountId;
-
+pub type Refunds<T> =  Vec<(AccountIdOf<T>, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>;
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedWhitelistSpots<T> =
     BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, MaxWhitelistPerProject>;
@@ -331,55 +331,56 @@ pub mod pallet {
             weight
         }
 
-        fn on_initialize(_b: T::BlockNumber) -> {
+        fn on_initialize(_b: T::BlockNumber) -> Weight {
             // Perhaps if some theshold is met the we can start to use the on initialise as a backup?
+            //todo: 
             let mut weight = Weight::default();
 
             let mut refunds = RefundQueue::<T>::get();
             weight += T::DbWeight::get().reads(2);
             
-                // A counter is used to know how many elements to split off.
-            let mut c = 0usize;
+            // A counter is used to know how many elements to split off.
+            let mut c = 0u32;
             for i in 0..T::RefundsPerBlock::get(){
                 if let Some(rf) = refunds.get(i as usize) {
-                    Self::refund_item_in_queue(rf.1, rf.0, rf.2, rf.3);                    
-                    weight.saturating_add(T::DbWeight::refund_item_in_queue())
-                   
+                    Self::refund_item_in_queue(&rf.1, &rf.0, rf.2, rf.3);                    
+                    weight.saturating_add(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
                     c += 1;
                 } else {
                     break;
                 }
             }
 
-            Self::split_off_refunds(refunds, c);
-            weight.saturating_add(T::Dbweight::split_off_refunds());
+            Self::split_off_refunds(&mut refunds, c);
+            weight.saturating_add(<T as pallet::Config>::WeightInfo::split_off_refunds());
 
             weight
         }
-
 
         fn on_idle(_b: T::BlockNumber, remaining_weight: Weight) -> Weight {
             let mut refunds = RefundQueue::<T>::get();
             remaining_weight.saturating_sub(T::DbWeight::get().reads(2));
 
-            let weight_required_to_finish_hook = T::DbWeight::refund_item_in_queue() + T::DbWeight::split_off_refunds();
+            // A little extra than required for safety.
+            let weight_required_to_finish_hook = 
+                <T as pallet::Config>::WeightInfo::refund_item_in_queue() + <T as pallet::Config>::WeightInfo::split_off_refunds();
+
             // A counter is used to know how many elements to split off.
-            let mut c = 0usize;
+            let mut c = 0u32;
 
             // While the weight has enough weight to finish off the 
             while remaining_weight > weight_required_to_finish_hook {
-                if let Some(rf) = refunds.get(i as usize) {
-                    let _ = Self::refund_item_in_queue(rf.1, rf.0, rf.2, rf.3);
+                if let Some(rf) = refunds.get(c as usize) {
+                    let _ = Self::refund_item_in_queue(&rf.1, &rf.0, rf.2, rf.3);
+                    remaining_weight.saturating_sub(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
+                    c += 1;
                 } else {
                     break
                 }
-
-                remaining_weight.saturating_sub(T::DbWeight::refund_item_in_queue())
-                c += 1
             }
 
-            Self::split_off_refunds(refunds, c);
-            remaining_weight.saturating_sub(T::Dbweight::split_off_refunds())
+            let _ = Self::split_off_refunds(&mut refunds, c);
+            remaining_weight.saturating_sub(<T as pallet::Config>::WeightInfo::split_off_refunds());
             
             remaining_weight
         }

@@ -1,6 +1,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 use super::*;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, selected_benchmark};
 use frame_system::{Pallet as System, EventRecord, RawOrigin};
 use crate::Pallet as Proposals;
 use common_types::CurrencyId;
@@ -328,6 +328,43 @@ benchmarks! {
     }:_(RawOrigin::Root, 0)
      verify {
         assert_last_event::<T>(Event::ProjectFundsAddedToRefundQueue(0, (contribution_amount * T::MaximumContributorsPerProject::get()).into()).into());
+    }
+
+    refund_item_in_queue {
+        run_to_block::<T>(5u32.into());
+        let mut accounts: Vec<T::AccountId> = vec![];
+        for i in 0..2 {
+            let acc = create_funded_user::<T>("contributor", i, 100_000);
+            accounts.push(acc);
+        }
+        
+    }: {
+        Proposals::<T>::refund_item_in_queue(&accounts[0], &accounts[1], 10_000u32.into(), CurrencyId::Native)
+    }
+     verify {
+        assert!(T::Currency::total_balance(&accounts[1]) - T::Currency::total_balance(&accounts[0]) == 10_000u32.into())
+    }
+
+    split_off_refunds {
+        // Setup state: Approved project.
+        let a in 0..100u32;
+        run_to_block::<T>(5u32.into());
+        let mut accounts: Vec<T::AccountId> = vec![];
+        let mut refunds: Refunds<T> = vec![];
+        for i in 0..100usize {
+            let acc = create_funded_user::<T>("contributor", i as u32, 100_000);
+
+            accounts.push(acc);
+            if i > 0 {
+                refunds.push((accounts[0].clone(), accounts[i].clone(), 10_000u32.into(), CurrencyId::Native));
+            }
+        }
+        
+    }: {
+        Proposals::<T>::split_off_refunds(&mut refunds, a.into())
+    }
+     verify {
+       //null 
     }
 }
 

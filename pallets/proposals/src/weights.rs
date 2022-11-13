@@ -26,7 +26,8 @@ pub trait WeightInfo {
     fn set_storage_variable() -> Weight;
     fn refund() -> Weight;
     fn fund() -> Weight;
-
+    fn refund_item_in_queue() -> Weight;
+    fn split_off_refunds() -> Weight;
 }
 
 
@@ -118,6 +119,16 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
+    fn refund_item_in_queue() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+    }
+    fn split_off_refunds() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+    }
 }
 
 // For backwards compatibility and tests
@@ -203,6 +214,16 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn fund() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(2_u64))
+            .saturating_add(RocksDbWeight::get().writes(2_u64))
+    }
+    fn split_off_refunds() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(2_u64))
+            .saturating_add(RocksDbWeight::get().writes(2_u64))
+    }
+    fn refund_item_in_queue() -> Weight {
         Weight::from_ref_time(49_000_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
