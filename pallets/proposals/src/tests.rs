@@ -2325,6 +2325,8 @@ fn stress_test_refunds() {
         for i in 0..num_of_refunds {
             assert_eq!(Currencies::free_balance(CurrencyId::Native, &accounts[i as usize]), 20_000u64);
         }
+
+        assert!(Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64)
     });
 } 
 
