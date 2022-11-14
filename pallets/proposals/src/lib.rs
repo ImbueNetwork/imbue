@@ -332,13 +332,17 @@ pub mod pallet {
         }
 
         fn on_initialize(_b: T::BlockNumber) -> Weight {
-            // Perhaps if some theshold is met the we can start to use the on initialise as a backup?
-            //todo: 
+            
             let mut weight = Weight::default();
 
             let mut refunds = RefundQueue::<T>::get();
             weight += T::DbWeight::get().reads(2);
             
+            // Only use on initialise when there is high demand and on_idle() cannot keep up.
+            if refunds.len() < (T::RefundsPerBlock::get() as usize * 10usize).into() {
+                return weight
+            } 
+
             // A counter is used to know how many elements to split off.
             let mut c = 0u32;
             for i in 0..T::RefundsPerBlock::get(){

@@ -347,7 +347,6 @@ benchmarks! {
     }
 
     split_off_refunds {
-        // Setup state: Approved project.
         let a in 0..100u32;
         run_to_block::<T>(5u32.into());
         let mut accounts: Vec<T::AccountId> = vec![];
