@@ -156,8 +156,8 @@ impl<T: Config> Pallet<T> {
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
             round.round_type == RoundType::ContributionRound
-                && round.start < now
-                && round.end > now,
+                && round.start <= now
+                && round.end >= now,
             Error::<T>::RoundNotProcessing
         );
         ensure!(
