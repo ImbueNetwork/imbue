@@ -2403,12 +2403,15 @@ fn deposit_initial_balance(alice: &AccountId, bob: &AccountId, additional_amount
 
 fn run_to_block(n: u64) {
     while System::block_number() < n {
-        if System::block_number() > 1 {
-            Proposals::on_finalize(System::block_number());
-            System::on_finalize(System::block_number());
-        }
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
         Proposals::on_initialize(System::block_number());
+        
+        //Worst case scenario is that we have no space. all tests must still pass.
+        if n % 2 == 0 {
+            Proposals::on_idle(System::block_number(), Weight::zero() );
+        } else {
+            Proposals::on_idle(System::block_number(), Weight::MAX / 2);
+        }
     }
 }
