@@ -306,7 +306,7 @@ benchmarks! {
     set_storage_variable {
     }: set_max_project_count_per_round(RawOrigin::Root, u32::MAX)
     verify {
-        assert!(true);
+        assert_eq!(MaxProjectCountPerRound::<T>::get(), u32::MAX)  
     }
 
     refund {
@@ -342,7 +342,8 @@ benchmarks! {
         Proposals::<T>::refund_item_in_queue(&accounts[0], &accounts[1], 10_000u32.into(), CurrencyId::Native)
     }
      verify {
-        assert!(T::Currency::total_balance(&accounts[1]) - T::Currency::total_balance(&accounts[0]) == 10_000u32.into())
+        dbg!(T::Currency::total_balance(&accounts[1]) - T::Currency::total_balance(&accounts[0]));
+        assert!(T::Currency::total_balance(&accounts[1]) - T::Currency::total_balance(&accounts[0]) == 20_000u32.into());
     }
 
     split_off_refunds {
@@ -362,10 +363,7 @@ benchmarks! {
         
     }: {
         Proposals::<T>::split_off_refunds(&mut refunds, a.into())
-    }
-     verify {
-       //null 
-    }
+    } 
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event)
