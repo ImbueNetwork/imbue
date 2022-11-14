@@ -5,7 +5,7 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{
     assert_noop, assert_ok, bounded_btree_map, bounded_vec, dispatch::DispatchErrorWithPostInfo,
-    weights::PostDispatchInfo,
+    weights::PostDispatchInfo, log::info
 };
 use sp_core::sr25519;
 use sp_std::vec::Vec;
@@ -2290,6 +2290,44 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
 
 }
 
+
+// Very slow test, due to the creation of multiple account keys.
+#[test]
+fn stress_test_refunds() {
+    build_test_externality().execute_with(|| {
+        let initiator = get_account_id_from_seed::<sr25519::Public>("TreasuryPot");
+        let mut accounts: Vec<<Test as frame_system::Config>::AccountId> = vec![];
+        let num_of_refunds: u32 = 100;
+
+        create_project(initiator);
+        let _ = Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![0u32],
+            RoundType::ContributionRound
+        ).unwrap();
+
+        run_to_block(System::block_number() + 2u64);
+        let input: Vec<String> = (0..num_of_refunds).map(|i| i.to_string()).collect();
+        for i in 0..num_of_refunds   {
+            let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
+            accounts.push(acc.clone());
+            let _ = Currencies::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
+            let _ = Proposals::contribute(Origin::signed(acc), Some(1), 0u32, 10_000u64).unwrap();
+        }
+
+        assert_ok!(Proposals::refund(Origin::root(), 0));
+
+        // The maximum amount of block it should take for all refunds to occur.
+        run_to_block(num_of_refunds as u64 / RefundsPerBlock::get() as u64);
+
+        for i in 0..num_of_refunds {
+            assert_eq!(Currencies::free_balance(CurrencyId::Native, &accounts[i as usize]), 20_000u64);
+        }
+    });
+} 
+
 //common helper methods
 fn create_project(account: AccountId) {
     assert_ok!(Proposals::create_project(
@@ -2406,10 +2444,9 @@ fn run_to_block(n: u64) {
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
         Proposals::on_initialize(System::block_number());
-        
-        //Worst case scenario is that we have no space. all tests must still pass.
+        //Bad case scenario is that we have little space. all tests must still pass.
         if n % 2 == 0 {
-            Proposals::on_idle(System::block_number(), Weight::zero() );
+            Proposals::on_idle(System::block_number(), Weight::MAX / 90 );
         } else {
             Proposals::on_idle(System::block_number(), Weight::MAX / 2);
         }
