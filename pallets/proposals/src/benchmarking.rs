@@ -1,6 +1,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 use super::*;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, selected_benchmark};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::{Pallet as System, EventRecord, RawOrigin};
 use crate::Pallet as Proposals;
 use common_types::CurrencyId;
@@ -313,7 +313,6 @@ benchmarks! {
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
         let contribution_amount = 10_000u32;
         let milestone_keys: BoundedMilestoneKeys = vec![0].try_into().unwrap();
-        // Setup state: Approved project.
         create_project_common::<T>(contribution_amount.into());
         Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
         run_to_block::<T>(5u32.into());
@@ -342,7 +341,6 @@ benchmarks! {
         Proposals::<T>::refund_item_in_queue(&accounts[0], &accounts[1], 10_000u32.into(), CurrencyId::Native)
     }
      verify {
-        dbg!(T::Currency::total_balance(&accounts[1]) - T::Currency::total_balance(&accounts[0]));
         assert!(T::Currency::total_balance(&accounts[1]) - T::Currency::total_balance(&accounts[0]) == 20_000u32.into());
     }
 
