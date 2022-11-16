@@ -168,7 +168,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn withdrawal_expiration)]
-    pub type WithdrawalExpiration<T> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
+    pub type WithdrawalExpiration<T> = StorageValue<_, BlockNumberefundor<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn is_identity_required)]
@@ -271,8 +271,8 @@ pub mod pallet {
         NoActiveRound,
         // TODO: NOT IN USE
         NoActiveProject,
-        /// There was an overflow.
-        Overflow,
+        /// There was an overefundlow.
+        Overefundlow,
         /// A project must be approved before the submission of milestones.
         OnlyApprovedProjectsCanSubmitMilestones,
         /// Only contributors can vote.
@@ -332,10 +332,10 @@ pub mod pallet {
         }
 
         fn on_initialize(_b: T::BlockNumber) -> Weight {
-            
             let mut weight = Weight::default();
 
             let mut refunds = RefundQueue::<T>::get();
+            // Overestimating.
             weight += T::DbWeight::get().reads(2);
             
             // Only use on initialise when there is high demand and on_idle() cannot keep up.
@@ -346,8 +346,8 @@ pub mod pallet {
             // A counter is used to know how many elements to split off.
             let mut c = 0u32;
             for i in 0..T::RefundsPerBlock::get(){
-                if let Some(rf) = refunds.get(i as usize) {
-                    Self::refund_item_in_queue(&rf.1, &rf.0, rf.2, rf.3);                    
+                if let Some(refund) = refunds.get(i as usize) {
+                    Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);                    
                     weight.saturating_add(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
                     c += 1;
                 } else {
@@ -363,6 +363,7 @@ pub mod pallet {
 
         fn on_idle(_b: T::BlockNumber, remaining_weight: Weight) -> Weight {
             let mut refunds = RefundQueue::<T>::get();
+            // Overestimating.
             remaining_weight.saturating_sub(T::DbWeight::get().reads(2));
 
             // A little extra than required for safety.
@@ -374,8 +375,8 @@ pub mod pallet {
 
             // While the weight has enough weight to finish off the 
             while remaining_weight > weight_required_to_finish_hook {
-                if let Some(rf) = refunds.get(c as usize) {
-                    let _ = Self::refund_item_in_queue(&rf.1, &rf.0, rf.2, rf.3);
+                if let Some(refund) = refunds.get(c as usize) {
+                    let _ = Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);
                     remaining_weight.saturating_sub(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
                     c += 1;
                 } else {
@@ -737,7 +738,7 @@ pub mod pallet {
         /// Refund
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
-            //ensure only admin can perform refund
+            //ensure only admin can perefundorm refund
             T::AuthorityOrigin::ensure_origin(origin)?;
             Self::add_refunds_to_queue(project_key)
         }
