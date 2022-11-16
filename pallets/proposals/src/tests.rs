@@ -2293,7 +2293,7 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
 
 // Very slow test, due to the creation of multiple account keys.
 #[test]
-fn stress_test_refunds() {
+fn test_refunds_go_back_to_contributors() {
     build_test_externality().execute_with(|| {
         let initiator = get_account_id_from_seed::<sr25519::Public>("TreasuryPot");
         let mut accounts: Vec<<Test as frame_system::Config>::AccountId> = vec![];
@@ -2329,6 +2329,59 @@ fn stress_test_refunds() {
         assert!(Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64)
     });
 } 
+
+
+#[test]
+fn test_refunds_state_is_handled_correctly() {
+    build_test_externality().execute_with(|| {
+        let initiator = get_account_id_from_seed::<sr25519::Public>("TreasuryPot");
+        let mut accounts: Vec<<Test as frame_system::Config>::AccountId> = vec![];
+        // Only works if 
+        let num_of_refunds: u32 = 20;
+
+        create_project(initiator);
+        let _ = Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![0u32],
+            RoundType::ContributionRound
+        ).unwrap();
+
+       run_to_block(System::block_number() + 2u64);
+        let input: Vec<String> = (0..num_of_refunds).map(|i| i.to_string()).collect();
+        for i in 0..num_of_refunds   {
+            let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
+            accounts.push(acc.clone());
+            let _ = Currencies::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
+            let _ = Proposals::contribute(Origin::signed(acc), Some(1), 0u32, 10_000u64).unwrap();
+        }
+
+        assert_ok!(Proposals::refund(Origin::root(), 0));
+        let mut refunds_completed = 0usize;
+        // The maximum amount of block it should take for all refunds to occur.
+        for i in 0..(num_of_refunds / RefundsPerBlock::get() as u32) {
+            run_to_block_with_no_idle_space(System::block_number() + 1u64);
+            
+            // Get the total number of refunds completed.
+            let refunds_after_block = accounts.iter()
+            .map(|acc| {
+                Currencies::free_balance(CurrencyId::Native, acc)
+            }).filter(|balance| balance == &20_000u64)
+            .collect::<Vec<u64>>().len();
+
+            // Assert that only 2 have been completed
+            assert_eq!(refunds_after_block - refunds_completed, 2usize);
+            refunds_completed += 2;
+
+            // And that they have been removed from the refund list.
+           assert_eq!(RefundQueue::<Test>::get().len(), num_of_refunds as usize - refunds_completed);
+        }
+
+        assert!(Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64)
+    });
+} 
+
 
 //common helper methods
 fn create_project(account: AccountId) {
@@ -2452,5 +2505,14 @@ fn run_to_block(n: u64) {
         } else {
             Proposals::on_idle(System::block_number(), Weight::MAX / 2);
         }
+    }
+}
+
+fn run_to_block_with_no_idle_space(n: u64) {
+    while System::block_number() < n {
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Proposals::on_initialize(System::block_number());
+        Proposals::on_idle(System::block_number(), Weight::zero());
     }
 }

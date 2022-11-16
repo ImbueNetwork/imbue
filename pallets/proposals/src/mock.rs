@@ -208,7 +208,7 @@ parameter_types! {
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: u8 = 75u8;
     pub MaximumContributorsPerProject: u32 = 5000;
-    pub RefundsPerBlock: u8 = 20;
+    pub RefundsPerBlock: u8 = 2;
 }
 impl proposals::Config for Test {
     type Event = Event;
