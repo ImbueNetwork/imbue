@@ -13,11 +13,11 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_account_truncating()
     }
 
-    pub fn ensure_initator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>> {
+    pub fn ensure_initiator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>> {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         match project.initiator == who {
             true => Ok(()),
-            false => Err(Error::<T>::UserIsNotInitator),
+            false => Err(Error::<T>::UserIsNotInitiator),
         }
     }
 
@@ -37,7 +37,7 @@ impl<T: Config> Pallet<T> {
         name: BoundedStringField,
         logo: BoundedStringField,
         description: BoundedDescriptionField,
-        website: BoundedDescriptionField,
+        website: BoundedWebsiteUrlField,
         proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
@@ -47,7 +47,6 @@ impl<T: Config> Pallet<T> {
             let _ = Self::ensure_identity_is_decent(&who)?;
         }
 
-        
         let project_key = ProjectCount::<T>::get();
         let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
@@ -157,8 +156,8 @@ impl<T: Config> Pallet<T> {
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
             round.round_type == RoundType::ContributionRound
-                && round.start < now
-                && round.end > now,
+                && round.start <= now
+                && round.end >= now,
             Error::<T>::RoundNotProcessing
         );
 
@@ -220,7 +219,7 @@ impl<T: Config> Pallet<T> {
                 timestamp,
             },
         );
-        project.raised_funds = project.raised_funds + value;
+        project.raised_funds = project.raised_funds.saturating_add(value);
 
         // Update storage item to include the new contributions.
         <Projects<T>>::insert(project_key, project.clone());
@@ -299,7 +298,7 @@ impl<T: Config> Pallet<T> {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         // Ensure that only the initiator has submitted and the project has been approved.
-        ensure!(project.initiator == who, Error::<T>::UserIsNotInitator);
+        ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
         ensure!(
             project.funding_threshold_met,
             Error::<T>::OnlyApprovedProjectsCanSubmitMilestones
@@ -489,10 +488,16 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+<<<<<<< HEAD
 
     /// Appends a list of refunds to the queue to be used by the hooks.
     pub fn add_refunds_to_queue(project_key: ProjectKey) -> DispatchResultWithPostInfo {
         let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+=======
+    pub fn do_refund(project_key: ProjectKey) -> DispatchResultWithPostInfo {
+        let mut project =
+            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+>>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
 
         //getting the locked milestone percentage - these are also milestones that have not been approved
         let mut refunded_funds: BalanceOf<T> = 0_u32.into();
@@ -516,7 +521,7 @@ impl<T: Config> Pallet<T> {
             current_refunds.push((who.clone(), project_account_id.clone(), refund_amount, project.currency_id));
             refunded_funds += refund_amount;
         }
-        
+
         // Updated new project status to cancelled
         project.cancelled = true;
         <Projects<T>>::insert(project_key, project);
