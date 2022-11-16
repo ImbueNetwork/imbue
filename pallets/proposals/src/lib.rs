@@ -9,7 +9,7 @@ use frame_support::{
     pallet_prelude::*,
     storage::bounded_btree_map::BoundedBTreeMap,
     traits::{ConstU32, EnsureOrigin},
-    transactional, PalletId, 
+    transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
@@ -40,6 +40,7 @@ type MaxStringFieldLen = ConstU32<255>;
 type MaxProjectKeysPerRound = ConstU32<1000>;
 type MaxMilestoneKeys = ConstU32<100>;
 type MaxProposedMilestones = ConstU32<100>;
+type MaxWebsiteUrlField = ConstU32<2048>;
 type MaxDescriptionField = ConstU32<5000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
 
@@ -59,8 +60,8 @@ type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
 type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
 type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
+type BoundedWebsiteUrlField = BoundedVec<u8, MaxWebsiteUrlField>;
 type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
-
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -178,6 +179,7 @@ pub mod pallet {
     #[pallet::getter(fn storage_version)]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
+<<<<<<< HEAD
     /// The refund queue is used to store the list of accounts that have been involved in a do_refund call.
     /// The queue will be sent to the hooks which will inturn actually carry out the 
     #[pallet::storage]
@@ -185,6 +187,8 @@ pub mod pallet {
     pub type RefundQueue<T> = StorageValue<_, Vec<(AccountIdOf<T>, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>, ValueQuery>;
 
 
+=======
+>>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
     #[pallet::event]
@@ -278,7 +282,7 @@ pub mod pallet {
         /// Only contributors can vote.
         OnlyContributorsCanVote,
         /// You do not have permission to do this.
-        UserIsNotInitator,
+        UserIsNotInitiator,
         /// You do not have permission to do this.
         OnlyInitiatorOrAdminCanApproveMilestone,
         /// You do not have permission to do this.
@@ -301,8 +305,7 @@ pub mod pallet {
         RoundNotProcessing,
         /// Round has been cancelled.
         RoundCanceled,
-        // TODO: not in use.
-        StartBlockNumberTooSmall,
+        StartBlockNumberInvalid,
         /// You have already voted on this round.
         VoteAlreadyExists,
         /// The voting threshhold has not been met.
@@ -318,14 +321,17 @@ pub mod pallet {
         /// The project must be approved.
         ProjectApprovalRequired,
     }
+<<<<<<< HEAD
     
+=======
+>>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             if StorageVersion::<T>::get() == Release::V0 {
-				weight += migration::v1::migrate::<T>();
+                weight += migration::v1::migrate::<T>();
                 StorageVersion::<T>::set(Release::V1);
             }
             weight
@@ -408,7 +414,7 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Step 1 (INITATOR)
+        /// Step 1 (INITIATOR)
         /// Create project.
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn create_project(
@@ -416,7 +422,7 @@ pub mod pallet {
             name: BoundedStringField,
             logo: BoundedStringField,
             description: BoundedDescriptionField,
-            website: BoundedDescriptionField,
+            website: BoundedWebsiteUrlField,
             proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
             currency_id: common_types::CurrencyId,
@@ -452,7 +458,7 @@ pub mod pallet {
             )
         }
 
-        /// Step 1.5 (INITATOR)
+        /// Step 1.5 (INITIATOR)
         /// Add whitelist to a project
         #[pallet::weight(<T as Config>::WeightInfo::add_project_whitelist())]
         pub fn add_project_whitelist(
@@ -461,7 +467,7 @@ pub mod pallet {
             new_whitelist_spots: BoundedWhitelistSpots<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::ensure_initator(who, project_key)?;
+            Self::ensure_initiator(who, project_key)?;
             let mut project_whitelist_spots =
                 WhitelistSpots::<T>::get(project_key).unwrap_or(BTreeMap::new());
             project_whitelist_spots.extend(new_whitelist_spots);
@@ -471,7 +477,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Step 1.5 (INITATOR)
+        /// Step 1.5 (INITIATOR)
         /// Remove a whitelist
         #[pallet::weight(<T as Config>::WeightInfo::remove_project_whitelist())]
         pub fn remove_project_whitelist(
@@ -479,7 +485,7 @@ pub mod pallet {
             project_key: ProjectKey,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::ensure_initator(who, project_key)?;
+            Self::ensure_initiator(who, project_key)?;
             <WhitelistSpots<T>>::remove(project_key);
             let now = <frame_system::Pallet<T>>::block_number();
             Self::deposit_event(Event::WhitelistRemoved(project_key, now));
@@ -502,6 +508,7 @@ pub mod pallet {
             // The end block must be greater than the start block
             ensure!(end > start, Error::<T>::EndTooEarly);
             // Both the starting block number and the ending block number must be greater than the current number of blocks
+            ensure!(start >= now, Error::<T>::StartBlockNumberInvalid);
             ensure!(end > now, Error::<T>::EndBlockNumberInvalid);
             ensure!(!project_keys.is_empty(), Error::<T>::LengthMustExceedZero);
 
@@ -553,7 +560,7 @@ pub mod pallet {
 
         /// Step 4 (ADMIN)
         /// Approve project
-        /// If the project is approved, the project initator can withdraw funds for approved milestones
+        /// If the project is approved, the project initiator can withdraw funds for approved milestones
         #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
@@ -566,8 +573,12 @@ pub mod pallet {
             Self::do_approve(project_key, approval_round_key, milestone_keys)
         }
 
+<<<<<<< HEAD
         /// Step 5 (INITATOR)
         //
+=======
+        /// Step 5 (INITIATOR)
+>>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
@@ -599,9 +610,14 @@ pub mod pallet {
             )
         }
 
+<<<<<<< HEAD
         /// Step 7 (INITATOR)
         /// Finalise the voting on a milestone.
         #[pallet::weight(<T as Config>::WeightInfo::finalise_milestone_voting())]
+=======
+        /// Step 7 (INITIATOR)
+        #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
+>>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
         pub fn finalise_milestone_voting(
             origin: OriginFor<T>,
             project_key: ProjectKey,
@@ -611,8 +627,13 @@ pub mod pallet {
             Self::do_finalise_milestone_voting(who, project_key, milestone_key)
         }
 
+<<<<<<< HEAD
         /// Step 8 (INITATOR)
         /// Withdraw some avaliable funds from the project.
+=======
+        /// Step 8 (INITIATOR)
+        /// Withdraw
+>>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
@@ -739,7 +760,6 @@ pub mod pallet {
         }
     }
 }
-
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub enum RoundType {
