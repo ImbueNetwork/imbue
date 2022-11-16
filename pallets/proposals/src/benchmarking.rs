@@ -11,7 +11,6 @@ use frame_support::{
 use sp_std::str;
 const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
-
 //accumulate_dummy {
 //    let b in 1 .. 1000;
 //    let caller = account("caller", 0, 0);
@@ -39,6 +38,7 @@ benchmarks! {
         let required_funds: BalanceOf<T> = u32::MAX.into();
         let currency_id = CurrencyId::Native;
 
+        // (Origin, ProjectName, Logo, Description, Website, ProposedMilestones, RequiredFunds, CurrencyId)
     }: _(RawOrigin::Signed(whitelisted_caller()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f.clone(), bounded_desc_f, milestones, required_funds, CurrencyId::Native)
     verify {
         assert_last_event::<T>(Event::ProjectCreated(caller, bounded_str_f.to_vec(), 0, required_funds, CurrencyId::Native).into());
@@ -51,7 +51,7 @@ benchmarks! {
         for i in 0..<MaxWhitelistPerProject as Get<u32>>::get() {
             bbt.try_insert(whitelisted_caller(), 100u32.into()).unwrap();
         }
-
+        // (Origin, ProjectKey, BoundedWhitelistSpots)
     }: _(RawOrigin::Signed(caller), 0, bbt)
     verify {
         assert_last_event::<T>(Event::WhitelistAdded(0, 1u32.into()).into());
@@ -66,7 +66,8 @@ benchmarks! {
         }
         let _ = Proposals::<T>::add_project_whitelist(RawOrigin::Signed(caller.clone()).into(), 0, bbt);
 
-    }: _(RawOrigin::Signed(caller), 0)
+        // (Origin, ProjectKey)
+    }: _(RawOrigin::Signed(caller), 0u32)
     verify {
         assert_last_event::<T>(Event::WhitelistRemoved(0, 1u32.into()).into());
     }
@@ -78,8 +79,9 @@ benchmarks! {
             let _caller = create_project_common::<T>(u32::MAX.into());
             let _ = project_keys.try_push(i).unwrap();
         }
-
-    }: _(RawOrigin::Root, 1u32.into(), 100u32.into(), project_keys.clone(), RoundType::ContributionRound)
+        
+        // (Origin, StartBlockNumber, EndBlockNumber, ProjectKeys, RoundType)c
+    }: _(RawOrigin::Root, 0u32.into(), 100u32.into(), project_keys.clone(), RoundType::ContributionRound)
     verify {
         assert_last_event::<T>(Event::FundingRoundCreated(1, project_keys.to_vec()).into());
     }
@@ -94,6 +96,7 @@ benchmarks! {
         let _ = Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), project_keys, RoundType::ContributionRound);
     
         // Round key starts at 1
+        //(Origin, RoundKey)
     }: _(RawOrigin::Root, 1)
     verify {
        assert_last_event::<T>(Event::RoundCancelled(1).into());
@@ -113,6 +116,8 @@ benchmarks! {
         
         // Progress the blocks to allow contribution.
         run_to_block::<T>(5u32.into());
+
+        //(Origin, RoundKey, ProjectKey, Contribution)
     }: _(RawOrigin::Signed(alice.clone()), Some(1u32), a.into(), 10_000u32.into())
     verify {
         assert_last_event::<T>(Event::ContributeSucceeded(alice, a.into(), 10_000u32.into(), CurrencyId::Native, 5u32.into()).into());
@@ -134,6 +139,7 @@ benchmarks! {
         run_to_block::<T>(5u32.into());
         let _ = Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1u32), a.into(), contribution.into());
         
+        //(Origin, RoundKey, ProjectKey, MilestoneKeys)
     }: _(RawOrigin::Root, Some(1), a.into(), Some(milestone_keys))
     verify {
        assert_last_event::<T>(Event::ProjectApproved(1, a.into()).into());
@@ -324,6 +330,7 @@ benchmarks! {
             }
         }
         
+        // (Origin, ProjectKey)
     }:_(RawOrigin::Root, 0)
      verify {
         assert_last_event::<T>(Event::ProjectFundsAddedToRefundQueue(0, (contribution_amount * T::MaximumContributorsPerProject::get()).into()).into());
@@ -338,6 +345,7 @@ benchmarks! {
         }
         
     }: {
+        //(From, To, Amount, CurrencyID)
         Proposals::<T>::refund_item_in_queue(&accounts[0], &accounts[1], 10_000u32.into(), CurrencyId::Native)
     }
      verify {
@@ -359,6 +367,7 @@ benchmarks! {
         }
         
     }: {
+        //(Refunds, SplitOffIndex)
         Proposals::<T>::split_off_refunds(&mut refunds, a.into())
     } 
 }
