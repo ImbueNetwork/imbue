@@ -82,7 +82,7 @@ benchmarks! {
         }
         
         // (Origin, StartBlockNumber, EndBlockNumber, ProjectKeys, RoundType)c
-    }: _(RawOrigin::Root, 0u32.into(), 100u32.into(), project_keys.clone(), RoundType::ContributionRound)
+    }: _(RawOrigin::Root, 2u32.into(), 100u32.into(), project_keys.clone(), RoundType::ContributionRound)
     verify {
         assert_last_event::<T>(Event::FundingRoundCreated(1, project_keys.to_vec()).into());
     }
