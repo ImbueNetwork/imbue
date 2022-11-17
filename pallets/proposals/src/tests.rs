@@ -2322,7 +2322,7 @@ fn test_refunds_state_is_handled_correctly() {
         assert_ok!(Proposals::refund(Origin::root(), 0));
         let mut refunds_completed = 0usize;
         // The maximum amount of block it should take for all refunds to occur.
-        for i in 0..(num_of_refunds / RefundsPerBlock::get() as u32) {
+        for _ in 0..(num_of_refunds / RefundsPerBlock::get() as u32) {
             run_to_block_with_no_idle_space(System::block_number() + 1u64);
             
             // Get the total number of refunds completed.

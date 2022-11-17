@@ -30,6 +30,7 @@ benchmarks! {
         
         let bounded_desc_f: BoundedDescriptionField = "b".repeat(<MaxDescriptionField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
         
+        let bounded_website_f: BoundedWebsiteUrlField = "c".repeat(<MaxWebsiteUrlField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
         let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
             name: bounded_str_f.clone(),
             percentage_to_unlock: 1,
@@ -39,7 +40,7 @@ benchmarks! {
         let currency_id = CurrencyId::Native;
 
         // (Origin, ProjectName, Logo, Description, Website, ProposedMilestones, RequiredFunds, CurrencyId)
-    }: _(RawOrigin::Signed(whitelisted_caller()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f.clone(), bounded_desc_f, milestones, required_funds, CurrencyId::Native)
+    }: _(RawOrigin::Signed(whitelisted_caller()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f, bounded_website_f, milestones, required_funds, CurrencyId::Native)
     verify {
         assert_last_event::<T>(Event::ProjectCreated(caller, bounded_str_f.to_vec(), 0, required_funds, CurrencyId::Native).into());
     }
@@ -390,7 +391,7 @@ fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
         let project_name: BoundedStringField = b"Imbue's Awesome Initiative".to_vec().try_into().unwrap();
         let project_logo: BoundedStringField = b"Imbue Logo".to_vec().try_into().unwrap();
         let project_description: BoundedDescriptionField = b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().unwrap();
-        let website: BoundedDescriptionField = b"https://imbue.network".to_vec().try_into().unwrap();
+        let website: BoundedWebsiteUrlField = b"https://imbue.network".to_vec().try_into().unwrap();
         let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
             name: project_logo.clone(),
             percentage_to_unlock: 100 / milestone_max_count as u32,
