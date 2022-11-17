@@ -90,6 +90,12 @@ pub mod pallet {
 
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<u8>;
+
+        /// The % of fee taken on the approval of a project
+        type PercentFeeOnApproval: Get<u8>;
+
+        /// The treasury account.
+        type TreasuryId: Get<<Self as frame_system::Config>::AccountId>;
     }
 
     #[pallet::type_value]

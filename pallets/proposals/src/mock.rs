@@ -207,7 +207,11 @@ parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
+    pub const PercentFeeOnApproval: u8 = 3;
+
 }
+
 impl proposals::Config for Test {
     type Event = Event;
     type PalletId = ProposalsPalletId;
@@ -219,6 +223,8 @@ impl proposals::Config for Test {
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
+    type TreasuryId = TreasuryAccount;
+    type PercentFeeOnApproval = PercentFeeOnApproval;
 }
 
 parameter_types! {

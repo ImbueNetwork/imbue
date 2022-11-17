@@ -779,7 +779,8 @@ parameter_types! {
 
     // Maximum number of approvals that can be in the spending queue
     pub const MaxApprovals: u32 = 100;
-}
+
+    }
 
 impl pallet_treasury::Config for Runtime {
     type Currency = Balances;
@@ -803,6 +804,10 @@ impl pallet_treasury::Config for Runtime {
     type SpendFunds = ();
     type MaxApprovals = MaxApprovals;
 }
+parameter_types! {
+    // Percent fee taken when a project is approved
+    pub const PercentFeeOnApproval: u8 = 3;
+}
 
 impl proposals::Config for Runtime {
     type Event = Event;
@@ -814,6 +819,9 @@ impl proposals::Config for Runtime {
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type WeightInfo = ();
+    type TreasuryId = TreasuryAccount;
+    type PercentFeeOnApproval = PercentFeeOnApproval;
+
 }
 
 construct_runtime! {

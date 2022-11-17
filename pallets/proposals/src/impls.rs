@@ -226,6 +226,9 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+
+    /// Approve a project ready for milestone submission.
+    // This will take a fee from the approved funds and send to the treasury.
     pub fn do_approve(
         project_key: ProjectKey,
         round_key: RoundKey,
@@ -250,6 +253,7 @@ impl<T: Config> Pallet<T> {
         }
         project.funding_threshold_met = true;
         // set is_approved
+        
         if milestone_keys.is_some() {
             for milestone_key in milestone_keys.unwrap().into_iter() {
                 ensure!(
@@ -281,8 +285,13 @@ impl<T: Config> Pallet<T> {
                 project.milestones.insert(milestone_key, milestone.clone());
             }
         }
+        // Take the fee and remove from avaliable funds.
+        let fee = Self::take_fee_from_pot(project_key, T::PercentFeeOnApproval::get(), total_contribution_amount, project.currency_id.clone())?;
+        project.raised_funds -= fee;
+        project.withdrawn_funds += fee;
         <Rounds<T>>::insert(round_key, Some(round));
         <Projects<T>>::insert(project_key, project);
+        // Finally take the fee to be sent to treasury.
         Self::deposit_event(Event::ProjectApproved(round_key, project_key));
         Ok(().into())
     }
@@ -675,5 +684,15 @@ impl<T: Config> Pallet<T> {
         } else {
             Err(Error::<T>::InvalidAccount)
         }
+    }
+
+    /// A primitive function to take a fee from the pot after project approval.
+    /// The project must be approved before this is called.
+    fn take_fee_from_pot(project_key: ProjectKey, percent_fee: u8, total_funds: BalanceOf<T>, currency_id: CurrencyId) -> Result<BalanceOf<T>, DispatchError> {
+        // total funds * percent_fee = 100fee
+        let fee: BalanceOf<T> = (total_funds * (percent_fee as u32).into()) / 100u32.into();
+        
+        let _ = T::MultiCurrency::transfer(currency_id, &Self::project_account_id(project_key), &T::TreasuryId::get(), fee)?;
+        Ok(fee)
     }
 }
