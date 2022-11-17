@@ -179,16 +179,12 @@ pub mod pallet {
     #[pallet::getter(fn storage_version)]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
-<<<<<<< HEAD
     /// The refund queue is used to store the list of accounts that have been involved in a do_refund call.
     /// The queue will be sent to the hooks which will inturn actually carry out the 
     #[pallet::storage]
     #[pallet::getter(fn refund_queue)]
     pub type RefundQueue<T> = StorageValue<_, Vec<(AccountIdOf<T>, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>, ValueQuery>;
 
-
-=======
->>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
     #[pallet::event]
@@ -321,10 +317,6 @@ pub mod pallet {
         /// The project must be approved.
         ProjectApprovalRequired,
     }
-<<<<<<< HEAD
-    
-=======
->>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
@@ -573,12 +565,7 @@ pub mod pallet {
             Self::do_approve(project_key, approval_round_key, milestone_keys)
         }
 
-<<<<<<< HEAD
-        /// Step 5 (INITATOR)
-        //
-=======
         /// Step 5 (INITIATOR)
->>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
@@ -610,14 +597,9 @@ pub mod pallet {
             )
         }
 
-<<<<<<< HEAD
         /// Step 7 (INITATOR)
         /// Finalise the voting on a milestone.
         #[pallet::weight(<T as Config>::WeightInfo::finalise_milestone_voting())]
-=======
-        /// Step 7 (INITIATOR)
-        #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
->>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
         pub fn finalise_milestone_voting(
             origin: OriginFor<T>,
             project_key: ProjectKey,
@@ -627,13 +609,8 @@ pub mod pallet {
             Self::do_finalise_milestone_voting(who, project_key, milestone_key)
         }
 
-<<<<<<< HEAD
         /// Step 8 (INITATOR)
         /// Withdraw some avaliable funds from the project.
-=======
-        /// Step 8 (INITIATOR)
-        /// Withdraw
->>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
