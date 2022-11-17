@@ -228,6 +228,7 @@ pub mod pallet {
         WhitelistAdded(ProjectKey, T::BlockNumber),
         /// A white list has been removed.
         WhitelistRemoved(ProjectKey, T::BlockNumber),
+        /// A project has been added to refund queue.
         ProjectFundsAddedToRefundQueue(ProjectKey, BalanceOf<T>),
         /// You have created a vote of no confidence.
         NoConfidenceRoundCreated(RoundKey, ProjectKey),
