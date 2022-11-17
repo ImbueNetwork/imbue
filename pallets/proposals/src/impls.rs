@@ -488,16 +488,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-<<<<<<< HEAD
 
     /// Appends a list of refunds to the queue to be used by the hooks.
     pub fn add_refunds_to_queue(project_key: ProjectKey) -> DispatchResultWithPostInfo {
         let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-=======
-    pub fn do_refund(project_key: ProjectKey) -> DispatchResultWithPostInfo {
-        let mut project =
-            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
->>>>>>> 647f60a87326ac2becf7e1066f249715a308893d
 
         //getting the locked milestone percentage - these are also milestones that have not been approved
         let mut refunded_funds: BalanceOf<T> = 0_u32.into();
