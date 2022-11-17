@@ -207,6 +207,8 @@ parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub MaximumContributorsPerProject: u32 = 5000;
+    pub RefundsPerBlock: u8 = 2;
 }
 impl proposals::Config for Test {
     type Event = Event;
@@ -219,6 +221,8 @@ impl proposals::Config for Test {
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
+    type MaximumContributorsPerProject = MaximumContributorsPerProject;
+    type RefundsPerBlock = RefundsPerBlock;
 }
 
 parameter_types! {
