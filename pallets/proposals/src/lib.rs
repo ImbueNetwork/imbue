@@ -444,6 +444,8 @@ pub mod pallet {
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
+            // Ensure that the fee taken is above the existential deposit.
+
             Self::new_project(
                 who,
                 name,
@@ -848,6 +850,7 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     approved_for_funding: bool,
     funding_threshold_met: bool,
     cancelled: bool,
+    fee_taken: Balance
 }
 
 /// The contribution users made to a proposal project.

@@ -84,6 +84,7 @@ impl<T: Config> Pallet<T> {
             approved_for_funding: false,
             funding_threshold_met: false,
             cancelled: false,
+            fee_taken: BalanceOf::<T>::default(),
         };
 
         // Add project to list
@@ -288,8 +289,10 @@ impl<T: Config> Pallet<T> {
         }
         // Take the fee and remove from avaliable funds.
         let fee = Self::take_fee_from_pot(project_key, T::PercentFeeOnApproval::get(), total_contribution_amount, project.currency_id.clone())?;
-        project.raised_funds -= fee;
+        
+        project.fee_taken = fee;
         project.withdrawn_funds += fee;
+
         <Rounds<T>>::insert(round_key, Some(round));
         <Projects<T>>::insert(project_key, project);
         // Finally take the fee to be sent to treasury.
@@ -408,6 +411,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone
         );
 
+        // The total contribution amount includes the fee.
         let total_contribution_amount: BalanceOf<T> = project.raised_funds;
         ensure!(
             project.milestones.contains_key(&milestone_key),
@@ -456,18 +460,18 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         
-        let total_contribution_amount: BalanceOf<T> = project.raised_funds;
+        let total_unapproved_funds: BalanceOf<T> = project.raised_funds;
 
         let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
         for (_milestone_key, milestone) in project.milestones.clone() {
             if milestone.is_approved {
-                unlocked_funds += (total_contribution_amount
+                unlocked_funds += (total_unapproved_funds
                     * milestone.percentage_to_unlock.into())
                     / MAX_PERCENTAGE.into();
             }
         }
 
-        let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
+        let available_funds: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
         ensure!(
             available_funds > (0_u32).into(),
             Error::<T>::NoAvailableFundsToWithdraw
@@ -517,8 +521,9 @@ impl<T: Config> Pallet<T> {
         for (who, contribution) in project.contributions.iter() {
             let project_account_id = Self::project_account_id(project_key);
             
-            let refund_amount: BalanceOf<T> = ((contribution).value
-                * locked_milestone_percentage.into())
+            // is 0/100 ok? if this is called when all milestones are approved. the locked milestone percent will be zero.
+            let refund_amount: BalanceOf<T> = 
+                ((contribution).value * (locked_milestone_percentage.saturating_sub(T::PercentFeeOnApproval::get() as u32)).into())
                 / MAX_PERCENTAGE.into();
 
             current_refunds.push((who.clone(), project_account_id.clone(), refund_amount, project.currency_id));
@@ -738,6 +743,7 @@ impl<T: Config> Pallet<T> {
 
     /// A primitive function to take a fee from the pot after project approval.
     /// The project must be approved before this is called.
+    /// Returns the fee.
     fn take_fee_from_pot(project_key: ProjectKey, percent_fee: u8, total_funds: BalanceOf<T>, currency_id: CurrencyId) -> Result<BalanceOf<T>, DispatchError> {
         // total funds * percent_fee = 100fee
         let fee: BalanceOf<T> = (total_funds * (percent_fee as u32).into()) / 100u32.into();

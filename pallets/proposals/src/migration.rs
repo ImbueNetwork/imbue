@@ -98,6 +98,11 @@ pub mod v1 {
                 funding_threshold_met: project.funding_threshold_met,
                 cancelled: project.cancelled,
                 raised_funds: raised_funds,
+
+
+                //TODOOO
+                fee_taken: 0u32.into(),
+
             };
             Some(migrated_project)
         });

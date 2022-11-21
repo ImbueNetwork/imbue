@@ -1476,13 +1476,14 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
+        let withdrawn_project = Projects::<Test>::get(0u32).expect("should be there");
         assert_ne!(
             Balances::free_balance(&alice),
-            additional_amount + required_funds
+            additional_amount + required_funds - withdrawn_project.fee_taken
         );
         assert_eq!(
             Balances::free_balance(&alice),
-            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
+            (additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100) - withdrawn_project.fee_taken
         );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
@@ -1495,7 +1496,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
             mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
                 alice,
                 0,
-                500000u64,
+                500000u64 - withdrawn_project.fee_taken,
                 CurrencyId::Native
             ))
         );
@@ -1525,7 +1526,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         )
         .unwrap();
 
-        let required_funds = 100u64;
+        let required_funds = 1000u64;
         Proposals::contribute(Origin::signed(bob), None, project_key, required_funds).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
@@ -2333,8 +2334,8 @@ fn test_refunds_state_is_handled_correctly() {
             .collect::<Vec<u64>>().len();
 
             // Assert that only 2 have been completed
-            assert_eq!(refunds_after_block - refunds_completed, 2usize);
-            refunds_completed += 2;
+            assert_eq!(refunds_after_block - refunds_completed, <Test as Config>::RefundsPerBlock::get() as usize);
+            refunds_completed += <Test as Config>::RefundsPerBlock::get() as usize         ;
 
             // And that they have been removed from the refund list.
            assert_eq!(RefundQueue::<Test>::get().len(), num_of_refunds as usize - refunds_completed);

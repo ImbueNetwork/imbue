@@ -282,6 +282,11 @@ pub fn build_test_externality() -> sp_io::TestExternalities {
         .build_storage::<Test>()
         .unwrap();
     let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
+    ext.execute_with(|| {
+        System::set_block_number(1);
+        let tres = <Test as proposals::Config>::TreasuryId::get();
+        let _ = Currencies::deposit(CurrencyId::Native, &tres, 100_000u64);
+    }
+    );
     ext
 }
