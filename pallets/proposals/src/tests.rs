@@ -2244,11 +2244,15 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
             project_key
         ));
 
-        // Wait a block so that refunds occur;
-        run_to_block(System::block_number() + 1);
+        let project_in_q = Projects::<Test>::get(project_key).unwrap();
+        // Wait blocks so that refunds occur;
+        run_to_block(System::block_number() + 2);
         // assert that the voters have had their funds refunded.
-        assert!(Currencies::free_balance(CurrencyId::Native, &charlie) == 1_000_000u64);
-        assert!(Currencies::free_balance(CurrencyId::Native, &bob) == 1_000_000u64);
+        let contribution_after_fee_charlie = (750_000u64 * (100 - <Test as Config>::PercentFeeOnApproval::get() as u64)) / 100;
+        dbg!(&RefundQueue::<Test>::get());
+        let contribution_after_fee_bob = 250_000u64 * (100 - <Test as Config>::PercentFeeOnApproval::get() as u64) / 100;
+        assert_eq!(Currencies::free_balance(CurrencyId::Native, &charlie), contribution_after_fee_charlie + 250_000);
+        assert_eq!(Currencies::free_balance(CurrencyId::Native, &bob), contribution_after_fee_bob + 750_000);
     });
 
 }

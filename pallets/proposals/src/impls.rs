@@ -521,9 +521,15 @@ impl<T: Config> Pallet<T> {
         for (who, contribution) in project.contributions.iter() {
             let project_account_id = Self::project_account_id(project_key);
             
-            // is 0/100 ok? if this is called when all milestones are approved. the locked milestone percent will be zero.
+            if project.fee_taken > BalanceOf::<T>::default() {
+                locked_milestone_percentage.saturating_sub(T::PercentFeeOnApproval::get() as u32);                
+            }
+
+            // Ensure that the locked milestone percentage > 0
+           // ensure!(todo!());
+
             let refund_amount: BalanceOf<T> = 
-                ((contribution).value * (locked_milestone_percentage.saturating_sub(T::PercentFeeOnApproval::get() as u32)).into())
+                ((contribution).value * (locked_milestone_percentage).into())
                 / MAX_PERCENTAGE.into();
 
             current_refunds.push((who.clone(), project_account_id.clone(), refund_amount, project.currency_id));
