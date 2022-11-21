@@ -746,13 +746,6 @@ impl pallet_identity::Config for Runtime {
     type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-    pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub const MaxProjectsPerRound: u32 = 256;
-    pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
-    pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
-    pub const PercentRequiredForVoteToPass: u8 = 75;
-}
 
 parameter_types! {
     // 5% of the proposal value need to be bonded. This will be returned
@@ -809,6 +802,16 @@ parameter_types! {
     pub const PercentFeeOnApproval: u8 = 3;
 }
 
+parameter_types! {
+    pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
+    pub const MaxProjectsPerRound: u32 = 256;
+    pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
+    pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
+    pub const PercentRequiredForVoteToPass: u8 = 75;
+    pub const MaximumContributorsPerProject: u32 = 5000; 
+    pub const RefundsPerBlock: u8 = 20; 
+}
+
 impl proposals::Config for Runtime {
     type Event = Event;
     type PalletId = ProposalsPalletId;
@@ -818,6 +821,8 @@ impl proposals::Config for Runtime {
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
+    type MaximumContributorsPerProject = MaximumContributorsPerProject;
+    type RefundsPerBlock = RefundsPerBlock;
     type WeightInfo = ();
     type TreasuryId = TreasuryAccount;
     type PercentFeeOnApproval = PercentFeeOnApproval;

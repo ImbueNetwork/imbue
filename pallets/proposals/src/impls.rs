@@ -21,7 +21,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    pub fn project_account_id(key: ProjectKey) -> T::AccountId {
+    pub fn project_account_id(key: ProjectKey) -> ProjectAccountId<T> {
         T::PalletId::get().into_sub_account_truncating(key)
     }
 
@@ -160,6 +160,7 @@ impl<T: Config> Pallet<T> {
                 && round.end >= now,
             Error::<T>::RoundNotProcessing
         );
+
         ensure!(
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
@@ -359,7 +360,7 @@ impl<T: Config> Pallet<T> {
         let contribution_amount = Self::ensure_contributor_of(&project, &who)?;
         let vote_lookup_key = (who.clone(), project_key, milestone_key, round_key);
 
-        let vote_exists = UserVotes::<T>::contains_key(vote_lookup_key.clone());
+        let vote_exists = UserVotes::<T>::contains_key(&vote_lookup_key);
         ensure!(!vote_exists, Error::<T>::VoteAlreadyExists);
 
         <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
@@ -451,7 +452,10 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
     ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
+        ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
+        
         let total_contribution_amount: BalanceOf<T> = project.raised_funds;
 
         let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
@@ -493,9 +497,10 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn do_refund(project_key: ProjectKey) -> DispatchResultWithPostInfo {
-        let mut project =
-            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
+    /// Appends a list of refunds to the queue to be used by the hooks.
+    pub fn add_refunds_to_queue(project_key: ProjectKey) -> DispatchResultWithPostInfo {
+        let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         //getting the locked milestone percentage - these are also milestones that have not been approved
         let mut refunded_funds: BalanceOf<T> = 0_u32.into();
@@ -506,32 +511,75 @@ impl<T: Config> Pallet<T> {
             }
         }
 
+        let mut current_refunds = RefundQueue::<T>::get();
+
         // TODO: How can we refund all contributions without looping?
         for (who, contribution) in project.contributions.iter() {
-            let refund_amount: BalanceOf<T> = ((*contribution).value
+            let project_account_id = Self::project_account_id(project_key);
+            
+            let refund_amount: BalanceOf<T> = ((contribution).value
                 * locked_milestone_percentage.into())
                 / MAX_PERCENTAGE.into();
 
-            T::MultiCurrency::transfer(
-                project.currency_id,
-                &Self::project_account_id(project_key),
-                &who,
-                refund_amount,
-            )?;
-
+            current_refunds.push((who.clone(), project_account_id.clone(), refund_amount, project.currency_id));
             refunded_funds += refund_amount;
         }
 
         // Updated new project status to cancelled
         project.cancelled = true;
         <Projects<T>>::insert(project_key, project);
+        RefundQueue::<T>::put(current_refunds);
 
-        Self::deposit_event(Event::ProjectLockedFundsRefunded(
+        Self::deposit_event(Event::ProjectFundsAddedToRefundQueue(
             project_key,
             refunded_funds,
         ));
         Ok(().into())
     }
+
+    /// Using the parameters provided (which should be from the refund queue), 
+    /// Process a refund. 
+    /// Used in hooks so cannot error.
+    pub fn refund_item_in_queue(from: &T::AccountId, to: &T::AccountId, amount: BalanceOf<T>, currency_id: CurrencyId) -> bool {
+        let can_withraw: DispatchResult = T::MultiCurrency::ensure_can_withdraw(
+            currency_id, 
+            from,
+            amount,
+        );
+        if can_withraw.is_ok() {
+            // this should pass now, but i will not return early
+            let _ = T::MultiCurrency::transfer(
+                currency_id,
+                from,
+                to,
+                amount,
+            );
+            return true
+        } else {
+            return false
+        }
+    }
+
+    /// Split off an amount of refunds off the vector and place into refund storage.
+    /// Returns a boolean if a split off has succeeded.
+    /// Used in hooks so cannot error.
+    pub fn split_off_refunds(refunds:&mut Refunds<T>, c: u32) -> bool {
+        // split_off panics when at > len: 
+        // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
+        // If the length is zero do nothing
+        if c == 0 {return false}
+
+        if c as usize <= refunds.len() {
+            // If its a legitimate operation, split off.
+            RefundQueue::<T>::put(refunds.split_off(c as usize));
+            return true
+        } else  {
+            // panic case we will place in an empty vec as the counter is wrong.
+            RefundQueue::<T>::kill();
+            return false
+        }
+    }
+
 
     /// This function raises a vote of no confidence.
     /// This round can only be called once and there after can only be voted on.
@@ -621,6 +669,8 @@ impl<T: Config> Pallet<T> {
 
     /// Called when a contributor wants to finalise a vote of no confidence.
     /// Votes for the vote of no confidence must reach the majority requred for the vote to pass.
+    /// As defined in the config.
+    /// This also calls a refund of funds to the users.
     pub fn call_finalise_no_confidence_vote(
         who: T::AccountId,
         round_key: RoundKey,
@@ -650,7 +700,7 @@ impl<T: Config> Pallet<T> {
             // Set Round to is cancelled, remove the vote from NoConfidenceVotes, and do the refund.
             NoConfidenceVotes::<T>::remove(project_key);
             Rounds::<T>::insert(round_key, Some(round));
-            let _ = Self::do_refund(project_key)?;
+            let _ = Self::add_refunds_to_queue(project_key)?;
 
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {

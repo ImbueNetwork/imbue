@@ -209,7 +209,8 @@ parameter_types! {
     pub PercentRequiredForVoteToPass: u8 = 75u8;
     pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
     pub const PercentFeeOnApproval: u8 = 3;
-
+    pub MaximumContributorsPerProject: u32 = 5000;
+    pub RefundsPerBlock: u8 = 2;
 }
 
 impl proposals::Config for Test {
@@ -225,6 +226,8 @@ impl proposals::Config for Test {
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type TreasuryId = TreasuryAccount;
     type PercentFeeOnApproval = PercentFeeOnApproval;
+    type MaximumContributorsPerProject = MaximumContributorsPerProject;
+    type RefundsPerBlock = RefundsPerBlock;
 }
 
 parameter_types! {
