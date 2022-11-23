@@ -460,7 +460,7 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         
-        let total_unapproved_funds: BalanceOf<T> = project.raised_funds;
+        let total_unapproved_funds: BalanceOf<T> = project.raised_funds.saturating_sub(project.withdrawn_funds);
 
         let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
         for (_milestone_key, milestone) in project.milestones.clone() {
@@ -471,7 +471,7 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        let available_funds: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
+        let available_funds: BalanceOf<T> = unlocked_funds;//.saturating_sub(project.withdrawn_funds);
         ensure!(
             available_funds > (0_u32).into(),
             Error::<T>::NoAvailableFundsToWithdraw
@@ -522,7 +522,7 @@ impl<T: Config> Pallet<T> {
             let project_account_id = Self::project_account_id(project_key);
             
             if project.fee_taken > BalanceOf::<T>::default() {
-                locked_milestone_percentage.saturating_sub(T::PercentFeeOnApproval::get() as u32);                
+                locked_milestone_percentage = locked_milestone_percentage.saturating_sub(T::PercentFeeOnApproval::get() as u32);                
             }
 
             // Ensure that the locked milestone percentage > 0
@@ -702,7 +702,7 @@ impl<T: Config> Pallet<T> {
         // The nay vote must >= minimum threshold required for the vote to pass.
         let total_contribute = project.raised_funds;
 
-        // 100 * Threshold =  (total_contribute * majority_required)/100
+        // 100 * Threshold =  (total_contribute * majority_required)
         let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into();
 
         if vote.nay * 100u8.into() >= threshold_votes {

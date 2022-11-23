@@ -2248,8 +2248,7 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         // Wait blocks so that refunds occur;
         run_to_block(System::block_number() + 2);
         // assert that the voters have had their funds refunded.
-        let contribution_after_fee_charlie = (750_000u64 * (100 - <Test as Config>::PercentFeeOnApproval::get() as u64)) / 100;
-        dbg!(&RefundQueue::<Test>::get());
+        let contribution_after_fee_charlie = 750_000u64 * (100 - <Test as Config>::PercentFeeOnApproval::get() as u64) / 100;
         let contribution_after_fee_bob = 250_000u64 * (100 - <Test as Config>::PercentFeeOnApproval::get() as u64) / 100;
         assert_eq!(Currencies::free_balance(CurrencyId::Native, &charlie), contribution_after_fee_charlie + 250_000);
         assert_eq!(Currencies::free_balance(CurrencyId::Native, &bob), contribution_after_fee_bob + 750_000);
