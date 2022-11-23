@@ -263,20 +263,32 @@ impl<T: Config> Pallet<T> {
                     Error::<T>::MilestoneDoesNotExist
                 );
 
-                let mut milestone = project.milestones.get_mut(&milestone_key).unwrap().clone();
+                let mut milestone = project.milestones.get_mut(&milestone_key).expect("Contains key is called; qed").clone();
+                
+                // If the milestone is approved twice the fee would be taken twice.
+                ensure!(!milestone.is_approved, Error::<T>::MilestoneAlreadyApproved);
+
                 milestone.is_approved = true;
 
                 let vote_lookup_key = (project_key, milestone_key);
 
                 let _ = MilestoneVotes::<T>::try_mutate(vote_lookup_key, |maybe_vote| {
+                    // This is false as it is set to true when the milestone voting is finalised.
                     if let Some(vote) = maybe_vote {
-                        vote.is_approved = true;
+                        vote.is_approved = false;
                     } else {
-                        *maybe_vote = Some(Vote::default())
+                        *maybe_vote = Some(Vote::default());
                     }
 
                     Ok::<(), Error<T>>(())
                 })?;
+                let fee = take_fee_from_pot(project_key, T::PercentFeeOnApproval::get(), )
+
+                // Take the fee and remove from avaliable funds.
+                project.fee_taken = fee;
+                project.withdrawn_funds += fee;
+
+                project.milestones.insert(milestone_key, milestone.clone());
 
                 Self::deposit_event(Event::MilestoneApproved(
                     project.initiator.clone(),
@@ -284,18 +296,11 @@ impl<T: Config> Pallet<T> {
                     milestone_key,
                     now,
                 ));
-                project.milestones.insert(milestone_key, milestone.clone());
             }
         }
-        // Take the fee and remove from avaliable funds.
-        let fee = Self::take_fee_from_pot(project_key, T::PercentFeeOnApproval::get(), total_contribution_amount, project.currency_id.clone())?;
         
-        project.fee_taken = fee;
-        project.withdrawn_funds += fee;
-
         <Rounds<T>>::insert(round_key, Some(round));
         <Projects<T>>::insert(project_key, project);
-        // Finally take the fee to be sent to treasury.
         Self::deposit_event(Event::ProjectApproved(round_key, project_key));
         Ok(().into())
     }
@@ -460,7 +465,7 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         
-        let total_unapproved_funds: BalanceOf<T> = project.raised_funds.saturating_sub(project.withdrawn_funds);
+        let total_unapproved_funds: BalanceOf<T> = project.raised_funds;
 
         let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
         for (_milestone_key, milestone) in project.milestones.clone() {
@@ -471,7 +476,7 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        let available_funds: BalanceOf<T> = unlocked_funds;//.saturating_sub(project.withdrawn_funds);
+        let available_funds: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
         ensure!(
             available_funds > (0_u32).into(),
             Error::<T>::NoAvailableFundsToWithdraw
@@ -750,9 +755,9 @@ impl<T: Config> Pallet<T> {
     /// A primitive function to take a fee from the pot after project approval.
     /// The project must be approved before this is called.
     /// Returns the fee.
-    fn take_fee_from_pot(project_key: ProjectKey, percent_fee: u8, total_funds: BalanceOf<T>, currency_id: CurrencyId) -> Result<BalanceOf<T>, DispatchError> {
+    fn take_fee_from_pot(project_key: ProjectKey, percent_fee: u8, funds_to_be_taxed: BalanceOf<T>, currency_id: CurrencyId) -> Result<BalanceOf<T>, DispatchError> {
         // total funds * percent_fee = 100fee
-        let fee: BalanceOf<T> = (total_funds * (percent_fee as u32).into()) / 100u32.into();
+        let fee: BalanceOf<T> = (funds_to_be_taxed * (percent_fee as u32).into()) / 100u32.into();
         
         let _ = T::MultiCurrency::transfer(currency_id, &Self::project_account_id(project_key), &T::TreasuryId::get(), fee)?;
         Ok(fee)

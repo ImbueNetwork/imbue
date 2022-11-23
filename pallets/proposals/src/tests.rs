@@ -1547,9 +1547,12 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
 
         assert_ok!(Proposals::withdraw(Origin::signed(alice), project_key));
 
+        let project = Projects::<Test>::get(project_key).unwrap();
+
+        // Assert that alice can withdraw the entire amount minus the fee.
         assert_eq!(
             Balances::free_balance(&alice),
-            additional_amount + required_funds
+            additional_amount + required_funds - project.fee_taken
         );
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -1560,7 +1563,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
             mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
                 alice,
                 0,
-                100,
+                required_funds - project.fee_taken,
                 CurrencyId::Native
             ))
         );
@@ -1859,16 +1862,18 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         let total_percentage_to_withdraw: u32 =
             proposed_milestones1.get(0).unwrap().percentage_to_unlock;
 
+        let project = Projects::<Test>::get(project_key).unwrap();
+
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
         //checking that Alice now has 10.2m
         assert_ne!(
             Balances::free_balance(&alice),
-            additional_amount + required_funds
+            additional_amount + required_funds - project.fee_taken
         );
         assert_eq!(
             Balances::free_balance(&alice),
-            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
+            additional_amount - project.fee_taken + required_funds * (total_percentage_to_withdraw as u64) / 100
         );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
@@ -2244,7 +2249,6 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
             project_key
         ));
 
-        let project_in_q = Projects::<Test>::get(project_key).unwrap();
         // Wait blocks so that refunds occur;
         run_to_block(System::block_number() + 2);
         // assert that the voters have had their funds refunded.

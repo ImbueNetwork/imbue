@@ -322,6 +322,8 @@ pub mod pallet {
         VoteThresholdNotMet,
         /// The project must be approved.
         ProjectApprovalRequired,
+        /// A milestone cannot be approved more than once.
+        MilestoneAlreadyApproved,
     }
 
     #[pallet::hooks]
