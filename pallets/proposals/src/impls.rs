@@ -282,13 +282,14 @@ impl<T: Config> Pallet<T> {
 
                     Ok::<(), Error<T>>(())
                 })?;
-                let fee = take_fee_from_pot(project_key, T::PercentFeeOnApproval::get(), )
+
+                let fee = Self::take_fee_from_pot(project_key, T::PercentFeeOnApproval::get(), total_contribution_amount / milestone.percentage_to_unlock.into(), project.currency_id)?;
 
                 // Take the fee and remove from avaliable funds.
-                project.fee_taken = fee;
+                project.fee_taken += fee;
                 project.withdrawn_funds += fee;
 
-                project.milestones.insert(milestone_key, milestone.clone());
+                project.milestones.insert(milestone_key, milestone);
 
                 Self::deposit_event(Event::MilestoneApproved(
                     project.initiator.clone(),
@@ -529,9 +530,6 @@ impl<T: Config> Pallet<T> {
             if project.fee_taken > BalanceOf::<T>::default() {
                 locked_milestone_percentage = locked_milestone_percentage.saturating_sub(T::PercentFeeOnApproval::get() as u32);                
             }
-
-            // Ensure that the locked milestone percentage > 0
-           // ensure!(todo!());
 
             let refund_amount: BalanceOf<T> = 
                 ((contribution).value * (locked_milestone_percentage).into())

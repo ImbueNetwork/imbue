@@ -1758,8 +1758,8 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
-    let additional_amount = 10000000u64;
-    let required_funds = 1000000u64;
+    let additional_amount = 10_000_000u64;
+    let required_funds = 1_000_000u64;
     let project_key = 0;
 
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
@@ -1886,7 +1886,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
                 alice,
                 project_key,
-                200000u64,
+                200000u64 - project.fee_taken,
                 CurrencyId::Native
             ))
         );
@@ -1909,7 +1909,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             exp_projectfundsrefunded_event,
             mock::Event::from(proposals::Event::ProjectFundsAddedToRefundQueue(
                 project_key,
-                800000u64
+                800000u64 - projesct.fee_taken
             ))
         );
 
@@ -1993,9 +1993,10 @@ fn test_raising_a_vote_of_no_confidence() {
         let round_count = RoundCount::<Test>::get();
 
         // Assert that storage has been mutated correctly.
-        assert!(vote.nay == 1_000_000u64 && vote.yay == 0u64);
-        assert!(UserVotes::<Test>::get((bob, project_key, 0, round_count)) == Some(true));
-        assert!(round_count == 2u32);
+        assert_eq!(vote.nay, 1_000_000u64);
+        assert_eq!(vote.yay, 0u64);
+        assert_eq!(UserVotes::<Test>::get((bob, project_key, 0, round_count)), Some(true));
+        assert_eq!(round_count, 2u32);
         assert!(NoConfidenceVotes::<Test>::contains_key(project_key));
 
         // Assert that you cannot raise the vote twice.
@@ -2073,11 +2074,12 @@ fn test_adding_vote_of_no_confidence() {
         let round_count = RoundCount::<Test>::get();
 
         // Assert that storage has been mutated correctly.
-        assert!(vote.nay == 500_000u64 && vote.yay == 500_000u64);
-        assert!(UserVotes::<Test>::get((charlie, project_key, 0, round_count)) == Some(true));
-        assert!(UserVotes::<Test>::get((bob, project_key, 0, round_count)) == Some(true));
+        assert_eq!(vote.nay, 500_000u64);
+        assert_eq!(vote.yay, 500_000u64);
+        assert_eq!(UserVotes::<Test>::get((charlie, project_key, 0, round_count)), Some(true));
+        assert_eq!(UserVotes::<Test>::get((bob, project_key, 0, round_count)), Some(true));
 
-        assert!(round_count == 2u32);
+        assert_eq!(round_count, 2u32);
     });
 }
 
@@ -2296,7 +2298,7 @@ fn test_refunds_go_back_to_contributors() {
             assert_eq!(Currencies::free_balance(CurrencyId::Native, &accounts[i as usize]), 20_000u64);
         }
 
-        assert!(Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64)
+        assert_eq!(Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)), 0u64);
     });
 } 
 
@@ -2348,7 +2350,7 @@ fn test_refunds_state_is_handled_correctly() {
            assert_eq!(RefundQueue::<Test>::get().len(), num_of_refunds as usize - refunds_completed);
         }
 
-        assert!(Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64)
+        assert_eq!(Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)), 0u64);
     });
 } 
 
