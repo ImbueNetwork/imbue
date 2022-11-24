@@ -467,12 +467,10 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         
-        let total_unapproved_funds: BalanceOf<T> = project.raised_funds;
-
         let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
         for (_milestone_key, milestone) in project.milestones.clone() {
             if milestone.is_approved {
-                unlocked_funds += (total_unapproved_funds
+                unlocked_funds += (project.raised_funds
                     * milestone.percentage_to_unlock.into())
                     / MAX_PERCENTAGE.into();
             }
@@ -537,6 +535,8 @@ impl<T: Config> Pallet<T> {
             current_refunds.push((who.clone(), project_account_id.clone(), refund_amount, project.currency_id));
             refunded_funds += refund_amount;
         }
+
+        // todo? If there is dust left over then transfer to the treasury or burn?.
 
         // Updated new project status to cancelled
         project.cancelled = true;
@@ -608,15 +608,15 @@ impl<T: Config> Pallet<T> {
             Error::<T>::RoundStarted
         );
 
-        // Create the accosiated vote struct, index can be used as an ensure on length has been called.
+        // Create the associated vote struct.
         let vote = Vote {
             yay: Default::default(),
             nay: contribution,
-            // not using this so approved will be false.
             is_approved: false,
         };
+
         let now = frame_system::Pallet::<T>::block_number();
-        // Create the accosiated round.
+        // Create the associated round.
         let round = RoundOf::<T>::new(
             now,
             now + T::NoConfidenceTimeLimit::get(),
@@ -755,7 +755,6 @@ impl<T: Config> Pallet<T> {
     fn take_fee_from_pot(project_key: ProjectKey, percent_fee: u8, funds_to_be_taxed: BalanceOf<T>, currency_id: CurrencyId) -> Result<BalanceOf<T>, DispatchError> {
         // total funds * percent_fee = 100fee
         let fee: BalanceOf<T> = (funds_to_be_taxed * (percent_fee as u32).into()) / 100u32.into();
-        
         let _ = T::MultiCurrency::transfer(currency_id, &Self::project_account_id(project_key), &T::TreasuryId::get(), fee)?;
         Ok(fee)
     }

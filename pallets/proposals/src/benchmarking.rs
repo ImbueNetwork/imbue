@@ -170,7 +170,7 @@ benchmarks! {
         let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
 
-        let contribution_amount = 10_000u32;
+        let contribution_amount = 100_000u32;
         let milestone_keys: BoundedMilestoneKeys = vec![0].try_into().unwrap();
 
         // Setup state.
@@ -192,7 +192,7 @@ benchmarks! {
         let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
 
-        let contribution_amount = 10_000u32;
+        let contribution_amount = 100_000u32;
         let milestone_keys: BoundedMilestoneKeys = vec![0].try_into().unwrap();
 
         // Setup state.
@@ -233,17 +233,18 @@ benchmarks! {
             Proposals::<T>::vote_on_milestone(RawOrigin::Signed(alice.clone()).into(), 0, key, Some(key + 2u32), true)?;
             Proposals::<T>::finalise_milestone_voting(RawOrigin::Signed(bob.clone()).into(), 0, key)?;
         }
-        
+            let project = Projects::<T>::get(0).unwrap();
+            let withdrawn_wo_fee: BalanceOf<T> = (10_000u32 * milestone_keys.len() as u32).into();
         // (Initiator, ProjectKey)
-    }: _(RawOrigin::Signed(bob.clone()) ,0)
+    }: _(RawOrigin::Signed(bob.clone()), 0)
     verify {
-        assert_last_event::<T>(Event::ProjectFundsWithdrawn(bob, 0, (10_000u32 * milestone_keys.len() as u32).into(), CurrencyId::Native).into());
+        assert_last_event::<T>(Event::ProjectFundsWithdrawn(bob, 0, withdrawn_wo_fee - project.fee_taken, CurrencyId::Native).into());
     }
 
     raise_vote_of_no_confidence { 
         let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
-        let contribution_amount = 10_000u32;
+        let contribution_amount = 100_000u32;
         let milestone_keys: BoundedMilestoneKeys = vec![0].try_into().unwrap();
         // Setup state: Approved project.
         create_project_common::<T>(contribution_amount.into());
@@ -354,19 +355,17 @@ benchmarks! {
     }
 
     split_off_refunds {
-        let a in 0..100u32;
+        let a in 0..10_000u32;
         run_to_block::<T>(5u32.into());
         let mut accounts: Vec<T::AccountId> = vec![];
         let mut refunds: Refunds<T> = vec![];
-        for i in 0..100usize {
-            let acc = create_funded_user::<T>("contributor", i as u32, 100_000);
-
-            accounts.push(acc);
+        let acc = create_funded_user::<T>("contributor", 10u32, 100_000);
+        for i in 0..10_000 {
+            accounts.push(acc.clone());
             if i > 0 {
                 refunds.push((accounts[0].clone(), accounts[i].clone(), 10_000u32.into(), CurrencyId::Native));
             }
         }
-        
     }: {
         //(Refunds, SplitOffIndex)
         Proposals::<T>::split_off_refunds(&mut refunds, a.into())

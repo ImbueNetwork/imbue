@@ -97,6 +97,7 @@ pub mod pallet {
 
         /// The treasury account.
         type TreasuryId: Get<<Self as frame_system::Config>::AccountId>;
+        
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
 

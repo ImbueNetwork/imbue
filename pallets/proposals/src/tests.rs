@@ -5,7 +5,7 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{
     assert_noop, assert_ok, bounded_btree_map, bounded_vec, dispatch::DispatchErrorWithPostInfo,
-    weights::PostDispatchInfo, log::info
+    weights::PostDispatchInfo
 };
 use sp_core::sr25519;
 use sp_std::vec::Vec;
@@ -1754,7 +1754,6 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
 }
 
 // What exactly does this mean xd.
-// 
 #[test]
 fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
@@ -2386,7 +2385,7 @@ fn test_treasury_recieves_exact_fee() {
             System::block_number() + 100,
             bounded_vec![0u32],
             RoundType::ContributionRound
-        ).unwrap();
+        ).unwrap(); 
         
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 2_000_000u64);
         let _ = Proposals::contribute(Origin::signed(bob), Some(1), project_key, 1_000_000).unwrap();
