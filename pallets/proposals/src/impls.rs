@@ -509,6 +509,8 @@ impl<T: Config> Pallet<T> {
 
 
     /// Appends a list of refunds to the queue to be used by the hooks.
+    /// It will tally up the required refund for each contribution as a fraction of UNAPPROVED milestones.
+    /// If a milestone has been approved then the funds WILL NOT be refunded. 
     pub fn add_refunds_to_queue(project_key: ProjectKey) -> DispatchResultWithPostInfo {
         let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
@@ -527,10 +529,6 @@ impl<T: Config> Pallet<T> {
         for (who, contribution) in project.contributions.iter() {
             let project_account_id = Self::project_account_id(project_key);
             
-            if project.fee_taken > BalanceOf::<T>::default() {
-                locked_milestone_percentage = locked_milestone_percentage.saturating_sub(T::PercentFeeOnApproval::get() as u32);                
-            }
-
             let refund_amount: BalanceOf<T> = 
                 ((contribution).value * (locked_milestone_percentage).into())
                 / MAX_PERCENTAGE.into();

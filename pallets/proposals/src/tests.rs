@@ -1753,6 +1753,8 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
     });
 }
 
+// What exactly does this mean xd.
+// 
 #[test]
 fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
@@ -1873,7 +1875,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         );
         assert_eq!(
             Balances::free_balance(&alice),
-            additional_amount - project.fee_taken + required_funds * (total_percentage_to_withdraw as u64) / 100
+            additional_amount - project.fee_taken + (required_funds * (total_percentage_to_withdraw as u64) / 100)
         );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
@@ -1886,7 +1888,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
                 alice,
                 project_key,
-                200000u64 - project.fee_taken,
+                200_000u64 - project.fee_taken,
                 CurrencyId::Native
             ))
         );
@@ -1901,6 +1903,8 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
 
         Proposals::refund(Origin::root(), project_key).unwrap();
 
+        // Total amount was 1_000_000 so 800_000 is left after a 200_000 withdraw.
+        // No fee taken as the milestone was not approved.
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
             .pop()
             .expect("Expected at least one EventRecord to be found")
@@ -1909,7 +1913,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             exp_projectfundsrefunded_event,
             mock::Event::from(proposals::Event::ProjectFundsAddedToRefundQueue(
                 project_key,
-                800000u64 - projesct.fee_taken
+                800_000u64
             ))
         );
 
@@ -2239,7 +2243,7 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         assert!(Currencies::free_balance(CurrencyId::Native, &charlie) == 250_000u64);
         assert!(Currencies::free_balance(CurrencyId::Native, &bob) == 750_000u64);
 
-        // approve and raise votees
+        // approve and raise votes.
         let _ = Proposals::approve(Origin::root(), Some(1), project_key, None).unwrap();
         let _ = Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key).unwrap();
         let _ = Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, false).unwrap();
@@ -2253,11 +2257,11 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
 
         // Wait blocks so that refunds occur;
         run_to_block(System::block_number() + 2);
+
         // assert that the voters have had their funds refunded.
-        let contribution_after_fee_charlie = 750_000u64 * (100 - <Test as Config>::PercentFeeOnApproval::get() as u64) / 100;
-        let contribution_after_fee_bob = 250_000u64 * (100 - <Test as Config>::PercentFeeOnApproval::get() as u64) / 100;
-        assert_eq!(Currencies::free_balance(CurrencyId::Native, &charlie), contribution_after_fee_charlie + 250_000);
-        assert_eq!(Currencies::free_balance(CurrencyId::Native, &bob), contribution_after_fee_bob + 750_000);
+        // The total amount is refunded as no milestones have been approved.
+        assert_eq!(Currencies::free_balance(CurrencyId::Native, &charlie), 1_000_000u64);
+        assert_eq!(Currencies::free_balance(CurrencyId::Native, &bob), 1_000_000u64);
     });
 
 }
