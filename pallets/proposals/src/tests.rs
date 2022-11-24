@@ -2310,7 +2310,7 @@ fn test_refunds_go_back_to_contributors() {
 #[test]
 fn test_refunds_state_is_handled_correctly() {
     build_test_externality().execute_with(|| {
-        let initiator = get_account_id_from_seed::<sr25519::Public>("TreasuryPot");
+        let initiator = get_account_id_from_seed::<sr25519::Public>("initiator");
         let mut accounts: Vec<<Test as frame_system::Config>::AccountId> = vec![];
         // Only works if 
         let num_of_refunds: u32 = 20;
@@ -2355,6 +2355,50 @@ fn test_refunds_state_is_handled_correctly() {
         }
 
         assert_eq!(Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)), 0u64);
+    });
+} 
+
+// Fees are taken on the approval of a milestone and act on a per milestone basis.
+#[test]
+fn test_treasury_recieves_exact_fee() {
+    build_test_externality().execute_with(|| {
+        let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+        let initiator = get_account_id_from_seed::<sr25519::Public>("initiator");
+        let project_key = 0u32;
+        let mut ms_1: ProposedMilestone = ProposedMilestone {
+            name: b"milestone"
+                .to_vec()
+                .try_into()
+                .expect("input should be of decent length"),
+            percentage_to_unlock: 50,
+        };
+        let mut ms_2 = ms_1.clone();
+        
+        ms_1.percentage_to_unlock = 60;
+        ms_2.percentage_to_unlock = 40;
+
+        let milestones = bounded_vec![ms_1.clone(), ms_2];
+        create_project_multiple_milestones(initiator, milestones);
+        
+        let _ = Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![0u32],
+            RoundType::ContributionRound
+        ).unwrap();
+        
+        let _ = Currencies::deposit(CurrencyId::Native, &bob, 2_000_000u64);
+        let _ = Proposals::contribute(Origin::signed(bob), Some(1), project_key, 1_000_000).unwrap();
+
+        let treasury_initial_balance = Currencies::free_balance(CurrencyId::Native, &<Test as Config>::TreasuryId::get());
+        // Approve one milestone to ensure that only the milestones fee is taken.
+        let _ = Proposals::approve(Origin::root(), Some(1), project_key, Some(bounded_vec![0])).unwrap();
+        let treasury_fee_taken_balance = Currencies::free_balance(CurrencyId::Native, &<Test as Config>::TreasuryId::get());
+
+        // Milestone 1 has been approved alas a fee should have been taken from 60% of total contribution amount only.
+        let fee_taken: u64 = <Test as Config>::PercentFeeOnApproval::get() as u64 * (ms_1.percentage_to_unlock as u64 * 1_000_000u64 / 100u64) / 100u64;
+        assert_eq!(treasury_fee_taken_balance - treasury_initial_balance, fee_taken);
     });
 } 
 

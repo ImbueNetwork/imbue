@@ -283,7 +283,8 @@ impl<T: Config> Pallet<T> {
                     Ok::<(), Error<T>>(())
                 })?;
 
-                let fee = Self::take_fee_from_pot(project_key, T::PercentFeeOnApproval::get(), total_contribution_amount / milestone.percentage_to_unlock.into(), project.currency_id)?;
+                let total_to_be_feed = total_contribution_amount * milestone.percentage_to_unlock.into() / 100u32.into();
+                let fee = Self::take_fee_from_pot(project_key, T::PercentFeeOnApproval::get(), total_to_be_feed, project.currency_id)?;
 
                 // Take the fee and remove from avaliable funds.
                 project.fee_taken += fee;
