@@ -88,7 +88,6 @@ pub fn development_local_config(environment: &str) -> ImbueKusamaChainSpec {
         ChainType::Local,
         move || {
             development_genesis(
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
                 vec![
                     (
                         get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -119,7 +118,6 @@ pub fn development_environment_config(environment: &str) -> ImbueKusamaChainSpec
         ChainType::Live,
         move || {
             development_genesis(
-                AccountId32::from_str("5DZpUh1ztshcL1Tx6nJrcn9Bnc1RkHc8GehP4eWdspMMqCyi").unwrap(),
                 vec![
                     (
                         hex!["17c93b50295e42ba30018fc8ec9e2793faff94b657541da184cc875d66f38cf0"]
@@ -197,7 +195,6 @@ pub fn get_dev_session_keys(keys: imbue_kusama_runtime::AuraId) -> imbue_kusama_
 }
 
 fn development_genesis(
-    root_key: AccountId,
     initial_authorities: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
     total_issuance: Option<imbue_kusama_runtime::Balance>,
@@ -236,9 +233,6 @@ fn development_genesis(
         },
         balances: imbue_kusama_runtime::BalancesConfig { balances: balances },
         orml_asset_registry: Default::default(),
-        sudo: imbue_kusama_runtime::SudoConfig {
-            key: Some(root_key),
-        },
         orml_tokens: imbue_kusama_runtime::OrmlTokensConfig {
             balances: token_balances,
         },
