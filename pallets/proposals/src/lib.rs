@@ -331,9 +331,9 @@ pub mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            if StorageVersion::<T>::get() == Release::V0 {
-                weight += migration::v1::migrate::<T>();
-                StorageVersion::<T>::set(Release::V1);
+            if StorageVersion::<T>::get() == Release::V1 {
+                weight += migration::v2::migrate::<T>();
+                StorageVersion::<T>::set(Release::V2);
             }
             weight
         }

@@ -3,7 +3,7 @@ use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, wei
 use crate::*;
 pub use pallet::*;
 
-mod v0 {
+pub mod v0 {
     use super::*;
     pub type ProjectV0Of<T> = ProjectV0<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>;
 
@@ -20,26 +20,50 @@ mod v0 {
         pub description: Vec<u8>,
         pub website: Vec<u8>,
         pub milestones: Vec<Milestone>,
-        /// A collection of the accounts which have contributed and their contributions.
         pub contributions: Vec<ContributionV0<AccountId, Balance>>,
         pub currency_id: common_types::CurrencyId,
         pub required_funds: Balance,
         pub withdrawn_funds: Balance,
-        /// The account that will receive the funds if the campaign is successful
         pub initiator: AccountId,
         pub create_block_number: BlockNumber,
         pub approved_for_funding: bool,
         pub funding_threshold_met: bool,
         pub cancelled: bool,
     }
-
+    
     #[storage_alias]
     pub type Projects<T: Config> =
         StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV0Of<T>, OptionQuery>;
 }
 
+// Depricated but maintained in case. I dont believe we have a need for this however
 pub mod v1 {
     use super::*;
+
+    pub type ProjectV1Of<T> = ProjectV1<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
+
+    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+    pub struct ProjectV1<AccountId, Balance, BlockNumber, Timestamp> {
+        pub name: Vec<u8>,
+        pub logo: Vec<u8>,
+        pub description: Vec<u8>,
+        pub website: Vec<u8>,
+        pub milestones: BTreeMap<MilestoneKey, Milestone>,
+        pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+        pub currency_id: common_types::CurrencyId,
+        pub required_funds: Balance,
+        pub withdrawn_funds: Balance,
+        pub raised_funds: Balance,
+        pub initiator: AccountId,
+        pub create_block_number: BlockNumber,
+        pub approved_for_funding: bool,
+        pub funding_threshold_met: bool,
+        pub cancelled: bool,
+    }
+    
+    #[storage_alias]
+    pub type Projects<T: Config> =
+        StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV1Of<T>, OptionQuery>;
 
     pub fn migrate<T: Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
@@ -77,12 +101,12 @@ pub mod v1 {
                 })
                 .collect::<Vec<_>>();
 
-            let migrated_project: Project<
+            let _migrated_project: ProjectV1<
                 T::AccountId,
                 BalanceOf<T>,
                 T::BlockNumber,
                 TimestampOf<T>,
-            > = Project {
+            > = ProjectV1 {
                 name: project.name,
                 logo: project.logo,
                 description: project.description,
@@ -98,11 +122,44 @@ pub mod v1 {
                 funding_threshold_met: project.funding_threshold_met,
                 cancelled: project.cancelled,
                 raised_funds: raised_funds,
+            };
+            None
+            // DEPRICATED
+            //Some(migrated_project)
+        });
+        weight
+    }
+}
 
+pub mod v2 {
+    use super::*;
+    use v1::ProjectV1;
 
-                //TODOOO
-                fee_taken: 0u32.into(),
+    pub type ProjectV2Of<T> = Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
 
+    pub fn migrate<T: Config>() -> Weight {
+        let mut weight: Weight = Default::default();
+
+        Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| { 
+            weight += T::DbWeight::get().reads_writes(1, 1);
+            let migrated_project = Project::<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>> {
+                name: project.name,
+                logo: project.logo,
+                description: project.description,
+                website: project.website,
+                milestones: project.milestones,
+                contributions: project.contributions,
+                required_funds: project.required_funds,
+                currency_id: project.currency_id,
+                withdrawn_funds: project.withdrawn_funds,
+                initiator: project.initiator,
+                create_block_number: project.create_block_number,
+                approved_for_funding: project.approved_for_funding,
+                funding_threshold_met: project.funding_threshold_met,
+                cancelled: project.cancelled,
+                raised_funds: project.raised_funds,
+                // Migrate over the new field fee taken set as default.
+                fee_taken: Default::default(),
             };
             Some(migrated_project)
         });
@@ -117,9 +174,10 @@ mod test {
     use sp_core::sr25519;
     use sp_std::vec::Vec;
     use v0::{ContributionV0, ProjectV0};
+    use v1::*;
 
     #[test]
-    fn migrate_v0_to_v1() {
+    fn migrate_v1_to_v2() {
         let contribution_value = 10_000_00u64;
 
         build_test_externality().execute_with(|| {
@@ -128,41 +186,13 @@ mod test {
 
             let project_key = 1;
 
-            let old_milestones = vec![
-                Milestone {
-                    project_key,
-                    milestone_key: 0,
-                    name: Vec::new(),
-                    percentage_to_unlock: 40,
-                    is_approved: true,
-                },
-                Milestone {
-                    project_key,
-                    milestone_key: 1,
-                    name: Vec::new(),
-                    percentage_to_unlock: 60,
-                    is_approved: true,
-                },
-            ];
-
-            let old_contributions = vec![
-                ContributionV0 {
-                    account_id: alice,
-                    value: contribution_value,
-                },
-                ContributionV0 {
-                    account_id: bob,
-                    value: contribution_value,
-                },
-            ];
-
-            let old_project = ProjectV0 {
-                name: b"Project Pre-migrations".to_vec(),
-                logo: b"logo".to_vec(),
-                description: b"description".to_vec(),
-                website: b"https://imbue.network".to_vec(),
-                milestones: old_milestones,
-                contributions: old_contributions,
+            let old_project = ProjectV1 {
+                name: b"Project Pre-migrations".to_vec().try_into().unwrap(),
+                logo: b"logo".to_vec().try_into().unwrap(),
+                description: b"description".to_vec().try_into().unwrap(),
+                website: b"https://imbue.network".to_vec().try_into().unwrap(),
+                milestones: BTreeMap::new(),
+                contributions: BTreeMap::new(),
                 currency_id: CurrencyId::KSM,
                 required_funds: (100_000_000u32).into(),
                 withdrawn_funds: (0u32).into(),
@@ -171,27 +201,28 @@ mod test {
                 approved_for_funding: true,
                 funding_threshold_met: true,
                 cancelled: false,
+                raised_funds: Default::default(),
             };
 
-            v0::Projects::<Test>::insert(project_key, &old_project);
-            let _ = v1::migrate::<Test>();
-            let migrated_project = Projects::<Test>::get(&project_key).unwrap();
+            v1::Projects::<Test>::insert(project_key, &old_project);
+            let _ = v2::migrate::<Test>();
+            let migrated_project = v1::Projects::<Test>::get(&project_key).unwrap();
 
             assert_eq!(old_project.name, migrated_project.name);
 
             assert_eq!(
-                &old_project.milestones[0],
+                &old_project.milestones[&0u32],
                 migrated_project.milestones.get(&0).unwrap()
-            );
-
-            assert_eq!(
-                &old_project.contributions[0].value,
-                &migrated_project.contributions.get(&alice).unwrap().value
             );
 
             assert_eq!(
                 contribution_value.saturating_mul(2),
                 migrated_project.raised_funds
+            );
+
+            assert_eq!(
+                Default::default(),
+                migrated_project.fee_taken
             );
         })
     }
