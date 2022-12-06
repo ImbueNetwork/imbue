@@ -133,9 +133,12 @@ pub mod v1 {
 
 pub mod v2 {
     use super::*;
-    use v1::ProjectV1;
+    use v1::{ProjectV1, ProjectV1Of};
 
-    pub type ProjectV2Of<T> = Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
+    #[storage_alias]
+    pub type Projects<T: Config> =
+        StorageMap<Pallet<T>, Identity, ProjectKey, Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>, OptionQuery>;
+
 
     pub fn migrate<T: Config>() -> Weight {
         let mut weight: Weight = Default::default();
@@ -173,8 +176,8 @@ mod test {
     use mock::*;
     use sp_core::sr25519;
     use sp_std::vec::Vec;
-    use v0::{ContributionV0, ProjectV0};
-    use v1::*;
+    use v1::{ProjectV1, ProjectV1Of};
+
 
     #[test]
     fn migrate_v1_to_v2() {
@@ -184,9 +187,9 @@ mod test {
             let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
             let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
 
-            let project_key = 1;
+            let project_key = 10;
 
-            let old_project = ProjectV1 {
+            let old_project = ProjectV1Of::<Test> {
                 name: b"Project Pre-migrations".to_vec().try_into().unwrap(),
                 logo: b"logo".to_vec().try_into().unwrap(),
                 description: b"description".to_vec().try_into().unwrap(),
@@ -203,10 +206,17 @@ mod test {
                 cancelled: false,
                 raised_funds: Default::default(),
             };
+            dbg!(&old_project);
 
             v1::Projects::<Test>::insert(project_key, &old_project);
+            dbg!(&v2::Projects::<Test>::iter_keys().collect::<Vec<_>>());
+            dbg!(&v1::Projects::<Test>::iter_keys().collect::<Vec<_>>());
+            dbg!(&Projects::<Test>::iter_keys().collect::<Vec<_>>());
+
+            
             let _ = v2::migrate::<Test>();
-            let migrated_project = v1::Projects::<Test>::get(&project_key).unwrap();
+            
+            let migrated_project = v2::Projects::<Test>::get(&project_key).unwrap();
 
             assert_eq!(old_project.name, migrated_project.name);
 
@@ -219,11 +229,12 @@ mod test {
                 contribution_value.saturating_mul(2),
                 migrated_project.raised_funds
             );
-
-            assert_eq!(
-                Default::default(),
-                migrated_project.fee_taken
-            );
+            dbg!(&migrated_project);
+            assert!(false);
+            //assert_eq!(
+            //    migrated_project.fee_taken,
+            //    Default::default()
+            //)
         })
     }
 }
