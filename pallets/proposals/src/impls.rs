@@ -414,8 +414,9 @@ impl<T: Config> Pallet<T> {
 
         // let the 100 x threshold required = total_votes * majority required
         let threshold_votes: BalanceOf<T> = project.raised_funds * T::PercentRequiredForVoteToPass::get().into();
+        let percent_multiple : BalanceOf<T> = 100u32.into();
         ensure!(
-             (vote.yay + vote.nay) >= threshold_votes,
+             (percent_multiple * (vote.yay + vote.nay)) >= threshold_votes,
             Error::<T>::MilestoneVotingNotComplete
         );
         if vote.yay > vote.nay {
