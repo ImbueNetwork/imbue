@@ -2344,6 +2344,57 @@ fn test_refunds_state_is_handled_correctly() {
     });
 } 
 
+// create project, schedule a round, approve and submit a milestone.
+// assert that the vote will pass when it is on the threshold.
+#[test]
+fn test_finalise_milestone_is_ok_on_threshold_vote() {
+    build_test_externality().execute_with(|| {
+        let initiator = get_account_id_from_seed::<sr25519::Public>("initiator");
+        let contyes = get_account_id_from_seed::<sr25519::Public>("cont1");
+        let contno = get_account_id_from_seed::<sr25519::Public>("cont2");
+        
+        create_project(initiator);
+        let _ = Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![0u32],
+            RoundType::ContributionRound
+        ).unwrap();
+
+        // Deposit and contribute up to the voting threshold so that it should pass.
+        let _ = Currencies::deposit(CurrencyId::Native, &contyes, 1_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &contno, 1_000_000u64);
+        
+        let yes_contribution = 1_000_000u64 / 100u64 * PercentRequiredForVoteToPass::get() as u64;
+        let no_contribution = 1_000_000u64 / 100u64 * (100u8 - PercentRequiredForVoteToPass::get()) as u64;
+
+        run_to_block(System::block_number() + 1);
+
+        let _ = Proposals::contribute(Origin::signed(contyes.clone()), Some(1), 0u32, yes_contribution).unwrap();
+        let _ = Proposals::contribute(Origin::signed(contno.clone()), Some(1), 0u32, no_contribution).unwrap();
+
+        run_to_block(System::block_number() + 100);
+
+        // Assert that threshold has been met
+        let _ = Proposals::approve(
+           Origin::root(),
+           Some(1),
+           0,
+           None
+        ).unwrap();
+
+        let _ = Proposals::submit_milestone(Origin::signed(initiator.clone()), 0, 0).unwrap();
+        
+        run_to_block(System::block_number() + 1);
+
+        let _ = Proposals::vote_on_milestone(Origin::signed(contyes.clone()), 0, 0, None, true).unwrap();
+        let _ = Proposals::vote_on_milestone(Origin::signed(contno.clone()), 0, 0, None, false).unwrap();
+
+        assert_ok!(Proposals::finalise_milestone_voting(Origin::signed(initiator), 0, 0));
+    })
+}
+
 
 //common helper methods
 fn create_project(account: AccountId) {
