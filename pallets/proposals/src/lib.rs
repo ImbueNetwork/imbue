@@ -302,6 +302,7 @@ pub mod pallet {
         RoundNotProcessing,
         /// Round has been cancelled.
         RoundCanceled,
+        /// The start block number is invalid.
         StartBlockNumberInvalid,
         /// You have already voted on this round.
         VoteAlreadyExists,
@@ -317,6 +318,9 @@ pub mod pallet {
         VoteThresholdNotMet,
         /// The project must be approved.
         ProjectApprovalRequired,
+        /// The round type specified is invalid.
+        InvalidRoundType
+        ///
     }
 
     #[pallet::hooks]
