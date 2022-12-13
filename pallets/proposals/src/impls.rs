@@ -164,11 +164,12 @@ impl<T: Config> Pallet<T> {
             round.start <= now,
             Error::<T>::StartBlockNumberInvalid
 
-        )
+        );
+        
         ensure!(
             round.end >= now,
             Error::<T>::EndBlockNumberInvalid
-        )
+        );
 
         ensure!(
             round.project_keys.contains(&project_key),
@@ -353,11 +354,12 @@ impl<T: Config> Pallet<T> {
             round.start < now,
             Error::<T>::StartBlockNumberInvalid
 
-        )
+        );
+        
         ensure!(
             round.end > now,
             Error::<T>::EndBlockNumberInvalid
-        )
+        );
 
         ensure!(
             round.project_keys.contains(&project_key),
