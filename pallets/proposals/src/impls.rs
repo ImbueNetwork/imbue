@@ -154,12 +154,21 @@ impl<T: Config> Pallet<T> {
 
         // round list must be not none
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
+        
         ensure!(
-            round.round_type == RoundType::ContributionRound
-                && round.start <= now
-                && round.end >= now,
-            Error::<T>::RoundNotProcessing
+            round.round_type == RoundType::ContributionRound,
+            Error::<T>::InvalidRoundType
         );
+
+        ensure!(
+            round.start <= now,
+            Error::<T>::StartBlockNumberInvalid
+
+        )
+        ensure!(
+            round.end >= now,
+            Error::<T>::EndBlockNumberInvalid
+        )
 
         ensure!(
             round.project_keys.contains(&project_key),
