@@ -954,6 +954,9 @@ fn test_voting_on_a_cancelled_round() {
         ));
 
         run_to_block(5);
+
+        // A strange test as voting on a milestone is not permitted during a contribution round, only a voting round.
+        // Todo:? test that contribution is not allowed after the round is cancelled.
         let milestone_key = 0;
         assert_noop!(
             Proposals::vote_on_milestone(
@@ -968,7 +971,7 @@ fn test_voting_on_a_cancelled_round() {
                     actual_weight: None,
                     pays_fee: Pays::Yes,
                 },
-                error: Error::<Test>::RoundNotProcessing.into(),
+                error: Error::<Test>::InvalidRoundType.into(),
             }
         );
 
