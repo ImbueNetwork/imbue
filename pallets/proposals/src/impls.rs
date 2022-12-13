@@ -336,9 +336,20 @@ impl<T: Config> Pallet<T> {
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
-            round.round_type == RoundType::VotingRound && round.start < now && round.end > now,
-            Error::<T>::RoundNotProcessing
+            round.round_type == RoundType::VotingRound,
+            Error::<T>::InvalidRoundType
         );
+
+        ensure!(
+            round.start < now,
+            Error::<T>::StartBlockNumberInvalid
+
+        )
+        ensure!(
+            round.end > now,
+            Error::<T>::EndBlockNumberInvalid
+        )
+
         ensure!(
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
