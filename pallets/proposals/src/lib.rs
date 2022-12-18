@@ -35,6 +35,9 @@ pub mod migration;
 pub mod impls;
 pub use impls::*;
 
+pub mod traits;
+pub use traits;
+
 // The Constants associated with the bounded parameters
 type MaxStringFieldLen = ConstU32<255>;
 type MaxProjectKeysPerRound = ConstU32<1000>;
@@ -98,6 +101,11 @@ pub mod pallet {
         /// Defines the amount of refunds that occur in the on initialise method.
         /// Does not include the remaining refunds that may occur in the on_idle hook.
         type RefundsPerBlock: Get<u8>;
+
+        /// Minimum and maximun contribution allowed on all projects.
+        type MaxContribution = Get<BalanceOf<Self>>;
+        type MinimumContribution  Get<BalanceOf<Self>>;
+
     }
 
     #[pallet::type_value]
@@ -317,6 +325,8 @@ pub mod pallet {
         VoteThresholdNotMet,
         /// The project must be approved.
         ProjectApprovalRequired,
+        /// The contribution amount is invalid.
+        InvalidContributionAmount,
     }
 
     #[pallet::hooks]
@@ -548,6 +558,11 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let contribution_round_key = round_key.unwrap_or(RoundCount::<T>::get());
+
+            // Ensure that it is within contribution bounds.
+            ensure!(value >= T::MinimumContribution::get(), T::InvalidContributionAmount);
+            ensure!(value <= T::MaximumContributions::get(), T::InvalidContributionAmount);
+
             Self::new_contribution(who, contribution_round_key, project_key, value)
         }
 
@@ -844,6 +859,8 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     funding_threshold_met: bool,
     cancelled: bool,
 }
+
+
 
 /// The contribution users made to a proposal project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
