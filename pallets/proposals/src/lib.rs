@@ -35,9 +35,6 @@ pub mod migration;
 pub mod impls;
 pub use impls::*;
 
-pub mod traits;
-pub use traits;
-
 // The Constants associated with the bounded parameters
 type MaxStringFieldLen = ConstU32<255>;
 type MaxProjectKeysPerRound = ConstU32<1000>;
@@ -103,8 +100,8 @@ pub mod pallet {
         type RefundsPerBlock: Get<u8>;
 
         /// Minimum and maximun contribution allowed on all projects.
-        type MaxContribution = Get<BalanceOf<Self>>;
-        type MinimumContribution  Get<BalanceOf<Self>>;
+        type MaximumContribution: Get<BalanceOf<Self>>;
+        type MinimumContribution:  Get<BalanceOf<Self>>;
 
     }
 
@@ -560,8 +557,8 @@ pub mod pallet {
             let contribution_round_key = round_key.unwrap_or(RoundCount::<T>::get());
 
             // Ensure that it is within contribution bounds.
-            ensure!(value >= T::MinimumContribution::get(), T::InvalidContributionAmount);
-            ensure!(value <= T::MaximumContributions::get(), T::InvalidContributionAmount);
+            ensure!(value >= T::MinimumContribution::get(), Error::<T>::InvalidContributionAmount);
+            ensure!(value <= T::MaximumContribution::get(), Error::<T>::InvalidContributionAmount);
 
             Self::new_contribution(who, contribution_round_key, project_key, value)
         }

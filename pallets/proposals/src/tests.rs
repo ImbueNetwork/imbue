@@ -2348,7 +2348,6 @@ fn test_contributions_is_bounded_max() {
     build_test_externality().execute_with(|| {
         let contributor = get_account_id_from_seed::<sr25519::Public>("contributior");
         let initiator = get_account_id_from_seed::<sr25519::Public>("initiator");
-        let num_of_refunds: u32 = 20;
 
         create_project(initiator);
         let _ = Proposals::schedule_round(
@@ -2359,17 +2358,16 @@ fn test_contributions_is_bounded_max() {
             RoundType::ContributionRound
         ).unwrap();
 
-        let _ = Currencies::deposit(CurrencyId::Native, &contributor.clone(), 2u64 * MaxContribution::get());
-        assert_noop!(Proposals::contribute(Origin::signed(contributor), Some(1), 0u32, MaxContribution::get() + 10u64).unwrap(), T::InvalidContributionAmount);
+        let _ = Currencies::deposit(CurrencyId::Native, &contributor.clone(), 2u64 * MaximumContribution::get());
+        assert_noop!(Proposals::contribute(Origin::signed(contributor), Some(1), 0u32, MaximumContribution::get() + 10u64), Error::<Test>::InvalidContributionAmount);
     });
 }
 
 #[test]
-fn test_contributions_is_bounded_max() {
+fn test_contributions_is_bounded_min() {
     build_test_externality().execute_with(|| {
         let contributor = get_account_id_from_seed::<sr25519::Public>("contributior");
         let initiator = get_account_id_from_seed::<sr25519::Public>("initiator");
-        let num_of_refunds: u32 = 20;
 
         create_project(initiator);
         let _ = Proposals::schedule_round(
@@ -2380,8 +2378,8 @@ fn test_contributions_is_bounded_max() {
             RoundType::ContributionRound
         ).unwrap();
 
-        let _ = Currencies::deposit(CurrencyId::Native, &contributor.clone(), MaxContribution::get());
-        assert_noop!(Proposals::contribute(Origin::signed(contributor), Some(1), 0u32, MinimumContribution::get() - 10u64).unwrap(), T::InvalidContributionAmount);
+        let _ = Currencies::deposit(CurrencyId::Native, &contributor.clone(), MaximumContribution::get());
+        assert_noop!(Proposals::contribute(Origin::signed(contributor), Some(1), 0u32, MinimumContribution::get() - 10u64), Error::<Test>::InvalidContributionAmount);
     });
 }
 

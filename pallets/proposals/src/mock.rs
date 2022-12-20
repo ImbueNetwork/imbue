@@ -209,8 +209,8 @@ parameter_types! {
     pub PercentRequiredForVoteToPass: u8 = 75u8;
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
-    pub MinimumContribution: Balance = 1000u64; 
-    pub MaximumContributions: Balance =  100_000_000u64;
+    pub MinimumContribution: Balance = 100u64; 
+    pub MaximumContribution: Balance =  100_000_000u64;
 }
 impl proposals::Config for Test {
     type Event = Event;
@@ -226,7 +226,7 @@ impl proposals::Config for Test {
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type RefundsPerBlock = RefundsPerBlock;
     type MinimumContribution = MinimumContribution;
-    type MaximumContributions = MaximumContributions;
+    type MaximumContribution = MaximumContribution;
 }
 
 parameter_types! {
