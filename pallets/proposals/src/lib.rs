@@ -606,6 +606,7 @@ pub mod pallet {
             project_key: ProjectKey,
             milestone_key: MilestoneKey,
         ) -> DispatchResultWithPostInfo {
+            // Must be the initiator.
             let who = ensure_signed(origin)?;
             Self::do_finalise_milestone_voting(who, project_key, milestone_key)
         }
