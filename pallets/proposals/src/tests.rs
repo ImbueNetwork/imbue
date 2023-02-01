@@ -2449,8 +2449,8 @@ fn update_an_existing_project() {
         percentage_to_unlock: 30,
     };
 
-    updated_proposed_milestones.push(milestone1);
-    updated_proposed_milestones.push(milestone2);
+    updated_proposed_milestones.push(updated_milestone1);
+    updated_proposed_milestones.push(updated_milestone2);
 
 
 
@@ -2462,7 +2462,7 @@ fn update_an_existing_project() {
         let project_key = 0;
 
 
-        Proposals::update_project(Origin::signed(alice), project_key, updated_proposed_milestones, updated_required_funds);
+        Proposals::update_project(Origin::signed(alice), project_key, updated_proposed_milestones.try_into().expect("Invalid proposed milestones"), updated_required_funds);
 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
