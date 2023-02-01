@@ -2395,6 +2395,86 @@ fn test_finalise_milestone_is_ok_on_threshold_vote() {
     })
 }
 
+#[test]
+//update project required funds and milestones - positive test case
+fn update_an_existing_project() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let project_name = b"Farmer's Project Sudan".to_vec();
+    let additional_amount = 100000000u64;
+    let updated_required_funds = 2_500_000u64;
+    let milestone1_key = 0;
+    let milestone2_key = 1;
+    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
+    let milestone1: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 1"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 20,
+    };
+    let milestone2: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 2"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 30,
+    };
+
+    let milestone3: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 3"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 50,
+    };
+    proposed_milestones.push(milestone1);
+    proposed_milestones.push(milestone2);
+    proposed_milestones.push(milestone3);
+
+
+    let mut updated_proposed_milestones: Vec<ProposedMilestone> = Vec::new();
+    let updated_milestone1: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 1"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 70,
+    };
+    let updated_milestone2: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 2"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 30,
+    };
+
+    updated_proposed_milestones.push(milestone1);
+    updated_proposed_milestones.push(milestone2);
+
+
+
+
+    build_test_externality().execute_with(|| {
+        deposit_initial_balance(&alice, &bob, additional_amount);
+        create_project_multiple_milestones(alice, proposed_milestones);
+
+        let project_key = 0;
+
+
+        Proposals::update_project(Origin::signed(alice), project_key, updated_proposed_milestones, updated_required_funds);
+
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            latest_event,
+            mock::Event::from(proposals::Event::ProjectUpdated(alice, project_name, project_key, updated_required_funds))
+        );
+
+    });
+}
 
 //common helper methods
 fn create_project(account: AccountId) {

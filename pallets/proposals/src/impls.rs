@@ -101,6 +101,66 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+//update new project
+pub fn update_existing_project(
+    who: T::AccountId,
+    project_key: ProjectKey,
+    proposed_milestones: BoundedProposedMilestones,
+    required_funds: BalanceOf<T>,
+) -> DispatchResultWithPostInfo {
+    // Check if identity is required
+    if IsIdentityRequired::<T>::get() {
+        let _ = Self::ensure_identity_is_decent(&who)?;
+    }
+
+    //check to ensure valid and existing project
+    let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
+    ensure!(
+    project.approved_for_funding == false,
+    Error::<T>::ProjectAlreadyApproved
+    );
+
+    let mut milestone_key: u32 = 0;
+
+    let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+
+    let project_name = project.name.to_vec();
+
+    // Fill in the projects structure in advance
+    for milestone in proposed_milestones {
+        let milestone = Milestone { 
+            project_key,
+            milestone_key,
+            name: milestone.name.to_vec(),
+            percentage_to_unlock: milestone.percentage_to_unlock,
+            is_approved: false,
+        };
+        milestones.insert(milestone_key.clone(), milestone.clone());
+        milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
+    }
+
+    // Update project
+    //1st - Update project milestones
+    project.milestones = milestones;
+
+    //2nd - Update funds required for project
+    project.required_funds = required_funds;
+
+    // Add project to list
+    <Projects<T>>::insert(project_key, project);
+
+    Self::deposit_event(Event::ProjectUpdated(
+        who,
+        project_name,
+        project_key,
+        required_funds,
+    ));
+
+    Ok(().into())
+}
+
+
     pub fn new_round(
         start: T::BlockNumber,
         end: T::BlockNumber,
