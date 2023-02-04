@@ -105,8 +105,13 @@ impl<T: Config> Pallet<T> {
 pub fn update_existing_project(
     who: T::AccountId,
     project_key: ProjectKey,
+    name: BoundedStringField,
+    logo: BoundedStringField,
+    description: BoundedDescriptionField,
+    website: BoundedWebsiteUrlField,
     proposed_milestones: BoundedProposedMilestones,
     required_funds: BalanceOf<T>,
+    currency_id: common_types::CurrencyId,
 ) -> DispatchResultWithPostInfo {
     // Check if identity is required
     if IsIdentityRequired::<T>::get() {
@@ -125,8 +130,6 @@ pub fn update_existing_project(
 
     let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
 
-    let project_name = project.name.to_vec();
-
     // Fill in the projects structure in advance
     for milestone in proposed_milestones {
         let milestone = Milestone { 
@@ -141,18 +144,28 @@ pub fn update_existing_project(
     }
 
     // Update project
-    //1st - Update project milestones
+    //Update project name
+    project.name = name.to_vec();
+    //Update project logo
+    project.logo = logo.to_vec();
+    //Update project description
+    project.description = description.to_vec();
+    //Update project website
+    project.website = website.to_vec();
+    //Update project milestones
     project.milestones = milestones;
-
-    //2nd - Update funds required for project
+    //Update funds required for project
     project.required_funds = required_funds;
+    //Update currency id for funds
+    project.currency_id = currency_id;
+
 
     // Add project to list
     <Projects<T>>::insert(project_key, project);
 
     Self::deposit_event(Event::ProjectUpdated(
         who,
-        project_name,
+        name.to_vec(),
         project_key,
         required_funds,
     ));
