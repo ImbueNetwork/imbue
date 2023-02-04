@@ -464,8 +464,13 @@ pub mod pallet {
         pub fn update_project(
             origin: OriginFor<T>,
             project_key: ProjectKey,
+            name: BoundedStringField,
+            logo: BoundedStringField,
+            description: BoundedDescriptionField,
+            website: BoundedWebsiteUrlField,
             proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
+            currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             
@@ -481,8 +486,13 @@ pub mod pallet {
             Self::update_existing_project(
                 who,
                 project_key,
+                name,
+                logo,
+                description,
+                website,
                 proposed_milestones,
                 required_funds,
+                currency_id,
             )
         }
 

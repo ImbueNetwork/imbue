@@ -5,7 +5,7 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{
     assert_noop, assert_ok, bounded_btree_map, bounded_vec, dispatch::DispatchErrorWithPostInfo,
-    weights::PostDispatchInfo, log::info
+    weights::PostDispatchInfo
 };
 use sp_core::sr25519;
 use sp_std::vec::Vec;
@@ -2400,11 +2400,13 @@ fn test_finalise_milestone_is_ok_on_threshold_vote() {
 fn update_an_existing_project() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let project_name = b"Farmer's Project Sudan".to_vec();
+    let updated_project_name = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
+    let expected_project_name_in_event = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
+    let updated_project_logo = b"Some logo".to_vec().try_into().expect("Invalid input");
+    let updated_project_description = b"Raise funds for Farmer's project phase 2".to_vec().try_into().expect("Invalid input");
+    let updated_project_website = b"www.ab.com".to_vec().try_into().expect("Invalid input");
     let additional_amount = 100000000u64;
     let updated_required_funds = 2_500_000u64;
-    let milestone1_key = 0;
-    let milestone2_key = 1;
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
         name: b"milestone 1"
@@ -2462,7 +2464,17 @@ fn update_an_existing_project() {
         let project_key = 0;
 
 
-        Proposals::update_project(Origin::signed(alice), project_key, updated_proposed_milestones.try_into().expect("Invalid proposed milestones"), updated_required_funds);
+        assert_ok!(Proposals::update_project(
+            Origin::signed(alice), 
+            project_key,
+            updated_project_name,
+            updated_project_logo,
+            updated_project_description,
+            updated_project_website,
+            updated_proposed_milestones.try_into().expect("Invalid proposed milestones"), 
+            updated_required_funds,
+            CurrencyId::Native,
+        ));
 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -2470,7 +2482,7 @@ fn update_an_existing_project() {
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectUpdated(alice, project_name, project_key, updated_required_funds))
+            mock::Event::from(proposals::Event::ProjectUpdated(alice, expected_project_name_in_event, project_key, updated_required_funds))
         );
 
     });
