@@ -201,8 +201,8 @@ pub mod xcm_fees {
 /// AssetRegistry's AssetProcessor
 pub mod asset_registry {
     use super::types::{AccountId, Balance};
-    use codec::{Decode, Encode};
     use common_types::{CurrencyId, CustomMetadata};
+    use codec::{Decode, Encode};
     use frame_support::{
         dispatch::RawOrigin,
         sp_std::marker::PhantomData,
@@ -211,6 +211,30 @@ pub mod asset_registry {
     use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
     use scale_info::TypeInfo;
     use sp_runtime::DispatchError;
+
+    #[derive(
+    Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo,
+    )]
+    pub struct CustomAssetProcessor;
+
+    impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for CustomAssetProcessor {
+        fn pre_register(
+            id: Option<CurrencyId>,
+            metadata: AssetMetadata<Balance, CustomMetadata>,
+        ) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata>), DispatchError> {
+            match id {
+                Some(id) => Ok((id, metadata)),
+                None => Err(DispatchError::Other("asset-registry: AssetId is required")),
+            }
+        }
+
+        fn post_register(
+            _id: CurrencyId,
+            _asset_metadata: AssetMetadata<Balance, CustomMetadata>,
+        ) -> Result<(), DispatchError> {
+            Ok(())
+        }
+    }
 
     /// The OrmlAssetRegistry::AuthorityOrigin impl
     pub struct AuthorityOrigin<
@@ -222,10 +246,9 @@ pub mod asset_registry {
     >(PhantomData<(Origin, DefaultEnsureOrigin)>);
 
     impl<
-            Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
-            DefaultEnsureOrigin: EnsureOrigin<Origin>,
-        > EnsureOriginWithArg<Origin, Option<CurrencyId>>
-        for AuthorityOrigin<Origin, DefaultEnsureOrigin>
+        Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
+        DefaultEnsureOrigin: EnsureOrigin<Origin>,
+    > EnsureOriginWithArg<Origin, Option<CurrencyId>> for AuthorityOrigin<Origin, DefaultEnsureOrigin>
     {
         type Success = ();
 
@@ -245,7 +268,6 @@ pub mod asset_registry {
         }
     }
 }
-
 pub mod common_xcm {
     use super::types::Balance;
     use common_types::{CurrencyId, CustomMetadata};

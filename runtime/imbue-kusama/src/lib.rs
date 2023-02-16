@@ -640,27 +640,15 @@ impl orml_tokens::Config for Runtime {
 }
 
 
-pub struct AssetAuthority;
-impl EnsureOriginWithArg<RuntimeOrigin, Option<u32>> for AssetAuthority {
-    type Success = ();
-
-    fn try_origin(origin: RuntimeOrigin, _asset_id: &Option<u32>) -> Result<Self::Success, RuntimeOrigin> {
-        EnsureRootOr<HalfOfCouncil>::try_origin(origin)
-    }
-}
-
 impl orml_asset_registry::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
-    type AssetId = u32;
-    type AuthorityOrigin = AssetAuthority;
+    type AssetId = CurrencyId;
+    type AuthorityOrigin = asset_registry::AuthorityOrigin<RuntimeOrigin, EnsureRootOr<HalfOfCouncil>>;
     type CustomMetadata = CustomMetadata;
-    type AssetProcessor = orml_asset_registry::SequentialId<Runtime>;
+    type AssetProcessor = asset_registry::CustomAssetProcessor;
     type WeightInfo = ();
 }
-
-
-
 
 pub type Amount = i128;
 

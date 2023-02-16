@@ -46,6 +46,7 @@ use xcm_executor::XcmExecutor;
 
 use pallet_collective::EnsureProportionAtLeast;
 use polkadot_parachain::primitives::Sibling;
+use sp_runtime::DispatchError;
 
 parameter_types! {
     // One XCM operation is 100_000_000 weight - almost certainly a conservative estimate.
@@ -138,10 +139,9 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
     LocationToAccountId,
     CurrencyId,
     CurrencyIdConvert,
-    DepositToAlternative<TreasuryAccount, Currencies, AssetId, AccountId, Balance>,
+    DepositFailureHandler,
+    // DepositToAlternative<TreasuryAccount, Currencies, AssetId, AccountId, Balance>,
 >;
-
-
 
 pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
@@ -244,6 +244,20 @@ impl orml_xcm::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type SovereignOrigin = MoreThanHalfCouncil;
 }
+
+pub struct DepositFailureHandler;
+
+impl<CurrencyId, AccountId, Balance> orml_xcm_support::OnDepositFail<CurrencyId, AccountId, Balance> for DepositFailureHandler {
+    fn on_deposit_currency_fail(
+        err: DispatchError,
+        _currency_id: CurrencyId,
+        _who: &AccountId,
+        _amount: Balance,
+    ) -> xcm::latest::Result {
+        Err(XcmError::FailedToTransactAsset(err.into()))
+    }
+}
+
 
 /// CurrencyIdConvert
 /// This type implements conversions from our `CurrencyId` type into `MultiLocation` and vice-versa.
