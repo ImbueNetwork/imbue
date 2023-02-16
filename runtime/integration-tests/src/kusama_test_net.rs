@@ -40,7 +40,7 @@ decl_test_relay_chain! {
 decl_test_parachain! {
     pub struct Development {
         Runtime = imbue_kusama_runtime::Runtime,
-        Origin = imbue_kusama_runtime::Origin,
+        RuntimeOrigin = imbue_kusama_runtime::RuntimeOrigin,
         XcmpMessageHandler = imbue_kusama_runtime::XcmpQueue,
         DmpMessageHandler = imbue_kusama_runtime::DmpQueue,
         new_ext = para_ext(PARA_ID_DEVELOPMENT),
@@ -50,7 +50,7 @@ decl_test_parachain! {
 decl_test_parachain! {
     pub struct Sibling {
         Runtime = imbue_kusama_runtime::Runtime,
-        Origin = imbue_kusama_runtime::Origin,
+        RuntimeOrigin = imbue_kusama_runtime::RuntimeOrigin,
         XcmpMessageHandler = imbue_kusama_runtime::XcmpQueue,
         DmpMessageHandler = imbue_kusama_runtime::DmpQueue,
         new_ext = para_ext(PARA_ID_SIBLING),
@@ -60,7 +60,7 @@ decl_test_parachain! {
 decl_test_parachain! {
     pub struct Karura {
         Runtime = imbue_kusama_runtime::Runtime,
-        Origin = imbue_kusama_runtime::Origin,
+        RuntimeOrigin = imbue_kusama_runtime::RuntimeOrigin,
         XcmpMessageHandler = imbue_kusama_runtime::XcmpQueue,
         DmpMessageHandler = imbue_kusama_runtime::DmpQueue,
         new_ext = para_ext(PARA_ID_KARURA),

@@ -1,7 +1,7 @@
 use common_runtime::Balance;
 use common_types::currency_decimals;
 use frame_support::traits::GenesisBuild;
-pub use imbue_kusama_runtime::{AccountId, CurrencyId, Origin, Runtime, System};
+pub use imbue_kusama_runtime::{AccountId, CurrencyId, RuntimeOrigin, Runtime, System};
 /// Accounts
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];

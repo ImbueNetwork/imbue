@@ -44,4 +44,4 @@ common-types = { path = "../../libs/common-types", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
-#xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", branch = "polkadot-v0.9.37" }
+xcm-emulator = { git = "https://github.com/imbuenetwork/xcm-simulator", branch = "polkadot-v0.9.37" }

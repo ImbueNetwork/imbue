@@ -25,7 +25,7 @@ use crate::setup::{
 use common_runtime::Balance;
 use common_types::CurrencyId;
 use imbue_kusama_runtime::{
-    AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, Origin,
+    AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, RuntimeOrigin,
     OrmlTokens, XTokens,
 };
 use orml_traits::MultiCurrency;
@@ -49,7 +49,7 @@ fn transfer_native_to_sibling() {
 
     Development::execute_with(|| {
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::Native,
             transfer_amount,
             Box::new(
@@ -65,7 +65,7 @@ fn transfer_native_to_sibling() {
                 )
                 .into()
             ),
-            1_000_000_000,
+            xcm_emulator::Limited(1_000_000_000),
         ));
 
         // Confirm that Alice's balance is initial balance - amount transferred
@@ -128,7 +128,7 @@ fn transfer_ausd_to_development() {
 
     Karura::execute_with(|| {
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::AUSD,
             transfer_amount,
             Box::new(
@@ -144,7 +144,7 @@ fn transfer_ausd_to_development() {
                 )
                 .into()
             ),
-            8_000_000_000,
+            xcm_emulator::Limited(8_000_000_000),
         ));
 
         assert_eq!(
@@ -209,7 +209,7 @@ fn transfer_kar_to_development() {
 
     Karura::execute_with(|| {
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::KAR,
             transfer_amount,
             Box::new(
@@ -225,7 +225,7 @@ fn transfer_kar_to_development() {
                 )
                 .into()
             ),
-            8_000_000_000,
+            xcm_emulator::Limited(8_000_000_000),
         ));
 
         assert_eq!(
@@ -255,7 +255,7 @@ fn transfer_from_relay_chain() {
 
     KusamaNet::execute_with(|| {
         assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
-            kusama_runtime::Origin::signed(ALICE.into()),
+            kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
             Box::new(Parachain(PARA_ID_DEVELOPMENT).into().into()),
             Box::new(
                 Junction::AccountId32 {
@@ -282,7 +282,7 @@ fn transfer_from_relay_chain() {
 fn transfer_ksm_to_relay_chain() {
     Development::execute_with(|| {
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::KSM,
             ksm_amount(1),
             Box::new(
@@ -295,7 +295,7 @@ fn transfer_ksm_to_relay_chain() {
                 )
                 .into()
             ),
-            4_000_000_000
+            xcm_emulator::Limited(4_000_000_000)
         ));
     });
 
