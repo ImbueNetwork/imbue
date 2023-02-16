@@ -9,7 +9,7 @@ use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use imbue_kusama_runtime::{Block, RuntimeApi};
+use imbue_kusama_runtime::{Block};
 use log::info;
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -19,7 +19,7 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 use std::net::SocketAddr;
-use parachains_common::AuraId;
+
 const DEFAULT_PARA_ID: u32 = 2121;
 
 enum ChainIdentity {

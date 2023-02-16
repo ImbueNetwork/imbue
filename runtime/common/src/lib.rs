@@ -269,11 +269,11 @@ pub mod asset_registry {
     }
 }
 pub mod common_xcm {
-    use super::types::Balance;
-    use common_types::{CurrencyId, CustomMetadata};
-    use frame_support::sp_std::marker::PhantomData;
+    
+    
+    
     use sp_runtime::{traits::ConstU32, WeakBoundedVec};
-    use xcm::latest::MultiLocation;
+    
     use xcm::opaque::v2::Junction::GeneralKey;
 
     pub fn general_key(key: &[u8]) -> xcm::v2::Junction {

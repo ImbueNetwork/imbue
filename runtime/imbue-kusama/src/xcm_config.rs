@@ -18,7 +18,7 @@ pub use frame_support::{
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{FixedConversionRateProvider, location::AbsoluteReserveProvider, parameter_type_with_key};
 use orml_xcm_support::{
-    DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
+    IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
 
 pub use common_runtime::{
@@ -56,7 +56,7 @@ parameter_types! {
 
 use super::{
     AccountId, Balance, CouncilCollective, Currencies, OrmlAssetRegistry,
-    ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, TreasuryAccount,UnknownTokens,
+    ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,UnknownTokens,
     XcmpQueue,
 };
 

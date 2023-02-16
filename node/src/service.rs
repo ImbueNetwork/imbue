@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-use codec::Codec;
+
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::{
-    ParachainBlockImport as TParachainBlockImport, ParachainCandidate, ParachainConsensus,
+    ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
 };
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
@@ -26,40 +26,36 @@ use cumulus_client_service::{
     StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::{
-    relay_chain::v2::{Hash as PHash, PersistedValidationData},
     ParaId,
 };
 use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface};
-use sp_core::Pair;
+
 
 use jsonrpsee::RpcModule;
 
 use crate::rpc;
 pub use parachains_common::{AccountId, Balance, Block, BlockNumber, Hash, Header, Index as Nonce};
 
-use cumulus_client_consensus_relay_chain::Verifier as RelayChainVerifier;
-use futures::lock::Mutex;
+
+
 use sc_consensus::{
-    import_queue::{BasicQueue, Verifier as VerifierT},
-    BlockImportParams, ImportQueue,
+    ImportQueue,
 };
 use sc_executor::WasmExecutor;
 use sc_network::NetworkService;
 use sc_network_common::service::NetworkBlock;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_api::{ApiExt, ConstructRuntimeApi};
-use sp_consensus::CacheKeyId;
-use sp_consensus_aura::AuraApi;
+use sp_api::{ConstructRuntimeApi};
+
+
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::{
-    app_crypto::AppKey,
-    generic::BlockId,
     traits::{BlakeTwo256, Header as HeaderT},
 };
-use std::{marker::PhantomData, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
-use sc_executor::NativeElseWasmExecutor;
+
 
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
