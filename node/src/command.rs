@@ -19,6 +19,7 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 use std::net::SocketAddr;
+use parachains_common::AuraId;
 const DEFAULT_PARA_ID: u32 = 2121;
 
 enum ChainIdentity {
@@ -144,20 +145,59 @@ impl SubstrateCli for RelayChainCli {
     }
 }
 
+
+// /// Creates partial components for the runtimes that are supported by the benchmarks.
+// macro_rules! construct_benchmark_partials {
+// 	($config:expr, |$partials:ident| $code:expr) => {
+// 		match $config.chain_spec.runtime() {
+// 			Runtime::Statemine => {
+// 				let $partials = new_partial::<statemine_runtime::RuntimeApi, _>(
+// 					&$config,
+// 					crate::service::aura_build_import_queue::<_, AuraId>,
+// 				)?;
+// 				$code
+// 			},
+// 			Runtime::Westmint => {
+// 				let $partials = new_partial::<westmint_runtime::RuntimeApi, _>(
+// 					&$config,
+// 					crate::service::aura_build_import_queue::<_, AuraId>,
+// 				)?;
+// 				$code
+// 			},
+// 			Runtime::Statemint => {
+// 				let $partials = new_partial::<statemint_runtime::RuntimeApi, _>(
+// 					&$config,
+// 					crate::service::aura_build_import_queue::<_, StatemintAuraId>,
+// 				)?;
+// 				$code
+// 			},
+// 			Runtime::CollectivesPolkadot | Runtime::CollectivesWestend => {
+// 				let $partials = new_partial::<collectives_polkadot_runtime::RuntimeApi, _>(
+// 					&$config,
+// 					crate::service::aura_build_import_queue::<_, AuraId>,
+// 				)?;
+// 				$code
+// 			},
+// 			_ => Err("The chain is not supported".into()),
+// 		}
+// 	};
+// }
+
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
 		match runner.config().chain_spec.identify() {
 			ChainIdentity::ImbueKusama => {
-				runner.async_run(|$config| {
-					let $components = new_partial::<RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
+		runner.async_run(|$config| {
+					let $components = new_partial::<imbue_kusama_runtime::RuntimeApi, _>(
 						&$config,
-						crate::service::build_kusama_import_queue,
+						crate::service::kusama_parachain_build_import_queue,
 					)?;
 					let task_manager = $components.task_manager;
 					{ $( $code )* }.map(|v| (v, task_manager))
 				})
-			}
+			},
+
 		}
 	}}
 }
@@ -245,22 +285,23 @@ pub fn run() -> Result<()> {
                     }
                 }
                 BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
-                    let partials = new_partial::<RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
+                    let partials = new_partial::<imbue_kusama_runtime::RuntimeApi, _>(
                         &config,
-                        crate::service::build_kusama_import_queue,
+                        crate::service::kusama_parachain_build_import_queue,
                     )?;
-                    cmd.run(partials.client)
-                }),
-                BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-                    let partials = new_partial::<RuntimeApi, ImbueKusamaRuntimeExecutor, _>(
-                        &config,
-                        crate::service::build_kusama_import_queue,
-                    )?;
-                    let db = partials.backend.expose_db();
-                    let storage = partials.backend.expose_storage();
-
-                    cmd.run(config, partials.client.clone(), db, storage)
-                }),
+                    cmd.run(partials.client)                }),
+                //TODO FIXME
+                // BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
+                //     let partials = new_partial::<imbue_kusama_runtime::RuntimeApi, _>(
+                //         &config,
+                //         crate::service::kusama_parachain_build_import_queue,
+                //     )?;
+                //     cmd.run(partials.client);
+                //     let db = partials.backend.expose_db();
+                //     let storage = partials.backend.expose_storage();
+                //
+                //     cmd.run(config, partials.client.clone(), db, storage)
+                // }),
                 BenchmarkCmd::Machine(cmd) => {
                     runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
                 }
@@ -321,7 +362,7 @@ pub fn run() -> Result<()> {
 
                 match config.chain_spec.identify() {
                     ChainIdentity::ImbueKusama => {
-                        crate::service::start_kusama_node(config, polkadot_config,collator_options, id, hwbench)
+                        crate::service::start_kusama_parachain_node(config, polkadot_config,collator_options, id, hwbench)
                             .await
                             .map(|r| r.0)
                             .map_err(Into::into)
