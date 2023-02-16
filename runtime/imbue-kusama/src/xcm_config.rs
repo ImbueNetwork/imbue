@@ -9,7 +9,7 @@ pub use frame_support::{
         Everything, Get, Imbalance, IsInVec, Nothing, OnUnbalanced, Randomness,
     },
     weights::{
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
         ConstantMultiplier, DispatchClass, IdentityFee, Weight,
     },
     PalletId, StorageValue,

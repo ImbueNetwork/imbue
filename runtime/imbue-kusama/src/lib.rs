@@ -43,7 +43,7 @@ pub use frame_support::{
         Everything, Get, Imbalance, IsInVec, Nothing, OnUnbalanced, Randomness,
     },
     weights::{
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
         ConstantMultiplier, DispatchClass, IdentityFee, Weight,
     },
     PalletId, StorageValue,
@@ -113,7 +113,10 @@ pub fn native_version() -> NativeVersion {
 /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
 /// by  Operational  extrinsics.
 /// We allow for .5 seconds of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
+const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
+    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
+    cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
+);
 
 pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 

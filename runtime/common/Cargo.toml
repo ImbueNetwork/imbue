@@ -31,6 +31,11 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "master", d
 
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "master", default-features = false }
 
+
+#Cumulus
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "master" , default-features = false }
+
+
 # Local Dependencies
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }

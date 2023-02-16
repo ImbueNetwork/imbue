@@ -2,6 +2,7 @@
 
 pub use constants::*;
 pub use types::*;
+use frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND;
 
 /// Common types for all runtimes
 pub mod types {
@@ -93,7 +94,9 @@ pub mod currency {
 /// Common constants for all runtimes
 pub mod constants {
     use super::types::BlockNumber;
-    use frame_support::weights::{constants::WEIGHT_PER_SECOND, Weight};
+    use frame_support::weights::Weight;
+    use frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND;
+    use cumulus_primitives_core::relay_chain::MAX_POV_SIZE;
     use sp_runtime::Perbill;
 
     /// This determines the average expected block time that we are targeting. Blocks will be
@@ -121,7 +124,10 @@ pub mod constants {
     pub const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
     /// We allow for 0.5 seconds of compute with a 6 second average block time.
-    pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
+    pub const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
+        WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
+        cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
+    );
 
 }
 
@@ -148,13 +154,14 @@ pub mod parachains {
 pub mod xcm_fees {
     use super::types::Balance;
     use super::currency::CENTS;
+    use frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND;
     pub use common_types::{CurrencyId,currency_decimals};
     use smallvec::smallvec;
     use sp_runtime::Perbill;
 
     use frame_support::{
         weights::{
-            constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+            constants::{ExtrinsicBaseWeight},
             WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
         },
     };
@@ -194,7 +201,7 @@ pub mod xcm_fees {
 
     pub fn default_per_second() -> Balance {
         let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
-		let default_per_second = (WEIGHT_PER_SECOND.ref_time() as u128) / base_weight;
+		let default_per_second = (WEIGHT_REF_TIME_PER_SECOND.ref_time() as u128) / base_weight;
 		default_per_second * base_tx_in_imbu()
 	}
     
@@ -276,8 +283,8 @@ pub mod common_xcm {
 	use common_types::{CurrencyId, CustomMetadata};
 	use frame_support::sp_std::marker::PhantomData;
 	use sp_runtime::{traits::ConstU32, WeakBoundedVec};
-	use xcm::latest::{Junction::GeneralKey, MultiLocation};
-
+	use xcm::latest::{MultiLocation};
+    use xcm::opaque::v2::Junction::GeneralKey;
 	use crate::xcm_fees::default_per_second;
 
 	/// Our FixedConversionRateProvider, used to charge XCM-related fees for tokens registered in
@@ -302,10 +309,11 @@ pub mod common_xcm {
 		}
 	}
 
-	pub fn general_key(key: &[u8]) -> xcm::latest::Junction {
-		GeneralKey(WeakBoundedVec::<u8, ConstU32<32>>::force_from(
-			key.into(),
-			None,
-		))
+	pub fn general_key(key: &[u8]) -> xcm::v2::Junction {
+
+        GeneralKey(WeakBoundedVec::<u8, ConstU32<32>>::force_from(
+            key.into(),
+            None,
+        ))
 	}
 }

@@ -1291,6 +1291,7 @@ version = "2.0.0"
 dependencies = [
  "common-traits",
  "common-types",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/cumulus?branch=master)",
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
  "frame-system 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
  "hex",
