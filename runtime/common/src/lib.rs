@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use constants::*;
-use frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND;
 pub use types::*;
 
 /// Common types for all runtimes
@@ -254,7 +253,6 @@ pub mod common_xcm {
     use sp_runtime::{traits::ConstU32, WeakBoundedVec};
     use xcm::latest::MultiLocation;
     use xcm::opaque::v2::Junction::GeneralKey;
-
 
     pub fn general_key(key: &[u8]) -> xcm::v2::Junction {
         GeneralKey(WeakBoundedVec::<u8, ConstU32<32>>::force_from(
