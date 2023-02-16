@@ -1,7 +1,7 @@
-use common_runtime::{Balance};
-pub use imbue_kusama_runtime::{AccountId, CurrencyId, Origin, Runtime, System};
-use frame_support::traits::GenesisBuild;
+use common_runtime::Balance;
 use common_types::currency_decimals;
+use frame_support::traits::GenesisBuild;
+pub use imbue_kusama_runtime::{AccountId, CurrencyId, Origin, Runtime, System};
 /// Accounts
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
@@ -102,7 +102,7 @@ pub fn ksm_amount(amount: Balance) -> Balance {
 }
 
 pub fn dollar(decimals: u32) -> Balance {
-	10u128.saturating_pow(decimals.into())
+    10u128.saturating_pow(decimals.into())
 }
 
 pub fn sibling_account() -> AccountId {

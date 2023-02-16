@@ -28,11 +28,10 @@ pub mod currency_decimals {
 }
 
 impl Default for CurrencyId {
-	fn default() -> Self {
-		CurrencyId::Native
-	}
+    fn default() -> Self {
+        CurrencyId::Native
+    }
 }
-
 
 pub type ForeignAssetId = u32;
 
@@ -41,17 +40,16 @@ pub type ForeignAssetId = u32;
 )]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct CustomMetadata {
-	/// XCM-related metadata.
-	/// XCM-related metadata, optional.
-	pub xcm: XcmMetadata,
+    /// XCM-related metadata.
+    /// XCM-related metadata, optional.
+    pub xcm: XcmMetadata,
 }
-
 
 #[derive(
     Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
 )]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct XcmMetadata {
-	/// The fee charged for every second that an XCM message takes to execute.
-	pub fee_per_second: Option<u128>,
+    /// The fee charged for every second that an XCM message takes to execute.
+    pub fee_per_second: Option<u128>,
 }

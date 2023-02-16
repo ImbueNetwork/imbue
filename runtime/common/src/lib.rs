@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use constants::*;
-pub use types::*;
 use frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND;
+pub use types::*;
 
 /// Common types for all runtimes
 pub mod types {
@@ -64,8 +64,6 @@ pub mod types {
 
     // A cryptographic salt to be combined with a value before hashing.
     pub type Salt = FixedArray<u8, 32>;
-
-
 }
 
 pub mod currency {
@@ -83,7 +81,7 @@ pub mod currency {
     pub const MIN_VESTING: Balance = 10;
 
     /// Additional fee charged when moving native tokens to target chains (in IMBUs).
-    pub const NATIVE_TOKEN_TRANSFER_FEE: Balance = 10 * CENTS;	
+    pub const NATIVE_TOKEN_TRANSFER_FEE: Balance = 10 * CENTS;
 
     pub const fn deposit(items: u32, bytes: u32) -> Balance {
         // map to 1/10 of what the kusama relay chain charges (v9020)
@@ -94,9 +92,8 @@ pub mod currency {
 /// Common constants for all runtimes
 pub mod constants {
     use super::types::BlockNumber;
-    use frame_support::weights::Weight;
     use frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND;
-    use cumulus_primitives_core::relay_chain::MAX_POV_SIZE;
+    use frame_support::weights::Weight;
     use sp_runtime::Perbill;
 
     /// This determines the average expected block time that we are targeting. Blocks will be
@@ -126,9 +123,8 @@ pub mod constants {
     /// We allow for 0.5 seconds of compute with a 6 second average block time.
     pub const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
         WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-        cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
+        cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64,
     );
-
 }
 
 pub mod parachains {
@@ -148,22 +144,19 @@ pub mod parachains {
             pub const IMBU_KEY: &[u8] = &[0, 150];
         }
     }
-
 }
 
 pub mod xcm_fees {
-    use super::types::Balance;
     use super::currency::CENTS;
+    use super::types::Balance;
+    pub use common_types::{currency_decimals, CurrencyId};
     use frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND;
-    pub use common_types::{CurrencyId,currency_decimals};
     use smallvec::smallvec;
     use sp_runtime::Perbill;
 
-    use frame_support::{
-        weights::{
-            constants::{ExtrinsicBaseWeight},
-            WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
-        },
+    use frame_support::weights::{
+        constants::ExtrinsicBaseWeight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+        WeightToFeePolynomial,
     };
 
     pub struct WeightToFee;
@@ -201,119 +194,72 @@ pub mod xcm_fees {
 
     pub fn default_per_second() -> Balance {
         let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
-		let default_per_second = (WEIGHT_REF_TIME_PER_SECOND.ref_time() as u128) / base_weight;
-		default_per_second * base_tx_in_imbu()
-	}
-    
+        let default_per_second = (WEIGHT_REF_TIME_PER_SECOND as u128) / base_weight;
+        default_per_second * base_tx_in_imbu()
+    }
 }
 
 /// AssetRegistry's AssetProcessor
 pub mod asset_registry {
     use super::types::{AccountId, Balance};
-	use common_types::{CurrencyId, CustomMetadata};
-	use codec::{Decode, Encode};
-	use frame_support::{
-		dispatch::RawOrigin,
-		sp_std::marker::PhantomData,
-		traits::{EnsureOrigin, EnsureOriginWithArg},
-	};
-	use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
-	use scale_info::TypeInfo;
-	use sp_runtime::DispatchError;
+    use codec::{Decode, Encode};
+    use common_types::{CurrencyId, CustomMetadata};
+    use frame_support::{
+        dispatch::RawOrigin,
+        sp_std::marker::PhantomData,
+        traits::{EnsureOrigin, EnsureOriginWithArg},
+    };
+    use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
+    use scale_info::TypeInfo;
+    use sp_runtime::DispatchError;
 
-	#[derive(
-		Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo,
-	)]
-	pub struct CustomAssetProcessor;
+    /// The OrmlAssetRegistry::AuthorityOrigin impl
+    pub struct AuthorityOrigin<
+        // The origin type
+        Origin,
+        // The default EnsureOrigin impl used to authorize all
+        // assets besides tranche tokens.
+        DefaultEnsureOrigin,
+    >(PhantomData<(Origin, DefaultEnsureOrigin)>);
 
-	impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for CustomAssetProcessor {
-		fn pre_register(
-			id: Option<CurrencyId>,
-			metadata: AssetMetadata<Balance, CustomMetadata>,
-		) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata>), DispatchError> {
-			match id {
-				Some(id) => Ok((id, metadata)),
-				None => Err(DispatchError::Other("asset-registry: AssetId is required")),
-			}
-		}
+    impl<
+            Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
+            DefaultEnsureOrigin: EnsureOrigin<Origin>,
+        > EnsureOriginWithArg<Origin, Option<CurrencyId>>
+        for AuthorityOrigin<Origin, DefaultEnsureOrigin>
+    {
+        type Success = ();
 
-		fn post_register(
-			_id: CurrencyId,
-			_asset_metadata: AssetMetadata<Balance, CustomMetadata>,
-		) -> Result<(), DispatchError> {
-			Ok(())
-		}
-	}
-
-	/// The OrmlAssetRegistry::AuthorityOrigin impl
-	pub struct AuthorityOrigin<
-		// The origin type
-		Origin,
-		// The default EnsureOrigin impl used to authorize all
-		// assets besides tranche tokens.
-		DefaultEnsureOrigin,
-	>(PhantomData<(Origin, DefaultEnsureOrigin)>);
-
-	impl<
-			Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
-			DefaultEnsureOrigin: EnsureOrigin<Origin>,
-		> EnsureOriginWithArg<Origin, Option<CurrencyId>> for AuthorityOrigin<Origin, DefaultEnsureOrigin>
-	{
-		type Success = ();
-
-		fn try_origin(
-			origin: Origin,
-			asset_id: &Option<CurrencyId>,
-		) -> Result<Self::Success, Origin> {
+        fn try_origin(
+            origin: Origin,
+            asset_id: &Option<CurrencyId>,
+        ) -> Result<Self::Success, Origin> {
             match asset_id {
-				// Any other `asset_id` defaults to EnsureRoot
-				_ => DefaultEnsureOrigin::try_origin(origin).map(|_| ()),
-			}
-		}
+                // Any other `asset_id` defaults to EnsureRoot
+                _ => DefaultEnsureOrigin::try_origin(origin).map(|_| ()),
+            }
+        }
 
-		#[cfg(feature = "runtime-benchmarks")]
-		fn successful_origin(_asset_id: &Option<CurrencyId>) -> Origin {
-			unimplemented!()
-		}
-	}
+        #[cfg(feature = "runtime-benchmarks")]
+        fn successful_origin(_asset_id: &Option<CurrencyId>) -> Origin {
+            unimplemented!()
+        }
+    }
 }
 
 pub mod common_xcm {
-    use super::types::{Balance};
-	use common_types::{CurrencyId, CustomMetadata};
-	use frame_support::sp_std::marker::PhantomData;
-	use sp_runtime::{traits::ConstU32, WeakBoundedVec};
-	use xcm::latest::{MultiLocation};
+    use super::types::Balance;
+    use common_types::{CurrencyId, CustomMetadata};
+    use frame_support::sp_std::marker::PhantomData;
+    use sp_runtime::{traits::ConstU32, WeakBoundedVec};
+    use xcm::latest::MultiLocation;
     use xcm::opaque::v2::Junction::GeneralKey;
-	use crate::xcm_fees::default_per_second;
 
-	/// Our FixedConversionRateProvider, used to charge XCM-related fees for tokens registered in
-	/// the asset registry that were not already handled by native Trader rules.
-	pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
 
-	impl<
-			OrmlAssetRegistry: orml_traits::asset_registry::Inspect<
-				AssetId = CurrencyId,
-				Balance = Balance,
-				CustomMetadata = CustomMetadata,
-			>,
-		> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<OrmlAssetRegistry>
-	{
-		fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
-			let metadata = OrmlAssetRegistry::metadata_by_location(location)?;
-			metadata
-				.additional
-				.xcm
-				.fee_per_second
-				.or_else(|| Some(default_per_second()))
-		}
-	}
-
-	pub fn general_key(key: &[u8]) -> xcm::v2::Junction {
-
+    pub fn general_key(key: &[u8]) -> xcm::v2::Junction {
         GeneralKey(WeakBoundedVec::<u8, ConstU32<32>>::force_from(
             key.into(),
             None,
         ))
-	}
+    }
 }

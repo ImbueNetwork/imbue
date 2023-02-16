@@ -701,7 +701,7 @@ impl orml_tokens::Config for Runtime {
 
 impl orml_asset_registry::Config for Runtime {
     type AssetId = CurrencyId;
-    type AssetProcessor = asset_registry::CustomAssetProcessor;
+    type AssetProcessor = orml_asset_registry::SequentialId<Runtime>;
     type AuthorityOrigin = asset_registry::AuthorityOrigin<Origin, EnsureRootOr<HalfOfCouncil>>;
     type Balance = Balance;
     type CustomMetadata = CustomMetadata;
@@ -748,7 +748,6 @@ impl pallet_identity::Config for Runtime {
     type RegistrarOrigin = EnsureRootOr<HalfOfCouncil>;
     type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
-
 
 parameter_types! {
     // 5% of the proposal value need to be bonded. This will be returned
@@ -806,8 +805,8 @@ parameter_types! {
     pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
     pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
     pub const PercentRequiredForVoteToPass: u8 = 75;
-    pub const MaximumContributorsPerProject: u32 = 5000; 
-    pub const RefundsPerBlock: u8 = 20; 
+    pub const MaximumContributorsPerProject: u32 = 5000;
+    pub const RefundsPerBlock: u8 = 20;
 }
 
 // impl proposals::Config for Runtime {
@@ -867,7 +866,7 @@ construct_runtime! {
         PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 27,
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 28,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 29,
-        
+
         XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 30,
 
         Currencies: orml_currencies::{Pallet, Call} = 31,
