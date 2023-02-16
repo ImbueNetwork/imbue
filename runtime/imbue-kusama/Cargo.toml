@@ -99,7 +99,7 @@ hex-literal = { version = "0.3.4", optional = true }
 
 # Local Dependencies
 common-runtime = { path = "../common", default-features = false }
-proposals = { package = 'proposals', path = '../../pallets/proposals', default-features = false }
+#proposals = { package = 'proposals', path = '../../pallets/proposals', default-features = false }
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 
@@ -180,7 +180,7 @@ runtime-benchmarks = [
 	"hex-literal",
 	'frame-system-benchmarking',
 	'frame-system/runtime-benchmarks',
-	'proposals/runtime-benchmarks',
+#	'proposals/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-collective/runtime-benchmarks',
 	'pallet-identity/runtime-benchmarks',

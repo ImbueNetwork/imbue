@@ -807,19 +807,19 @@ parameter_types! {
     pub const RefundsPerBlock: u8 = 20; 
 }
 
-impl proposals::Config for Runtime {
-    type Event = Event;
-    type PalletId = ProposalsPalletId;
-    type MultiCurrency = Currencies;
-    type AuthorityOrigin = AdminOrigin;
-    type MaxProjectsPerRound = MaxProjectsPerRound;
-    type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
-    type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
-    type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type RefundsPerBlock = RefundsPerBlock;
-    type WeightInfo = ();
-}
+// impl proposals::Config for Runtime {
+//     type Event = Event;
+//     type PalletId = ProposalsPalletId;
+//     type MultiCurrency = Currencies;
+//     type AuthorityOrigin = AdminOrigin;
+//     type MaxProjectsPerRound = MaxProjectsPerRound;
+//     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
+//     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
+//     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
+//     type MaximumContributorsPerProject = MaximumContributorsPerProject;
+//     type RefundsPerBlock = RefundsPerBlock;
+//     type WeightInfo = ();
+// }
 
 construct_runtime! {
     pub enum Runtime where
@@ -877,7 +877,7 @@ construct_runtime! {
 
 
         // Imbue Pallets
-        ImbueProposals: proposals::{Pallet, Call, Storage, Event<T>} = 100,
+        // ImbueProposals: proposals::{Pallet, Call, Storage, Event<T>} = 100,
     }
 }
 

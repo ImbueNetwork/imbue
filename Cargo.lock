@@ -3274,7 +3274,7 @@ dependencies = [
  "linregress 0.5.1",
  "log",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "scale-info 2.3.1",
  "serde",
  "sp-api 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
@@ -3298,7 +3298,7 @@ dependencies = [
  "linregress 0.4.4",
  "log",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "scale-info 2.3.1",
  "serde",
  "sp-api 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
@@ -3539,7 +3539,7 @@ dependencies = [
  "log",
  "once_cell",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "scale-info 2.3.1",
  "serde",
  "smallvec 1.10.0",
@@ -3571,7 +3571,7 @@ dependencies = [
  "log",
  "once_cell",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "scale-info 2.3.1",
  "serde",
  "smallvec 1.10.0",
@@ -3603,7 +3603,7 @@ dependencies = [
  "log",
  "once_cell",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "scale-info 2.3.1",
  "serde",
  "smallvec 1.10.0",
@@ -4633,7 +4633,6 @@ dependencies = [
  "parity-scale-codec 3.4.0",
  "polkadot-parachain 0.9.37 (git+https://github.com/paritytech/polkadot?branch=master)",
  "polkadot-runtime-common 0.9.37",
- "proposals",
  "scale-info 2.3.1",
  "serde",
  "sp-api 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
@@ -6118,24 +6117,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f9f08d8963a6c613f4b1a78f4f4a4dbfadf8e6545b2d72861731e4858b8b47f"
 
 [[package]]
-name = "lite-json"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0460d985423a026b4d9b828a7c6eed1bcf606f476322f3f9b507529686a61715"
-dependencies = [
- "lite-parser",
-]
-
-[[package]]
-name = "lite-parser"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c50092e40e0ccd1bf2015a10333fde0502ff95b832b0895dc1ca0d7ac6c52f6"
-dependencies = [
- "paste 0.1.18",
-]
-
-[[package]]
 name = "lock_api"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6699,7 +6680,7 @@ checksum = "25af9cf0dc55498b7bd94a1508af7a78706aa0ab715a73c5169273e03c84845e"
 dependencies = [
  "anyhow",
  "byteorder",
- "paste 1.0.6",
+ "paste",
  "thiserror",
 ]
 
@@ -9166,28 +9147,9 @@ dependencies = [
 
 [[package]]
 name = "paste"
-version = "0.1.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45ca20c77d80be666aef2b45486da86238fabe33e38306bd3118fe4af33fa880"
-dependencies = [
- "paste-impl",
- "proc-macro-hack",
-]
-
-[[package]]
-name = "paste"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
-
-[[package]]
-name = "paste-impl"
-version = "0.1.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d95a7db200b97ef370c8e6de0088252f7e0dfff7d047a28528e47456c0fc98b6"
-dependencies = [
- "proc-macro-hack",
-]
 
 [[package]]
 name = "pbkdf2"
@@ -11786,12 +11748,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proc-macro-hack"
-version = "0.5.20+deprecated"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc375e1527247fe1a97d8b7156678dfe7c1af2fc075c9a4db3690ecd2a148068"
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11835,41 +11791,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "proposals"
-version = "3.0.0"
-dependencies = [
- "common-traits",
- "common-types",
- "cumulus-pallet-xcm",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/cumulus?branch=master)",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
- "hex",
- "integer-sqrt",
- "lite-json",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
- "pallet-identity 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
- "pallet-timestamp 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=master)",
- "pallet-xcm 0.9.37 (git+https://github.com/paritytech/polkadot?branch=master)",
- "parity-scale-codec 3.4.0",
- "scale-info 2.3.1",
- "serde",
- "sp-core 7.0.0 (git+https://github.com/paritytech/substrate?branch=master)",
- "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=master)",
- "sp-keystore 0.13.0 (git+https://github.com/paritytech/substrate?branch=master)",
- "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=master)",
- "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=master)",
- "xcm 0.9.37 (git+https://github.com/paritytech/polkadot?branch=master)",
- "xcm-builder 0.9.37 (git+https://github.com/paritytech/polkadot?branch=master)",
- "xcm-executor 0.9.37 (git+https://github.com/paritytech/polkadot?branch=master)",
 ]
 
 [[package]]
@@ -15300,7 +15221,7 @@ dependencies = [
  "approx",
  "num-complex",
  "num-traits",
- "paste 1.0.6",
+ "paste",
 ]
 
 [[package]]
@@ -15312,7 +15233,7 @@ dependencies = [
  "approx",
  "num-complex",
  "num-traits",
- "paste 1.0.6",
+ "paste",
  "wide",
 ]
 
@@ -15335,7 +15256,7 @@ source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.36#dc25
 dependencies = [
  "enumn",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
 ]
@@ -15347,7 +15268,7 @@ source = "git+https://github.com/paritytech/polkadot?branch=master#9a17c4e9bf44b
 dependencies = [
  "enumn",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=master)",
  "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=master)",
 ]
@@ -16587,7 +16508,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "rand 0.8.5",
  "scale-info 2.3.1",
  "serde",
@@ -16609,7 +16530,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "rand 0.7.3",
  "scale-info 2.3.1",
  "serde",
@@ -16631,7 +16552,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "rand 0.8.5",
  "scale-info 2.3.1",
  "serde",
@@ -17822,7 +17743,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e37706572f4b151dff7a0146e040804e9c26fe3a3118591112f05cf12a4216c1"
 dependencies = [
  "libc",
- "paste 1.0.6",
+ "paste",
  "tikv-jemalloc-sys",
 ]
 
@@ -18830,7 +18751,7 @@ dependencies = [
  "log",
  "object 0.29.0",
  "once_cell",
- "paste 1.0.6",
+ "paste",
  "psm",
  "rayon",
  "serde",
@@ -18857,7 +18778,7 @@ dependencies = [
  "log",
  "object 0.29.0",
  "once_cell",
- "paste 1.0.6",
+ "paste",
  "psm",
  "rayon",
  "serde",
@@ -19099,7 +19020,7 @@ dependencies = [
  "mach",
  "memfd",
  "memoffset 0.6.5",
- "paste 1.0.6",
+ "paste",
  "rand 0.8.5",
  "rustix 0.35.13",
  "thiserror",
@@ -19123,7 +19044,7 @@ dependencies = [
  "mach",
  "memfd",
  "memoffset 0.6.5",
- "paste 1.0.6",
+ "paste",
  "rand 0.8.5",
  "rustix 0.36.4",
  "wasmtime-asm-macros 5.0.0",
@@ -19961,7 +19882,7 @@ dependencies = [
  "frame-system 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "parachain-info 0.1.0 (git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.36)",
  "parity-scale-codec 3.4.0",
- "paste 1.0.6",
+ "paste",
  "polkadot-primitives 0.9.36",
  "polkadot-runtime-parachains 0.9.36",
  "quote",

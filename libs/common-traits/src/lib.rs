@@ -14,7 +14,7 @@
 use frame_support::dispatch::{Codec, DispatchResultWithPostInfo};
 use frame_support::Parameter;
 use sp_runtime::traits::{
-    AtLeast32BitUnsigned, Bounded, MaybeDisplay, MaybeMallocSizeOf, MaybeSerialize,
+    AtLeast32BitUnsigned, Bounded, MaybeDisplay, MaybeSerialize,
     MaybeSerializeDeserialize, Member, Zero,
 };
 use sp_std::fmt::Debug;
@@ -61,7 +61,6 @@ pub trait Reward {
         + FromStr
         + Hash
         + MaybeDisplay
-        + MaybeMallocSizeOf
         + MaybeSerializeDeserialize
         + Member
         + Parameter;
