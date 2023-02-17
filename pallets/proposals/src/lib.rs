@@ -72,11 +72,11 @@ pub mod pallet {
         frame_system::Config + pallet_identity::Config + pallet_timestamp::Config
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type PalletId: Get<PalletId>;
 
-        type AuthorityOrigin: EnsureOrigin<Self::Origin>;
+        type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
@@ -377,7 +377,7 @@ pub mod pallet {
             let mut c = 0u32;
 
             // While the weight has enough weight to finish off the 
-            while remaining_weight > weight_required_to_finish_hook {
+            while remaining_weight.ref_time() > weight_required_to_finish_hook.ref_time() {
                 if let Some(refund) = refunds.get(c as usize) {
                     let _ = Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);
                     remaining_weight.saturating_sub(<T as pallet::Config>::WeightInfo::refund_item_in_queue());

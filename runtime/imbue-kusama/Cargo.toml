@@ -98,7 +98,7 @@ hex-literal = { version = "0.3.4", optional = true }
 
 # Local Dependencies
 common-runtime = { path = "../common", default-features = false }
-#proposals = { package = 'proposals', path = '../../pallets/proposals', default-features = false }
+proposals = { package = 'proposals', path = '../../pallets/proposals', default-features = false }
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 
