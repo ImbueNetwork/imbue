@@ -145,44 +145,6 @@ impl SubstrateCli for RelayChainCli {
     }
 }
 
-
-// /// Creates partial components for the runtimes that are supported by the benchmarks.
-// macro_rules! construct_benchmark_partials {
-// 	($config:expr, |$partials:ident| $code:expr) => {
-// 		match $config.chain_spec.runtime() {
-// 			Runtime::Statemine => {
-// 				let $partials = new_partial::<statemine_runtime::RuntimeApi, _>(
-// 					&$config,
-// 					crate::service::aura_build_import_queue::<_, AuraId>,
-// 				)?;
-// 				$code
-// 			},
-// 			Runtime::Westmint => {
-// 				let $partials = new_partial::<westmint_runtime::RuntimeApi, _>(
-// 					&$config,
-// 					crate::service::aura_build_import_queue::<_, AuraId>,
-// 				)?;
-// 				$code
-// 			},
-// 			Runtime::Statemint => {
-// 				let $partials = new_partial::<statemint_runtime::RuntimeApi, _>(
-// 					&$config,
-// 					crate::service::aura_build_import_queue::<_, StatemintAuraId>,
-// 				)?;
-// 				$code
-// 			},
-// 			Runtime::CollectivesPolkadot | Runtime::CollectivesWestend => {
-// 				let $partials = new_partial::<collectives_polkadot_runtime::RuntimeApi, _>(
-// 					&$config,
-// 					crate::service::aura_build_import_queue::<_, AuraId>,
-// 				)?;
-// 				$code
-// 			},
-// 			_ => Err("The chain is not supported".into()),
-// 		}
-// 	};
-// }
-
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
