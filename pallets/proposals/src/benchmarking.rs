@@ -42,7 +42,7 @@ benchmarks! {
         // (Origin, ProjectName, Logo, Description, Website, ProposedMilestones, RequiredFunds, CurrencyId)
     }: _(RawOrigin::Signed(whitelisted_caller()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f, bounded_website_f, milestones, required_funds, CurrencyId::Native)
     verify {
-        assert_last_event::<T>(Event::ProjectCreated(caller, bounded_str_f.to_vec(), 0, required_funds, CurrencyId::Native).into());
+        assert_last_event::<T>(Event::<T>::ProjectCreated(caller, bounded_str_f.to_vec(), 0, required_funds, CurrencyId::Native).into());
     }
 
     add_project_whitelist {
@@ -55,7 +55,7 @@ benchmarks! {
         // (Origin, ProjectKey, BoundedWhitelistSpots)
     }: _(RawOrigin::Signed(caller), 0, bbt)
     verify {
-        assert_last_event::<T>(Event::WhitelistAdded(0, 1u32.into()).into());
+        assert_last_event::<T>(Event::<T>::WhitelistAdded(0, 1u32.into()).into());
     }
 
     remove_project_whitelist {
@@ -70,7 +70,7 @@ benchmarks! {
         // (Origin, ProjectKey)
     }: _(RawOrigin::Signed(caller), 0u32)
     verify {
-        assert_last_event::<T>(Event::WhitelistRemoved(0, 1u32.into()).into());
+        assert_last_event::<T>(Event::<T>::WhitelistRemoved(0, 1u32.into()).into());
     }
 
     schedule_round {
@@ -84,7 +84,7 @@ benchmarks! {
         // (Origin, StartBlockNumber, EndBlockNumber, ProjectKeys, RoundType)c
     }: _(RawOrigin::Root, 2u32.into(), 100u32.into(), project_keys.clone(), RoundType::ContributionRound)
     verify {
-        assert_last_event::<T>(Event::FundingRoundCreated(1, project_keys.to_vec()).into());
+        assert_last_event::<T>(Event::<T>::FundingRoundCreated(1, project_keys.to_vec()).into());
     }
 
     cancel_round {
@@ -100,7 +100,7 @@ benchmarks! {
         //(Origin, RoundKey)
     }: _(RawOrigin::Root, 1)
     verify {
-       assert_last_event::<T>(Event::RoundCancelled(1).into());
+       assert_last_event::<T>(Event::<T>::RoundCancelled(1).into());
     }
 
     contribute {
@@ -121,7 +121,7 @@ benchmarks! {
         //(Origin, RoundKey, ProjectKey, Contribution)
     }: _(RawOrigin::Signed(alice.clone()), Some(1u32), a.into(), 10_000u32.into())
     verify {
-        assert_last_event::<T>(Event::ContributeSucceeded(alice, a.into(), 10_000u32.into(), CurrencyId::Native, 5u32.into()).into());
+        assert_last_event::<T>(Event::<T>::ContributeSucceeded(alice, a.into(), 10_000u32.into(), CurrencyId::Native, 5u32.into()).into());
     }
 
     approve {        
@@ -143,7 +143,7 @@ benchmarks! {
         //(Origin, RoundKey, ProjectKey, MilestoneKeys)
     }: _(RawOrigin::Root, Some(1), a.into(), Some(milestone_keys))
     verify {
-       assert_last_event::<T>(Event::ProjectApproved(1, a.into()).into());
+       assert_last_event::<T>(Event::<T>::ProjectApproved(1, a.into()).into());
     }
 
     submit_milestone { 
@@ -163,7 +163,7 @@ benchmarks! {
         // (Initiator, ProjectKey, MilestoneKey)
     }: _(RawOrigin::Signed(bob.clone()), 0, 0)
     verify {
-       assert_last_event::<T>(Event::VotingRoundCreated(2, vec![0]).into());
+       assert_last_event::<T>(Event::<T>::VotingRoundCreated(2, vec![0]).into());
     }
 
     vote_on_milestone { 
@@ -185,7 +185,7 @@ benchmarks! {
         // (Voter, ProjectKey, MilestoneKey, Option<RoundKey>, is_approved)
     }: _(RawOrigin::Signed(alice.clone()), 0, 0, Some(2), true)
     verify {
-        assert_last_event::<T>(Event::VoteComplete(alice, 0, 0, true, 11u32.into()).into());
+        assert_last_event::<T>(Event::<T>::VoteComplete(alice, 0, 0, true, 11u32.into()).into());
     }
 
     finalise_milestone_voting { 
@@ -208,7 +208,7 @@ benchmarks! {
         // (Initiator, ProjectKey, MilestoneKey)
     }: _(RawOrigin::Signed(bob.clone()), 0, 0)
     verify {
-        assert_last_event::<T>(Event::MilestoneApproved(bob, 0, 0, 11u32.into()).into());
+        assert_last_event::<T>(Event::<T>::MilestoneApproved(bob, 0, 0, 11u32.into()).into());
     }
 
     withdraw { 
@@ -237,7 +237,7 @@ benchmarks! {
         // (Initiator, ProjectKey)
     }: _(RawOrigin::Signed(bob.clone()) ,0)
     verify {
-        assert_last_event::<T>(Event::ProjectFundsWithdrawn(bob, 0, (10_000u32 * milestone_keys.len() as u32).into(), CurrencyId::Native).into());
+        assert_last_event::<T>(Event::<T>::ProjectFundsWithdrawn(bob, 0, (10_000u32 * milestone_keys.len() as u32).into(), CurrencyId::Native).into());
     }
 
     raise_vote_of_no_confidence { 
@@ -255,7 +255,7 @@ benchmarks! {
         // (Initiator, ProjectKey)
     }: _(RawOrigin::Signed(alice.clone()) , 0)
     verify {
-        assert_last_event::<T>(Event::NoConfidenceRoundCreated(2, 0).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundCreated(2, 0).into());
     }
 
     vote_on_no_confidence_round { 
@@ -276,7 +276,7 @@ benchmarks! {
         // (Initiator, RoundKey, ProjectKey, boolean)
     }: _(RawOrigin::Signed(charlie), Some(2u32), 0u32, true)
     verify {
-        assert_last_event::<T>(Event::NoConfidenceRoundVotedUpon(2, 0).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(2, 0).into());
     }
 
 
@@ -307,7 +307,7 @@ benchmarks! {
         // (Contributor, RoundKey, ProjectKey)
     }: _(RawOrigin::Signed(contributor), Some(2u32), 0u32)
     verify {
-        assert_last_event::<T>(Event::NoConfidenceRoundFinalised(2, 0).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(2, 0).into());
     }
 
     set_storage_variable {
@@ -334,7 +334,7 @@ benchmarks! {
         // (Origin, ProjectKey)
     }:_(RawOrigin::Root, 0)
      verify {
-        assert_last_event::<T>(Event::ProjectFundsAddedToRefundQueue(0, (contribution_amount * T::MaximumContributorsPerProject::get()).into()).into());
+        assert_last_event::<T>(Event::<T>::ProjectFundsAddedToRefundQueue(0, (contribution_amount * T::MaximumContributorsPerProject::get()).into()).into());
     }
 
     refund_item_in_queue {
@@ -373,12 +373,12 @@ benchmarks! {
     } 
 }
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::Event)
+fn assert_last_event<T: Config>(generic_event: <T as pallet::Config>::RuntimeEvent)
 where
     <T as frame_system::Config>::AccountId: AsRef<[u8]>,
 {
     let events = frame_system::Pallet::<T>::events();
-    let system_event: <T as frame_system::Config>::Event = generic_event.into();
+    let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
     // compare to the last event record
     let EventRecord { event, .. } = &events[events.len() - 1];
     assert_eq!(event, &system_event);
