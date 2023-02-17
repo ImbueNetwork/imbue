@@ -4,8 +4,7 @@ use crate::mock::*;
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::{
-    assert_noop, assert_ok, bounded_btree_map, bounded_vec, dispatch::DispatchErrorWithPostInfo,
-    weights::PostDispatchInfo
+    assert_noop, assert_ok, bounded_btree_map, bounded_vec, dispatch::{DispatchErrorWithPostInfo, PostDispatchInfo},
 };
 use sp_core::sr25519;
 use sp_std::vec::Vec;
@@ -29,7 +28,7 @@ fn create_a_test_project_with_less_than_100_percent() {
         let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
         assert_noop!(
         Proposals::create_project(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             //project name
             b"Imbue's Awesome Initiative".to_vec().try_into().expect("input should be of decent length"),
             //project logo
@@ -126,15 +125,15 @@ fn create_a_test_project_and_add_whitelist() {
         create_project(alice);
         let whitelist = bounded_btree_map!(alice => max_cap);
 
-        Proposals::add_project_whitelist(Origin::signed(alice), project_key, whitelist).unwrap();
+        Proposals::add_project_whitelist(RuntimeOrigin::signed(alice), project_key, whitelist).unwrap();
 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::WhitelistAdded(0, 1))
+            mock::RuntimeEvent::from(proposals::Event::WhitelistAdded(0, 1))
         );
     });
 }
@@ -150,7 +149,7 @@ fn create_a_test_project_and_add_whitelist_from_non_initiator_fail() {
         let whitelist = bounded_btree_map!(alice => max_cap);
 
         assert_noop!(
-            Proposals::add_project_whitelist(Origin::signed(bob), project_key, whitelist),
+            Proposals::add_project_whitelist(RuntimeOrigin::signed(bob), project_key, whitelist),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -167,14 +166,14 @@ fn create_a_test_project_remove_whitelist() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     build_test_externality().execute_with(|| {
         create_project(alice);
-        Proposals::remove_project_whitelist(Origin::signed(alice), 0).unwrap();
+        Proposals::remove_project_whitelist(RuntimeOrigin::signed(alice), 0).unwrap();
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::WhitelistRemoved(0, 1))
+            mock::RuntimeEvent::from(proposals::Event::WhitelistRemoved(0, 1))
         );
     });
 }
@@ -186,7 +185,7 @@ fn create_a_test_project_and_schedule_round() {
         create_project(alice);
 
         assert_ok!(Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             //Project key starts with 0 for the first project submitted to the chain
@@ -204,7 +203,7 @@ fn schedule_round_invalid_project_key() {
 
         assert_noop!(
             Proposals::schedule_round(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 System::block_number(),
                 System::block_number() + 1,
                 //Project key starts with 0 for the first project submitted to the chain
@@ -230,7 +229,7 @@ fn schedule_round_invalid_end_block_no() {
 
         assert_noop!(
             Proposals::schedule_round(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 System::block_number() + 6000,
                 System::block_number() + 3000,
                 //Project key starts with 0 for the first project submitted to the chain
@@ -255,7 +254,7 @@ fn cancel_round_no_active_round() {
         create_project(alice);
 
         let _ = Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 3000,
             System::block_number() + 6000,
             bounded_vec![0],
@@ -263,7 +262,7 @@ fn cancel_round_no_active_round() {
         );
 
         assert_noop!(
-            Proposals::cancel_round(Origin::root(), 0),
+            Proposals::cancel_round(RuntimeOrigin::root(), 0),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -284,7 +283,7 @@ fn test_funding_round_is_created_on_schedule_round() {
         create_project(alice);
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
             project_keys.clone(),
@@ -294,12 +293,12 @@ fn test_funding_round_is_created_on_schedule_round() {
 
         let exp_fundingroundcreated_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
 
         assert_eq!(
             exp_fundingroundcreated_event,
-            mock::Event::from(proposals::Event::FundingRoundCreated(
+            mock::RuntimeEvent::from(proposals::Event::FundingRoundCreated(
                 1,
                 project_keys.to_vec()
             ))
@@ -316,7 +315,7 @@ fn cancel_round() {
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         //schedule_round extrinsic
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
             project_keys.clone(),
@@ -328,17 +327,17 @@ fn cancel_round() {
 
         //cancel_round extrinsic
         assert_ok!(<proposals::Pallet<Test>>::cancel_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             round_index
         ));
 
         let exp_roundcancelled_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             exp_roundcancelled_event,
-            mock::Event::from(proposals::Event::RoundCancelled(1))
+            mock::RuntimeEvent::from(proposals::Event::RoundCancelled(1))
         );
     });
 }
@@ -356,7 +355,7 @@ fn test_cancelling_started_round() {
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -367,7 +366,7 @@ fn test_cancelling_started_round() {
         let round_key = 1;
 
         assert_noop!(
-            Proposals::cancel_round(Origin::root(), round_key),
+            Proposals::cancel_round(RuntimeOrigin::root(), round_key),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -393,7 +392,7 @@ fn test_cancelling_round_without_root_privilege() {
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -402,7 +401,7 @@ fn test_cancelling_round_without_root_privilege() {
         .unwrap();
         let round_key = 1;
         assert_noop!(
-            Proposals::cancel_round(Origin::signed(alice), round_key),
+            Proposals::cancel_round(RuntimeOrigin::signed(alice), round_key),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -427,7 +426,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
 
         //schedule_round extrinsic
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
@@ -444,35 +443,35 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
         run_to_block(4);
         //contribute extrinsic
         Proposals::contribute(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             None,
             project_key,
             contribution_amount,
         )
         .unwrap();
         Proposals::contribute(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             None,
             project_key,
             contribution_amount,
         )
         .unwrap();
         Proposals::contribute(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             None,
             project_key,
             contribution_amount,
         )
         .unwrap();
 
-        //contribute success event
+        //contribute success RuntimeEvent
         let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             exp_contributedtoproject_event,
-            mock::Event::from(proposals::Event::ContributeSucceeded(
+            mock::RuntimeEvent::from(proposals::Event::ContributeSucceeded(
                 alice,
                 project_key,
                 contribution_amount,
@@ -496,11 +495,11 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
         let max_cap = 1000000u64;
 
         let whitelist = bounded_btree_map!(alice => max_cap);
-        Proposals::add_project_whitelist(Origin::signed(alice), project_key, whitelist).unwrap();
+        Proposals::add_project_whitelist(RuntimeOrigin::signed(alice), project_key, whitelist).unwrap();
 
         //schedule_round extrinsic
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
@@ -518,21 +517,21 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
 
         //contribute extrinsic
         Proposals::contribute(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             None,
             project_key,
             contribution_amount,
         )
         .unwrap();
 
-        //contribute success event
+        //contribute success RuntimeEvent
         let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             exp_contributedtoproject_event,
-            mock::Event::from(proposals::Event::ContributeSucceeded(
+            mock::RuntimeEvent::from(proposals::Event::ContributeSucceeded(
                 alice,
                 project_key,
                 contribution_amount,
@@ -556,11 +555,11 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
         let max_cap = 0u64;
 
         let whitelist = bounded_btree_map!(alice => max_cap);
-        Proposals::add_project_whitelist(Origin::signed(alice), project_key, whitelist).unwrap();
+        Proposals::add_project_whitelist(RuntimeOrigin::signed(alice), project_key, whitelist).unwrap();
 
         //schedule_round extrinsic
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
@@ -578,21 +577,21 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
 
         //contribute extrinsic
         Proposals::contribute(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             None,
             project_key,
             contribution_amount,
         )
         .unwrap();
 
-        //contribute success event
+        //contribute success RuntimeEvent
         let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             exp_contributedtoproject_event,
-            mock::Event::from(proposals::Event::ContributeSucceeded(
+            mock::RuntimeEvent::from(proposals::Event::ContributeSucceeded(
                 alice,
                 project_key,
                 contribution_amount,
@@ -616,11 +615,11 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
         let max_cap = 100_000u64;
 
         let whitelist = bounded_btree_map!(alice => max_cap);
-        Proposals::add_project_whitelist(Origin::signed(alice), project_key, whitelist).unwrap();
+        Proposals::add_project_whitelist(RuntimeOrigin::signed(alice), project_key, whitelist).unwrap();
 
         //schedule_round extrinsic
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
@@ -635,7 +634,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
 
         run_to_block(4);
         Proposals::contribute(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             None,
             project_key,
             contribution_amount,
@@ -644,7 +643,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
 
         assert_noop!(
             Proposals::contribute(
-                Origin::signed(alice),
+                RuntimeOrigin::signed(alice),
                 None,
                 project_key,
                 contribution_amount
@@ -674,7 +673,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
 
         //schedule_round extrinsic
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
@@ -690,7 +689,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
         run_to_block(4);
         //contribute extrinsic
         Proposals::contribute(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             None,
             project_key,
             contribution_amount,
@@ -699,16 +698,16 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
 
         let project_key = 0;
         //approve project
-        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
 
-        //approve event
+        //approve RuntimeEvent
         let exp_approvedproject_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             exp_approvedproject_event,
-            mock::Event::from(proposals::Event::ProjectApproved(1, project_key))
+            mock::RuntimeEvent::from(proposals::Event::ProjectApproved(1, project_key))
         );
     });
 }
@@ -727,7 +726,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
 
         //schedule_round extrinsic
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
@@ -743,7 +742,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
         run_to_block(4);
         //contribute extrinsic
         Proposals::contribute(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             None,
             project_key,
             contribution_amount,
@@ -752,7 +751,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
 
         assert_noop!(
             //approve project
-            Proposals::approve(Origin::root(), None, project_key, None),
+            Proposals::approve(RuntimeOrigin::root(), None, project_key, None),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -779,7 +778,7 @@ fn test_submit_milestone() {
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -788,28 +787,28 @@ fn test_submit_milestone() {
         .unwrap();
 
         let value = 100u64;
-        Proposals::contribute(Origin::signed(bob), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), None, project_key, value).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
-        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
 
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             0
         ));
 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::VotingRoundCreated(
+            mock::RuntimeEvent::from(proposals::Event::VotingRoundCreated(
                 voting_round_key,
                 vec![project_key]
             ))
@@ -832,7 +831,7 @@ fn test_submit_milestone_without_approval() {
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -842,7 +841,7 @@ fn test_submit_milestone_without_approval() {
 
         let value = 100u64;
         assert_ok!(Proposals::contribute(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             None,
             project_key,
             value
@@ -854,7 +853,7 @@ fn test_submit_milestone_without_approval() {
         run_to_block(3);
 
         assert_noop!(
-            Proposals::submit_milestone(Origin::signed(alice), project_key, 0),
+            Proposals::submit_milestone(RuntimeOrigin::signed(alice), project_key, 0),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -880,7 +879,7 @@ fn test_voting_on_a_milestone() {
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -889,24 +888,24 @@ fn test_voting_on_a_milestone() {
         .unwrap();
 
         let value = 100u64;
-        Proposals::contribute(Origin::signed(bob), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), None, project_key, value).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
+        assert_ok!(Proposals::approve(RuntimeOrigin::root(), None, project_key, None));
 
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             0
         ));
 
         run_to_block(5);
         assert_ok!(Proposals::vote_on_milestone(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             project_key,
             milestone1_key,
             None,
@@ -915,11 +914,11 @@ fn test_voting_on_a_milestone() {
 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::VoteComplete(bob, 0, 0, true, 5))
+            mock::RuntimeEvent::from(proposals::Event::VoteComplete(bob, 0, 0, true, 5))
         );
     });
 }
@@ -940,7 +939,7 @@ fn test_voting_on_a_cancelled_round() {
         let project_keys: BoundedProjectKeys = bounded_vec![project_key];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
             project_keys,
@@ -949,7 +948,7 @@ fn test_voting_on_a_cancelled_round() {
         .unwrap();
 
         assert_ok!(<proposals::Pallet<Test>>::cancel_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             round_key
         ));
 
@@ -957,7 +956,7 @@ fn test_voting_on_a_cancelled_round() {
         let milestone_key = 0;
         assert_noop!(
             Proposals::vote_on_milestone(
-                Origin::signed(bob),
+                RuntimeOrigin::signed(bob),
                 project_key,
                 milestone_key,
                 None,
@@ -974,11 +973,11 @@ fn test_voting_on_a_cancelled_round() {
 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::RoundCancelled(round_key))
+            mock::RuntimeEvent::from(proposals::Event::RoundCancelled(round_key))
         );
     });
 }
@@ -1026,7 +1025,7 @@ fn test_finalize_a_milestone_without_voting() {
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -1035,7 +1034,7 @@ fn test_finalize_a_milestone_without_voting() {
         .unwrap();
 
         let value = 100u64;
-        Proposals::contribute(Origin::signed(bob), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), None, project_key, value).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
@@ -1043,24 +1042,24 @@ fn test_finalize_a_milestone_without_voting() {
 
         run_to_block(3);
 
-        Proposals::approve(Origin::root(), None, project_key, Some(milestone_index)).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, Some(milestone_index)).unwrap();
 
         // Test you can submit a milestone whenever.
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             milestone1_key
         ));
 
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             milestone2_key
         ));
 
         run_to_block(5);
         assert_ok!(Proposals::vote_on_milestone(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             project_key,
             milestone1_key,
             None,
@@ -1069,13 +1068,13 @@ fn test_finalize_a_milestone_without_voting() {
 
         //this works as the voting has been done for this milestone
         assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             0
         ));
 
         assert_noop!(
-            Proposals::finalise_milestone_voting(Origin::signed(alice), project_key, 1),
+            Proposals::finalise_milestone_voting(RuntimeOrigin::signed(alice), project_key, 1),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -1131,7 +1130,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -1141,7 +1140,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
 
         let bob_contribution = 200_000u64;
         assert_ok!(Proposals::contribute(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             None,
             project_key,
             bob_contribution
@@ -1150,7 +1149,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
         // Second contribution to give Bob majority
         let bob_second_contribution = 400_000u64;
         assert_ok!(Proposals::contribute(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             None,
             project_key,
             bob_second_contribution
@@ -1158,7 +1157,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
 
         let charlie_contribution = 500_000u64;
         assert_ok!(Proposals::contribute(
-            Origin::signed(charlie),
+            RuntimeOrigin::signed(charlie),
             None,
             project_key,
             charlie_contribution
@@ -1170,10 +1169,10 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
 
         run_to_block(3);
 
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
+        assert_ok!(Proposals::approve(RuntimeOrigin::root(), None, project_key, None));
 
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             0
         ));
@@ -1181,12 +1180,12 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
         run_to_block(5);
         let milestone_key = 0;
         //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone_key, None, false)
+        Proposals::vote_on_milestone(RuntimeOrigin::signed(bob), project_key, milestone_key, None, false)
             .ok();
 
         //Charlie voting on the submitted milestone
         Proposals::vote_on_milestone(
-            Origin::signed(charlie),
+            RuntimeOrigin::signed(charlie),
             project_key,
             milestone_key,
             None,
@@ -1195,13 +1194,13 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
         .ok();
 
         assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             0
         ));
 
         assert_noop!(
-            Proposals::withdraw(Origin::signed(alice), project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(alice), project_key),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -1262,7 +1261,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -1271,9 +1270,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         .unwrap();
 
         let value = 500000u64;
-        Proposals::contribute(Origin::signed(bob), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), None, project_key, value).unwrap();
 
-        Proposals::contribute(Origin::signed(charlie), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(charlie), None, project_key, value).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(milestone1_key);
@@ -1281,22 +1280,22 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         run_to_block(3);
 
-        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
 
-        Proposals::submit_milestone(Origin::signed(alice), project_key, milestone1_key).unwrap();
+        Proposals::submit_milestone(RuntimeOrigin::signed(alice), project_key, milestone1_key).unwrap();
 
-        Proposals::submit_milestone(Origin::signed(alice), project_key, milestone2_key).ok();
+        Proposals::submit_milestone(RuntimeOrigin::signed(alice), project_key, milestone2_key).ok();
 
         run_to_block(5);
         //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone1_key, None, true)
+        Proposals::vote_on_milestone(RuntimeOrigin::signed(bob), project_key, milestone1_key, None, true)
             .ok();
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone2_key, None, true)
+        Proposals::vote_on_milestone(RuntimeOrigin::signed(bob), project_key, milestone2_key, None, true)
             .ok();
 
         //Charlie voting on the submitted milestone
         Proposals::vote_on_milestone(
-            Origin::signed(charlie),
+            RuntimeOrigin::signed(charlie),
             project_key,
             milestone1_key,
             None,
@@ -1304,7 +1303,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         )
         .ok();
         Proposals::vote_on_milestone(
-            Origin::signed(charlie),
+            RuntimeOrigin::signed(charlie),
             project_key,
             milestone2_key,
             None,
@@ -1313,19 +1312,19 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         .ok();
 
         assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             0
         ));
 
         assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             1
         ));
 
         assert_ok!(<proposals::Pallet<Test>>::withdraw(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key
         ));
 
@@ -1347,17 +1346,17 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         // withdraw last milestone
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             2
         ));
         run_to_block(10);
         //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone3_key, None, true)
+        Proposals::vote_on_milestone(RuntimeOrigin::signed(bob), project_key, milestone3_key, None, true)
             .ok();
         //Charlie voting on the submitted milestone
         Proposals::vote_on_milestone(
-            Origin::signed(charlie),
+            RuntimeOrigin::signed(charlie),
             project_key,
             milestone3_key,
             None,
@@ -1366,13 +1365,13 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         .ok();
 
         assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             milestone3_key
         ));
 
         assert_ok!(<proposals::Pallet<Test>>::withdraw(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key
         ));
 
@@ -1384,11 +1383,11 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         //can withdraw only the amount corresponding to the milestone percentage completion
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
+            mock::RuntimeEvent::from(proposals::Event::ProjectFundsWithdrawn(
                 alice,
                 0,
                 500000u64,
@@ -1444,7 +1443,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -1453,8 +1452,8 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         .unwrap();
 
         let value = 500000u64;
-        Proposals::contribute(Origin::signed(bob), None, project_key, value).unwrap();
-        Proposals::contribute(Origin::signed(charlie), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(charlie), None, project_key, value).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
@@ -1462,10 +1461,10 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 
         run_to_block(3);
 
-        Proposals::approve(Origin::root(), None, project_key, Some(milestone_index)).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, Some(milestone_index)).unwrap();
 
         assert_ok!(<proposals::Pallet<Test>>::withdraw(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key
         ));
 
@@ -1488,11 +1487,11 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         //can withdraw only the amount corresponding to the milestone percentage completion
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
+            mock::RuntimeEvent::from(proposals::Event::ProjectFundsWithdrawn(
                 alice,
                 0,
                 500000u64,
@@ -1517,7 +1516,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -1526,25 +1525,25 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         .unwrap();
 
         let required_funds = 100u64;
-        Proposals::contribute(Origin::signed(bob), None, project_key, required_funds).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), None, project_key, required_funds).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
-        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
 
-        Proposals::submit_milestone(Origin::signed(alice), project_key, 0).unwrap();
+        Proposals::submit_milestone(RuntimeOrigin::signed(alice), project_key, 0).unwrap();
 
         run_to_block(5);
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone1_key, None, true)
+        Proposals::vote_on_milestone(RuntimeOrigin::signed(bob), project_key, milestone1_key, None, true)
             .unwrap();
 
-        Proposals::finalise_milestone_voting(Origin::signed(alice), project_key, milestone1_key)
+        Proposals::finalise_milestone_voting(RuntimeOrigin::signed(alice), project_key, milestone1_key)
             .unwrap();
 
-        assert_ok!(Proposals::withdraw(Origin::signed(alice), project_key));
+        assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(alice), project_key));
 
         assert_eq!(
             Balances::free_balance(&alice),
@@ -1552,11 +1551,11 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         );
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
+            mock::RuntimeEvent::from(proposals::Event::ProjectFundsWithdrawn(
                 alice,
                 0,
                 100,
@@ -1579,7 +1578,7 @@ fn test_withdraw_from_non_initiator_account() {
         let project_key = 0;
 
         assert_noop!(
-            Proposals::withdraw(Origin::signed(bob), project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(bob), project_key),
             DispatchErrorWithPostInfo {
                 post_info: PostDispatchInfo {
                     actual_weight: None,
@@ -1628,7 +1627,7 @@ fn submit_multiple_milestones() {
         let milestone_index_2 = 1;
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -1637,7 +1636,7 @@ fn submit_multiple_milestones() {
         .unwrap();
 
         let value = 100u64;
-        Proposals::contribute(Origin::signed(bob), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), None, project_key, value).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(milestone_index_1);
@@ -1645,17 +1644,17 @@ fn submit_multiple_milestones() {
 
         run_to_block(3);
 
-        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
 
-        Proposals::submit_milestone(Origin::signed(alice), project_key, milestone_index_1).unwrap();
+        Proposals::submit_milestone(RuntimeOrigin::signed(alice), project_key, milestone_index_1).unwrap();
 
         let voting_round_event_1 = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             voting_round_event_1,
-            mock::Event::from(proposals::Event::VotingRoundCreated(
+            mock::RuntimeEvent::from(proposals::Event::VotingRoundCreated(
                 voting_round1_key,
                 vec![project_key]
             ))
@@ -1664,18 +1663,18 @@ fn submit_multiple_milestones() {
         run_to_block(5);
 
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             milestone_index_2
         ));
 
         let voting_round_event_2 = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             voting_round_event_2,
-            mock::Event::from(proposals::Event::VotingRoundCreated(
+            mock::RuntimeEvent::from(proposals::Event::VotingRoundCreated(
                 voting_round2_key,
                 vec![project_key]
             ))
@@ -1696,7 +1695,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
 
         //schedule_round extrinsic
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 10,
             //Project key starts with 0 for the first project submitted to the chain
@@ -1712,7 +1711,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
         run_to_block(4);
         //contribute extrinsic
         Proposals::contribute(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             None,
             project_key,
             contribution_amount,
@@ -1726,15 +1725,15 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
             Balances::free_balance(&alice)
         );
 
-        Proposals::refund(Origin::root(), project_key).unwrap();
+        Proposals::refund(RuntimeOrigin::root(), project_key).unwrap();
 
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             exp_projectfundsrefunded_event,
-            mock::Event::from(proposals::Event::ProjectFundsAddedToRefundQueue(
+            mock::RuntimeEvent::from(proposals::Event::ProjectFundsAddedToRefundQueue(
                 project_key,
                 contribution_amount
             ))
@@ -1797,7 +1796,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         let milestone2_key = 1;
 
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 1,
             project_keys,
@@ -1806,36 +1805,36 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         .unwrap();
 
         let value = 500000u64;
-        Proposals::contribute(Origin::signed(bob), None, project_key, value).unwrap();
-        Proposals::contribute(Origin::signed(charlie), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), None, project_key, value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(charlie), None, project_key, value).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
 
-        Proposals::approve(Origin::root(), None, project_key, Some(milestone_index)).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, Some(milestone_index)).unwrap();
 
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             milestone1_key
         ));
 
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             milestone2_key
         ));
 
         run_to_block(5);
         //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone1_key, None, true)
+        Proposals::vote_on_milestone(RuntimeOrigin::signed(bob), project_key, milestone1_key, None, true)
             .ok();
 
         //Charlie voting on the submitted milestone
         Proposals::vote_on_milestone(
-            Origin::signed(charlie),
+            RuntimeOrigin::signed(charlie),
             project_key,
             milestone1_key,
             None,
@@ -1844,13 +1843,13 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         .ok();
 
         assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key,
             0
         ));
 
         assert_ok!(<proposals::Pallet<Test>>::withdraw(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(alice),
             project_key
         ));
 
@@ -1873,11 +1872,11 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         //can withdraw only the amount corresponding to the milestone percentage completion
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
+            mock::RuntimeEvent::from(proposals::Event::ProjectFundsWithdrawn(
                 alice,
                 project_key,
                 200000u64,
@@ -1893,15 +1892,15 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             Balances::free_balance(&charlie)
         );
 
-        Proposals::refund(Origin::root(), project_key).unwrap();
+        Proposals::refund(RuntimeOrigin::root(), project_key).unwrap();
 
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             exp_projectfundsrefunded_event,
-            mock::Event::from(proposals::Event::ProjectFundsAddedToRefundQueue(
+            mock::RuntimeEvent::from(proposals::Event::ProjectFundsAddedToRefundQueue(
                 project_key,
                 800000u64
             ))
@@ -1928,7 +1927,7 @@ fn test_schedule_round_fails_gracefully_with_empty_vec() {
 
         assert_noop!(
             Proposals::schedule_round(
-                Origin::root(),
+                RuntimeOrigin::root(),
                 System::block_number(),
                 System::block_number() + 1,
                 // Empty keys is the test.
@@ -1954,7 +1953,7 @@ fn test_raising_a_vote_of_no_confidence() {
 
         // Schedule a round to allow for contributions.
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![project_key],
@@ -1966,20 +1965,20 @@ fn test_raising_a_vote_of_no_confidence() {
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 10_000_000u64);
         run_to_block(System::block_number() + 3);
 
-        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 1_000_000u64).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), Some(1), project_key, 1_000_000u64).unwrap();
         run_to_block(System::block_number() + 101);
 
-        Proposals::approve(Origin::root(), Some(1), project_key, None).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, None).unwrap();
 
         // Assert that Bob cannot raise the vote as he is not a contributor.
         assert_noop!(
-            Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key),
+            Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(charlie), project_key),
             Error::<Test>::OnlyContributorsCanVote
         );
 
         // Call a vote of no confidence and assert it will pass.
         assert_ok!(Proposals::raise_vote_of_no_confidence(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             project_key
         ));
 
@@ -1994,7 +1993,7 @@ fn test_raising_a_vote_of_no_confidence() {
 
         // Assert that you cannot raise the vote twice.
         assert_noop!(
-            Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_key),
+            Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(bob), project_key),
             Error::<Test>::RoundStarted
         );
     });
@@ -2012,7 +2011,7 @@ fn test_adding_vote_of_no_confidence() {
 
         //schedule a round to allow for contributions.
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![project_key],
@@ -2026,27 +2025,27 @@ fn test_adding_vote_of_no_confidence() {
         run_to_block(System::block_number() + 3);
 
         // Setup required state to start voting: must have contributed and round must have started.
-        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 500_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 500_000u64).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(charlie), Some(1), project_key, 500_000u64).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), Some(1), project_key, 500_000u64).unwrap();
 
         run_to_block(System::block_number() + 101);
 
         // Assert that threshold has been met
         assert_ok!(Proposals::approve(
-            Origin::root(),
+            RuntimeOrigin::root(),
             Some(1),
             project_key,
             None
         ));
 
         assert_ok!(Proposals::raise_vote_of_no_confidence(
-            Origin::signed(charlie),
+            RuntimeOrigin::signed(charlie),
             project_key
         ));
 
         // Charlie has raised a vote of no confidence, now Bob is gonna disagree!
         assert_ok!(Proposals::vote_on_no_confidence_round(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             None,
             project_key,
             true
@@ -2054,11 +2053,11 @@ fn test_adding_vote_of_no_confidence() {
 
         // Assert Bob cannot game the system.
         assert_noop!(
-            Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, true),
+            Proposals::vote_on_no_confidence_round(RuntimeOrigin::signed(bob), None, project_key, true),
             Error::<Test>::VoteAlreadyExists
         );
         assert_noop!(
-            Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, false),
+            Proposals::vote_on_no_confidence_round(RuntimeOrigin::signed(bob), None, project_key, false),
             Error::<Test>::VoteAlreadyExists
         );
 
@@ -2089,7 +2088,7 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
 
         //schedule a round to allow for contributions.
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![project_key],
@@ -2102,17 +2101,17 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
         run_to_block(System::block_number() + 3);
         // Setup required state to start voting: must have contributed and round must have started.
-        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_001u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(charlie), Some(1), project_key, 750_001u64).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
         run_to_block(System::block_number() + 101);
-        Proposals::approve(Origin::root(), Some(1), project_key, None).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, None).unwrap();
 
         assert_ok!(Proposals::raise_vote_of_no_confidence(
-            Origin::signed(charlie),
+            RuntimeOrigin::signed(charlie),
             project_key
         ));
         assert_ok!(Proposals::vote_on_no_confidence_round(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             None,
             project_key,
             false
@@ -2120,21 +2119,21 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
 
         // Assert that steve who is not a contributor cannot finalise the same goes for the initiator.
         assert_noop!(
-            Proposals::finalise_no_confidence_round(Origin::signed(steve), None, project_key),
+            Proposals::finalise_no_confidence_round(RuntimeOrigin::signed(steve), None, project_key),
             Error::<Test>::OnlyContributorsCanVote
         );
         assert_noop!(
-            Proposals::finalise_no_confidence_round(Origin::signed(alice), None, project_key),
+            Proposals::finalise_no_confidence_round(RuntimeOrigin::signed(alice), None, project_key),
             Error::<Test>::OnlyContributorsCanVote
         );
         // And we might aswell assert that you cannot call finalise on a project key that doesnt exist.
         assert_noop!(
-            Proposals::finalise_no_confidence_round(Origin::signed(bob), None, 2),
+            Proposals::finalise_no_confidence_round(RuntimeOrigin::signed(bob), None, 2),
             Error::<Test>::ProjectNotInRound
         );
         // Assert that bob, a contrbutor, can finalise
         assert_ok!(Proposals::finalise_no_confidence_round(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             None,
             project_key
         ));
@@ -2156,7 +2155,7 @@ fn test_finalise_vote_of_no_confidence_below_threshold() {
 
         //schedule a round to allow for contributions.
         Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![project_key],
@@ -2170,32 +2169,32 @@ fn test_finalise_vote_of_no_confidence_below_threshold() {
         run_to_block(System::block_number() + 3);
 
         // Setup required state to start voting: must have contributed and round must have started.
-        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 500_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 500_000u64).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(charlie), Some(1), project_key, 500_000u64).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(bob), Some(1), project_key, 500_000u64).unwrap();
 
         run_to_block(System::block_number() + 101);
 
         // Assert that threshold has been met
         assert_ok!(Proposals::approve(
-            Origin::root(),
+            RuntimeOrigin::root(),
             Some(1),
             project_key,
             None
         ));
 
         assert_ok!(Proposals::raise_vote_of_no_confidence(
-            Origin::signed(charlie),
+            RuntimeOrigin::signed(charlie),
             project_key
         ));
         assert_ok!(Proposals::vote_on_no_confidence_round(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             Some(2),
             project_key,
             true
         ));
 
         assert_noop!(
-            Proposals::finalise_no_confidence_round(Origin::signed(charlie), Some(2), project_key),
+            Proposals::finalise_no_confidence_round(RuntimeOrigin::signed(charlie), Some(2), project_key),
             Error::<Test>::VoteThresholdNotMet
         );
     });
@@ -2214,7 +2213,7 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         // Create a project for both alice and bob.
         create_project(alice);
         let _ = Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![project_key],
@@ -2223,8 +2222,8 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         let _ = Currencies::deposit(CurrencyId::Native, &charlie, 1_000_000u64);
         let _ = Currencies::deposit(CurrencyId::Native, &bob, 1_000_000u64);
         run_to_block(System::block_number() + 3);
-        let _ = Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_000u64).unwrap();
-        let _ = Proposals::contribute(Origin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
+        let _ = Proposals::contribute(RuntimeOrigin::signed(charlie), Some(1), project_key, 750_000u64).unwrap();
+        let _ = Proposals::contribute(RuntimeOrigin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
         run_to_block(System::block_number() + 101);
 
         // assert that the voters have had their funds transferred.
@@ -2232,13 +2231,13 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         assert!(Currencies::free_balance(CurrencyId::Native, &bob) == 750_000u64);
 
         // approve and raise votees
-        let _ = Proposals::approve(Origin::root(), Some(1), project_key, None).unwrap();
-        let _ = Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key).unwrap();
-        let _ = Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, false).unwrap();
+        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, None).unwrap();
+        let _ = Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(charlie), project_key).unwrap();
+        let _ = Proposals::vote_on_no_confidence_round(RuntimeOrigin::signed(bob), None, project_key, false).unwrap();
 
         // Assert that bob, a contrbutor, can finalise
         assert_ok!(Proposals::finalise_no_confidence_round(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(bob),
             None,
             project_key
         ));
@@ -2263,7 +2262,7 @@ fn test_refunds_go_back_to_contributors() {
 
         create_project(initiator);
         let _ = Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![0u32],
@@ -2276,10 +2275,10 @@ fn test_refunds_go_back_to_contributors() {
             let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
             accounts.push(acc.clone());
             let _ = Currencies::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
-            let _ = Proposals::contribute(Origin::signed(acc), Some(1), 0u32, 10_000u64).unwrap();
+            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64).unwrap();
         }
 
-        assert_ok!(Proposals::refund(Origin::root(), 0));
+        assert_ok!(Proposals::refund(RuntimeOrigin::root(), 0));
 
         // The maximum amount of block it should take for all refunds to occur.
         run_to_block(num_of_refunds as u64 / RefundsPerBlock::get() as u64);
@@ -2303,7 +2302,7 @@ fn test_refunds_state_is_handled_correctly() {
 
         create_project(initiator);
         let _ = Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![0u32],
@@ -2316,10 +2315,10 @@ fn test_refunds_state_is_handled_correctly() {
             let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
             accounts.push(acc.clone());
             let _ = Currencies::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
-            let _ = Proposals::contribute(Origin::signed(acc), Some(1), 0u32, 10_000u64).unwrap();
+            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64).unwrap();
         }
 
-        assert_ok!(Proposals::refund(Origin::root(), 0));
+        assert_ok!(Proposals::refund(RuntimeOrigin::root(), 0));
         let mut refunds_completed = 0usize;
         // The maximum amount of block it should take for all refunds to occur.
         for _ in 0..(num_of_refunds / RefundsPerBlock::get() as u32) {
@@ -2355,7 +2354,7 @@ fn test_finalise_milestone_is_ok_on_threshold_vote() {
         
         create_project(initiator);
         let _ = Proposals::schedule_round(
-            Origin::root(),
+            RuntimeOrigin::root(),
             System::block_number(),
             System::block_number() + 100,
             bounded_vec![0u32],
@@ -2371,27 +2370,27 @@ fn test_finalise_milestone_is_ok_on_threshold_vote() {
 
         run_to_block(System::block_number() + 1);
 
-        let _ = Proposals::contribute(Origin::signed(contyes.clone()), Some(1), 0u32, yes_contribution).unwrap();
-        let _ = Proposals::contribute(Origin::signed(contno.clone()), Some(1), 0u32, no_contribution).unwrap();
+        let _ = Proposals::contribute(RuntimeOrigin::signed(contyes.clone()), Some(1), 0u32, yes_contribution).unwrap();
+        let _ = Proposals::contribute(RuntimeOrigin::signed(contno.clone()), Some(1), 0u32, no_contribution).unwrap();
 
         run_to_block(System::block_number() + 100);
 
         // Assert that threshold has been met
         let _ = Proposals::approve(
-           Origin::root(),
+           RuntimeOrigin::root(),
            Some(1),
            0,
            None
         ).unwrap();
 
-        let _ = Proposals::submit_milestone(Origin::signed(initiator.clone()), 0, 0).unwrap();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(initiator.clone()), 0, 0).unwrap();
         
         run_to_block(System::block_number() + 1);
 
-        let _ = Proposals::vote_on_milestone(Origin::signed(contyes.clone()), 0, 0, None, true).unwrap();
-        let _ = Proposals::vote_on_milestone(Origin::signed(contno.clone()), 0, 0, None, false).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(contyes.clone()), 0, 0, None, true).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(contno.clone()), 0, 0, None, false).unwrap();
 
-        assert_ok!(Proposals::finalise_milestone_voting(Origin::signed(initiator), 0, 0));
+        assert_ok!(Proposals::finalise_milestone_voting(RuntimeOrigin::signed(initiator), 0, 0));
     })
 }
 
@@ -2465,7 +2464,7 @@ fn update_an_existing_project() {
 
 
         assert_ok!(Proposals::update_project(
-            Origin::signed(alice), 
+            RuntimeOrigin::signed(alice), 
             project_key,
             updated_project_name,
             updated_project_logo,
@@ -2478,11 +2477,11 @@ fn update_an_existing_project() {
 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
-            .expect("Expected at least one EventRecord to be found")
+            .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
         assert_eq!(
             latest_event,
-            mock::Event::from(proposals::Event::ProjectUpdated(alice, expected_project_name_in_event, project_key, updated_required_funds))
+            mock::RuntimeEvent::from(proposals::Event::ProjectUpdated(alice, expected_project_name_in_event, project_key, updated_required_funds))
         );
 
     });
@@ -2491,7 +2490,7 @@ fn update_an_existing_project() {
 //common helper methods
 fn create_project(account: AccountId) {
     assert_ok!(Proposals::create_project(
-        Origin::signed(account),
+        RuntimeOrigin::signed(account),
         //project name
         b"Farmer's Project Sudan"
             .to_vec()
@@ -2528,7 +2527,7 @@ fn create_project_multiple_milestones(
     proposed_milestones: Vec<ProposedMilestone>,
 ) {
     assert_ok!(Proposals::create_project(
-        Origin::signed(alice),
+        RuntimeOrigin::signed(alice),
         //project name
         b"Farmer's Project Sudan"
             .to_vec()
@@ -2568,7 +2567,7 @@ fn create_projects_with_inputs(
 ) -> DispatchResultWithPostInfo {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     Proposals::create_project(
-        Origin::signed(alice),
+        RuntimeOrigin::signed(alice),
         //project name
         name.as_bytes()
             .to_vec()
