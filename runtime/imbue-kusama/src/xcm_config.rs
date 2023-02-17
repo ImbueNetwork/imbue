@@ -12,6 +12,7 @@ pub use frame_support::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
         ConstantMultiplier, IdentityFee, Weight,
     },
+    dispatch::DispatchClass,
     PalletId, StorageValue,
 };
 

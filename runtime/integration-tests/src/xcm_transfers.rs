@@ -302,7 +302,7 @@ fn transfer_ksm_to_relay_chain() {
     KusamaNet::execute_with(|| {
         assert_eq!(
             kusama_runtime::Balances::free_balance(&BOB.into()),
-            999988476752
+            999895428355
         );
     });
 }

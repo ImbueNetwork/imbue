@@ -16,7 +16,6 @@ use sp_runtime::{
     impl_opaque_keys,
     traits::{
         AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto,
-        Extrinsic as ExtrinsicT,
     },
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, Perbill, Permill,
@@ -36,7 +35,7 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-    construct_runtime, ensure, parameter_types,
+    construct_runtime, dispatch::DispatchClass, ensure, parameter_types,
     traits::{
         fungibles, Contains, Currency as PalletCurrency, EnsureOriginWithArg, EqualPrivilegeOnly,ConstU128, ConstU16, ConstU32,
         Everything, Get, Imbalance, IsInVec, Nothing, OnUnbalanced, Randomness,WithdrawReasons
@@ -45,7 +44,7 @@ pub use frame_support::{
         constants::{
             BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
         },
-        ConstantMultiplier, DispatchClass, IdentityFee, Weight,
+        ConstantMultiplier,IdentityFee, Weight,
     },
     PalletId, StorageValue,
 };

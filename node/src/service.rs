@@ -51,7 +51,7 @@ use sp_api::{ConstructRuntimeApi};
 
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::{
-    traits::{BlakeTwo256, Header as HeaderT},
+    traits::{BlakeTwo256},
 };
 use std::{sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
