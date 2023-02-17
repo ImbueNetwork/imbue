@@ -23,4 +23,3 @@ scripts/imbue-data-proxy.env
 scripts/imbue_db/
 scripts/polkadot-launch/
 cumulus-parachain/*
-Cargo.lock

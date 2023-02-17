@@ -418,7 +418,6 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Step 1 (INITIATOR)
         /// Create project.
-        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn create_project(
             origin: OriginFor<T>,
@@ -461,7 +460,6 @@ pub mod pallet {
             )
         }
 
-        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::update_project())]
         pub fn update_project(
             origin: OriginFor<T>,
@@ -500,7 +498,6 @@ pub mod pallet {
 
         /// Step 1.5 (INITIATOR)
         /// Add whitelist to a project
-        #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::add_project_whitelist())]
         pub fn add_project_whitelist(
             origin: OriginFor<T>,
@@ -520,7 +517,6 @@ pub mod pallet {
 
         /// Step 1.5 (INITIATOR)
         /// Remove a whitelist
-        #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::remove_project_whitelist())]
         pub fn remove_project_whitelist(
             origin: OriginFor<T>,
@@ -537,7 +533,6 @@ pub mod pallet {
         /// Step 2 (ADMIN)
         /// Schedule a round
         /// project_keys: the projects were selected for this round
-        #[pallet::call_index(4)]
         #[pallet::weight(<T as Config>::WeightInfo::schedule_round())]
         pub fn schedule_round(
             origin: OriginFor<T>,
@@ -564,7 +559,6 @@ pub mod pallet {
         /// Step 2.5 (ADMIN)
         /// Cancel a round
         /// This round must have not started yet
-        #[pallet::call_index(5)]
         #[pallet::weight(<T as Config>::WeightInfo::cancel_round())]
         pub fn cancel_round(
             origin: OriginFor<T>,
@@ -589,7 +583,6 @@ pub mod pallet {
 
         /// Step 3 (CONTRIBUTOR/FUNDER)
         /// Contribute to a project
-        #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
         #[transactional]
         pub fn contribute(
@@ -606,7 +599,6 @@ pub mod pallet {
         /// Step 4 (ADMIN)
         /// Approve project
         /// If the project is approved, the project initiator can withdraw funds for approved milestones
-        #[pallet::call_index(7)]
         #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
@@ -620,7 +612,6 @@ pub mod pallet {
         }
 
         /// Step 5 (INITIATOR)
-        #[pallet::call_index(8)]
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
@@ -633,7 +624,6 @@ pub mod pallet {
 
         /// Step 6 (CONTRIBUTOR/FUNDER)
         /// Vote on a milestone
-        #[pallet::call_index(9)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_milestone())]
         pub fn vote_on_milestone(
             origin: OriginFor<T>,
@@ -655,7 +645,6 @@ pub mod pallet {
 
         /// Step 7 (INITATOR)
         /// Finalise the voting on a milestone.
-        #[pallet::call_index(10)]
         #[pallet::weight(<T as Config>::WeightInfo::finalise_milestone_voting())]
         pub fn finalise_milestone_voting(
             origin: OriginFor<T>,
@@ -669,7 +658,6 @@ pub mod pallet {
 
         /// Step 8 (INITATOR)
         /// Withdraw some avaliable funds from the project.
-        #[pallet::call_index(11)]
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
@@ -682,7 +670,6 @@ pub mod pallet {
         /// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
         /// This will start a round which each contributor can vote on.
         /// The round will last as long as set in the Config.
-        #[pallet::call_index(12)]
         #[pallet::weight(<T as Config>::WeightInfo::raise_vote_of_no_confidence())]
         pub fn raise_vote_of_no_confidence(
             origin: OriginFor<T>,
@@ -695,7 +682,6 @@ pub mod pallet {
         /// Vote on an already existing "Vote of no condidence" round.
         /// is_yay is FOR the project's continuation.
         /// so is_yay = false == against the project from continuing perhaps should be flipped.
-        #[pallet::call_index(13)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         pub fn vote_on_no_confidence_round(
             origin: OriginFor<T>,
@@ -710,7 +696,6 @@ pub mod pallet {
 
         /// Finalise a "vote of no condidence" round.
         /// Votes must pass a threshold as defined in the config trait for the vote to succeed.
-        #[pallet::call_index(14)]
         #[pallet::weight(<T as Config>::WeightInfo::finalise_no_confidence_round())]
         pub fn finalise_no_confidence_round(
             origin: OriginFor<T>,
@@ -730,7 +715,6 @@ pub mod pallet {
         // Root Extrinsics:
 
         /// Set max project count per round
-        #[pallet::call_index(15)]
         #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_max_project_count_per_round(
             origin: OriginFor<T>,
@@ -747,7 +731,6 @@ pub mod pallet {
         }
 
         /// Set milestone voting window
-        #[pallet::call_index(16)]
         #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_milestone_voting_window(
             origin: OriginFor<T>,
@@ -764,7 +747,6 @@ pub mod pallet {
         }
 
         /// Set withdrawal expiration
-        #[pallet::call_index(17)]
         #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_withdrawal_expiration(
             origin: OriginFor<T>,
@@ -781,7 +763,6 @@ pub mod pallet {
         }
 
         /// set is_identity_required
-        #[pallet::call_index(18)]
         #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_is_identity_required(
             origin: OriginFor<T>,
@@ -795,7 +776,6 @@ pub mod pallet {
 
         /// Ad Hoc Step (ADMIN)
         /// This will add the refunds to a queue to eventually be processed, Hooks will show refunds themselves.
-        #[pallet::call_index(19)]
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
             //ensure only admin can perform refund
