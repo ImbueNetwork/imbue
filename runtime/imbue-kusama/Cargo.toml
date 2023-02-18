@@ -176,7 +176,7 @@ runtime-benchmarks = [
 	'frame-benchmarking',
 	'frame-support/runtime-benchmarks',
 	"hex-literal",
-	'frame-system-benchmarking',
+	'frame-system-benchmarking/runtime-benchmarks',
 	'frame-system/runtime-benchmarks',
 #	'proposals/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
