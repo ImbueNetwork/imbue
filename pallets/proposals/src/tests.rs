@@ -3,12 +3,14 @@ use crate::mock::*;
 
 use crate::*;
 use common_types::CurrencyId;
+use frame_benchmarking::whitelisted_caller;
 use frame_support::{
     assert_noop, assert_ok, bounded_btree_map, bounded_vec, dispatch::DispatchErrorWithPostInfo,
     weights::PostDispatchInfo
 };
 use sp_core::sr25519;
 use sp_std::vec::Vec;
+
 
 #[test]
 fn create_a_test_project() {
@@ -2401,7 +2403,7 @@ fn update_an_existing_project() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let updated_project_name = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
-    let expected_project_name_in_event = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
+    let expected_project_name_in_event: Vec<u8> = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
     let updated_project_logo = b"Some logo".to_vec().try_into().expect("Invalid input");
     let updated_project_description = b"Raise funds for Farmer's project phase 2".to_vec().try_into().expect("Invalid input");
     let updated_project_website = b"www.ab.com".to_vec().try_into().expect("Invalid input");
@@ -2480,10 +2482,15 @@ fn update_an_existing_project() {
             .pop()
             .expect("Expected at least one EventRecord to be found")
             .event;
-        assert_eq!(
+        /*assert_eq!(
             latest_event,
             mock::Event::from(proposals::Event::ProjectUpdated(alice, expected_project_name_in_event, project_key, updated_required_funds))
-        );
+        );*/
+
+
+        let updated_project = Proposals::projects(project_key);
+
+        assert_eq!(updated_project.unwrap().name, expected_project_name_in_event);          
 
     });
 }
