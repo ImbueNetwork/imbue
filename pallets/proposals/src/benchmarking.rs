@@ -8,6 +8,7 @@ use frame_support::{
     assert_ok,
     traits::{Currency, Get},
 };
+use frame_benchmarking::vec;
 use sp_std::str;
 const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
