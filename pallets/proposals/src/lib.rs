@@ -198,6 +198,13 @@ pub mod pallet {
             BalanceOf<T>,
             common_types::CurrencyId,
         ),
+        // Project has been updated
+        ProjectUpdated(
+            T::AccountId,
+            Vec<u8>,
+            ProjectKey,
+            BalanceOf<T>
+        ),  
         /// A funding round has been created.
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
         /// A voting round has been created.
@@ -318,6 +325,8 @@ pub mod pallet {
         ProjectApprovalRequired,
         /// The round type specified is invalid.
         InvalidRoundType,
+        /// The project already be approved, cannot be updated.
+        ProjectAlreadyApproved,
     }
 
     #[pallet::hooks]
@@ -442,6 +451,42 @@ pub mod pallet {
 
             Self::new_project(
                 who,
+                name,
+                logo,
+                description,
+                website,
+                proposed_milestones,
+                required_funds,
+                currency_id,
+            )
+        }
+
+        #[pallet::weight(<T as Config>::WeightInfo::update_project())]
+        pub fn update_project(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+            name: BoundedStringField,
+            logo: BoundedStringField,
+            description: BoundedDescriptionField,
+            website: BoundedWebsiteUrlField,
+            proposed_milestones: BoundedProposedMilestones,
+            required_funds: BalanceOf<T>,
+            currency_id: common_types::CurrencyId,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            
+            let mut total_percentage = 0;
+            for milestone in proposed_milestones.iter() {
+                total_percentage += milestone.percentage_to_unlock;
+            }
+            ensure!(
+                total_percentage == 100,
+                Error::<T>::MilestonesTotalPercentageMustEqual100
+            );
+
+            Self::update_existing_project(
+                who,
+                project_key,
                 name,
                 logo,
                 description,
@@ -607,6 +652,7 @@ pub mod pallet {
             project_key: ProjectKey,
             milestone_key: MilestoneKey,
         ) -> DispatchResultWithPostInfo {
+            // Must be the initiator.
             let who = ensure_signed(origin)?;
             Self::do_finalise_milestone_voting(who, project_key, milestone_key)
         }

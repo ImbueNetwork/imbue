@@ -10,6 +10,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for pallet_proposals.
 pub trait WeightInfo {
     fn create_project() -> Weight;
+    fn update_project() -> Weight;
     fn add_project_whitelist() -> Weight; 
     fn remove_project_whitelist() -> Weight; 
     fn schedule_round() -> Weight;
@@ -35,6 +36,11 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn create_project() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+    }
+    fn update_project() -> Weight {
         Weight::from_ref_time(49_000_000 as u64)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
@@ -134,6 +140,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn create_project() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(2_u64))
+            .saturating_add(RocksDbWeight::get().writes(2_u64))
+    }
+    fn update_project() -> Weight {
         Weight::from_ref_time(49_000_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))

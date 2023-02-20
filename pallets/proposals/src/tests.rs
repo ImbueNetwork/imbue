@@ -5,7 +5,7 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{
     assert_noop, assert_ok, bounded_btree_map, bounded_vec, dispatch::DispatchErrorWithPostInfo,
-    weights::PostDispatchInfo, log::info
+    weights::PostDispatchInfo
 };
 use sp_core::sr25519;
 use sp_std::vec::Vec;
@@ -2347,6 +2347,149 @@ fn test_refunds_state_is_handled_correctly() {
     });
 } 
 
+// create project, schedule a round, approve and submit a milestone.
+// assert that the vote will pass when it is on the threshold.
+#[test]
+fn test_finalise_milestone_is_ok_on_threshold_vote() {
+    build_test_externality().execute_with(|| {
+        let initiator = get_account_id_from_seed::<sr25519::Public>("initiator");
+        let contyes = get_account_id_from_seed::<sr25519::Public>("cont1");
+        let contno = get_account_id_from_seed::<sr25519::Public>("cont2");
+        
+        create_project(initiator);
+        let _ = Proposals::schedule_round(
+            Origin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![0u32],
+            RoundType::ContributionRound
+        ).unwrap();
+
+        // Deposit and contribute up to the voting threshold so that it should pass.
+        let _ = Currencies::deposit(CurrencyId::Native, &contyes, 1_000_000u64);
+        let _ = Currencies::deposit(CurrencyId::Native, &contno, 1_000_000u64);
+        
+        let yes_contribution = 1_000_000u64 / 100u64 * PercentRequiredForVoteToPass::get() as u64;
+        let no_contribution = 1_000_000u64 / 100u64 * (100u8 - PercentRequiredForVoteToPass::get()) as u64;
+
+        run_to_block(System::block_number() + 1);
+
+        let _ = Proposals::contribute(Origin::signed(contyes.clone()), Some(1), 0u32, yes_contribution).unwrap();
+        let _ = Proposals::contribute(Origin::signed(contno.clone()), Some(1), 0u32, no_contribution).unwrap();
+
+        run_to_block(System::block_number() + 100);
+
+        // Assert that threshold has been met
+        let _ = Proposals::approve(
+           Origin::root(),
+           Some(1),
+           0,
+           None
+        ).unwrap();
+
+        let _ = Proposals::submit_milestone(Origin::signed(initiator.clone()), 0, 0).unwrap();
+        
+        run_to_block(System::block_number() + 1);
+
+        let _ = Proposals::vote_on_milestone(Origin::signed(contyes.clone()), 0, 0, None, true).unwrap();
+        let _ = Proposals::vote_on_milestone(Origin::signed(contno.clone()), 0, 0, None, false).unwrap();
+
+        assert_ok!(Proposals::finalise_milestone_voting(Origin::signed(initiator), 0, 0));
+    })
+}
+
+#[test]
+//update project required funds and milestones - positive test case
+fn update_an_existing_project() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+    let updated_project_name = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
+    let expected_project_name_in_event = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
+    let updated_project_logo = b"Some logo".to_vec().try_into().expect("Invalid input");
+    let updated_project_description = b"Raise funds for Farmer's project phase 2".to_vec().try_into().expect("Invalid input");
+    let updated_project_website = b"www.ab.com".to_vec().try_into().expect("Invalid input");
+    let additional_amount = 100000000u64;
+    let updated_required_funds = 2_500_000u64;
+    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
+    let milestone1: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 1"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 20,
+    };
+    let milestone2: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 2"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 30,
+    };
+
+    let milestone3: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 3"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 50,
+    };
+    proposed_milestones.push(milestone1);
+    proposed_milestones.push(milestone2);
+    proposed_milestones.push(milestone3);
+
+
+    let mut updated_proposed_milestones: Vec<ProposedMilestone> = Vec::new();
+    let updated_milestone1: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 1"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 70,
+    };
+    let updated_milestone2: ProposedMilestone = ProposedMilestone {
+        name: b"milestone 2"
+            .to_vec()
+            .try_into()
+            .expect("input should be of decent length"),
+        percentage_to_unlock: 30,
+    };
+
+    updated_proposed_milestones.push(updated_milestone1);
+    updated_proposed_milestones.push(updated_milestone2);
+
+
+
+
+    build_test_externality().execute_with(|| {
+        deposit_initial_balance(&alice, &bob, additional_amount);
+        create_project_multiple_milestones(alice, proposed_milestones);
+
+        let project_key = 0;
+
+
+        assert_ok!(Proposals::update_project(
+            Origin::signed(alice), 
+            project_key,
+            updated_project_name,
+            updated_project_logo,
+            updated_project_description,
+            updated_project_website,
+            updated_proposed_milestones.try_into().expect("Invalid proposed milestones"), 
+            updated_required_funds,
+            CurrencyId::Native,
+        ));
+
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one EventRecord to be found")
+            .event;
+        assert_eq!(
+            latest_event,
+            mock::Event::from(proposals::Event::ProjectUpdated(alice, expected_project_name_in_event, project_key, updated_required_funds))
+        );
+
+    });
+}
 
 //common helper methods
 fn create_project(account: AccountId) {
