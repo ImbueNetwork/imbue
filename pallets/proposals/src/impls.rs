@@ -227,11 +227,21 @@ pub fn update_existing_project(
 
         // round list must be not none
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
+        
         ensure!(
-            round.round_type == RoundType::ContributionRound
-                && round.start <= now
-                && round.end >= now,
-            Error::<T>::RoundNotProcessing
+            round.round_type == RoundType::ContributionRound,
+            Error::<T>::InvalidRoundType
+        );
+
+        ensure!(
+            round.start <= now,
+            Error::<T>::StartBlockNumberInvalid
+
+        );
+        
+        ensure!(
+            round.end >= now,
+            Error::<T>::EndBlockNumberInvalid
         );
 
         ensure!(
@@ -411,9 +421,21 @@ pub fn update_existing_project(
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
-            round.round_type == RoundType::VotingRound && round.start < now && round.end > now,
-            Error::<T>::RoundNotProcessing
+            round.round_type == RoundType::VotingRound,
+            Error::<T>::InvalidRoundType
         );
+
+        ensure!(
+            round.start < now,
+            Error::<T>::StartBlockNumberInvalid
+
+        );
+        
+        ensure!(
+            round.end > now,
+            Error::<T>::EndBlockNumberInvalid
+        );
+
         ensure!(
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
