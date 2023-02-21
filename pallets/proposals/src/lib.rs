@@ -305,10 +305,9 @@ pub mod pallet {
         RoundStarted,
         /// Round stll in progress.
         RoundNotEnded,
-        /// There was a processing error when finding the round.
-        RoundNotProcessing,
         /// Round has been cancelled.
         RoundCanceled,
+        /// The start block number is invalid.
         StartBlockNumberInvalid,
         /// You have already voted on this round.
         VoteAlreadyExists,
@@ -324,6 +323,8 @@ pub mod pallet {
         VoteThresholdNotMet,
         /// The project must be approved.
         ProjectApprovalRequired,
+        /// The round type specified is invalid.
+        InvalidRoundType,
         /// The project already be approved, cannot be updated.
         ProjectAlreadyApproved,
     }
