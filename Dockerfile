@@ -12,7 +12,7 @@ WORKDIR /builds/imbue
 RUN cargo build --${PROFILE}
 RUN cp target/${PROFILE}/imbue /
 
-FROM parity/polkadot:v0.9.29 AS polkadot
+FROM parity/polkadot:v0.9.37 AS polkadot
 FROM parity/subkey:latest AS subkey
 # to copy polkadot binaries only; no other directives required
 

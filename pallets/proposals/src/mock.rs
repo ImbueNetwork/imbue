@@ -17,8 +17,8 @@ use sp_std::{
 };
 
 use sp_runtime::{
-    testing::{Header, TestXt},
-    traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
+    testing::{Header},
+    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
 
 use common_types::CurrencyId;
@@ -85,19 +85,17 @@ parameter_types! {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = i128;
     type CurrencyId = common_types::CurrencyId;
+    type CurrencyHooks = ();
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = orml_tokens::TransferDust<Test, DustAccount>;
     type MaxLocks = MaxLocks;
     type DustRemovalWhitelist = Nothing;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
 }
 
 parameter_types! {
@@ -105,12 +103,13 @@ parameter_types! {
     pub const OperationalFeeMultiplier: u8 = 5;
 }
 impl pallet_transaction_payment::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type WeightToFee = IdentityFee<u64>;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
-    type Event = Event;
+
 }
 
 parameter_types! {
@@ -122,8 +121,8 @@ impl frame_system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -131,13 +130,12 @@ impl frame_system::Config for Test {
     type AccountId = sp_core::sr25519::Public;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
-    type BlockHashCount = BlockHashCount;
+    type  BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
-
-    type OnNewAccount = ();
+    type RuntimeEvent = RuntimeEvent;
+    type  OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
@@ -145,21 +143,12 @@ impl frame_system::Config for Test {
     type MaxConsumers = ConstU32<16>;
 }
 
-type Extrinsic = TestXt<Call, ()>;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type AccountPublic = <Signature as Verify>::Signer;
 
 impl frame_system::offchain::SigningTypes for Test {
     type Public = <Signature as Verify>::Signer;
     type Signature = Signature;
-}
-
-impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
-where
-    Call: From<LocalCall>,
-{
-    type OverarchingCall = Call;
-    type Extrinsic = Extrinsic;
 }
 
 parameter_types! {
@@ -174,10 +163,10 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type AccountStore = System;
     type Balance = u64;
     type DustRemoval = ();
-    type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
     type MaxReserves = ();
@@ -211,7 +200,7 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
 }
 impl proposals::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Currencies;
@@ -239,7 +228,7 @@ parameter_types! {
 //}
 
 impl pallet_identity::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Slashed = ();
     type BasicDeposit = BasicDeposit;
@@ -251,20 +240,6 @@ impl pallet_identity::Config for Test {
     type RegistrarOrigin = EnsureRoot<AccountId>;
     type ForceOrigin = EnsureRoot<AccountId>;
     type WeightInfo = ();
-}
-
-impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Test
-where
-    Call: From<LocalCall>,
-{
-    fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-        call: Call,
-        _public: <Signature as Verify>::Signer,
-        _account: AccountId,
-        nonce: u64,
-    ) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
-        Some((call, (nonce, ())))
-    }
 }
 
 parameter_types! {
