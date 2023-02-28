@@ -24,6 +24,8 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 
 # local dependancies
 pallet-proposals = { path = "../proposals", default-features = false }
+common-traits = { path = "../../libs/common-traits", default-features = false }
+common-types = { path = "../../libs/common-types", default-features = false }
 
 
 [dev-dependencies]
