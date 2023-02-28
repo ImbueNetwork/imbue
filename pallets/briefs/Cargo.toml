@@ -1,5 +1,5 @@
 [package]
-name = "pallet-brief"
+name = "pallet-briefs"
 authors = ['Imbue <https://github.com/ImbueNetwork>']
 description = "Briefs pallet is used to create a piece of work (briefs) to be done by a freelancer"
 version = '0.1.0'
@@ -21,6 +21,8 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
 
 # local dependancies
 pallet-proposals = { path = "../proposals", default-features = false }
@@ -32,6 +34,8 @@ common-types = { path = "../../libs/common-types", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
 
 [features]
 default = ["std"]
