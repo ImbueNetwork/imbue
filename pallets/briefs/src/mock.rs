@@ -18,7 +18,7 @@ use sp_std::{
 
 use sp_runtime::{
     testing::{Header},
-    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify, AccountIdConversion},
 };
 
 use common_types::CurrencyId;
@@ -49,15 +49,15 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system,
-        Balances: pallet_balances,
-        Proposals: proposals,
-        Tokens: orml_tokens,
-        Currencies: orml_currencies,
-        Timestamp: pallet_timestamp,
-        TransactionPayment: pallet_transaction_payment,
-        Identity: pallet_identity,
-		Briefs: pallet_briefs,
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Proposals: proposals::{Pallet, Call, Storage, Event<T>},
+        Tokens: orml_tokens::{Pallet, Storage, Event<T>},
+        Currencies: orml_currencies::{Pallet, Call, Storage},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
+        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
+		Briefs: pallet_briefs::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -217,6 +217,20 @@ impl pallet_identity::Config for Test {
     type RegistrarOrigin = EnsureRoot<AccountId>;
     type ForceOrigin = EnsureRoot<AccountId>;
     type WeightInfo = ();
+}
+
+parameter_types! {
+    pub MinimumBounty: Balance = 10_000u32.into();
+    pub MinimumDeposit: Balance = 1000u32.into();
+    pub MaximumApplicants: u32 = 10_000u32;
+}
+
+impl pallet_briefs::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type RMultiCurrency = Tokens;
+    type MinimumDeposit = MinimumDeposit;
+    type MinimumBounty = MinimumBounty;
+    type MaximumApplicants = MaximumApplicants;
 }
 
 parameter_types! {

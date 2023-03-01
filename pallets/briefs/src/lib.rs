@@ -28,7 +28,7 @@ pub mod pallet {
 
 	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-	type BoundedApplications<T> = BoundedVec<Application<T>, <T as Config>::MaximumApplicants>;
+	type BoundedApplications<T> = BoundedVec<Application<AccountIdOf<T>>, <T as Config>::MaximumApplicants>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -48,7 +48,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn briefs)]
-	pub type Briefs<T> = StorageMap<_, Blake2_128Concat, BriefId, BriefData<T>, OptionQuery>;
+	pub type Briefs<T> = StorageMap<_, Blake2_128Concat, BriefId, BriefData<AccountIdOf<T>, BalanceOf<T>>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn brief_applications)]
@@ -110,22 +110,22 @@ pub mod pallet {
 
 
 	/// An application to a brief, used to decide who will do the work.
-	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen)]
-	struct Application<T: frame_system::Config> {
-		who: AccountIdOf<T>,
+	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
+	pub struct Application<AccountId> {
+		who: AccountId,
 		// do we need info on chain? arguably only the account id for the who clause.
 		//db_id: u64, 		
 	}	
 
 	/// The data assocaited with a Brief, 
-	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen)]
-	struct BriefData<T: Config> {
+	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
+	pub struct BriefData<AccountId, Balance> {
 		// looking to store minimal data on chain. 
 		// We can get the rest of the data from the backend dapp.
-		created_by: AccountIdOf<T>,
-		bounty_total: BalanceOf<T>,
+		created_by: AccountId,
+		bounty_total: Balance,
 		currency_id: CurrencyId,
-		current_contribution: BalanceOf<T>,
+		current_contribution: Balance,
 		//milestones?
 	}
 }
