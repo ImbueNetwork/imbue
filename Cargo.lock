@@ -5852,13 +5852,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-brief"
+name = "pallet-briefs"
 version = "0.1.0"
 dependencies = [
+ "common-traits",
+ "common-types",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-identity",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
  "parity-scale-codec 3.4.0",
+ "proposals",
  "scale-info 2.3.1",
  "sp-core",
  "sp-io",

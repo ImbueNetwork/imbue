@@ -98,11 +98,10 @@ pub mod pallet {
 	#[pallet::weight(10_000)]
 	pub fn submit_application(origin: OriginFor<T>) -> DispatchResult {
 		let who = ensure_signed(origin)?;
-
+		Ok(())
 
 	}
 
-}
 
 	/// An application to a brief, used to decide who will do the work.
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]

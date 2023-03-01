@@ -29,19 +29,6 @@ pub type BlockNumber = u32;
 pub type Amount = i128;
 pub type Balance = u64;
 
-fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
-
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
-
 parameter_types! {
     pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
 }
