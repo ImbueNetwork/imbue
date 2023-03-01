@@ -49,15 +49,15 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
-        Tokens: orml_tokens::{Pallet, Storage, Event<T>},
-        Currencies: orml_currencies::{Pallet, Call, Storage},
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
-		Briefs: pallet_brief,
+        System: frame_system,
+        Balances: pallet_balances,
+        Proposals: proposals,
+        Tokens: orml_tokens,
+        Currencies: orml_currencies,
+        Timestamp: pallet_timestamp,
+        TransactionPayment: pallet_transaction_payment,
+        Identity: pallet_identity,
+		Briefs: pallet_briefs,
     }
 );
 

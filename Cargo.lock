@@ -5863,6 +5863,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "pallet-balances",
  "pallet-identity",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -5872,6 +5873,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

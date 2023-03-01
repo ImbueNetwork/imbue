@@ -12,12 +12,6 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-// A unique hash of the brief in the db.
-pub type BriefId = [u8; 32];
-
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId
-type BalanceOf<T> = <<T as Config>::RMultiCurrency as ReservableMultiCurrency<AccountIdOf<T>>>::Balance;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{
@@ -26,9 +20,15 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use common_types::CurrencyId;
-	use orml_traits::ReservableMultiCurrency;
-	use pallet_proposals::{Config};
+	use orml_traits::{MultiReservableCurrency, MultiCurrency};
+
 	
+	// A unique hash of the brief in the db.
+	pub type BriefId = [u8; 32];
+
+	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+	type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+	type BoundedApplications<T> = BoundedVec<Application<T>, <T as Config>::MaximumApplicants>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -37,20 +37,22 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config + proposals::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		type RMultiCurrency: ReservableMultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+		type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 		/// The minimum deposit required to submit a brief.
-		type MinimumDeposit: Get<BalanceOf<T>>;
+		type MinimumDeposit: Get<BalanceOf<Self>>;
 		/// The minimum bounty required to submit a brief.
-		type MinimumBounty: Get<BalanceOf<T>>;
+		type MinimumBounty: Get<BalanceOf<Self>>;
+		// Maximum amount of applicants to a brief.
+		type MaximumApplicants: Get<u32>;
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	pub type Briefs<T> = StorageMap<_, BriefId, BriefInfo>;
+	#[pallet::getter(fn briefs)]
+	pub type Briefs<T> = StorageMap<_, Blake2_128Concat, BriefId, BriefData<T>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	pub type BriefApplications<T> = StorageMap<_, BriefId, Vec<Application<T>>>;
+	#[pallet::getter(fn brief_applications)]
+	pub type BriefApplications<T> = StorageMap<_, Blake2_128Concat, BriefId, BoundedApplications<T>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -78,33 +80,37 @@ pub mod pallet {
 			ensure!(bounty_total >= <T as Config>::MinimumBounty::get(), Error::<T>::BountyBelowMinimum);
 			ensure!(bounty_total >= initial_contribution, Error::<T>::ContributionMoreThanBounty);
 			// ensure that the brief_id is a legitimate brief (can be done in offchain worker as we need to make a req)!
+			// Take fee for brief
 
 			<T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
-			let new_brief = Brief {
+			let new_brief = BriefData {
 				created_by: who,
 				bounty_total,
 				current_contribution: initial_contribution,
+				currency_id
 				// milestones
 			};
 
 			Briefs::<T>::insert(brief_id, new_brief);
 
 			Self::deposit_event(Event::<T>::BriefSubmitted(brief_id));
+
+			Ok(())
 		}
-	}
 
-	#[pallet::call_index(1)]
-	#[pallet::weight(10_000)]
-	pub fn submit_application(origin: OriginFor<T>) -> DispatchResult {
-		let who = ensure_signed(origin)?;
-		Ok(())
-
+		#[pallet::call_index(1)]
+		#[pallet::weight(10_000)]
+		pub fn submit_application(origin: OriginFor<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			Ok(())
+		
+		}
 	}
 
 
 	/// An application to a brief, used to decide who will do the work.
-	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen)]
 	struct Application<T: frame_system::Config> {
 		who: AccountIdOf<T>,
 		// do we need info on chain? arguably only the account id for the who clause.
@@ -112,13 +118,13 @@ pub mod pallet {
 	}	
 
 	/// The data assocaited with a Brief, 
-	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen)]
 	struct BriefData<T: Config> {
 		// looking to store minimal data on chain. 
 		// We can get the rest of the data from the backend dapp.
-		created_by: AccountIdOf<T>
+		created_by: AccountIdOf<T>,
 		bounty_total: BalanceOf<T>,
-		currency: CurrencyId,
+		currency_id: CurrencyId,
 		current_contribution: BalanceOf<T>,
 		//milestones?
 	}
