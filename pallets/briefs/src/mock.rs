@@ -15,19 +15,24 @@ use sp_std::{
     str,
     vec::Vec,
 };
-
+use frame_support::once_cell::sync::Lazy;
+use common_types::CurrencyId;
+use sp_core::sr25519;
 use sp_runtime::{
     testing::{Header},
     traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify, AccountIdConversion},
+    BuildStorage
 };
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 
-use common_types::CurrencyId;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 pub type BlockNumber = u32;
 pub type Amount = i128;
 pub type Balance = u64;
+
+//type AccountId = sp_core::sr25519::Public;
 
 parameter_types! {
     pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
@@ -115,7 +120,7 @@ impl frame_system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = sp_core::sr25519::Public;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type  BlockHashCount = BlockHashCount;
@@ -237,12 +242,28 @@ parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
+pub static ALICE : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([1u8; 32])});
+pub static BOB : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([2u8; 32])});
+pub static TED : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([10u8; 32])});
 
-pub fn build_test_externality() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap();
-    let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
-    ext
+pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
+
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	
+    GenesisConfig::default()
+		.assimilate_storage(&mut t)
+		.unwrap();
+        
+    orml_tokens::GenesisConfig::<Test> {
+        balances: {
+            vec![*ALICE, *BOB, *TED].into_iter().map(|id| {
+            (id, CurrencyId::Native, 100000)
+        }).collect::<Vec<_>>()},
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
+    
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }
