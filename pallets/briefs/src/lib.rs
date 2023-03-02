@@ -16,14 +16,19 @@ mod benchmarking;
 pub mod pallet {
 	use frame_support::{
 		pallet_prelude::*,
-		traits::{Get}
+		traits::{Get},
+		BoundedBTreeMap
 	};
-	use frame_system::pallet_prelude::*;
+	use frame_system::{
+		pallet_prelude::*,
+		
+	};
 	use common_types::CurrencyId;
-	use orml_traits::{MultiReservableCurrency, MultiCurrency};
-
+	use orml_traits::{
+		MultiReservableCurrency,
+		MultiCurrency,
+	};
 	
-	// A unique hash of the brief in the db.
 	pub type BriefId = u32;
 
 	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -44,15 +49,13 @@ pub mod pallet {
 		type MinimumBounty: Get<BalanceOf<Self>>;
 		/// Maximum amount of applicants to a brief.
 		type MaximumApplicants: Get<u32>;
-		/// The fee taken for submitting a brief could be a deposit?
-		type BriefSubmissionFee: Get<Percent>;
-		/// The hasher used to generate the brief_ids. Must be collision resistant.
-		type BriefHasher: StorageHasher; 
+		// The fee taken for submitting a brief could be a deposit?
+		//type BriefSubmissionFee: Get<Percent>;
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn briefs)]
-	pub type Briefs<T> = CountedStorageMap<_, Blake2_128Concat, BriefId, BriefData<AccountIdOf<T>, BalanceOf<T>, BlockNumber>, OptionQuery>;
+	pub type Briefs<T> = CountedStorageMap<_, Blake2_128Concat, BriefId, BriefData<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn brief_applications)]
@@ -66,6 +69,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		BriefSubmitted(BriefId),
+		ApplicationSubmitted(AccountIdOf<T>)
 	}
 
 	#[pallet::error]
@@ -82,6 +86,11 @@ pub mod pallet {
 		AlreadyApplied,
 		/// Brief already exists.
 		BriefAlreadyExists,
+		/// Maximum Applications have been reached.
+		MaximumApplicants,
+		/// Brief not found.
+		BriefNotFound,
+
 	}
 
 	#[pallet::call]
@@ -97,12 +106,12 @@ pub mod pallet {
 			ensure!(bounty_total >= initial_contribution, Error::<T>::ContributionMoreThanBounty);
 
 			let new_brief = BriefData {
-				created_by: who,
+				created_by: who.clone(),
 				bounty_total,
 				currency_id,
 				off_chain_ref_id,
 				current_contribution: initial_contribution,
-				submitted_at: System::block_number(),
+				submitted_at: frame_system::Pallet::<T>::block_number(),
 			};
 
 			// Ensure that the off chain ref_id is legit in ocw.
@@ -127,23 +136,32 @@ pub mod pallet {
 			let is_approved = ApprovedAccounts::<T>::get(&who).is_some();
 			ensure!(is_approved, Error::<T>::OnlyApprovedAccountPermitted);
 
-			let current_applications: BoundedApplications = Applications::<T>::get(brief_id);
-			ensure!(current_applications.get(&who).is_none(), Error::<T>::AlreadyApplied);
+			if let Some(mut applicants) = BriefApplications::<T>::get(brief_id) {
+				ensure!(applicants.get(&who).is_none(), Error::<T>::AlreadyApplied);
+				if let Ok(_) = applicants.try_insert(who.clone(), ()) {
+					BriefApplications::<T>::insert(brief_id, applicants);
+				} else {
+					return Err(Error::<T>::MaximumApplicants.into())
+				};
+			} else {
+				return Err(Error::<T>::BriefNotFound.into())
+			}; 
 
-			Applications::<T>::insert(who, ());
-			
+			Self::deposit_event(Event::<T>::ApplicationSubmitted(who));
 			Ok(())
 		}
 	}
 
 
+
+
 	/// The data assocaited with a Brief, 
-	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Hash)]
+	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
 	pub struct BriefData<AccountId, Balance, BlockNumber> {
 		// looking to store minimal data on chain. 
 		// We can get the rest of the data from the backend dapp.
 		created_by: AccountId,
-		submitted_at: BlockNumber
+		submitted_at: BlockNumber,
 		bounty_total: Balance,
 		currency_id: CurrencyId,
 		current_contribution: Balance,
