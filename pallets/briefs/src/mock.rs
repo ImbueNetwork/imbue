@@ -1,4 +1,4 @@
-use super::*;
+
 use crate as pallet_briefs;
 use frame_support::{
     parameter_types,
@@ -8,7 +8,7 @@ use frame_support::{
 };
 
 use frame_system::EnsureRoot;
-use sp_core::{sr25519::Signature, Pair, Public, H256};
+use sp_core::{sr25519::Signature, H256};
 
 use sp_std::{
     convert::{TryFrom, TryInto},
@@ -175,7 +175,7 @@ impl pallet_timestamp::Config for Test {
 parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
+    pub NoConfidenceTimeLimit: BlockNumber = 100800u32;
     pub PercentRequiredForVoteToPass: u8 = 75u8;
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;

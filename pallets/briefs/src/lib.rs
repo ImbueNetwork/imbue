@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
-use sp_std::vec;
+
 
 #[cfg(test)]
 mod mock;
@@ -119,10 +119,10 @@ pub mod pallet {
 			// Update db from ocw to include the new brief_id??.
 
 			let brief_id: BriefId = Briefs::<T>::count();
-			ensure!(Briefs::<T>::get(&brief_id).is_none(), Error::<T>::BriefAlreadyExists);
+			ensure!(Briefs::<T>::get(brief_id).is_none(), Error::<T>::BriefAlreadyExists);
 
 			<T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
-			Briefs::<T>::insert(&brief_id, new_brief);
+			Briefs::<T>::insert(brief_id, new_brief);
 			Self::deposit_event(Event::<T>::BriefSubmitted(brief_id));
 
 			Ok(())
@@ -138,7 +138,7 @@ pub mod pallet {
 
 			if let Some(mut applicants) = BriefApplications::<T>::get(brief_id) {
 				ensure!(applicants.get(&who).is_none(), Error::<T>::AlreadyApplied);
-				if let Ok(_) = applicants.try_insert(who.clone(), ()) {
+				if applicants.try_insert(who.clone(), ()).is_ok() {
 					BriefApplications::<T>::insert(brief_id, applicants);
 				} else {
 					return Err(Error::<T>::MaximumApplicants.into())
