@@ -1,9 +1,9 @@
-use crate as pallet_briefs;
+
 use crate::mock::*;
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok};
-use frame_system::{Origin};
+
 
 #[test]
 fn brief_submit_deposit_below_minimum() {
@@ -76,7 +76,7 @@ fn brief_submit_not_enough_funds() {
 	});
 }
 
-fn run_to_block(n: u64) {
+fn run_to_block(_n: u64) {
     //while System::block_number() < n {
         //System::set_block_number(System::block_number() + 1);
         //System::on_initialize(System::block_number());
