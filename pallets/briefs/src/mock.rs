@@ -62,7 +62,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
-		Briefs: pallet_briefs::{Pallet, Call, Storage, Event<T>},
+		BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
     }
 );
 
