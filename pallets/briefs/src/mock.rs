@@ -236,6 +236,7 @@ impl pallet_briefs::Config for Test {
     type MinimumDeposit = MinimumDeposit;
     type MinimumBounty = MinimumBounty;
     type MaximumApplicants = MaximumApplicants;
+    type BriefHasher = BlakeTwo256;
 }
 
 parameter_types! {
