@@ -69,15 +69,12 @@ fn brief_submit_already_exists_future_blocks() {
 	});
 }
 
-
 #[test]
 fn brief_submit_not_enough_funds() {
     build_test_externality().execute_with(|| {
 		assert!(true)
 	});
 }
-
-
 
 fn run_to_block(n: u64) {
     //while System::block_number() < n {

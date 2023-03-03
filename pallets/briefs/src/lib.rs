@@ -95,6 +95,8 @@ pub mod pallet {
 		MaximumApplicants,
 		/// Brief not found.
 		BriefNotFound,
+		/// The BriefId generation failed.
+		BriefHashingFailed,
 
 	}
 
@@ -116,7 +118,7 @@ pub mod pallet {
 			// append_to_id_verification(&off_chain_ref_id);
 			// Update db from ocw to include the new brief_id??.
 
-			let brief_id: BriefHash = BriefPreImage::<T>::generate_hash(&who, &bounty_total, &currency_id, off_chain_ref_id);
+			let brief_id: BriefHash = BriefPreImage::<T>::generate_hash(&who, &bounty_total, &currency_id, off_chain_ref_id)?;
 			ensure!(Briefs::<T>::get(brief_id).is_none(), Error::<T>::BriefAlreadyExists);
 
 			let new_brief = BriefData {
@@ -170,18 +172,25 @@ pub mod pallet {
 	}
 
 	impl <T: Config> BriefPreImage<T> {
-		pub fn generate_hash<'a >(created_by: &'a AccountIdOf<T>, bounty_total: &'a BalanceOf<T>, currency_id: &'a CurrencyId, off_chain_ref_id: u32) -> BriefHash {
-			let preimage: BriefPreImage<T> = Self {
+		fn new<'a>(created_by: &'a AccountIdOf<T>, bounty_total: &'a BalanceOf<T>, currency_id: &'a CurrencyId, off_chain_ref_id: u32) -> Self {
+			Self {
 				created_by: <AccountIdOf<T> as Encode>::encode(created_by),
 				bounty_total: <BalanceOf<T> as Encode>::encode(bounty_total),
 				currency_id: <CurrencyId as Encode>::encode(currency_id),
 				off_chain_ref_id,
 				phantom: PhantomData
-			};
-			
+			}
+		}
+		
+		pub fn generate_hash<'a>(created_by: &'a AccountIdOf<T>, bounty_total: &'a BalanceOf<T>, currency_id: &'a CurrencyId, off_chain_ref_id: u32) -> Result<BriefHash, DispatchError> {
+			let preimage: Self = Self::new(created_by, bounty_total, currency_id, off_chain_ref_id); 
 			let encoded = <BriefPreImage<T> as Encode>::encode(&preimage);
-			let h256: [u8; 32] = <<T as Config>::BriefHasher as Hasher>::hash(&encoded).as_ref().try_into().expect("todo err handling");
-			H256::from_slice(h256.as_slice())
+			let maybe_h256: Result<[u8; 32], _> = <<T as Config>::BriefHasher as Hasher>::hash(&encoded).as_ref().try_into(); 
+			if let Ok(h256) = maybe_h256 {
+				Ok(H256::from_slice(h256.as_slice()))
+			} else {
+				Err(Error::<T>::BriefHashingFailed.into())
+			}
 		}
 	}
 
