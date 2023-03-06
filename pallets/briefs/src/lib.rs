@@ -151,7 +151,7 @@ pub mod pallet {
 			let is_approved = ApprovedAccounts::<T>::get(&who).is_some();
 			ensure!(is_approved, Error::<T>::OnlyApprovedAccountPermitted);
 
-			if let Some(mut applicants) = BriefApplications::<T>::get(brief_id) {
+			let mut applicants = BriefApplications::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound);
 				ensure!(applicants.get(&who).is_none(), Error::<T>::AlreadyApplied);
 				
 				if applicants.try_insert(who.clone(), ()).is_ok() {
@@ -159,9 +159,6 @@ pub mod pallet {
 				} else {
 					return Err(Error::<T>::MaximumApplicants.into())
 				};
-			} else {
-				return Err(Error::<T>::BriefNotFound.into())
-			}; 
 
 			Self::deposit_event(Event::<T>::ApplicationSubmitted(who));
 			Ok(())
