@@ -56,6 +56,7 @@ pub mod pallet {
 		//type BriefSubmissionFee: Get<Percent>;
 		/// Hasher used to generate brief hash
 		type BriefHasher: Hasher;
+
 	}
 
 	#[pallet::storage]
@@ -97,6 +98,10 @@ pub mod pallet {
 		BriefNotFound,
 		/// The BriefId generation failed.
 		BriefHashingFailed,
+		/// You do not have the authority to do this
+		NotAuthorised,
+		/// the bounty required for this brief has not been met.
+		BountyTotalNotMet,
 
 	}
 
@@ -106,26 +111,27 @@ pub mod pallet {
 		/// Submit a brief to recieve applications.
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000)]
-		pub fn submit_brief(origin: OriginFor<T>, off_chain_ref_id: u32, bounty_total: BalanceOf<T>, initial_contribution: BalanceOf<T>, currency_id: CurrencyId) -> DispatchResult {
+		pub fn submit_brief(origin: OriginFor<T>, ipfs_hash: BriefHash, bounty_total: BalanceOf<T>, initial_contribution: BalanceOf<T>, currency_id: CurrencyId, is_auction: bool) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(initial_contribution >= <T as Config>::MinimumDeposit::get(), Error::<T>::DepositBelowMinimum);
 			ensure!(bounty_total >= <T as Config>::MinimumBounty::get(), Error::<T>::BountyBelowMinimum);
 			ensure!(bounty_total >= initial_contribution, Error::<T>::ContributionMoreThanBounty);
 
-			// This will prevent duplicates.
-			// Malicious users can still submit briefs without an off chain storage id (or an invalid one).
+			// This will prevent duplicates to an extent.
+			// Malicious users can still submit briefs without an ipfs_hash (or an invalid one).
 			// Therefore we must check that this item does exist in storage in an ocw and possible slash those who are malicious.
-			// append_to_id_verification(&off_chain_ref_id);
-			// Update db from ocw to include the new brief_id??.
+			// append_to_id_verification(&ipfs_hash);
 
-			let brief_id: BriefHash = BriefPreImage::<T>::generate_hash(&who, &bounty_total, &currency_id, off_chain_ref_id)?;
+			//let brief_id: BriefHash = BriefPreImage::<T>::generate_hash(&who, &bounty_total, &currency_id, off_chain_ref_id)?;
+			// I am led to believe that we can use the ipfs hash as a unique identifier so long as we have a nonce contained within the data.
+			// The main problem with this approach is that if the data changes, so does the hash.
+			// Alas when updating the brief we must update ipfs, get the hash, and submit that atomically.
 			ensure!(Briefs::<T>::get(brief_id).is_none(), Error::<T>::BriefAlreadyExists);
 
 			let new_brief = BriefData {
 				created_by: who.clone(),
 				bounty_total,
 				currency_id,
-				off_chain_ref_id,
 				current_contribution: initial_contribution,
 				created_at: frame_system::Pallet::<T>::block_number(),
 			};
@@ -147,6 +153,7 @@ pub mod pallet {
 
 			if let Some(mut applicants) = BriefApplications::<T>::get(brief_id) {
 				ensure!(applicants.get(&who).is_none(), Error::<T>::AlreadyApplied);
+				
 				if applicants.try_insert(who.clone(), ()).is_ok() {
 					BriefApplications::<T>::insert(brief_id, applicants);
 				} else {
@@ -159,14 +166,51 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::ApplicationSubmitted(who));
 			Ok(())
 		}
+
+
+		//todo add contribution to brief
+
+		/// Accept an application to a brief. This will create a proposal on chain only if the brief bounty total has been reached.
+		/// This way we can ensure that the brief owner has the required funds for the brief.
+		#[pallet::call_index(2)]
+		#[pallet::weight(10_000)]
+		pub fn accept_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound);
+			ensure!(brief.created_by == who, Error::<T>::NotAuthorised);
+			ensure!(brief.bounty_total == current_contribution, Error::<T>::BountyTotalNotMet);
+
+			
+
+
+			Self::deposit_event(Event::<T>::ApplicationSubmitted(who));
+			Ok(())
+		}
 	}
 
 
+	
+	/// The data assocaited with a Brief
+	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
+	pub struct BriefData<AccountId, Balance, BlockNumber> {
+		created_by: AccountId,
+		bounty_total: Balance,
+		currency_id: CurrencyId,
+		current_contribution: Balance,
+		created_at: BlockNumber,
+		//milestones?
+	}
+	
+	
+	
+	/// This is probably going to be removed.
 	#[derive(Encode, Hash)]
 	pub struct BriefPreImage<T: Config> {
 		created_by: Vec<u8>,
 		bounty_total: Vec<u8>,
 		currency_id: Vec<u8>,
+		// This must not be the ipfs hash as that will change with new content.
+		// It can however be a field in the storage item.
 		off_chain_ref_id: u32,
 		phantom: PhantomData<T>,
 	}
@@ -193,24 +237,4 @@ pub mod pallet {
 			}
 		}
 	}
-
-	
-
-	/// The data assocaited with a Brief, 
-	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
-	pub struct BriefData<AccountId, Balance, BlockNumber> {
-		// looking to store minimal data on chain. 
-		// We can get the rest of the data from the backend dapp.
-		created_by: AccountId,
-		bounty_total: Balance,
-		currency_id: CurrencyId,
-		current_contribution: Balance,
-		off_chain_ref_id: u32,
-		created_at: BlockNumber,
-
-		//milestones?
-	}
-
-
-
 }
