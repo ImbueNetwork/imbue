@@ -111,22 +111,22 @@ pub mod pallet {
 		/// Submit a brief to recieve applications.
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000)]
-		pub fn submit_brief(origin: OriginFor<T>, ipfs_hash: BriefHash, bounty_total: BalanceOf<T>, initial_contribution: BalanceOf<T>, currency_id: CurrencyId, is_auction: bool) -> DispatchResult {
+		pub fn submit_brief(origin: OriginFor<T>, ipfs_hash: BriefHash, bounty_total: BalanceOf<T>, initial_contribution: BalanceOf<T>, currency_id: CurrencyId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(initial_contribution >= <T as Config>::MinimumDeposit::get(), Error::<T>::DepositBelowMinimum);
 			ensure!(bounty_total >= <T as Config>::MinimumBounty::get(), Error::<T>::BountyBelowMinimum);
 			ensure!(bounty_total >= initial_contribution, Error::<T>::ContributionMoreThanBounty);
 
-			// This will prevent duplicates to an extent.
 			// Malicious users can still submit briefs without an ipfs_hash (or an invalid one).
 			// Therefore we must check that this item does exist in storage in an ocw and possible slash those who are malicious.
 			// append_to_id_verification(&ipfs_hash);
 
 			//let brief_id: BriefHash = BriefPreImage::<T>::generate_hash(&who, &bounty_total, &currency_id, off_chain_ref_id)?;
+
 			// I am led to believe that we can use the ipfs hash as a unique identifier so long as we have a nonce contained within the data.
 			// The main problem with this approach is that if the data changes, so does the hash.
 			// Alas when updating the brief we must update ipfs, get the hash, and submit that atomically.
-			ensure!(Briefs::<T>::get(brief_id).is_none(), Error::<T>::BriefAlreadyExists);
+			ensure!(Briefs::<T>::get(ipfs_hash).is_none(), Error::<T>::BriefAlreadyExists);
 
 			let new_brief = BriefData {
 				created_by: who.clone(),
@@ -137,8 +137,8 @@ pub mod pallet {
 			};
 
 			<T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
-			Briefs::<T>::insert(brief_id, new_brief);
-			Self::deposit_event(Event::<T>::BriefSubmitted(brief_id));
+			Briefs::<T>::insert(ipfs_hash, new_brief);
+			Self::deposit_event(Event::<T>::BriefSubmitted(ipfs_hash));
 
 			Ok(())
 		}
@@ -151,14 +151,14 @@ pub mod pallet {
 			let is_approved = ApprovedAccounts::<T>::get(&who).is_some();
 			ensure!(is_approved, Error::<T>::OnlyApprovedAccountPermitted);
 
-			let mut applicants = BriefApplications::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound);
-				ensure!(applicants.get(&who).is_none(), Error::<T>::AlreadyApplied);
-				
-				if applicants.try_insert(who.clone(), ()).is_ok() {
-					BriefApplications::<T>::insert(brief_id, applicants);
-				} else {
-					return Err(Error::<T>::MaximumApplicants.into())
-				};
+			let mut applicants: BoundedApplications<T> = BriefApplications::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
+			ensure!(applicants.get(&who).is_none(), Error::<T>::AlreadyApplied);
+			
+			if applicants.try_insert(who.clone(), ()).is_ok() {
+				BriefApplications::<T>::insert(brief_id, applicants);
+			} else {
+				return Err(Error::<T>::MaximumApplicants.into())
+			};
 
 			Self::deposit_event(Event::<T>::ApplicationSubmitted(who));
 			Ok(())
@@ -173,9 +173,9 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn accept_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound);
+			let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 			ensure!(brief.created_by == who, Error::<T>::NotAuthorised);
-			ensure!(brief.bounty_total == current_contribution, Error::<T>::BountyTotalNotMet);
+			ensure!(brief.bounty_total == brief.current_contribution, Error::<T>::BountyTotalNotMet);
 
 			
 
