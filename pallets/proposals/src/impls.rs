@@ -629,7 +629,7 @@ pub fn update_existing_project(
 
     /// Using the parameters provided (which should be from the refund queue), 
     /// Process a refund. 
-    /// Used in hooks so cannot error.
+    /// Used in hooks so cannot panic.
     pub fn refund_item_in_queue(from: &T::AccountId, to: &T::AccountId, amount: BalanceOf<T>, currency_id: CurrencyId) -> bool {
         let can_withraw: DispatchResult = T::MultiCurrency::ensure_can_withdraw(
             currency_id, 
@@ -652,7 +652,7 @@ pub fn update_existing_project(
 
     /// Split off an amount of refunds off the vector and place into refund storage.
     /// Returns a boolean if a split off has succeeded.
-    /// Used in hooks so cannot error.
+    /// Used in hooks so cannot panic.
     pub fn split_off_refunds(refunds:&mut Refunds<T>, c: u32) -> bool {
         // split_off panics when at > len: 
         // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
