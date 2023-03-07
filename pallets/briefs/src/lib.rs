@@ -94,11 +94,11 @@ pub mod pallet {
         BriefNotFound,
         /// The BriefId generation failed.
         BriefHashingFailed,
-        /// You do not have the authority to do this
+        /// You do not have the authority to do this.
         NotAuthorised,
         /// the bounty required for this brief has not been met.
         BountyTotalNotMet,
-        /// Current contribution exceeds the maximum total bounty
+        /// Current contribution exceeds the maximum total bounty.
         ExceedTotalBounty,
     }
 
@@ -179,32 +179,33 @@ pub mod pallet {
         }
 
         //todo add contribution to brief
-        #[pallet::call_index(3)]
+        #[pallet::call_index(2)]
         #[pallet::weight(10_000)]
         pub fn add_bounty(
             origin: OriginFor<T>,
             brief_id: BriefHash,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
+            // No check as to who is the signer?
+            // If someone who isnt the brief owner sends the funds we have no record of the reservation.
+            // Therefore when trying to send the reserved funds (when creating the proposal) the sum total will not be enough.
+            // Either Keep a record of contributions, (like in proposals), or ensure that only the brief owner can contribute.
             let who = ensure_signed(origin)?;
 
-            let brief_record = Briefs::<T>::get(&brief_id);
-            ensure!(brief_record.is_some(), Error::<T>::BriefNotFound);
-
-            let mut brief0 = brief_record.unwrap();
-            let new_amount: BalanceOf<T> = brief0.current_contribution + amount;
-            let currency_id = brief0.currency_id;
+            let mut brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
+            let currency_id = brief_record.currency_id;
 
             ensure!(
-                brief0.bounty_total >= new_amount,
+                brief_record.bounty_total >= new_amount,
                 Error::<T>::ExceedTotalBounty
             );
 
-            brief0.current_contribution = new_amount;
+            brief_record.current_contribution = new_amount;
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, amount)?;
 
             Briefs::<T>::mutate_exists(&brief_id, |brief| {
-                *brief = Some(brief0);
+                *brief = Some(brief_record);
             });
 
             Ok(())
@@ -212,7 +213,7 @@ pub mod pallet {
 
         /// Accept an application to a brief. This will create a proposal on chain only if the brief bounty total has been reached.
         /// This way we can ensure that the brief owner has the required funds for the brief.
-        #[pallet::call_index(2)]
+        #[pallet::call_index(3)]
         #[pallet::weight(10_000)]
         pub fn accept_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;

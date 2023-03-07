@@ -4,6 +4,7 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, once_cell::sync::Lazy};
 use sp_core::H256;
+use frame_support::pallet_prelude::Hooks;
 
 static TESTHASH: Lazy<H256> = Lazy::new(||{H256::from([1; 32])});
 
@@ -71,17 +72,11 @@ fn brief_submit_already_exists_future_blocks() {
 	});
 }
 
-#[test]
-fn brief_submit_not_enough_funds() {
-    build_test_externality().execute_with(|| {
-		assert!(true)
-	});
-}
-
-fn run_to_block(_n: u64) {
-    //while System::block_number() < n {
-        //System::set_block_number(System::block_number() + 1);
-        //System::on_initialize(System::block_number());
-        //Proposals::on_initialize(System::block_number());
-    //}
+fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Proposals::on_initialize(System::block_number());
+		BriefsMod::on_initialize(System::block_number());
+    }
 }
