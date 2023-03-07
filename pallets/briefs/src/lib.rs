@@ -24,7 +24,7 @@ pub mod pallet {
     type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     type BoundedApplications<T> =
         BoundedBTreeMap<AccountIdOf<T>, (), <T as Config>::MaximumApplicants>;
-    type BoundedBriefsPerBlock<T> = BoundedVec<BriefHash, ConstU32<100>>;
+    type BoundedBriefsPerBlock = BoundedVec<BriefHash, ConstU32<100>>;
 
     type BriefHash = H256;
 
@@ -49,7 +49,7 @@ pub mod pallet {
         type BriefHasher: Hasher;
 
         /// The amount of time applicants have to submit an application.
-        type ApplicationSubmissionTime: Get<BlockNumberFor<T>>;
+        type ApplicationSubmissionTime: Get<BlockNumberFor<Self>>;
     }
 
     #[pallet::storage]
@@ -58,7 +58,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         BriefHash,
-        BriefData<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
+        BriefData<T>,
         OptionQuery,
     >;
 
@@ -81,15 +81,13 @@ pub mod pallet {
     /// Key: BriefId.
     /// Value: Unit. 
     #[pallet::storage]
-    #[pallet::getter(fn approved_accounts)]
     pub type BriefsOpenForApplications<T> = StorageMap<_, Blake2_128Concat, BriefHash, (), OptionQuery>;
 
     /// Contains the briefs that are open for applicants.
-    /// Key: Blocknumber the applications expire.
+    /// Key: BlockNumber the applications expire.
     /// Value: The list of briefs that are going to stop accepting applicants.
     #[pallet::storage]
-    #[pallet::getter(fn approved_accounts)]
-    pub type BriefApplicationExpirations<T> = StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedBriefsPerBlock<T>, OptionQuery>;
+    pub type BriefApplicationExpirations<T> = StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedBriefsPerBlock, OptionQuery>;
     
 
     #[pallet::event]
@@ -129,6 +127,8 @@ pub mod pallet {
         BriefClosedForApplications,
         /// There are too many briefs open for this block, try again later.
         BriefLimitReached,
+        /// Currency must be set to add to a bounty.
+        BriefCurrencyNotSet
     }
 
     #[pallet::call]
@@ -173,17 +173,16 @@ pub mod pallet {
 
             let new_brief = BriefData {
                 created_by: who.clone(),
-                bounty_total,
-                currency_id,
-                current_contribution: initial_contribution,
+                bounty_total: Some(bounty_total), 
+                current_contribution: Some(initial_contribution),
+                currency_id: Some(currency_id),
                 created_at: frame_system::Pallet::<T>::block_number(),
+                is_auction: false,
             };
-
-            let new_brief = BreifData::new(who, Some(bounty_total), Some(currency_id), Some(current_contribution), frame_system::Pallet::<T>::block_number(), false)
 
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
             Briefs::<T>::insert(ipfs_hash, new_brief);
-            Self::open_brief_for_applications(brief_id);
+            let _ = Self::open_brief_for_applications(ipfs_hash);
 
             Self::deposit_event(Event::<T>::BriefSubmitted(ipfs_hash));
             Ok(())
@@ -194,7 +193,6 @@ pub mod pallet {
         pub fn submit_brief_auction(
             origin: OriginFor<T>,
             ipfs_hash: BriefHash,
-            currency_id: CurrencyId,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             // Look at extrinsic submit_breif_direct for related comments
@@ -203,9 +201,9 @@ pub mod pallet {
                 Error::<T>::BriefAlreadyExists
             );
 
-            let new_brief = BreifData::new(who, None, None, None, frame_system::Pallet::<T>::block_number(), true);
+            let new_brief = BriefData::new(who, None, None, None, frame_system::Pallet::<T>::block_number(), true);
             Briefs::<T>::insert(ipfs_hash, new_brief);
-            let _ = Self::open_brief_for_applications(brief_id)?;
+            let _ = Self::open_brief_for_applications(ipfs_hash)?;
             
             Self::deposit_event(Event::<T>::BriefSubmitted(ipfs_hash));
 
@@ -213,6 +211,9 @@ pub mod pallet {
         }
 
 
+        /// Submit an application to a brief.
+        /// Auctioning comes after the application process has closed.
+        /// So there should not be any dealings with balances here.
         #[pallet::call_index(1)]
         #[pallet::weight(10_000)]
         pub fn submit_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
@@ -235,7 +236,7 @@ pub mod pallet {
             Ok(())
         }
 
-        //todo add contribution to brief
+        /// todo: 
         #[pallet::call_index(2)]
         #[pallet::weight(10_000)]
         pub fn add_bounty(
@@ -250,15 +251,15 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             let mut brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
-            let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
-            let currency_id = brief_record.currency_id;
+            let new_amount: BalanceOf<T> = brief_record.current_contribution.unwrap_or(Default::default()) + amount;
+            let currency_id = brief_record.currency_id.ok_or(Error::<T>::BriefCurrencyNotSet)?;
 
             ensure!(
-                brief_record.bounty_total >= new_amount,
+                brief_record.bounty_total.ok_or(Error::<T>::BriefCurrencyNotSet)? >= new_amount,
                 Error::<T>::ExceedTotalBounty
             );
 
-            brief_record.current_contribution = new_amount;
+            brief_record.current_contribution = Some(new_amount);
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, amount)?;
 
             Briefs::<T>::mutate_exists(&brief_id, |brief| {
@@ -268,8 +269,7 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Accept an application to a brief. This will create a proposal on chain only if the brief bounty total has been reached.
-        /// This way we can ensure that the brief owner has the required funds for the brief.
+        /// Accept an application to a brief, 
         #[pallet::call_index(3)]
         #[pallet::weight(10_000)]
         pub fn accept_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
@@ -286,32 +286,35 @@ pub mod pallet {
         }
     }
 
-    impl <T: Config> Hooks<T::Blocknumber> for Pallet<T> {
+    #[pallet::hooks]
+    impl <T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         // Get all the briefs that need to close their application status and close them.
         fn on_initialize(b: T::BlockNumber) -> Weight {
             let mut weight = Weight::default();
             weight += Self::close_briefs_for_applications(b);
 
-            weight;
+            weight
         }
     }
 
     impl <T: Config> Pallet<T> {
         /// Keep track of wether the brief can still be applied to and when the brief application period closes.
-        fn open_brief_for_applications(brief_id: BriefId) -> Result<(), DispatchError> {
+        fn open_brief_for_applications(brief_id: BriefHash) -> Result<(), DispatchError> {
             let expiration_time = <T as Config>::ApplicationSubmissionTime::get() + frame_system::Pallet::<T>::block_number();
-            let mut briefs_for_expiration = BriefApplicationExpirations::<T>::get(block_number).unwrap_or(vec![].try_into().expect("empty vec is less than bound; qed"));
+            let mut briefs_for_expiration = BriefApplicationExpirations::<T>::get(expiration_time).unwrap_or(vec![].try_into().expect("empty vec is less than bound; qed"));
 
-            briefs_for_expiration.try_push(brief_id).ok_or(Error::<T>::BriefLimitReached)?;
+            briefs_for_expiration.try_push(brief_id).map_err(|_| Error::<T>::BriefLimitReached)?;
 
-            BriefsOpenForApplications::<T>::insert(brief_id);
+            BriefsOpenForApplications::<T>::insert(brief_id, ());
             BriefApplicationExpirations::<T>::insert(expiration_time, briefs_for_expiration);
+
+            Ok(())
         }
 
         fn close_briefs_for_applications(block_number: T::BlockNumber) -> Weight {
             let mut weight = Weight::default();
             
-            let briefs = BriefApplicationExpirations::<T>::get(block_number).unwrap_or(vec![]);
+            let briefs = BriefApplicationExpirations::<T>::get(block_number).unwrap_or(vec![].try_into().expect("Empty vec is less than bound; qed"));
             weight += T::DbWeight::get().reads(1);
 
             for brief_id in briefs {
@@ -328,27 +331,28 @@ pub mod pallet {
 
     /// The data assocaited with a Brief
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
-    pub struct BriefData<AccountId, Balance, BlockNumber> {
-        created_by: AccountId,
-        bounty_total: Option<Balance>,
+	#[scale_info(skip_type_params(T))]
+    pub struct BriefData<T: Config> {
+        created_by: AccountIdOf<T>,
+        bounty_total: Option<BalanceOf<T>>,
         currency_id: Option<CurrencyId>,
-        current_contribution: Option<Balance>,
-        created_at: BlockNumber,
+        current_contribution: Option<BalanceOf<T>>,
+        created_at: BlockNumberFor<T>,
         is_auction: bool,
     }
 
-    impl BriefData<AccountId, Balance, BlockNumber> {
-        fn new(created_by: AccountId, bounty_total: Option<Balance>, currency_id: Option<CurrencyId>,
-            current_contribution: Option<CurrencyId>, created_at: BlockNumber, is_auction: bool) -> Self {
+    impl<T: Config> BriefData<T> {
+        pub fn new(created_by: AccountIdOf<T>, bounty_total: Option<BalanceOf<T>>, current_contribution: Option<BalanceOf<T>>, currency_id: Option<CurrencyId>, created_at: BlockNumberFor<T>, is_auction: bool) -> Self {
                 Self {
                     created_at,
                     created_by,
                     bounty_total,
                     currency_id,
                     current_contribution,
-                    created_at
+                    is_auction,
                 }
         }
+
     }
 
 

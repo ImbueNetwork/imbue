@@ -137,7 +137,6 @@ impl frame_system::Config for Test {
 }
 
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-pub type AccountPublic = <Signature as Verify>::Signer;
 
 impl frame_system::offchain::SigningTypes for Test {
     type Public = <Signature as Verify>::Signer;
@@ -228,6 +227,7 @@ parameter_types! {
     pub MinimumBounty: Balance = 10_000u32.into();
     pub MinimumDeposit: Balance = 1000u32.into();
     pub MaximumApplicants: u32 = 10_000u32;
+    pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
 }
 
 impl pallet_briefs::Config for Test {
@@ -237,6 +237,7 @@ impl pallet_briefs::Config for Test {
     type MinimumBounty = MinimumBounty;
     type MaximumApplicants = MaximumApplicants;
     type BriefHasher = BlakeTwo256;
+    type ApplicationSubmissionTime = ApplicationSubmissionTime;
 }
 
 parameter_types! {
