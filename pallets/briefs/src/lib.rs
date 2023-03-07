@@ -62,18 +62,24 @@ pub mod pallet {
         OptionQuery,
     >;
 
+    /// The list of applications to a Brief, to be cleared only once the brief has been started.
+    /// Key: BriefHash
+    /// Value: List of applicants.
     #[pallet::storage]
     #[pallet::getter(fn brief_applications)]
     pub type BriefApplications<T> =
         StorageMap<_, Blake2_128Concat, BriefHash, BoundedApplications<T>, OptionQuery>;
 
+    /// The list of accounts approved to apply for work. 
+    /// Key: AccountId
+    /// Value: Unit
     #[pallet::storage]
     #[pallet::getter(fn approved_accounts)]
     pub type ApprovedAccounts<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), OptionQuery>;
 
     /// Contains the briefs that are open for applicants.
     /// Key: BriefId.
-    /// Value: unit. 
+    /// Value: Unit. 
     #[pallet::storage]
     #[pallet::getter(fn approved_accounts)]
     pub type BriefsOpenForApplications<T> = StorageMap<_, Blake2_128Concat, BriefHash, (), OptionQuery>;
@@ -121,6 +127,8 @@ pub mod pallet {
         ExceedTotalBounty,
         /// You are not able to apply for this brief at this time.
         BriefClosedForApplications,
+        /// There are too many briefs open for this block, try again later.
+        BriefLimitReached,
     }
 
     #[pallet::call]
@@ -197,7 +205,7 @@ pub mod pallet {
 
             let new_brief = BreifData::new(who, None, None, None, frame_system::Pallet::<T>::block_number(), true);
             Briefs::<T>::insert(ipfs_hash, new_brief);
-            Self::open_brief_for_applications(brief_id);
+            let _ = Self::open_brief_for_applications(brief_id)?;
             
             Self::deposit_event(Event::<T>::BriefSubmitted(ipfs_hash));
 
@@ -222,7 +230,6 @@ pub mod pallet {
             } else {
                 return Err(Error::<T>::MaximumApplicants.into());
             };
-
 
             Self::deposit_event(Event::<T>::ApplicationSubmitted(who));
             Ok(())
@@ -281,23 +288,24 @@ pub mod pallet {
 
     impl <T: Config> Hooks<T::Blocknumber> for Pallet<T> {
         // Get all the briefs that need to close their application status and close them.
-        fn on_initialize(_b: T::BlockNumber) -> Weight {
+        fn on_initialize(b: T::BlockNumber) -> Weight {
             let mut weight = Weight::default();
+            weight += Self::close_briefs_for_applications(b);
 
-
+            weight;
         }
     }
 
     impl <T: Config> Pallet<T> {
-        fn open_brief_for_applications(brief_id: BriefId) {
+        /// Keep track of wether the brief can still be applied to and when the brief application period closes.
+        fn open_brief_for_applications(brief_id: BriefId) -> Result<(), DispatchError> {
             let expiration_time = <T as Config>::ApplicationSubmissionTime::get() + frame_system::Pallet::<T>::block_number();
-
-            BriefsOpenForApplications::<T>::insert(brief_id);
             let mut briefs_for_expiration = BriefApplicationExpirations::<T>::get(block_number).unwrap_or(vec![].try_into().expect("empty vec is less than bound; qed"));
 
-            briefs_for_expiration.try_push()
+            briefs_for_expiration.try_push(brief_id).ok_or(Error::<T>::BriefLimitReached)?;
 
-            BriefApplicationExpirations::<T>::insert(expiration_time, brief_id);
+            BriefsOpenForApplications::<T>::insert(brief_id);
+            BriefApplicationExpirations::<T>::insert(expiration_time, briefs_for_expiration);
         }
 
         fn close_briefs_for_applications(block_number: T::BlockNumber) -> Weight {
@@ -310,6 +318,9 @@ pub mod pallet {
                 BriefsOpenForApplications::<T>::remove(brief_id);
                 weight += T::DbWeight::get().reads_writes(1, 1);
             }
+
+            BriefApplicationExpirations::<T>::remove(block_number);
+            weight += T::DbWeight::get().reads_writes(1, 1);
 
             weight
         }
