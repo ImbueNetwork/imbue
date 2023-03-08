@@ -75,13 +75,13 @@ pub mod pallet {
     /// Value: Unit
     #[pallet::storage]
     #[pallet::getter(fn approved_accounts)]
-    pub type ApprovedAccounts<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), OptionQuery>;
+    pub type ApprovedAccounts<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
     /// Contains the briefs that are open for applicants.
     /// Key: BriefId.
     /// Value: Unit. 
     #[pallet::storage]
-    pub type BriefsOpenForApplications<T> = StorageMap<_, Blake2_128Concat, BriefHash, (), OptionQuery>;
+    pub type BriefsOpenForApplications<T> = StorageMap<_, Blake2_128Concat, BriefHash, (), ValueQuery>;
 
     /// Contains the briefs that are open for applicants.
     /// Key: BlockNumber the applications expire.
@@ -89,7 +89,6 @@ pub mod pallet {
     #[pallet::storage]
     pub type BriefApplicationExpirations<T> = StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedBriefsPerBlock, OptionQuery>;
     
-
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -195,6 +194,7 @@ pub mod pallet {
             ipfs_hash: BriefHash,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            // Take deposit?
             // Look at extrinsic submit_breif_direct for related comments
             ensure!(
                 Briefs::<T>::get(ipfs_hash).is_none(),
@@ -218,13 +218,13 @@ pub mod pallet {
         #[pallet::weight(10_000)]
         pub fn submit_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let is_approved = ApprovedAccounts::<T>::get(&who).is_some();
+            let is_approved = ApprovedAccounts::<T>::contains_key(&who);
             ensure!(is_approved, Error::<T>::OnlyApprovedAccountPermitted);
 
             let mut applicants: BoundedApplications<T> =
                 BriefApplications::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
             ensure!(applicants.get(&who).is_none(), Error::<T>::AlreadyApplied);
-            ensure!(BriefsOpenForApplications::<T>::get(brief_id).is_some(), Error::<T>::BriefClosedForApplications);
+            ensure!(BriefsOpenForApplications::<T>::contains_key(brief_id), Error::<T>::BriefClosedForApplications);
 
             if applicants.try_insert(who.clone(), ()).is_ok() {
                 BriefApplications::<T>::insert(brief_id, applicants);

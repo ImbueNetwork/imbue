@@ -72,6 +72,7 @@ fn brief_submit_already_exists_future_blocks() {
 	});
 }
 
+
 fn run_to_block(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);
