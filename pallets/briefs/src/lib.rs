@@ -50,6 +50,9 @@ pub mod pallet {
 
         /// The amount of time applicants have to submit an application.
         type ApplicationSubmissionTime: Get<BlockNumberFor<Self>>;
+
+        /// The deposit required in IMBU to increase sybil resistance.
+       // type AuctionDeposit: Get<BalanceOf<Self>>;
     }
 
     #[pallet::storage]
@@ -194,8 +197,8 @@ pub mod pallet {
             ipfs_hash: BriefHash,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            // Take deposit?
-            // Look at extrinsic submit_breif_direct for related comments
+            // Take deposit? to increase sybil resistance.
+            // Look at extrinsic submit_brief_direct for related comments
             ensure!(
                 Briefs::<T>::get(ipfs_hash).is_none(),
                 Error::<T>::BriefAlreadyExists
@@ -209,7 +212,6 @@ pub mod pallet {
 
             Ok(())
         }
-
 
         /// Submit an application to a brief.
         /// Auctioning comes after the application process has closed.
@@ -236,6 +238,8 @@ pub mod pallet {
             Ok(())
         }
 
+
+
         /// todo: 
         #[pallet::call_index(2)]
         #[pallet::weight(10_000)]
@@ -248,6 +252,8 @@ pub mod pallet {
             // If someone who isnt the brief owner sends the funds we have no record of the reservation.
             // Therefore when trying to send the reserved funds (when creating the proposal) the sum total will not be enough.
             // Either Keep a record of contributions, (like in proposals), or ensure that only the brief owner can contribute.
+
+            // Only allow if its not an auction or it is an auction and the price has been set
             let who = ensure_signed(origin)?;
 
             let mut brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
@@ -281,6 +287,7 @@ pub mod pallet {
                 Error::<T>::BountyTotalNotMet
             );
 
+            // todo:
             Self::deposit_event(Event::<T>::ApplicationSubmitted(who));
             Ok(())
         }
