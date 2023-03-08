@@ -238,6 +238,7 @@ impl pallet_briefs::Config for Test {
     type MaximumApplicants = MaximumApplicants;
     type BriefHasher = BlakeTwo256;
     type ApplicationSubmissionTime = ApplicationSubmissionTime;
+    type AuthorityOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -246,7 +247,7 @@ parameter_types! {
 }
 pub static ALICE : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([1u8; 32])});
 pub static BOB : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([2u8; 32])});
-pub static TED : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([10u8; 32])});
+pub static CHARLIE : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([10u8; 32])});
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
 
@@ -258,7 +259,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         
     orml_tokens::GenesisConfig::<Test> {
         balances: {
-            vec![*ALICE, *BOB, *TED].into_iter().map(|id| {
+            vec![*ALICE, *BOB, *CHARLIE].into_iter().map(|id| {
             (id, CurrencyId::Native, 100000)
         }).collect::<Vec<_>>()},
     }

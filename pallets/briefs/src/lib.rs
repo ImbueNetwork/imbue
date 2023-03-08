@@ -51,7 +51,9 @@ pub mod pallet {
         /// The amount of time applicants have to submit an application.
         type ApplicationSubmissionTime: Get<BlockNumberFor<Self>>;
 
-        /// The deposit required in IMBU to increase sybil resistance.
+        type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+        // The deposit required in IMBU to increase sybil resistance.
        // type AuctionDeposit: Get<BalanceOf<Self>>;
     }
 
@@ -97,6 +99,9 @@ pub mod pallet {
     pub enum Event<T: Config> {
         BriefSubmitted(BriefHash),
         ApplicationSubmitted(AccountIdOf<T>),
+        ApplicationAccepted{brief: BriefHash, applicant: AccountIdOf<T>},
+        AccountApproved(AccountIdOf<T>),
+
     }
 
     #[pallet::error]
@@ -190,7 +195,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::call_index(4)]
+        #[pallet::call_index(1)]
         #[pallet::weight(10_000)]
         pub fn submit_brief_auction(
             origin: OriginFor<T>,
@@ -216,7 +221,7 @@ pub mod pallet {
         /// Submit an application to a brief.
         /// Auctioning comes after the application process has closed.
         /// So there should not be any dealings with balances here.
-        #[pallet::call_index(1)]
+        #[pallet::call_index(2)]
         #[pallet::weight(10_000)]
         pub fn submit_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -241,7 +246,7 @@ pub mod pallet {
 
 
         /// todo: 
-        #[pallet::call_index(2)]
+        #[pallet::call_index(3)]
         #[pallet::weight(10_000)]
         pub fn add_bounty(
             origin: OriginFor<T>,
@@ -276,7 +281,7 @@ pub mod pallet {
         }
 
         /// Accept an application to a brief, 
-        #[pallet::call_index(3)]
+        #[pallet::call_index(4)]
         #[pallet::weight(10_000)]
         pub fn accept_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -288,7 +293,18 @@ pub mod pallet {
             );
 
             // todo:
-            Self::deposit_event(Event::<T>::ApplicationSubmitted(who));
+            Self::deposit_event(Event::<T>::ApplicationAccepted{brief: brief_id, applicant: who});
+            Ok(())
+        }
+        
+        // todo: validation
+        #[pallet::call_index(5)]
+        #[pallet::weight(10_000)]
+        pub fn approve_account(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
+            <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
+            ApprovedAccounts::<T>::insert(&account_id, ());
+            Self::deposit_event(Event::<T>::AccountApproved(account_id));
+
             Ok(())
         }
     }
