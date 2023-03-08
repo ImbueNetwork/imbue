@@ -19,6 +19,8 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
+    use sp_std::collections::btree_map::BTreeMap;
+
 
     type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -225,11 +227,13 @@ pub mod pallet {
         #[pallet::weight(10_000)]
         pub fn submit_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
+
             let is_approved = ApprovedAccounts::<T>::contains_key(&who);
             ensure!(is_approved, Error::<T>::OnlyApprovedAccountPermitted);
 
-            let mut applicants: BoundedApplications<T> =
-                BriefApplications::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            let _ = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            let mut applicants: BoundedApplications<T> = BriefApplications::<T>::get(brief_id).unwrap_or(BTreeMap::new().try_into().expect("New map is smaller than bound; qed"));
+
             ensure!(applicants.get(&who).is_none(), Error::<T>::AlreadyApplied);
             ensure!(BriefsOpenForApplications::<T>::contains_key(brief_id), Error::<T>::BriefClosedForApplications);
 
