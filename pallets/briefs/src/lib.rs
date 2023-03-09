@@ -35,7 +35,7 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + proposals::Config {
+    pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         /// The minimum deposit required to submit a brief
@@ -249,7 +249,7 @@ pub mod pallet {
 
 
 
-        /// todo: 
+        /// todo: test
         #[pallet::call_index(3)]
         #[pallet::weight(10_000)]
         pub fn add_bounty(
@@ -326,6 +326,7 @@ pub mod pallet {
 
     impl <T: Config> Pallet<T> {
         /// Keep track of wether the brief can still be applied to and when the brief application period closes.
+        // Todo: test
         fn open_brief_for_applications(brief_id: BriefHash) -> Result<(), DispatchError> {
             let expiration_time = <T as Config>::ApplicationSubmissionTime::get() + frame_system::Pallet::<T>::block_number();
             let mut briefs_for_expiration = BriefApplicationExpirations::<T>::get(expiration_time).unwrap_or(vec![].try_into().expect("empty vec is less than bound; qed"));
@@ -338,6 +339,7 @@ pub mod pallet {
             Ok(())
         }
 
+        // todo: test
         fn close_briefs_for_applications(block_number: T::BlockNumber) -> Weight {
             let mut weight = Weight::default();
             
@@ -382,71 +384,57 @@ pub mod pallet {
 
     }
 
+}
 
 
 
+    // /// This is probably going to be removed.
+    // #[derive(Encode, Hash)]
+    // pub struct BriefPreImage<T: Config> {
+    //     created_by: Vec<u8>,
+    //     bounty_total: Vec<u8>,
+    //     currency_id: Vec<u8>,
+    //     // This must not be the ipfs hash as that will change with new content.
+    //     // It can however be a field in the storage item.
+    //     off_chain_ref_id: u32,
+    //     phantom: PhantomData<T>,
+    // }
 
+    // impl<T: Config> BriefPreImage<T> {
+    //     fn new<'a>(
+    //         created_by: &'a AccountIdOf<T>,
+    //         bounty_total: &'a BalanceOf<T>,
+    //         currency_id: &'a CurrencyId,
+    //         off_chain_ref_id: u32,
+    //     ) -> Self {
+    //         Self {
+    //             created_by: <AccountIdOf<T> as Encode>::encode(created_by),
+    //             bounty_total: <BalanceOf<T> as Encode>::encode(bounty_total),
+    //             currency_id: <CurrencyId as Encode>::encode(currency_id),
+    //             off_chain_ref_id,
+    //             phantom: PhantomData,
+    //         }
+    //     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-    /// This is probably going to be removed.
-    #[derive(Encode, Hash)]
-    pub struct BriefPreImage<T: Config> {
-        created_by: Vec<u8>,
-        bounty_total: Vec<u8>,
-        currency_id: Vec<u8>,
-        // This must not be the ipfs hash as that will change with new content.
-        // It can however be a field in the storage item.
-        off_chain_ref_id: u32,
-        phantom: PhantomData<T>,
-    }
-
-    impl<T: Config> BriefPreImage<T> {
-        fn new<'a>(
-            created_by: &'a AccountIdOf<T>,
-            bounty_total: &'a BalanceOf<T>,
-            currency_id: &'a CurrencyId,
-            off_chain_ref_id: u32,
-        ) -> Self {
-            Self {
-                created_by: <AccountIdOf<T> as Encode>::encode(created_by),
-                bounty_total: <BalanceOf<T> as Encode>::encode(bounty_total),
-                currency_id: <CurrencyId as Encode>::encode(currency_id),
-                off_chain_ref_id,
-                phantom: PhantomData,
-            }
-        }
-
-        pub fn generate_hash<'a>(
-            created_by: &'a AccountIdOf<T>,
-            bounty_total: &'a BalanceOf<T>,
-            currency_id: &'a CurrencyId,
-            off_chain_ref_id: u32,
-        ) -> Result<BriefHash, DispatchError> {
-            let preimage: Self = Self::new(created_by, bounty_total, currency_id, off_chain_ref_id);
-            let encoded = <BriefPreImage<T> as Encode>::encode(&preimage);
-            let maybe_h256: Result<[u8; 32], _> =
-                <<T as Config>::BriefHasher as Hasher>::hash(&encoded)
-                    .as_ref()
-                    .try_into();
-            if let Ok(h256) = maybe_h256 {
-                Ok(H256::from_slice(h256.as_slice()))
-            } else {
-                Err(Error::<T>::BriefHashingFailed.into())
-            }
-        }
-    }
+    //     pub fn generate_hash<'a>(
+    //         created_by: &'a AccountIdOf<T>,
+    //         bounty_total: &'a BalanceOf<T>,
+    //         currency_id: &'a CurrencyId,
+    //         off_chain_ref_id: u32,
+    //     ) -> Result<BriefHash, DispatchError> {
+    //         let preimage: Self = Self::new(created_by, bounty_total, currency_id, off_chain_ref_id);
+    //         let encoded = <BriefPreImage<T> as Encode>::encode(&preimage);
+    //         let maybe_h256: Result<[u8; 32], _> =
+    //             <<T as Config>::BriefHasher as Hasher>::hash(&encoded)
+    //                 .as_ref()
+    //                 .try_into();
+    //         if let Ok(h256) = maybe_h256 {
+    //             Ok(H256::from_slice(h256.as_slice()))
+    //         } else {
+    //             Err(Error::<T>::BriefHashingFailed.into())
+    //         }
+    //     }
+    // }
 
     
 
-}

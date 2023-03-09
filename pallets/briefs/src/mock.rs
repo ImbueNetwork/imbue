@@ -56,12 +56,10 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Proposals: proposals::{Pallet, Call, Storage, Event<T>},
         Tokens: orml_tokens::{Pallet, Storage, Event<T>},
         Currencies: orml_currencies::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
 		BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -183,44 +181,6 @@ parameter_types! {
     pub PercentRequiredForVoteToPass: u8 = 75u8;
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
-}
-impl proposals::Config for Test {
-    type RuntimeEvent = RuntimeEvent;
-    type PalletId = ProposalsPalletId;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
-    type MultiCurrency = Currencies;
-    type WeightInfo = ();
-    type MaxProjectsPerRound = ConstU32<4>;
-    // Adding 2 weeks as th expiration time
-    type MaxWithdrawalExpiration = TwoWeekBlockUnit;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
-    type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
-    type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type RefundsPerBlock = RefundsPerBlock;
-}
-
-parameter_types! {
-    pub const BasicDeposit: u64 = 10;
-    pub const FieldDeposit: u64 = 10;
-    pub const SubAccountDeposit: u64 = 10;
-    pub const MaxSubAccounts: u32 = 2;
-    pub const MaxAdditionalFields: u32 = 2;
-    pub const MaxRegistrars: u32 = 20;
-}
-
-impl pallet_identity::Config for Test {
-    type RuntimeEvent = RuntimeEvent;
-    type Currency = Balances;
-    type Slashed = ();
-    type BasicDeposit = BasicDeposit;
-    type FieldDeposit = FieldDeposit;
-    type SubAccountDeposit = SubAccountDeposit;
-    type MaxSubAccounts = MaxSubAccounts;
-    type MaxAdditionalFields = MaxAdditionalFields;
-    type MaxRegistrars = MaxRegistrars;
-    type RegistrarOrigin = EnsureRoot<AccountId>;
-    type ForceOrigin = EnsureRoot<AccountId>;
-    type WeightInfo = ();
 }
 
 parameter_types! {
