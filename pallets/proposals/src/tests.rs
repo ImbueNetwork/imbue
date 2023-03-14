@@ -2490,6 +2490,36 @@ fn update_an_existing_project() {
     });
 }
 
+#[test]
+fn only_the_initiator_can_update_project() {
+    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+
+    build_test_externality().execute_with(
+        deposit_initial_balance(&alice, &bob, additional_amount);
+        create_project(alice.clone()),
+        let updated_milestone1: ProposedMilestone = ProposedMilestone {
+            name: b"milestone 1"
+                .to_vec()
+                .try_into()
+                .expect("input should be of decent length"),
+            percentage_to_unlock: 70,
+        };
+        
+        assert_noop!(Proposals::update_project(
+            RuntimeOrigin::signed(bob), 
+            b"1".to_vec().try_into.expect("qed"),
+            b"1".to_vec().try_into.expect("qed"),
+            b"1".to_vec().try_into.expect("qed"),
+            b"1".to_vec().try_into.expect("qed"),
+            b"1".to_vec().try_into.expect("qed"),
+            vec![updated_milestone1].try_into().expect("qed"), 
+            10000,
+            CurrencyId::Native,
+        ), Error::<Test>::InvalidAccount);
+    )
+}
+
 //common helper methods
 fn create_project(account: AccountId) {
     assert_ok!(Proposals::create_project(

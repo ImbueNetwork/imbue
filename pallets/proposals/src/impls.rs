@@ -121,9 +121,11 @@ pub fn update_existing_project(
     //check to ensure valid and existing project
     let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
+    ensure!(project.initiator == who, Error::<T>::InvalidAccount);
+
     ensure!(
-    project.approved_for_funding == false,
-    Error::<T>::ProjectAlreadyApproved
+        project.approved_for_funding == false,
+        Error::<T>::ProjectAlreadyApproved
     );
 
     let mut milestone_key: u32 = 0;

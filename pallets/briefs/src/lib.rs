@@ -77,6 +77,14 @@ pub mod pallet {
     #[pallet::getter(fn approved_accounts)]
     pub type ApprovedAccounts<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
+    /// The Briefs ready to be converted to a proposal. 
+    /// Key: BriefHash
+    /// Value: () 
+    #[pallet::storage]
+    #[pallet::getter(fn approved_accounts)]
+    pub type BriefsForConversion<T> = StorageMap<_, Blake2_128Concat, BriefHash, (), ValueQuery>;
+
+    
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -106,7 +114,11 @@ pub mod pallet {
         /// There are too many briefs open for this block, try again later.
         BriefLimitReached,
         /// Currency must be set to add to a bounty.
-        BriefCurrencyNotSet
+        BriefCurrencyNotSet,
+        /// Too many brief owners.
+        TooManyBriefOwners,
+        /// Not authorized to do this,
+        NotAuthorised,
     }
 
     #[pallet::call]
@@ -114,6 +126,8 @@ pub mod pallet {
 
         /// Add a bounty to a brief.
         /// A bounty must be fully contributed to before a piece of work is started.
+        ///
+        /// Todo: runtime api to return how much bounty exactly is left on a brief.
         #[pallet::call_index(0)]
         #[pallet::weight(10_000)]
         pub fn add_bounty(
@@ -121,25 +135,24 @@ pub mod pallet {
             brief_id: BriefHash,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
-
             // Only allow if its not an auction or it is an auction and the price has been set
             let who = ensure_signed(origin)?;
             let mut brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            ensure!(brief_record.brief_owners.contains(who), Error::<T>::NotAuthorised);
 
-            let new_amount: BalanceOf<T> = brief_record.current_contribution.unwrap_or(Default::default()) + amount;
-            let currency_id = brief_record.currency_id.ok_or(Error::<T>::BriefCurrencyNotSet)?;
+            let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
 
             ensure!(
-                brief_record.bounty_total.ok_or(Error::<T>::BriefCurrencyNotSet)? >= new_amount,
+                brief_record.bounty_total >= new_amount,
                 Error::<T>::ExceedTotalBounty
             );
 
-            brief_record.current_contribution = Some(new_amount);
-            <T as Config>::RMultiCurrency::reserve(currency_id, &who, amount)?;
+            <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
             Briefs::<T>::mutate_exists(&brief_id, |brief| {
-                *brief = Some(brief_record);
+                *brief.current_contribution = new_amount;
             });
+
 
             Ok(())
         }
@@ -162,13 +175,17 @@ pub mod pallet {
         #[pallet::weight(10_000)]
         pub fn create_brief(origin: OriginFor<T>, brief_owners: BoundedBriefOwners<T> , applicant: AccountIdOf<T>, bounty_total: BalanceOf<T>, initial_contribution: BalanceOf<T>, ipfs_hash: IpfsHash, currency_id: CurrencyId) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            
+            if !brief_owners.contains(&who) {
+                brief_owners.try_push(who).map_err(|| Error::<T>::TooManyBriefOwners)?;
+            }
 
             ensure!(ApprovedAccounts::<T>::contains_key(&applicant), Error::<T>::OnlyApprovedAccountPermitted);
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             // add breifs to OCW list to verify.
             let brief_hash = BriefPreImage::generate_hash(&brief_owners.to_vec(), &bounty_total, &currency_id, &ipfs_hash);
-            let brief = BriefData::new(who.clone(), bounty_total, initial_contribution, currency_id, frame_system::Pallet::<T>::block_number(), ipfs_hash);
+            let brief = BriefData::new(brief_owners.to_vec(), bounty_total, initial_contribution, currency_id, frame_system::Pallet::<T>::block_number(), ipfs_hash);
 
             Briefs::<T>::insert(&brief_hash, brief);
 
@@ -176,6 +193,33 @@ pub mod pallet {
 
             Ok(())
         }
+
+        /// Once the bounty has been filled this extrinsic will be avaliable
+        // This call the evolver to convert the brief into a proposal.
+        #[pallet::call_index(2)]
+        #[pallet::weight(10_000)]
+        pub fn commence_work(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            
+            if !brief_owners.contains(&who) {
+                brief_owners.try_push(who).map_err(|| Error::<T>::TooManyBriefOwners)?;
+            }
+
+            ensure!(ApprovedAccounts::<T>::contains_key(&applicant), Error::<T>::OnlyApprovedAccountPermitted);
+            <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
+
+            // add breifs to OCW list to verify.
+            let brief_hash = BriefPreImage::generate_hash(&brief_owners.to_vec(), &bounty_total, &currency_id, &ipfs_hash);
+            let brief = BriefData::new(brief_owners.to_vec(), bounty_total, initial_contribution, currency_id, frame_system::Pallet::<T>::block_number(), ipfs_hash);
+
+            Briefs::<T>::insert(&brief_hash, brief);
+
+            Self::deposit_event(Event::<T>::BriefSubmitted(brief_hash));
+
+            Ok(())
+        }
+
+
     }
 
 
@@ -194,19 +238,19 @@ pub mod pallet {
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
     pub struct BriefData<T: Config> {
-        created_by: AccountIdOf<T>,
-        bounty_total: Option<BalanceOf<T>>,
-        currency_id: Option<CurrencyId>,
-        current_contribution: Option<BalanceOf<T>>,
+        brief_owners: Vec<AccountIdOf<T>>,
+        bounty_total: BalanceOf<T>,
+        currency_id: CurrencyId,
+        current_contribution: BalanceOf<T>,
         created_at: BlockNumberFor<T>,
         ipfs_hash: IpfsHash,
     }
 
     impl<T: Config> BriefData<T> {
-        pub fn new(created_by: AccountIdOf<T>, bounty_total: Option<BalanceOf<T>>, current_contribution: Option<BalanceOf<T>>, currency_id: Option<CurrencyId>, created_at: BlockNumberFor<T>, ipfs_hash: IpfsHash) -> Self {
+        pub fn new(brief_owners: Vec<AccountIdOf<T>>, bounty_total: BalanceOf<T>, current_contribution: BalanceOf<T>, currency_id: CurrencyId, created_at: BlockNumberFor<T>, ipfs_hash: IpfsHash) -> Self {
                 Self {
                     created_at,
-                    created_by,
+                    brief_owners,
                     bounty_total,
                     currency_id,
                     current_contribution,
@@ -218,7 +262,7 @@ pub mod pallet {
 
 
 
-     /// This is probably going to be removed.
+    /// The preimage for the id of the brief in storage.
      #[derive(Encode, Hash)]
      pub struct BriefPreImage<T: Config> {
          brief_owners: Vec<u8>,
