@@ -195,9 +195,7 @@ impl pallet_briefs::Config for Test {
     type RMultiCurrency = Tokens;
     type MinimumDeposit = MinimumDeposit;
     type MinimumBounty = MinimumBounty;
-    type MaximumApplicants = MaximumApplicants;
     type BriefHasher = BlakeTwo256;
-    type ApplicationSubmissionTime = ApplicationSubmissionTime;
     type AuthorityOrigin = EnsureRoot<AccountId>;
 }
 
