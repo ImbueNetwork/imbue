@@ -142,113 +142,6 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Submit a brief to recieve applications.
-        #[pallet::call_index(0)]
-        #[pallet::weight(10_000)]
-        pub fn submit_brief_direct(
-            origin: OriginFor<T>,
-            ipfs_hash: BriefHash,
-            bounty_total: BalanceOf<T>,
-            initial_contribution: BalanceOf<T>,
-            currency_id: CurrencyId,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            ensure!(
-                initial_contribution >= <T as Config>::MinimumDeposit::get(),
-                Error::<T>::DepositBelowMinimum
-            );
-            ensure!(
-                bounty_total >= <T as Config>::MinimumBounty::get(),
-                Error::<T>::BountyBelowMinimum
-            );
-            ensure!(
-                bounty_total >= initial_contribution,
-                Error::<T>::ContributionMoreThanBounty
-            );
-
-            // Malicious users can still submit briefs without an ipfs_hash (or an invalid one).
-            // Therefore we must check that this item does exist in storage in an ocw and possible slash those who are malicious.
-            // append_to_id_verification(&ipfs_hash);
-
-            //let brief_id: BriefHash = BriefPreImage::<T>::generate_hash(&who, &bounty_total, &currency_id, off_chain_ref_id)?;
-
-            // I am led to believe that we can use the ipfs hash as a unique identifier so long as we have a nonce contained within the data.
-            // The main problem with this approach is that if the data changes, so does the hash.
-            // Alas when updating the brief we must update ipfs, get the hash, and submit that atomically.
-            ensure!(
-                Briefs::<T>::get(ipfs_hash).is_none(),
-                Error::<T>::BriefAlreadyExists
-            );
-
-            let new_brief = BriefData {
-                created_by: who.clone(),
-                bounty_total: Some(bounty_total), 
-                current_contribution: Some(initial_contribution),
-                currency_id: Some(currency_id),
-                created_at: frame_system::Pallet::<T>::block_number(),
-                is_auction: false,
-            };
-
-            <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
-            Briefs::<T>::insert(ipfs_hash, new_brief);
-            let _ = Self::open_brief_for_applications(ipfs_hash);
-
-            Self::deposit_event(Event::<T>::BriefSubmitted(ipfs_hash));
-            Ok(())
-        }
-
-        #[pallet::call_index(1)]
-        #[pallet::weight(10_000)]
-        pub fn submit_brief_auction(
-            origin: OriginFor<T>,
-            ipfs_hash: BriefHash,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            // Take deposit? to increase sybil resistance.
-            // Look at extrinsic submit_brief_direct for related comments
-            ensure!(
-                Briefs::<T>::get(ipfs_hash).is_none(),
-                Error::<T>::BriefAlreadyExists
-            );
-
-            let new_brief = BriefData::new(who, None, None, None, frame_system::Pallet::<T>::block_number(), true);
-            Briefs::<T>::insert(ipfs_hash, new_brief);
-            let _ = Self::open_brief_for_applications(ipfs_hash)?;
-            
-            Self::deposit_event(Event::<T>::BriefSubmitted(ipfs_hash));
-
-            Ok(())
-        }
-
-        /// Submit an application to a brief.
-        /// Auctioning comes after the application process has closed.
-        /// So there should not be any dealings with balances here.
-        #[pallet::call_index(2)]
-        #[pallet::weight(10_000)]
-        pub fn submit_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-
-            let is_approved = ApprovedAccounts::<T>::contains_key(&who);
-            ensure!(is_approved, Error::<T>::OnlyApprovedAccountPermitted);
-
-            let _ = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
-            let mut applicants: BoundedApplications<T> = BriefApplications::<T>::get(brief_id).unwrap_or(BTreeMap::new().try_into().expect("New map is smaller than bound; qed"));
-
-            ensure!(applicants.get(&who).is_none(), Error::<T>::AlreadyApplied);
-            ensure!(BriefsOpenForApplications::<T>::contains_key(brief_id), Error::<T>::BriefClosedForApplications);
-
-            if applicants.try_insert(who.clone(), ()).is_ok() {
-                BriefApplications::<T>::insert(brief_id, applicants);
-            } else {
-                return Err(Error::<T>::MaximumApplicants.into());
-            };
-
-            Self::deposit_event(Event::<T>::ApplicationSubmitted(who));
-            Ok(())
-        }
-
-
-
         /// todo: test
         #[pallet::call_index(3)]
         #[pallet::weight(10_000)]
@@ -284,24 +177,6 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Accept an application to a brief, 
-        #[pallet::call_index(4)]
-        #[pallet::weight(10_000)]
-        pub fn accept_application(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
-            ensure!(brief.created_by == who, Error::<T>::NotAuthorised);
-            ensure!(
-                brief.bounty_total == brief.current_contribution,
-                Error::<T>::BountyTotalNotMet
-            );
-
-            // todo:
-            Self::deposit_event(Event::<T>::ApplicationAccepted{brief: brief_id, applicant: who});
-            Ok(())
-        }
-        
-        // todo: validation
         #[pallet::call_index(5)]
         #[pallet::weight(10_000)]
         pub fn approve_account(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
@@ -317,45 +192,10 @@ pub mod pallet {
     impl <T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         // Get all the briefs that need to close their application status and close them.
         fn on_initialize(b: T::BlockNumber) -> Weight {
-            let mut weight = Weight::default();
-            weight += Self::close_briefs_for_applications(b);
-
-            weight
         }
     }
 
     impl <T: Config> Pallet<T> {
-        /// Keep track of wether the brief can still be applied to and when the brief application period closes.
-        // Todo: test
-        fn open_brief_for_applications(brief_id: BriefHash) -> Result<(), DispatchError> {
-            let expiration_time = <T as Config>::ApplicationSubmissionTime::get() + frame_system::Pallet::<T>::block_number();
-            let mut briefs_for_expiration = BriefApplicationExpirations::<T>::get(expiration_time).unwrap_or(vec![].try_into().expect("empty vec is less than bound; qed"));
-
-            briefs_for_expiration.try_push(brief_id).map_err(|_| Error::<T>::BriefLimitReached)?;
-
-            BriefsOpenForApplications::<T>::insert(brief_id, ());
-            BriefApplicationExpirations::<T>::insert(expiration_time, briefs_for_expiration);
-
-            Ok(())
-        }
-
-        // todo: test
-        fn close_briefs_for_applications(block_number: T::BlockNumber) -> Weight {
-            let mut weight = Weight::default();
-            
-            let briefs = BriefApplicationExpirations::<T>::get(block_number).unwrap_or(vec![].try_into().expect("Empty vec is less than bound; qed"));
-            weight += T::DbWeight::get().reads(1);
-
-            for brief_id in briefs {
-                BriefsOpenForApplications::<T>::remove(brief_id);
-                weight += T::DbWeight::get().reads_writes(1, 1);
-            }
-
-            BriefApplicationExpirations::<T>::remove(block_number);
-            weight += T::DbWeight::get().reads_writes(1, 1);
-
-            weight
-        }
     }
 
     /// The data assocaited with a Brief
