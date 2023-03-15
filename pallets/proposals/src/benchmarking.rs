@@ -24,7 +24,6 @@ benchmarks! {
     }
 
     update_project {
-        let caller: T::AccountId = whitelisted_caller();
         let bounded_str_f: BoundedStringField = "a".repeat(<MaxStringFieldLen as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
         
         let bounded_desc_f: BoundedDescriptionField = "b".repeat(<MaxDescriptionField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
@@ -40,7 +39,7 @@ benchmarks! {
         let required_funds: BalanceOf<T> = u32::MAX.into();
         let currency_id = CurrencyId::Native;
         //origin, project_key, name, logo, description, website, proposed_milestones, required_funds, currency_id
-    }: _(RawOrigin::Signed(whitelisted_caller(), 0, bounded_str_f, bounded_str_f, bounded_desc_f, bounded_website_f, milestones, required_funds, currency_id))
+    }: _(RawOrigin::Signed(caller.clone()), 0, bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f, bounded_website_f, milestones, required_funds, currency_id)
     verify {
         assert_last_event::<T>(Event::ProjectUpdated(caller, bounded_str_f.to_vec(), 0, required_funds).into());
     }
