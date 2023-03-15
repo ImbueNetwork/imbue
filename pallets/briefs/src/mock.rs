@@ -1,4 +1,3 @@
-
 use crate as pallet_briefs;
 use frame_support::{
     parameter_types,
@@ -10,23 +9,23 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
 
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
+use crate::pallet::IpfsHash;
+use crate::traits::BriefEvolver;
+use common_types::CurrencyId;
+use frame_support::once_cell::sync::Lazy;
+use sp_core::sr25519;
+use sp_runtime::DispatchResult;
+use sp_runtime::{
+    testing::Header,
+    traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+    BuildStorage,
+};
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
     vec::Vec,
 };
-use frame_support::once_cell::sync::Lazy;
-use common_types::CurrencyId;
-use sp_core::sr25519;
-use sp_runtime::{
-    testing::{Header},
-    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify, AccountIdConversion},
-    BuildStorage
-};
-use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
-use crate::traits::{BriefEvolver};
-use crate::pallet::{IpfsHash};
-use sp_runtime::DispatchResult;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -63,7 +62,7 @@ frame_support::construct_runtime!(
         Currencies: orml_currencies::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-		BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
+        BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -103,7 +102,6 @@ impl pallet_transaction_payment::Config for Test {
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
-
 }
 
 parameter_types! {
@@ -124,12 +122,12 @@ impl frame_system::Config for Test {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type  BlockHashCount = BlockHashCount;
+    type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
     type RuntimeEvent = RuntimeEvent;
-    type  OnNewAccount = ();
+    type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
@@ -199,13 +197,15 @@ impl pallet_briefs::Config for Test {
 pub struct DummyBriefEvolver;
 
 impl BriefEvolver<AccountId, Balance, BlockNumber> for DummyBriefEvolver {
-    fn convert_to_proposal( brief_owners: Vec<AccountId>,
+    fn convert_to_proposal(
+        brief_owners: Vec<AccountId>,
         bounty_total: Balance,
         currency_id: CurrencyId,
         current_contribution: Balance,
         created_at: BlockNumber,
         ipfs_hash: IpfsHash,
-        applicant: AccountId) -> Result<(), ()> {
+        applicant: AccountId,
+    ) -> Result<(), ()> {
         // Perform the necessary logic here
         Ok(())
     }
@@ -215,28 +215,29 @@ parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
-pub static ALICE : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([1u8; 32])});
-pub static BOB : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([2u8; 32])});
-pub static CHARLIE : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([10u8; 32])});
+pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([1u8; 32]));
+pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([2u8; 32]));
+pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([10u8; 32]));
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap();
 
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	
-    GenesisConfig::default()
-		.assimilate_storage(&mut t)
-		.unwrap();
-        
+    GenesisConfig::default().assimilate_storage(&mut t).unwrap();
+
     orml_tokens::GenesisConfig::<Test> {
         balances: {
-            vec![*ALICE, *BOB, *CHARLIE].into_iter().map(|id| {
-            (id, CurrencyId::Native, 100000)
-        }).collect::<Vec<_>>()},
+            vec![*ALICE, *BOB, *CHARLIE]
+                .into_iter()
+                .map(|id| (id, CurrencyId::Native, 100000))
+                .collect::<Vec<_>>()
+        },
     }
     .assimilate_storage(&mut t)
     .unwrap();
-    
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
 }

@@ -9,7 +9,7 @@ use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use imbue_kusama_runtime::{Block};
+use imbue_kusama_runtime::Block;
 use log::info;
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -251,7 +251,8 @@ pub fn run() -> Result<()> {
                         &config,
                         crate::service::kusama_parachain_build_import_queue,
                     )?;
-                    cmd.run(partials.client)                }),
+                    cmd.run(partials.client)
+                }),
                 //TODO FIXME
                 // BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
                 //     let partials = new_partial::<imbue_kusama_runtime::RuntimeApi, _>(

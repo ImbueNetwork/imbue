@@ -25,8 +25,8 @@ use crate::setup::{
 use common_runtime::Balance;
 use common_types::CurrencyId;
 use imbue_kusama_runtime::{
-    AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, RuntimeOrigin,
-    OrmlTokens, XTokens,
+    AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, OrmlTokens,
+    RuntimeOrigin, XTokens,
 };
 use orml_traits::MultiCurrency;
 

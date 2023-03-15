@@ -11,8 +11,8 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
     fn create_project() -> Weight;
     fn update_project() -> Weight;
-    fn add_project_whitelist() -> Weight; 
-    fn remove_project_whitelist() -> Weight; 
+    fn add_project_whitelist() -> Weight;
+    fn remove_project_whitelist() -> Weight;
     fn schedule_round() -> Weight;
     fn cancel_round() -> Weight;
     fn contribute() -> Weight;
@@ -30,7 +30,6 @@ pub trait WeightInfo {
     fn refund_item_in_queue() -> Weight;
     fn split_off_refunds() -> Weight;
 }
-
 
 /// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
 pub struct SubstrateWeight<T>(PhantomData<T>);

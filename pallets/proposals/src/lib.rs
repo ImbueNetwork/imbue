@@ -49,7 +49,12 @@ type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
 type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 pub type ProjectAccountId<T> = <T as frame_system::Config>::AccountId;
-pub type Refunds<T> =  Vec<(AccountIdOf<T>, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>;
+pub type Refunds<T> = Vec<(
+    AccountIdOf<T>,
+    ProjectAccountId<T>,
+    BalanceOf<T>,
+    CurrencyId,
+)>;
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedWhitelistSpots<T> =
     BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, MaxWhitelistPerProject>;
@@ -177,10 +182,19 @@ pub mod pallet {
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
     /// The refund queue is used to store the list of accounts that have been involved in a do_refund call.
-    /// The queue will be sent to the hooks which will inturn actually carry out the 
+    /// The queue will be sent to the hooks which will inturn actually carry out the
     #[pallet::storage]
     #[pallet::getter(fn refund_queue)]
-    pub type RefundQueue<T> = StorageValue<_, Vec<(AccountIdOf<T>, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>, ValueQuery>;
+    pub type RefundQueue<T> = StorageValue<
+        _,
+        Vec<(
+            AccountIdOf<T>,
+            ProjectAccountId<T>,
+            BalanceOf<T>,
+            CurrencyId,
+        )>,
+        ValueQuery,
+    >;
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -196,12 +210,7 @@ pub mod pallet {
             common_types::CurrencyId,
         ),
         // Project has been updated
-        ProjectUpdated(
-            T::AccountId,
-            Vec<u8>,
-            ProjectKey,
-            BalanceOf<T>
-        ),  
+        ProjectUpdated(T::AccountId, Vec<u8>, ProjectKey, BalanceOf<T>),
         /// A funding round has been created.
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
         /// A voting round has been created.
@@ -343,13 +352,14 @@ pub mod pallet {
             let mut refunds = RefundQueue::<T>::get();
             // Overestimate.
             weight += T::DbWeight::get().reads(2);
-            
+
             // A counter is used to know how many elements to split off.
             let mut c = 0u32;
-            for i in 0..T::RefundsPerBlock::get(){
+            for i in 0..T::RefundsPerBlock::get() {
                 if let Some(refund) = refunds.get(i as usize) {
-                    Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);                    
-                    weight.saturating_add(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
+                    Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);
+                    weight
+                        .saturating_add(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
                     c += 1;
                 } else {
                     break;
@@ -368,26 +378,28 @@ pub mod pallet {
             remaining_weight.saturating_sub(T::DbWeight::get().reads(2));
 
             // A little extra than required for safety.
-            let weight_required_to_finish_hook = 
-                <T as pallet::Config>::WeightInfo::refund_item_in_queue() + <T as pallet::Config>::WeightInfo::split_off_refunds();
+            let weight_required_to_finish_hook =
+                <T as pallet::Config>::WeightInfo::refund_item_in_queue()
+                    + <T as pallet::Config>::WeightInfo::split_off_refunds();
 
             // A counter is used to know how many elements to split off.
             let mut c = 0u32;
 
-            // While the weight has enough weight to finish off the 
+            // While the weight has enough weight to finish off the
             while remaining_weight.ref_time() > weight_required_to_finish_hook.ref_time() {
                 if let Some(refund) = refunds.get(c as usize) {
                     let _ = Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);
-                    remaining_weight.saturating_sub(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
+                    remaining_weight
+                        .saturating_sub(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
                     c += 1;
                 } else {
-                    break
+                    break;
                 }
             }
 
             let _ = Self::split_off_refunds(&mut refunds, c);
             remaining_weight.saturating_sub(<T as pallet::Config>::WeightInfo::split_off_refunds());
-            
+
             remaining_weight
         }
     }
@@ -473,7 +485,7 @@ pub mod pallet {
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            
+
             let mut total_percentage = 0;
             for milestone in proposed_milestones.iter() {
                 total_percentage += milestone.percentage_to_unlock;
@@ -554,7 +566,10 @@ pub mod pallet {
             ensure!(!project_keys.is_empty(), Error::<T>::LengthMustExceedZero);
 
             // Project keys is bounded to 5 projects maximum.
-            let max_project_key = project_keys.iter().max().ok_or(Error::<T>::LengthMustExceedZero)?;
+            let max_project_key = project_keys
+                .iter()
+                .max()
+                .ok_or(Error::<T>::LengthMustExceedZero)?;
             Projects::<T>::get(max_project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             Self::new_round(start, end, project_keys, round_type)
         }
@@ -617,7 +632,6 @@ pub mod pallet {
             Self::do_approve(project_key, approval_round_key, milestone_keys)
         }
 
-        
         /// Step 5 (INITIATOR)
         #[pallet::call_index(8)]
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]

@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::{
@@ -25,52 +24,42 @@ use cumulus_client_service::{
     build_relay_chain_interface, prepare_node_config, start_collator, start_full_node,
     StartCollatorParams, StartFullNodeParams,
 };
-use cumulus_primitives_core::{
-    ParaId,
-};
+use cumulus_primitives_core::ParaId;
 use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface};
-
 
 use jsonrpsee::RpcModule;
 
 use crate::rpc;
 pub use parachains_common::{AccountId, Balance, Block, BlockNumber, Hash, Header, Index as Nonce};
 
-
-
-use sc_consensus::{
-    ImportQueue,
-};
+use sc_consensus::ImportQueue;
 use sc_executor::WasmExecutor;
 use sc_network::NetworkService;
 use sc_network_common::service::NetworkBlock;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_api::{ConstructRuntimeApi};
-
+use sp_api::ConstructRuntimeApi;
 
 use sp_keystore::SyncCryptoStorePtr;
-use sp_runtime::{
-    traits::{BlakeTwo256},
-};
+use sp_runtime::traits::BlakeTwo256;
 use std::{sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
-
 
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
 
 #[cfg(feature = "runtime-benchmarks")]
-type HostFunctions =
-(sp_io::SubstrateHostFunctions, frame_benchmarking::benchmarking::HostFunctions);
+type HostFunctions = (
+    sp_io::SubstrateHostFunctions,
+    frame_benchmarking::benchmarking::HostFunctions,
+);
 
 type ParachainClient<RuntimeApi> = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
 
 type ParachainBackend = TFullBackend<Block>;
 
-type ParachainBlockImport<RuntimeApi> = TParachainBlockImport<Block, Arc<ParachainClient<RuntimeApi>>, ParachainBackend>;
-
-
+type ParachainBlockImport<RuntimeApi> =
+    TParachainBlockImport<Block, Arc<ParachainClient<RuntimeApi>>, ParachainBackend>;
 
 /// Native executor instance.
 pub struct ImbueKusamaRuntimeExecutor;
@@ -101,13 +90,17 @@ pub fn new_partial<RuntimeApi, BIQ>(
         (),
         sc_consensus::DefaultImportQueue<Block, ParachainClient<RuntimeApi>>,
         sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>,
-        (ParachainBlockImport<RuntimeApi>, Option<Telemetry>, Option<TelemetryWorkerHandle>),
+        (
+            ParachainBlockImport<RuntimeApi>,
+            Option<Telemetry>,
+            Option<TelemetryWorkerHandle>,
+        ),
     >,
     sc_service::Error,
 >
-    where
-        RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
-        RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+where
+    RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
         + sp_api::Metadata<Block>
         + sp_session::SessionKeys<Block>
         + sp_api::ApiExt<
@@ -115,17 +108,17 @@ pub fn new_partial<RuntimeApi, BIQ>(
             StateBackend = sc_client_api::StateBackendFor<ParachainBackend, Block>,
         > + sp_offchain::OffchainWorkerApi<Block>
         + sp_block_builder::BlockBuilder<Block>,
-        sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
-        BIQ: FnOnce(
-            Arc<ParachainClient<RuntimeApi>>,
-            ParachainBlockImport<RuntimeApi>,
-            &Configuration,
-            Option<TelemetryHandle>,
-            &TaskManager,
-        ) -> Result<
-            sc_consensus::DefaultImportQueue<Block, ParachainClient<RuntimeApi>>,
-            sc_service::Error,
-        >,
+    sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
+    BIQ: FnOnce(
+        Arc<ParachainClient<RuntimeApi>>,
+        ParachainBlockImport<RuntimeApi>,
+        &Configuration,
+        Option<TelemetryHandle>,
+        &TaskManager,
+    ) -> Result<
+        sc_consensus::DefaultImportQueue<Block, ParachainClient<RuntimeApi>>,
+        sc_service::Error,
+    >,
 {
     let telemetry = config
         .telemetry_endpoints
@@ -157,7 +150,9 @@ pub fn new_partial<RuntimeApi, BIQ>(
     let telemetry_worker_handle = telemetry.as_ref().map(|(worker, _)| worker.handle());
 
     let telemetry = telemetry.map(|(worker, telemetry)| {
-        task_manager.spawn_handle().spawn("telemetry", None, worker.run());
+        task_manager
+            .spawn_handle()
+            .spawn("telemetry", None, worker.run());
         telemetry
     });
 
@@ -206,9 +201,9 @@ async fn start_node_impl<RuntimeApi, RB, BIQ, BIC>(
     build_consensus: BIC,
     hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient<RuntimeApi>>)>
-    where
-        RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
-        RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+where
+    RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
         + sp_api::Metadata<Block>
         + sp_session::SessionKeys<Block>
         + sp_api::ApiExt<
@@ -219,30 +214,30 @@ async fn start_node_impl<RuntimeApi, RB, BIQ, BIC>(
         + cumulus_primitives_core::CollectCollationInfo<Block>
         + pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
         + frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-        sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
-        RB: Fn(Arc<ParachainClient<RuntimeApi>>) -> Result<jsonrpsee::RpcModule<()>, sc_service::Error>,
-        BIQ: FnOnce(
-            Arc<ParachainClient<RuntimeApi>>,
-            ParachainBlockImport<RuntimeApi>,
-            &Configuration,
-            Option<TelemetryHandle>,
-            &TaskManager,
-        ) -> Result<
-            sc_consensus::DefaultImportQueue<Block, ParachainClient<RuntimeApi>>,
-            sc_service::Error,
-        >,
-        BIC: FnOnce(
-            Arc<ParachainClient<RuntimeApi>>,
-            ParachainBlockImport<RuntimeApi>,
-            Option<&Registry>,
-            Option<TelemetryHandle>,
-            &TaskManager,
-            Arc<dyn RelayChainInterface>,
-            Arc<sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>>,
-            Arc<NetworkService<Block, Hash>>,
-            SyncCryptoStorePtr,
-            bool,
-        ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
+    sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
+    RB: Fn(Arc<ParachainClient<RuntimeApi>>) -> Result<jsonrpsee::RpcModule<()>, sc_service::Error>,
+    BIQ: FnOnce(
+        Arc<ParachainClient<RuntimeApi>>,
+        ParachainBlockImport<RuntimeApi>,
+        &Configuration,
+        Option<TelemetryHandle>,
+        &TaskManager,
+    ) -> Result<
+        sc_consensus::DefaultImportQueue<Block, ParachainClient<RuntimeApi>>,
+        sc_service::Error,
+    >,
+    BIC: FnOnce(
+        Arc<ParachainClient<RuntimeApi>>,
+        ParachainBlockImport<RuntimeApi>,
+        Option<&Registry>,
+        Option<TelemetryHandle>,
+        &TaskManager,
+        Arc<dyn RelayChainInterface>,
+        Arc<sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>>,
+        Arc<NetworkService<Block, Hash>>,
+        SyncCryptoStorePtr,
+        bool,
+    ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
     let parachain_config = prepare_node_config(parachain_config);
 
@@ -261,11 +256,11 @@ async fn start_node_impl<RuntimeApi, RB, BIQ, BIC>(
         collator_options.clone(),
         hwbench.clone(),
     )
-        .await
-        .map_err(|e| match e {
-            RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
-            s => s.to_string().into(),
-        })?;
+    .await
+    .map_err(|e| match e {
+        RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
+        s => s.to_string().into(),
+    })?;
 
     let block_announce_validator =
         BlockAnnounceValidator::new(relay_chain_interface.clone(), para_id);
@@ -389,8 +384,6 @@ async fn start_node_impl<RuntimeApi, RB, BIQ, BIC>(
     Ok((task_manager, client))
 }
 
-
-
 /// Start a kusama parachain node.
 pub async fn start_kusama_parachain_node(
     parachain_config: Configuration,
@@ -481,7 +474,6 @@ pub async fn start_kusama_parachain_node(
         .await
 }
 
-
 /// Build the import queue for the kusama parachain runtime.
 pub fn kusama_parachain_build_import_queue(
     client: Arc<ParachainClient<imbue_kusama_runtime::RuntimeApi>>,
@@ -522,7 +514,6 @@ pub fn kusama_parachain_build_import_queue(
     })
         .map_err(Into::into)
 }
-
 
 // #[async_trait::async_trait]
 // impl<Client, AuraId> ParachainConsensus<Block> for WaitForAuraConsensus<Client, AuraId>

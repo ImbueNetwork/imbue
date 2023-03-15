@@ -17,7 +17,7 @@ use sp_std::{
 };
 
 use sp_runtime::{
-    testing::{Header},
+    testing::Header,
     traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
 
@@ -109,7 +109,6 @@ impl pallet_transaction_payment::Config for Test {
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
-
 }
 
 parameter_types! {
@@ -130,12 +129,12 @@ impl frame_system::Config for Test {
     type AccountId = sp_core::sr25519::Public;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type  BlockHashCount = BlockHashCount;
+    type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
     type RuntimeEvent = RuntimeEvent;
-    type  OnNewAccount = ();
+    type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();

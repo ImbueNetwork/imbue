@@ -59,7 +59,6 @@ pub mod v1 {
                 .contributions
                 .into_iter()
                 .map(|contribution| {
-
                     let migrated_contribution = Contribution {
                         value: contribution.value,
                         timestamp: TimestampOf::<T>::default(),

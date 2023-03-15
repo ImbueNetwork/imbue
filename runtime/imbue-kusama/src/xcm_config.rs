@@ -3,7 +3,9 @@ use sp_std::{marker::PhantomData, prelude::*};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-    construct_runtime, ensure, parameter_types,
+    construct_runtime,
+    dispatch::DispatchClass,
+    ensure, parameter_types,
     traits::{
         fungibles, Contains, Currency as PalletCurrency, EnsureOriginWithArg, EqualPrivilegeOnly,
         Everything, Get, Imbalance, IsInVec, Nothing, OnUnbalanced, Randomness,
@@ -12,15 +14,14 @@ pub use frame_support::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
         ConstantMultiplier, IdentityFee, Weight,
     },
-    dispatch::DispatchClass,
     PalletId, StorageValue,
 };
 
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
-use orml_traits::{FixedConversionRateProvider, location::AbsoluteReserveProvider, parameter_type_with_key};
-use orml_xcm_support::{
-    IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
+use orml_traits::{
+    location::AbsoluteReserveProvider, parameter_type_with_key, FixedConversionRateProvider,
 };
+use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
 
 pub use common_runtime::{
     asset_registry::AuthorityOrigin,
@@ -56,8 +57,8 @@ parameter_types! {
 }
 
 use super::{
-    AccountId, Balance, CouncilCollective, Currencies, OrmlAssetRegistry,
-    ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,UnknownTokens,
+    AccountId, Balance, CouncilCollective, Currencies, OrmlAssetRegistry, ParachainInfo,
+    ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, UnknownTokens,
     XcmpQueue,
 };
 
@@ -248,7 +249,9 @@ impl orml_xcm::Config for Runtime {
 
 pub struct DepositFailureHandler;
 
-impl<CurrencyId, AccountId, Balance> orml_xcm_support::OnDepositFail<CurrencyId, AccountId, Balance> for DepositFailureHandler {
+impl<CurrencyId, AccountId, Balance> orml_xcm_support::OnDepositFail<CurrencyId, AccountId, Balance>
+    for DepositFailureHandler
+{
     fn on_deposit_currency_fail(
         err: DispatchError,
         _currency_id: CurrencyId,
@@ -258,7 +261,6 @@ impl<CurrencyId, AccountId, Balance> orml_xcm_support::OnDepositFail<CurrencyId,
         Err(XcmError::FailedToTransactAsset(err.into()))
     }
 }
-
 
 /// CurrencyIdConvert
 /// This type implements conversions from our `CurrencyId` type into `MultiLocation` and vice-versa.

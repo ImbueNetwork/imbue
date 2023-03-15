@@ -12,11 +12,8 @@ use sp_core::OpaqueMetadata;
 
 use pallet_collective::EnsureProportionAtLeast;
 use sp_runtime::{
-    create_runtime_str, generic,
-    impl_opaque_keys,
-    traits::{
-        AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto,
-    },
+    create_runtime_str, generic, impl_opaque_keys,
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, Perbill, Permill,
 };
@@ -35,16 +32,19 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-    construct_runtime, dispatch::DispatchClass, ensure, parameter_types,
+    construct_runtime,
+    dispatch::DispatchClass,
+    ensure, parameter_types,
     traits::{
-        fungibles, Contains, Currency as PalletCurrency, EnsureOriginWithArg, EqualPrivilegeOnly,ConstU128, ConstU16, ConstU32,
-        Everything, Get, Imbalance, IsInVec, Nothing, OnUnbalanced, Randomness,WithdrawReasons
+        fungibles, ConstU128, ConstU16, ConstU32, Contains, Currency as PalletCurrency,
+        EnsureOriginWithArg, EqualPrivilegeOnly, Everything, Get, Imbalance, IsInVec, Nothing,
+        OnUnbalanced, Randomness, WithdrawReasons,
     },
     weights::{
         constants::{
             BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
         },
-        ConstantMultiplier,IdentityFee, Weight,
+        ConstantMultiplier, IdentityFee, Weight,
     },
     PalletId, StorageValue,
 };
@@ -55,7 +55,6 @@ use frame_system::{
 };
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
-
 
 pub use common_runtime::{
     asset_registry::AuthorityOrigin,
@@ -73,7 +72,6 @@ use xcm_executor::XcmExecutor;
 
 // XCM imports
 pub use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
-
 
 use common_runtime::currency::*;
 pub use common_runtime::Index;
@@ -291,9 +289,9 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MinVestedTransfer: Balance = 100 * DOLLARS;
-	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
-		WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
+    pub const MinVestedTransfer: Balance = 100 * DOLLARS;
+    pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+        WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
 }
 
 impl pallet_vesting::Config for Runtime {
@@ -321,15 +319,12 @@ impl pallet_utility::Config for Runtime {
     type WeightInfo = ();
 }
 
-
-
 parameter_types! {
     // Max size 4MB allowed: 4096 * 1024
     pub const PreimageMaxSize: u32 = 4096 * 1024;
       pub const PreimageBaseDeposit: Balance = deposit(2, 64);
       pub const PreimageByteDeposit: Balance = deposit(0, 1);
 }
-
 
 impl pallet_preimage::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
@@ -358,7 +353,6 @@ impl pallet_scheduler::Config for Runtime {
     type OriginPrivilegeCmp = EqualPrivilegeOnly;
     type Preimages = Preimage;
 }
-
 
 impl orml_unknown_tokens::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
@@ -413,7 +407,7 @@ type TechnicalCollective = pallet_collective::Instance2;
 impl pallet_collective::Config<CouncilCollective> for Runtime {
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeEvent = RuntimeEvent;
-    type  Proposal = RuntimeCall;
+    type Proposal = RuntimeCall;
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
@@ -424,7 +418,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeEvent = RuntimeEvent;
-    type  Proposal = RuntimeCall;
+    type Proposal = RuntimeCall;
     type MotionDuration = TechCommitteeMotionDuration;
     type MaxProposals = TechCommitteeMaxProposals;
     type MaxMembers = TechCommitteeMaxMembers;
@@ -435,7 +429,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
     type AddOrigin = MoreThanHalfCouncil;
     type RuntimeEvent = RuntimeEvent;
-    type  MaxMembers = CouncilMaxMembers;
+    type MaxMembers = CouncilMaxMembers;
     type MembershipChanged = Council;
     type MembershipInitialized = Council;
     type PrimeOrigin = MoreThanHalfCouncil;
@@ -448,7 +442,7 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
     type AddOrigin = MoreThanHalfCouncil;
     type RuntimeEvent = RuntimeEvent;
-    type  MaxMembers = TechCommitteeMaxMembers;
+    type MaxMembers = TechCommitteeMaxMembers;
     type MembershipChanged = TechnicalCommittee;
     type MembershipInitialized = TechnicalCommittee;
     type PrimeOrigin = MoreThanHalfCouncil;
@@ -637,12 +631,12 @@ impl orml_tokens::Config for Runtime {
     type ReserveIdentifier = [u8; 8];
 }
 
-
 impl orml_asset_registry::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type AssetId = CurrencyId;
-    type AuthorityOrigin = asset_registry::AuthorityOrigin<RuntimeOrigin, EnsureRootOr<HalfOfCouncil>>;
+    type AuthorityOrigin =
+        asset_registry::AuthorityOrigin<RuntimeOrigin, EnsureRootOr<HalfOfCouncil>>;
     type CustomMetadata = CustomMetadata;
     type AssetProcessor = asset_registry::CustomAssetProcessor;
     type WeightInfo = ();
@@ -834,7 +828,8 @@ pub type SignedExtra = (
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+pub type UncheckedExtrinsic =
+    generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 /// Executive: handles dispatch to the various modules.

@@ -201,8 +201,8 @@ pub mod xcm_fees {
 /// AssetRegistry's AssetProcessor
 pub mod asset_registry {
     use super::types::{AccountId, Balance};
-    use common_types::{CurrencyId, CustomMetadata};
     use codec::{Decode, Encode};
+    use common_types::{CurrencyId, CustomMetadata};
     use frame_support::{
         dispatch::RawOrigin,
         sp_std::marker::PhantomData,
@@ -212,9 +212,7 @@ pub mod asset_registry {
     use scale_info::TypeInfo;
     use sp_runtime::DispatchError;
 
-    #[derive(
-    Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo,
-    )]
+    #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
     pub struct CustomAssetProcessor;
 
     impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for CustomAssetProcessor {
@@ -246,9 +244,10 @@ pub mod asset_registry {
     >(PhantomData<(Origin, DefaultEnsureOrigin)>);
 
     impl<
-        Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
-        DefaultEnsureOrigin: EnsureOrigin<Origin>,
-    > EnsureOriginWithArg<Origin, Option<CurrencyId>> for AuthorityOrigin<Origin, DefaultEnsureOrigin>
+            Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
+            DefaultEnsureOrigin: EnsureOrigin<Origin>,
+        > EnsureOriginWithArg<Origin, Option<CurrencyId>>
+        for AuthorityOrigin<Origin, DefaultEnsureOrigin>
     {
         type Success = ();
 
@@ -269,11 +268,9 @@ pub mod asset_registry {
     }
 }
 pub mod common_xcm {
-    
-    
-    
+
     use sp_runtime::{traits::ConstU32, WeakBoundedVec};
-    
+
     use xcm::opaque::v2::Junction::GeneralKey;
 
     pub fn general_key(key: &[u8]) -> xcm::v2::Junction {
