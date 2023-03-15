@@ -199,7 +199,13 @@ impl pallet_briefs::Config for Test {
 pub struct DummyBriefEvolver;
 
 impl BriefEvolver<AccountId, Balance, BlockNumber> for DummyBriefEvolver {
-    fn convert_to_proposal(brief_owner: AccountId, bounty: Balance, created_at: BlockNumber, ipfs_hash: IpfsHash) -> Result<(), ()> {
+    fn convert_to_proposal( brief_owners: Vec<AccountId>,
+        bounty_total: Balance,
+        currency_id: CurrencyId,
+        current_contribution: Balance,
+        created_at: BlockNumber,
+        ipfs_hash: IpfsHash,
+        applicant: AccountId) -> Result<(), ()> {
         // Perform the necessary logic here
         Ok(())
     }

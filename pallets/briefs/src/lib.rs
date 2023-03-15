@@ -26,7 +26,6 @@ pub mod pallet {
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    type BoundedBriefsPerBlock = BoundedVec<BriefHash, ConstU32<100>>;
     type BoundedBriefOwners<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 
     type BriefHash = H256;
@@ -116,6 +115,8 @@ pub mod pallet {
         TooManyBriefOwners,
         /// Not authorized to do this,
         NotAuthorised,
+        /// The brief conversion failed
+        BriefConversionFailedGeneric,
     }
 
     #[pallet::call]
@@ -134,7 +135,7 @@ pub mod pallet {
         ) -> DispatchResult {
             // Only allow if its not an auction or it is an auction and the price has been set
             let who = ensure_signed(origin)?;
-            let mut brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            let brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
             ensure!(brief_record.brief_owners.contains(&who), Error::<T>::NotAuthorised);
 
             let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
@@ -146,7 +147,6 @@ pub mod pallet {
                     brief.current_contribution = new_amount;
                 }
             });
-
 
             Ok(())
         }
@@ -163,7 +163,7 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Create a brief to be fully funded.
+        /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
         #[pallet::call_index(2)]
         #[pallet::weight(10_000)]
@@ -178,8 +178,8 @@ pub mod pallet {
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             // add breifs to OCW list to verify.
-            let brief_hash = BriefPreImage::<T>::generate_hash(&brief_owners.to_vec(), &bounty_total, &currency_id, &ipfs_hash)?;
-            let brief = BriefData::new(brief_owners, bounty_total, initial_contribution, currency_id, frame_system::Pallet::<T>::block_number(), ipfs_hash);
+            let brief_hash = BriefPreImage::<T>::generate_hash(&brief_owners.to_vec(), &bounty_total, &currency_id, &ipfs_hash, &applicant)?;
+            let brief = BriefData::new(brief_owners, bounty_total, initial_contribution, currency_id, frame_system::Pallet::<T>::block_number(), ipfs_hash, applicant);
 
             Briefs::<T>::insert(&brief_hash, brief);
 
@@ -188,27 +188,30 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Once the bounty has been filled this extrinsic will be avaliable
-        // This call the evolver to convert the brief into a proposal.
+        /// Once the freelancer is happy with both the milestones and the offering this can be called.
+        /// It will call the hook (if we want to use the hook) to bypass approval in the proposals pallet.
         #[pallet::call_index(3)]
         #[pallet::weight(10_000)]
         pub fn commence_work(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            let brief = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
+            ensure!(&who == &brief.applicant, Error::<T>::NotAuthorised);
+
+            <T as Config>::BriefEvolver::convert_to_proposal(
+                brief.brief_owners.to_vec(),
+                 brief.bounty_total,
+                  brief.currency_id,
+                   brief.current_contribution,
+                    brief.created_at,
+                     brief.ipfs_hash,
+                      brief.applicant,
+            ).map_err(|_|Error::<T>::BriefConversionFailedGeneric)?;
+                // todo, finer grained err handling
+            
             Ok(())
         }
     }
-
-
-
-    #[pallet::hooks]
-    impl <T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        // Get all the briefs that need to close their application status and close them.
-        fn on_initialize(b: T::BlockNumber) -> Weight {
-            Weight::default()
-        }
-    }
-
 
     /// The data assocaited with a Brief
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
@@ -220,10 +223,11 @@ pub mod pallet {
         current_contribution: BalanceOf<T>,
         created_at: BlockNumberFor<T>,
         ipfs_hash: IpfsHash,
+        applicant: AccountIdOf<T>
     }
 
     impl<T: Config> BriefData<T> {
-        pub fn new(brief_owners: BoundedBriefOwners<T>, bounty_total: BalanceOf<T>, current_contribution: BalanceOf<T>, currency_id: CurrencyId, created_at: BlockNumberFor<T>, ipfs_hash: IpfsHash) -> Self {
+        pub fn new(brief_owners: BoundedBriefOwners<T>, bounty_total: BalanceOf<T>, current_contribution: BalanceOf<T>, currency_id: CurrencyId, created_at: BlockNumberFor<T>, ipfs_hash: IpfsHash, applicant: AccountIdOf<T>) -> Self {
                 Self {
                     created_at,
                     brief_owners,
@@ -231,6 +235,7 @@ pub mod pallet {
                     currency_id,
                     current_contribution,
                     ipfs_hash,
+                    applicant,
                 }
         }
     }
@@ -244,6 +249,7 @@ pub mod pallet {
       // It can however be a field in the storage item.
       ipfs_hash: Vec<u8>,
       phantom: PhantomData<T>,
+      applicant: Vec<u8>,
   }
 
   impl<T: Config> BriefPreImage<T> {
@@ -252,18 +258,20 @@ pub mod pallet {
          bounty_total: &'a BalanceOf<T>,
          currency_id: &'a CurrencyId,
          ipfs_hash: &'a IpfsHash,
+         applicant: &'a AccountIdOf<T>
       ) -> Result<BriefHash, DispatchError> {
          let preimage = Self {
-             brief_owners:  brief_owners.iter().map(|acc| {
+            brief_owners: brief_owners.iter().map(|acc| {
                  <AccountIdOf<T> as Encode>::encode(acc)
-             }).fold(vec![], |mut acc: Vec<u8>, mut n: Vec<u8>| {
+            }).fold(vec![], |mut acc: Vec<u8>, mut n: Vec<u8>| {
                 acc.append(&mut n);
                 acc
             }),
-             bounty_total: <BalanceOf<T> as Encode>::encode(bounty_total),
-             currency_id: <CurrencyId as Encode>::encode(currency_id),
-             ipfs_hash: ipfs_hash.to_vec(),
-             phantom: PhantomData,
+            bounty_total: <BalanceOf<T> as Encode>::encode(bounty_total),
+            currency_id: <CurrencyId as Encode>::encode(currency_id),
+            ipfs_hash: ipfs_hash.to_vec(),
+            applicant: <AccountIdOf<T> as Encode>::encode(applicant),
+            phantom: PhantomData,
          };
           let encoded = <BriefPreImage<T> as Encode>::encode(&preimage);
           let maybe_h256: Result<[u8; 32], _> =
