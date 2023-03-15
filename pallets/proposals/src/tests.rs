@@ -794,7 +794,7 @@ fn test_submit_milestone() {
 
         run_to_block(3);
 
-        Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
+        //Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
 
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(alice),
@@ -2495,9 +2495,9 @@ fn only_the_initiator_can_update_project() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
 
-    build_test_externality().execute_with(
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project(alice.clone()),
+    build_test_externality().execute_with(|| {
+        deposit_initial_balance(&alice, &bob, 1000000);
+        create_project(alice.clone());
         let updated_milestone1: ProposedMilestone = ProposedMilestone {
             name: b"milestone 1"
                 .to_vec()
@@ -2508,16 +2508,16 @@ fn only_the_initiator_can_update_project() {
         
         assert_noop!(Proposals::update_project(
             RuntimeOrigin::signed(bob), 
-            b"1".to_vec().try_into.expect("qed"),
-            b"1".to_vec().try_into.expect("qed"),
-            b"1".to_vec().try_into.expect("qed"),
-            b"1".to_vec().try_into.expect("qed"),
-            b"1".to_vec().try_into.expect("qed"),
+            100000u32,
+            b"abc".to_vec().try_into().expect("qed"),
+            b"abc".to_vec().try_into().expect("qed"),
+            b"abc".to_vec().try_into().expect("qed"),
+            b"abc".to_vec().try_into().expect("qed"),
             vec![updated_milestone1].try_into().expect("qed"), 
             10000,
             CurrencyId::Native,
         ), Error::<Test>::InvalidAccount);
-    )
+})
 }
 
 //common helper methods

@@ -102,6 +102,7 @@ impl<T: Config> Pallet<T> {
     }
 
 //update new project
+/// IF IT IS A BRIEF THIS CANNOT HAPPEN AS THE WORKER IS THE INITIATOR
 pub fn update_existing_project(
     who: T::AccountId,
     project_key: ProjectKey,
@@ -332,6 +333,7 @@ pub fn update_existing_project(
         if !funds_matched {
             // If the funds have not been matched then check if the round is over
             ensure!(round.end < now, Error::<T>::RoundNotEnded);
+            // TODO: PR for this exists.
             // Once the round ends, check for the funding threshold met. (set threshold for 75%)
         }
         project.funding_threshold_met = true;
@@ -517,6 +519,8 @@ pub fn update_existing_project(
             Error::<T>::MilestoneVotingNotComplete
         );
         if vote.yay > vote.nay {
+            // todo:
+            // THIS FLAG FLIPS IN THE APPROVE EXTRINSIC, WHY IS IT HAPPENING HERE?
             milestone.is_approved = true;
             let updated_vote = Vote {
                 yay: vote.yay,
@@ -551,7 +555,10 @@ pub fn update_existing_project(
         let total_contribution_amount: BalanceOf<T> = project.raised_funds;
 
         let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
+        // TODO: No need to clone
         for (_milestone_key, milestone) in project.milestones.clone() {
+            // Todo: milestone is approved at the point of the approve extrinsic
+            // CRITICAL BUG
             if milestone.is_approved {
                 unlocked_funds += (total_contribution_amount
                     * milestone.percentage_to_unlock.into())

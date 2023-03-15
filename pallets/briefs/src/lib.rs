@@ -196,30 +196,13 @@ pub mod pallet {
 
         /// Once the bounty has been filled this extrinsic will be avaliable
         // This call the evolver to convert the brief into a proposal.
-        #[pallet::call_index(2)]
+        #[pallet::call_index(3)]
         #[pallet::weight(10_000)]
         pub fn commence_work(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            
-            if !brief_owners.contains(&who) {
-                brief_owners.try_push(who).map_err(|| Error::<T>::TooManyBriefOwners)?;
-            }
-
-            ensure!(ApprovedAccounts::<T>::contains_key(&applicant), Error::<T>::OnlyApprovedAccountPermitted);
-            <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
-
-            // add breifs to OCW list to verify.
-            let brief_hash = BriefPreImage::generate_hash(&brief_owners.to_vec(), &bounty_total, &currency_id, &ipfs_hash);
-            let brief = BriefData::new(brief_owners.to_vec(), bounty_total, initial_contribution, currency_id, frame_system::Pallet::<T>::block_number(), ipfs_hash);
-
-            Briefs::<T>::insert(&brief_hash, brief);
-
-            Self::deposit_event(Event::<T>::BriefSubmitted(brief_hash));
 
             Ok(())
         }
-
-
     }
 
 
