@@ -63,7 +63,7 @@ impl<T: Config> Pallet<T> {
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             };
-            milestones.insert(milestone_key.clone(), milestone.clone());
+            milestones.insert(milestone_key, milestone);
             milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
         }
 
@@ -139,7 +139,7 @@ pub fn update_existing_project(
             percentage_to_unlock: milestone.percentage_to_unlock,
             is_approved: false,
         };
-        milestones.insert(milestone_key.clone(), milestone.clone());
+        milestones.insert(milestone_key, milestone);
         milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
     }
 
