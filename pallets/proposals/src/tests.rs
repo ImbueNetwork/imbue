@@ -799,7 +799,7 @@ fn test_submit_milestone() {
 
         run_to_block(3);
 
-        //Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
 
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(alice),
@@ -2690,13 +2690,13 @@ fn only_the_initiator_can_update_project() {
                 .to_vec()
                 .try_into()
                 .expect("input should be of decent length"),
-            percentage_to_unlock: 70,
+            percentage_to_unlock: 100,
         };
 
         assert_noop!(
             Proposals::update_project(
                 RuntimeOrigin::signed(bob),
-                100000u32,
+                0,
                 b"abc".to_vec().try_into().expect("qed"),
                 b"abc".to_vec().try_into().expect("qed"),
                 b"abc".to_vec().try_into().expect("qed"),

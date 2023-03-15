@@ -232,7 +232,7 @@ pub mod pallet {
             )
             .map_err(|_| Error::<T>::BriefConversionFailedGeneric)?;
             // todo, finer grained err handling
-
+            Self::deposit_event(Event::<T>::BriefEvolutionOccured(brief_id));
             Ok(())
         }
     }
