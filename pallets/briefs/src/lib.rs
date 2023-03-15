@@ -3,7 +3,6 @@
 pub use pallet::*;
 
 mod traits;
-use traits::BriefEvolver;
 
 #[cfg(test)]
 mod mock;
@@ -23,17 +22,15 @@ pub mod pallet {
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
     use sp_std::collections::btree_map::BTreeMap;
+    use crate::traits::BriefEvolver;
 
-
-    type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    type BoundedApplications<T> =
-        BoundedBTreeMap<AccountIdOf<T>, (), <T as Config>::MaximumApplicants>;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     type BoundedBriefsPerBlock = BoundedVec<BriefHash, ConstU32<100>>;
     type BoundedBriefOwners<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 
     type BriefHash = H256;
-    type IpfsHash = [u8; 32];
+    pub type IpfsHash = [u8; 32];
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -54,7 +51,7 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The type that allows for evolution from brief to proposal.
-        type BriefEvolver: BriefEvolver<BalanceOf<Self>, AccountIdOf<Self>, BlockNumberFor<Self>>;
+        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
 
         /// The maximum amount of owners to a brief
         type MaxBriefOwners: Get<u32>;
@@ -81,7 +78,7 @@ pub mod pallet {
     /// Key: BriefHash
     /// Value: () 
     #[pallet::storage]
-    #[pallet::getter(fn approved_accounts)]
+    #[pallet::getter(fn briefs_for_convert)]
     pub type BriefsForConversion<T> = StorageMap<_, Blake2_128Concat, BriefHash, (), ValueQuery>;
 
     
@@ -138,19 +135,16 @@ pub mod pallet {
             // Only allow if its not an auction or it is an auction and the price has been set
             let who = ensure_signed(origin)?;
             let mut brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
-            ensure!(brief_record.brief_owners.contains(who), Error::<T>::NotAuthorised);
+            ensure!(brief_record.brief_owners.contains(&who), Error::<T>::NotAuthorised);
 
             let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
 
-            ensure!(
-                brief_record.bounty_total >= new_amount,
-                Error::<T>::ExceedTotalBounty
-            );
-
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
-            Briefs::<T>::mutate_exists(&brief_id, |brief| {
-                *brief.current_contribution = new_amount;
+            Briefs::<T>::mutate_exists(&brief_id, |maybe_brief| {
+                if let Some(brief) = maybe_brief {
+                    brief.current_contribution = new_amount;
+                }
             });
 
 
@@ -173,19 +167,19 @@ pub mod pallet {
         /// In the current state the applicant must be approved.
         #[pallet::call_index(2)]
         #[pallet::weight(10_000)]
-        pub fn create_brief(origin: OriginFor<T>, brief_owners: BoundedBriefOwners<T> , applicant: AccountIdOf<T>, bounty_total: BalanceOf<T>, initial_contribution: BalanceOf<T>, ipfs_hash: IpfsHash, currency_id: CurrencyId) -> DispatchResult {
+        pub fn create_brief(origin: OriginFor<T>, mut brief_owners: BoundedBriefOwners<T> , applicant: AccountIdOf<T>, bounty_total: BalanceOf<T>, initial_contribution: BalanceOf<T>, ipfs_hash: IpfsHash, currency_id: CurrencyId) -> DispatchResult {
             let who = ensure_signed(origin)?;
             
             if !brief_owners.contains(&who) {
-                brief_owners.try_push(who).map_err(|| Error::<T>::TooManyBriefOwners)?;
+                brief_owners.try_push(who.clone()).map_err(|_| Error::<T>::TooManyBriefOwners)?;
             }
 
             ensure!(ApprovedAccounts::<T>::contains_key(&applicant), Error::<T>::OnlyApprovedAccountPermitted);
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             // add breifs to OCW list to verify.
-            let brief_hash = BriefPreImage::generate_hash(&brief_owners.to_vec(), &bounty_total, &currency_id, &ipfs_hash);
-            let brief = BriefData::new(brief_owners.to_vec(), bounty_total, initial_contribution, currency_id, frame_system::Pallet::<T>::block_number(), ipfs_hash);
+            let brief_hash = BriefPreImage::<T>::generate_hash(&brief_owners.to_vec(), &bounty_total, &currency_id, &ipfs_hash)?;
+            let brief = BriefData::new(brief_owners, bounty_total, initial_contribution, currency_id, frame_system::Pallet::<T>::block_number(), ipfs_hash);
 
             Briefs::<T>::insert(&brief_hash, brief);
 
@@ -206,7 +200,6 @@ pub mod pallet {
     }
 
 
-    }
 
     #[pallet::hooks]
     impl <T: Config> Hooks<T::BlockNumber> for Pallet<T> {
@@ -221,7 +214,7 @@ pub mod pallet {
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
     pub struct BriefData<T: Config> {
-        brief_owners: Vec<AccountIdOf<T>>,
+        brief_owners: BoundedBriefOwners<T>,
         bounty_total: BalanceOf<T>,
         currency_id: CurrencyId,
         current_contribution: BalanceOf<T>,
@@ -230,7 +223,7 @@ pub mod pallet {
     }
 
     impl<T: Config> BriefData<T> {
-        pub fn new(brief_owners: Vec<AccountIdOf<T>>, bounty_total: BalanceOf<T>, current_contribution: BalanceOf<T>, currency_id: CurrencyId, created_at: BlockNumberFor<T>, ipfs_hash: IpfsHash) -> Self {
+        pub fn new(brief_owners: BoundedBriefOwners<T>, bounty_total: BalanceOf<T>, current_contribution: BalanceOf<T>, currency_id: CurrencyId, created_at: BlockNumberFor<T>, ipfs_hash: IpfsHash) -> Self {
                 Self {
                     created_at,
                     brief_owners,
@@ -240,51 +233,55 @@ pub mod pallet {
                     ipfs_hash,
                 }
         }
-
     }
+  /// The preimage for the id of the brief in storage.
+  #[derive(Encode, Hash)]
+  pub struct BriefPreImage<T: Config> {
+      brief_owners: Vec<u8>,
+      bounty_total: Vec<u8>,
+      currency_id: Vec<u8>,
+      // This must not be the ipfs hash as that will change with new content.
+      // It can however be a field in the storage item.
+      ipfs_hash: Vec<u8>,
+      phantom: PhantomData<T>,
+  }
+
+  impl<T: Config> BriefPreImage<T> {
+      pub fn generate_hash<'a>(
+         brief_owners: &'a Vec<AccountIdOf<T>>,
+         bounty_total: &'a BalanceOf<T>,
+         currency_id: &'a CurrencyId,
+         ipfs_hash: &'a IpfsHash,
+      ) -> Result<BriefHash, DispatchError> {
+         let preimage = Self {
+             brief_owners:  brief_owners.iter().map(|acc| {
+                 <AccountIdOf<T> as Encode>::encode(acc)
+             }).fold(vec![], |mut acc: Vec<u8>, mut n: Vec<u8>| {
+                acc.append(&mut n);
+                acc
+            }),
+             bounty_total: <BalanceOf<T> as Encode>::encode(bounty_total),
+             currency_id: <CurrencyId as Encode>::encode(currency_id),
+             ipfs_hash: ipfs_hash.to_vec(),
+             phantom: PhantomData,
+         };
+          let encoded = <BriefPreImage<T> as Encode>::encode(&preimage);
+          let maybe_h256: Result<[u8; 32], _> =
+              <<T as Config>::BriefHasher as Hasher>::hash(&encoded)
+                  .as_ref()
+                  .try_into();
+          if let Ok(h256) = maybe_h256 {
+              Ok(H256::from_slice(h256.as_slice()))
+          } else {
+              Err(Error::<T>::BriefHashingFailed.into())
+          }
+      }
+  }
+
+ 
+}
 
 
 
-    /// The preimage for the id of the brief in storage.
-     #[derive(Encode, Hash)]
-     pub struct BriefPreImage<T: Config> {
-         brief_owners: Vec<u8>,
-         bounty_total: Vec<u8>,
-         currency_id: Vec<u8>,
-         // This must not be the ipfs hash as that will change with new content.
-         // It can however be a field in the storage item.
-         ipfs_hash: IpfsHash,
-         phantom: PhantomData<T>,
-     }
-
-     impl<T: Config> BriefPreImage<T> {
-         pub fn generate_hash<'a>(
-            brief_owners: &'a Vec<AccountIdOf<T>>,
-            bounty_total: &'a BalanceOf<T>,
-            currency_id: &'a CurrencyId,
-            ipfs_hash: u32,
-         ) -> Result<BriefHash, DispatchError> {
-            let preimage = Self {
-                brief_owners:  brief_owners.iter().map(|acc| {
-                    <AccountIdOf<T> as Encode>::encode(acc)
-                }).collect::<Vec<Vec<u8>>>().into_flattened(),
-                bounty_total: <BalanceOf<T> as Encode>::encode(bounty_total),
-                currency_id: <CurrencyId as Encode>::encode(currency_id),
-                ipfs_hash,
-                phantom: PhantomData,
-            }
-             let encoded = <BriefPreImage<T> as Encode>::encode(&preimage);
-             let maybe_h256: Result<[u8; 32], _> =
-                 <<T as Config>::BriefHasher as Hasher>::hash(&encoded)
-                     .as_ref()
-                     .try_into();
-             if let Ok(h256) = maybe_h256 {
-                 Ok(H256::from_slice(h256.as_slice()))
-             } else {
-                 Err(Error::<T>::BriefHashingFailed.into())
-             }
-         }
-     }
-
-    
+  
 

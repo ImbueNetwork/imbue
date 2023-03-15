@@ -24,11 +24,14 @@ use sp_runtime::{
     BuildStorage
 };
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
+use crate::traits::{BriefEvolver};
+use crate::pallet::{IpfsHash};
+use sp_runtime::DispatchResult;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-pub type BlockNumber = u32;
+pub type BlockNumber = <Test as frame_system::Config>::BlockNumber;
 pub type Amount = i128;
 pub type Balance = u64;
 
@@ -175,19 +178,11 @@ impl pallet_timestamp::Config for Test {
 }
 
 parameter_types! {
-    pub const TwoWeekBlockUnit: u32 = 100800u32;
-    pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub NoConfidenceTimeLimit: BlockNumber = 100800u32;
-    pub PercentRequiredForVoteToPass: u8 = 75u8;
-    pub MaximumContributorsPerProject: u32 = 5000;
-    pub RefundsPerBlock: u8 = 2;
-}
-
-parameter_types! {
     pub MinimumBounty: Balance = 10_000u32.into();
     pub MinimumDeposit: Balance = 1000u32.into();
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
+    pub MaxBriefOwners: u32 = 100;
 }
 
 impl pallet_briefs::Config for Test {
@@ -197,6 +192,17 @@ impl pallet_briefs::Config for Test {
     type MinimumBounty = MinimumBounty;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
+    type BriefEvolver = DummyBriefEvolver;
+    type MaxBriefOwners = MaxBriefOwners;
+}
+
+pub struct DummyBriefEvolver;
+
+impl BriefEvolver<AccountId, Balance, BlockNumber> for DummyBriefEvolver {
+    fn convert_to_proposal(brief_owner: AccountId, bounty: Balance, created_at: BlockNumber, ipfs_hash: IpfsHash) -> Result<(), ()> {
+        // Perform the necessary logic here
+        Ok(())
+    }
 }
 
 parameter_types! {
