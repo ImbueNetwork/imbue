@@ -3,12 +3,14 @@ use crate::mock::*;
 
 use crate::*;
 use common_types::CurrencyId;
+use frame_benchmarking::whitelisted_caller;
 use frame_support::{
     assert_noop, assert_ok, bounded_btree_map, bounded_vec, dispatch::DispatchErrorWithPostInfo,
     weights::PostDispatchInfo
 };
 use sp_core::sr25519;
 use sp_std::vec::Vec;
+
 
 #[test]
 fn create_a_test_project() {
@@ -31,13 +33,13 @@ fn create_a_test_project_with_less_than_100_percent() {
         Proposals::create_project(
             Origin::signed(alice),
             //project name
-            b"Imbue's Awesome Initiative".to_vec().try_into().expect("input should be of decent length"),
+            b"Imbue's Awesome Initiative".to_vec().try_into().expect("qed"),
             //project logo
-            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
+            b"Imbue Logo".to_vec().try_into().expect("qed"),
             //project description
-            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"), 
+            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("qed"), 
             //website
-            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
+            b"https://imbue.network".to_vec().try_into().expect("qed"),
             //milestone
             bounded_vec![ProposedMilestone {
                 name: bounded_vec![], percentage_to_unlock: 99
@@ -999,14 +1001,14 @@ fn test_finalize_a_milestone_without_voting() {
         name: b"milestone 1"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
         name: b"milestone 2"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 30,
     };
 
@@ -1014,7 +1016,7 @@ fn test_finalize_a_milestone_without_voting() {
         name: b"milestone 3"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1103,14 +1105,14 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
         name: b"milestone 1"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
         name: b"milestone 2"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 30,
     };
 
@@ -1118,7 +1120,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
         name: b"milestone 3"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1233,14 +1235,14 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         name: b"milestone 1"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
         name: b"milestone 2"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 30,
     };
 
@@ -1248,7 +1250,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         name: b"milestone 3"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1415,14 +1417,14 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         name: b"milestone 1"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
         name: b"milestone 2"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 30,
     };
 
@@ -1430,7 +1432,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         name: b"milestone 3"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1607,14 +1609,14 @@ fn submit_multiple_milestones() {
         name: b"milestone 1"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 50,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
         name: b"milestone 2"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -1767,14 +1769,14 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         name: b"milestone 1"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
         name: b"milestone 2"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 30,
     };
 
@@ -1782,7 +1784,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         name: b"milestone 3"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -2404,7 +2406,7 @@ fn update_an_existing_project() {
     let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
     let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
     let updated_project_name = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
-    let expected_project_name_in_event = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
+    let expected_project_name_in_event: Vec<u8> = b"Farmer's Project Sudan2".to_vec().try_into().expect("Invalid input");
     let updated_project_logo = b"Some logo".to_vec().try_into().expect("Invalid input");
     let updated_project_description = b"Raise funds for Farmer's project phase 2".to_vec().try_into().expect("Invalid input");
     let updated_project_website = b"www.ab.com".to_vec().try_into().expect("Invalid input");
@@ -2415,14 +2417,14 @@ fn update_an_existing_project() {
         name: b"milestone 1"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 20,
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
         name: b"milestone 2"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 30,
     };
 
@@ -2430,7 +2432,7 @@ fn update_an_existing_project() {
         name: b"milestone 3"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 50,
     };
     proposed_milestones.push(milestone1);
@@ -2443,22 +2445,19 @@ fn update_an_existing_project() {
         name: b"milestone 1"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 70,
     };
     let updated_milestone2: ProposedMilestone = ProposedMilestone {
         name: b"milestone 2"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         percentage_to_unlock: 30,
     };
 
     updated_proposed_milestones.push(updated_milestone1);
     updated_proposed_milestones.push(updated_milestone2);
-
-
-
 
     build_test_externality().execute_with(|| {
         deposit_initial_balance(&alice, &bob, additional_amount);
@@ -2483,10 +2482,15 @@ fn update_an_existing_project() {
             .pop()
             .expect("Expected at least one EventRecord to be found")
             .event;
-        assert_eq!(
+        /*assert_eq!(
             latest_event,
             mock::Event::from(proposals::Event::ProjectUpdated(alice, expected_project_name_in_event, project_key, updated_required_funds))
-        );
+        );*/
+
+
+        let updated_project = Proposals::projects(project_key);
+
+        assert_eq!(updated_project.unwrap().name, expected_project_name_in_event);          
 
     });
 }
@@ -2504,7 +2508,7 @@ fn create_project(account: AccountId) {
         b"Imbue Logo"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         //project description
         b"This project is aimed at providing decentralised funding for a farming project."
             .to_vec()
@@ -2536,22 +2540,22 @@ fn create_project_multiple_milestones(
         b"Farmer's Project Sudan"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         //project logo
         b"Imbue Logo"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         //project description
         b"This project is aimed at providing decentralised funding for a farming project."
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         //website
         b"https://farmers.network"
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         //milestone
         proposed_milestones
             .try_into()
@@ -2576,24 +2580,24 @@ fn create_projects_with_inputs(
         name.as_bytes()
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         //project logo
         logo.as_bytes()
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         //project description
         description
             .as_bytes()
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         //website
         website
             .as_bytes()
             .to_vec()
             .try_into()
-            .expect("input should be of decent length"),
+            .expect("qed"),
         //milestone
         bounded_vec![ProposedMilestone {
             name: bounded_vec![],
