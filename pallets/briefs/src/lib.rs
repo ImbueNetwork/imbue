@@ -153,6 +153,10 @@ pub mod pallet {
         #[pallet::weight(10_000)]
         pub fn approve_account(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
             <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
+            
+            // Or if they are not voted by governance, be voted in by another approved freelancer? 
+            // todo.
+
             ApprovedAccounts::<T>::insert(&account_id, ());
             Self::deposit_event(Event::<T>::AccountApproved(account_id));
 
@@ -187,13 +191,7 @@ pub mod pallet {
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             // add breifs to OCW list to verify.
-            let brief_hash = BriefPreImage::<T>::generate_hash(
-                &brief_owners.to_vec(),
-                &bounty_total,
-                &currency_id,
-                &ipfs_hash,
-                &applicant,
-            )?;
+            
             let brief = BriefData::new(
                 brief_owners,
                 bounty_total,
@@ -204,6 +202,7 @@ pub mod pallet {
                 applicant,
             );
 
+            let brief_hash: BriefHash = brief.into_hash()?;
             Briefs::<T>::insert(&brief_hash, brief);
 
             Self::deposit_event(Event::<T>::BriefSubmitted(brief_hash));
@@ -270,40 +269,20 @@ pub mod pallet {
                 applicant,
             }
         }
-    }
-    /// The preimage for the id of the brief in storage.
-    #[derive(Encode, Hash)]
-    pub struct BriefPreImage<T: Config> {
-        brief_owners: Vec<u8>,
-        bounty_total: Vec<u8>,
-        currency_id: Vec<u8>,
-        // This must not be the ipfs hash as that will change with new content.
-        // It can however be a field in the storage item.
-        ipfs_hash: Vec<u8>,
-        phantom: PhantomData<T>,
-        applicant: Vec<u8>,
-    }
 
-    impl<T: Config> BriefPreImage<T> {
-        pub fn generate_hash<'a>(
-            brief_owners: &'a Vec<AccountIdOf<T>>,
-            bounty_total: &'a BalanceOf<T>,
-            currency_id: &'a CurrencyId,
-            ipfs_hash: &'a IpfsHash,
-            applicant: &'a AccountIdOf<T>,
-        ) -> Result<BriefHash, DispatchError> {
-            let preimage = Self {
-                brief_owners: brief_owners
+        pub fn into_hash(&self) -> Result<BriefHash, Error::<T>> {
+            let preimage = BriefPreImage { 
+                brief_owners: self.brief_owners.to_vec()
                     .iter()
                     .map(|acc| <AccountIdOf<T> as Encode>::encode(acc))
                     .fold(vec![], |mut acc: Vec<u8>, mut n: Vec<u8>| {
                         acc.append(&mut n);
                         acc
                     }),
-                bounty_total: <BalanceOf<T> as Encode>::encode(bounty_total),
-                currency_id: <CurrencyId as Encode>::encode(currency_id),
-                ipfs_hash: ipfs_hash.to_vec(),
-                applicant: <AccountIdOf<T> as Encode>::encode(applicant),
+                bounty_total: <BalanceOf<T> as Encode>::encode(&self.bounty_total),
+                currency_id: <CurrencyId as Encode>::encode(&self.currency_id),
+                ipfs_hash: self.ipfs_hash.to_vec(),
+                applicant: <AccountIdOf<T> as Encode>::encode(&self.applicant),
                 phantom: PhantomData,
             };
             let encoded = <BriefPreImage<T> as Encode>::encode(&preimage);
@@ -318,4 +297,16 @@ pub mod pallet {
             }
         }
     }
+
+    /// The preimage for the id of the brief in storage.
+    #[derive(Encode, Hash)]
+    pub struct BriefPreImage<T: Config> {
+        brief_owners: Vec<u8>,
+        bounty_total: Vec<u8>,
+        currency_id: Vec<u8>,
+        ipfs_hash: Vec<u8>,
+        phantom: PhantomData<T>,
+        applicant: Vec<u8>,
+    }
+
 }
