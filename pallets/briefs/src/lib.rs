@@ -27,10 +27,10 @@ pub mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    type BoundedBriefOwners<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
+    pub(crate) type BoundedBriefOwners<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 
-    type BriefHash = H256;
-    pub type IpfsHash = [u8; 32];
+    pub(crate) type BriefHash = H256;
+    pub(crate) type IpfsHash = H256;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -281,7 +281,7 @@ pub mod pallet {
                     }),
                 bounty_total: <BalanceOf<T> as Encode>::encode(&self.bounty_total),
                 currency_id: <CurrencyId as Encode>::encode(&self.currency_id),
-                ipfs_hash: self.ipfs_hash.to_vec(),
+                ipfs_hash: self.ipfs_hash.0.to_vec(),
                 applicant: <AccountIdOf<T> as Encode>::encode(&self.applicant),
                 phantom: PhantomData,
             };

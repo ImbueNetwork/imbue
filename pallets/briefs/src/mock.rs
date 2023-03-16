@@ -215,9 +215,9 @@ parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
-pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([1u8; 32]));
-pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([2u8; 32]));
-pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([10u8; 32]));
+pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
+pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
+pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
@@ -230,7 +230,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         balances: {
             vec![*ALICE, *BOB, *CHARLIE]
                 .into_iter()
-                .map(|id| (id, CurrencyId::Native, 100000))
+                .map(|id| (id, CurrencyId::Native, 1000000))
                 .collect::<Vec<_>>()
         },
     }
