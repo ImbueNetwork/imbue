@@ -30,7 +30,6 @@ cargo-llvm-cov = "0.5.11"
 # local dependancies
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
-proposals = {path= "../proposals", default-features = false} 
 
 
 [dev-dependencies]
@@ -44,6 +43,8 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "
 serde = { version = "1.0.101" }
 common-traits = { path = "../../libs/common-traits" }
 common-types = { path = "../../libs/common-types" }
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37"}
+proposals = {path= "../proposals"} 
 
 
 [features]
@@ -60,7 +61,8 @@ std = [
 	"sp-runtime/std", 
 	"sp-io/std",
 	"pallet-balances/std",
-	"proposals/std"
+	"proposals/std",
+	"pallet-identity/std",
 	]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 try-runtime = ["frame-support/try-runtime"]

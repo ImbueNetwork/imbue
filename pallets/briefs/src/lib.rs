@@ -18,11 +18,11 @@ pub mod pallet {
 
     use crate::traits::BriefEvolver;
     use common_types::CurrencyId;
-    use frame_support::{pallet_prelude::*, traits::Get, BoundedBTreeMap};
+    use frame_support::{pallet_prelude::*, traits::Get};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
-    use sp_std::collections::btree_map::BTreeMap;
+    
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -112,6 +112,8 @@ pub mod pallet {
         NotAuthorised,
         /// The brief conversion failed
         BriefConversionFailedGeneric,
+        /// The brief hasnt yet been approved to commence by the freelancer.
+        FreelancerApprovalRequired,
     }
 
     #[pallet::call]
@@ -219,6 +221,7 @@ pub mod pallet {
             let brief = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
             ensure!(&who == &brief.applicant, Error::<T>::NotAuthorised);
+            ensure!(BriefsForConversion::<T>::contains_key(brief_id), Error::<T>::FreelancerApprovalRequired);
 
             <T as Config>::BriefEvolver::convert_to_proposal(
                 brief.brief_owners.to_vec(),

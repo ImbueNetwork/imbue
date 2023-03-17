@@ -9,7 +9,7 @@ use frame_support::{
     transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_runtime::traits::AccountIdConversion;
@@ -80,7 +80,7 @@ pub mod pallet {
 
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+        type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
         type MaxProjectsPerRound: Get<u32>;
 
@@ -905,23 +905,21 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 /// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
-    name: Vec<u8>,
-    logo: Vec<u8>,
-    description: Vec<u8>,
-    website: Vec<u8>,
-    milestones: BTreeMap<MilestoneKey, Milestone>,
-    /// A collection of the accounts which have contributed and their contributions.
-    contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
-    currency_id: common_types::CurrencyId,
-    required_funds: Balance,
-    withdrawn_funds: Balance,
-    raised_funds: Balance,
-    /// The account that will receive the funds if the campaign is successful
-    initiator: AccountId,
-    create_block_number: BlockNumber,
-    approved_for_funding: bool,
-    funding_threshold_met: bool,
-    cancelled: bool,
+    pub name: Vec<u8>,
+    pub logo: Vec<u8>,
+    pub description: Vec<u8>,
+    pub website: Vec<u8>,
+    pub milestones: BTreeMap<MilestoneKey, Milestone>,
+    pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+    pub currency_id: common_types::CurrencyId,
+    pub required_funds: Balance,
+    pub withdrawn_funds: Balance,
+    pub raised_funds: Balance,
+    pub initiator: AccountId,
+    pub create_block_number: BlockNumber,
+    pub approved_for_funding: bool,
+    pub funding_threshold_met: bool,
+    pub cancelled: bool,
 }
 
 /// The contribution users made to a proposal project.

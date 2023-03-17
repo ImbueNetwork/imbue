@@ -6010,6 +6010,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-identity",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "parity-scale-codec 3.4.0",
