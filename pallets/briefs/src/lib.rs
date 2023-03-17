@@ -18,11 +18,10 @@ pub mod pallet {
 
     use crate::traits::BriefEvolver;
     use common_types::CurrencyId;
-    use frame_support::{pallet_prelude::*, traits::Get};
+    use frame_support::{pallet_prelude::*, traits::Get, sp_runtime::Saturating};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
-    
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -250,7 +249,19 @@ pub mod pallet {
         created_at: BlockNumberFor<T>,
         ipfs_hash: IpfsHash,
         applicant: AccountIdOf<T>,
+        // MILESTONES!!!          
     }
+
+    impl<T: Config> Pallet<T> {
+        pub fn get_remaining_bounty(brief_id: BriefHash) -> BalanceOf<T> {
+            if let Some(brief) = Briefs::<T>::get(brief_id) {
+                return brief.bounty_total.saturating_sub(brief.current_contribution)
+            } else {
+                return Default::default()
+            }
+        }
+    }
+
 
     impl<T: Config> BriefData<T> {
         pub fn new(

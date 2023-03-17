@@ -35,7 +35,7 @@ fn create_brief_not_approved_applicant() {
 #[test]
 fn create_brief_brief_owner_overflow() {
     build_test_externality().execute_with(|| {
-        BriefsMod::approve_account(RuntimeOrigin::root(), *ALICE);
+        let _ = BriefsMod::approve_account(RuntimeOrigin::root(), *ALICE);
 
         assert_noop!(BriefsMod::create_brief(RuntimeOrigin::signed(*BOB), get_brief_owners(u32::MAX), *ALICE, 100000, 10000, gen_hash(1), CurrencyId::Native), Error::<Test>::TooManyBriefOwners);
     });

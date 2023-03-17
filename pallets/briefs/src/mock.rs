@@ -229,7 +229,11 @@ where
         applicant: AccountId,
     ) -> Result<(), ()> {
         
-    let project: Project<AccountId, Balance, BlockNumber, Moment > = Project {
+    // todo: valicdation
+    // tests: 
+    // lots of tests.
+    
+        let project: Project<AccountId, Balance, BlockNumber, Moment > = Project {
             name: vec![],
             logo: vec![],
             description: vec![],
@@ -248,7 +252,6 @@ where
         };
 
         Projects::<T>::insert(0, project);
-        // Perform the necessary logic here
         Ok(())
     }
 }
