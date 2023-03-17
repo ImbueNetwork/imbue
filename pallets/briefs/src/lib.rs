@@ -130,7 +130,7 @@ pub mod pallet {
         ) -> DispatchResult {
             // Only allow if its not an auction or it is an auction and the price has been set
             let who = ensure_signed(origin)?;
-            let brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            let brief_record = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
             ensure!(
                 brief_record.brief_owners.contains(&who),
                 Error::<T>::NotAuthorised
@@ -140,7 +140,7 @@ pub mod pallet {
 
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
-            Briefs::<T>::mutate_exists(&brief_id, |maybe_brief| {
+            Briefs::<T>::mutate_exists(brief_id, |maybe_brief| {
                 if let Some(brief) = maybe_brief {
                     brief.current_contribution = new_amount;
                 }
@@ -204,7 +204,7 @@ pub mod pallet {
             );
 
             let brief_hash: BriefHash = brief.into_hash()?;
-            Briefs::<T>::insert(&brief_hash, brief);
+            Briefs::<T>::insert(brief_hash, brief);
 
             Self::deposit_event(Event::<T>::BriefSubmitted(brief_hash));
 
@@ -217,7 +217,7 @@ pub mod pallet {
         #[pallet::weight(10_000)]
         pub fn commence_work(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let brief = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
             ensure!(&who == &brief.applicant, Error::<T>::NotAuthorised);
             ensure!(BriefsForConversion::<T>::contains_key(brief_id), Error::<T>::FreelancerApprovalRequired);
@@ -255,9 +255,9 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         pub fn get_remaining_bounty(brief_id: BriefHash) -> BalanceOf<T> {
             if let Some(brief) = Briefs::<T>::get(brief_id) {
-                return brief.bounty_total.saturating_sub(brief.current_contribution)
+                brief.bounty_total.saturating_sub(brief.current_contribution)
             } else {
-                return Default::default()
+                Default::default()
             }
         }
     }
@@ -288,7 +288,7 @@ pub mod pallet {
             let preimage = BriefPreImage { 
                 brief_owners: self.brief_owners.to_vec()
                     .iter()
-                    .map(|acc| <AccountIdOf<T> as Encode>::encode(acc))
+                    .map(<AccountIdOf<T> as Encode>::encode)
                     .fold(vec![], |mut acc: Vec<u8>, mut n: Vec<u8>| {
                         acc.append(&mut n);
                         acc
@@ -307,7 +307,7 @@ pub mod pallet {
             if let Ok(h256) = maybe_h256 {
                 Ok(H256::from_slice(h256.as_slice()))
             } else {
-                Err(Error::<T>::BriefHashingFailed.into())
+                Err(Error::<T>::BriefHashingFailed)
             }
         }
     }
