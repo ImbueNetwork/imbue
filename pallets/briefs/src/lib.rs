@@ -168,7 +168,7 @@ pub mod pallet {
             budget: BalanceOf<T>,
             //Add project milestones,
             initial_contribution: BalanceOf<T>,
-            ipfs_hash: IpfsHash,
+            ipfs_hash: BriefHash,
             currency_id: CurrencyId,
         ) -> DispatchResult
         {
@@ -200,8 +200,7 @@ pub mod pallet {
                 // TODO: Milestones
             );
 
-            let brief_hash: BriefHash = brief.into_hash()?;
-            Briefs::<T>::insert(brief_hash, brief);
+            Briefs::<T>::insert(ipfs_hash, brief);
 
             Self::deposit_event(Event::<T>::BriefSubmitted(brief_hash));
 
@@ -328,54 +327,14 @@ pub mod pallet {
                 applicant,
             }
         }
-
-        pub fn into_hash(&self) -> Result<BriefHash, Error<T>> {
-            let preimage = BriefPreImage {
-                brief_owners: self
-                    .brief_owners
-                    .to_vec()
-                    .iter()
-                    .map(<AccountIdOf<T> as Encode>::encode)
-                    .fold(vec![], |mut acc: Vec<u8>, mut n: Vec<u8>| {
-                        acc.append(&mut n);
-                        acc
-                    }),
-                bounty_total: <BalanceOf<T> as Encode>::encode(&self.bounty_total),
-                currency_id: <CurrencyId as Encode>::encode(&self.currency_id),
-                ipfs_hash: self.ipfs_hash.0.to_vec(),
-                applicant: <AccountIdOf<T> as Encode>::encode(&self.applicant),
-                phantom: PhantomData,
-            };
-            let encoded = <BriefPreImage<T> as Encode>::encode(&preimage);
-            let maybe_h256: Result<[u8; 32], _> =
-                <<T as Config>::BriefHasher as Hasher>::hash(&encoded)
-                    .as_ref()
-                    .try_into();
-            if let Ok(h256) = maybe_h256 {
-                Ok(H256::from_slice(h256.as_slice()))
-            } else {
-                Err(Error::<T>::BriefHashingFailed)
-            }
-        }
-    }
-
-    /// The preimage for the id of the brief in storage.
-    #[derive(Encode, Hash)]
-    pub struct BriefPreImage<T: Config> {
-        brief_owners: Vec<u8>,
-        bounty_total: Vec<u8>,
-        currency_id: Vec<u8>,
-        ipfs_hash: Vec<u8>,
-        phantom: PhantomData<T>,
-        applicant: Vec<u8>,
     }
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct BriefMilestone<T: Config> {
-        milestone_key: MilestoneKey,
-        name: Vec<u8>,
+        milestone_key: u16,
         percentage_to_unlock: u32,
+        name: Vec<u8>,
     }
 
 }
