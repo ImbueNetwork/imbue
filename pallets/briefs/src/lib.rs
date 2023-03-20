@@ -18,7 +18,7 @@ pub mod pallet {
 
     use crate::traits::BriefEvolver;
     use common_types::CurrencyId;
-    use frame_support::{pallet_prelude::*, traits::Get, sp_runtime::Saturating};
+    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
@@ -26,8 +26,9 @@ pub mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    pub(crate) type BoundedBriefOwners<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
-    pub(crate) type Bounded
+    pub(crate) type BoundedBriefOwners<T> =
+        BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
+
     pub(crate) type BriefHash = H256;
     pub(crate) type IpfsHash = H256;
 
@@ -145,8 +146,8 @@ pub mod pallet {
         #[pallet::weight(10_000)]
         pub fn approve_account(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
             <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
-            
-            // Or if they are not voted by governance, be voted in by another approved freelancer? 
+
+            // Or if they are not voted by governance, be voted in by another approved freelancer?
             // todo.
 
             ApprovedAccounts::<T>::insert(&account_id, ());
@@ -163,11 +164,14 @@ pub mod pallet {
             origin: OriginFor<T>,
             mut brief_owners: BoundedBriefOwners<T>,
             applicant: AccountIdOf<T>,
-            bounty_total: BalanceOf<T>,
+            //budget
+            budget: BalanceOf<T>,
+            //Add project milestones,
             initial_contribution: BalanceOf<T>,
             ipfs_hash: IpfsHash,
             currency_id: CurrencyId,
-        ) -> DispatchResult {
+        ) -> DispatchResult
+        {
             let who = ensure_signed(origin)?;
 
             if !brief_owners.contains(&who) {
@@ -177,27 +181,61 @@ pub mod pallet {
             }
 
             ensure!(
-                ApprovedAccounts::<T>::contains_key(&applicant),
+                FreelanceFellowship::<T>::contains_key(&applicant),
                 Error::<T>::OnlyApprovedAccountPermitted
             );
+
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             // add breifs to OCW list to verify.
-            
+
             let brief = BriefData::new(
                 brief_owners,
-                bounty_total,
+                budget,
                 initial_contribution,
                 currency_id,
                 frame_system::Pallet::<T>::block_number(),
                 ipfs_hash,
                 applicant,
+                // TODO: Milestones
             );
 
             let brief_hash: BriefHash = brief.into_hash()?;
             Briefs::<T>::insert(brief_hash, brief);
 
             Self::deposit_event(Event::<T>::BriefSubmitted(brief_hash));
+
+            Ok(())
+        }
+
+        /// Add a bounty to a brief.
+        /// A bounty must be fully contributed to before a piece of work is started.
+        ///
+        /// Todo: runtime api to return how much bounty exactly is left on a brief.
+        #[pallet::call_index(0)]
+        #[pallet::weight(10_000)]
+        pub fn contribute_to_brief(
+            origin: OriginFor<T>,
+            brief_id: BriefHash,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult
+        {
+            // Only allow if its not an auction or it is an auction and the price has been set
+            let who = ensure_signed(origin)?;
+            let brief_record = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            ensure!(
+                brief_record.brief_owners.contains(&who),
+                Error::<T>::NotAuthorised
+            );
+
+            let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
+            <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
+
+            Briefs::<T>::mutate_exists(brief_id, |maybe_brief| {
+                if let Some(brief) = maybe_brief {
+                    brief.current_contribution = new_amount;
+                }
+            });
 
             Ok(())
         }
@@ -226,6 +264,22 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::BriefEvolutionOccured(brief_id));
             Ok(())
         }
+
+        /// Approve an account so that they can be accepted as an applicant.
+        #[pallet::call_index(1)]
+        #[pallet::weight(10_000)]
+        pub fn add_to_fellowship(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
+            <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
+
+            // Or if they are not voted by governance, be voted in by another approved freelancer?
+            // todo.
+
+            FreelanceFellowship::<T>::insert(&account_id, ());
+            Self::deposit_event(Event::<T>::AccountApproved(account_id));
+
+            Ok(())
+        }
+
     }
 
     /// The data assocaited with a Brief
@@ -239,19 +293,20 @@ pub mod pallet {
         created_at: BlockNumberFor<T>,
         ipfs_hash: IpfsHash,
         applicant: AccountIdOf<T>,
-        // MILESTONES!!!          
+        // MILESTONES!!!
     }
 
     impl<T: Config> Pallet<T> {
         pub fn get_remaining_bounty(brief_id: BriefHash) -> BalanceOf<T> {
             if let Some(brief) = Briefs::<T>::get(brief_id) {
-                brief.bounty_total.saturating_sub(brief.current_contribution)
+                brief
+                    .bounty_total
+                    .saturating_sub(brief.current_contribution)
             } else {
                 Default::default()
             }
         }
     }
-
 
     impl<T: Config> BriefData<T> {
         pub fn new(
@@ -274,9 +329,11 @@ pub mod pallet {
             }
         }
 
-        pub fn into_hash(&self) -> Result<BriefHash, Error::<T>> {
-            let preimage = BriefPreImage { 
-                brief_owners: self.brief_owners.to_vec()
+        pub fn into_hash(&self) -> Result<BriefHash, Error<T>> {
+            let preimage = BriefPreImage {
+                brief_owners: self
+                    .brief_owners
+                    .to_vec()
                     .iter()
                     .map(<AccountIdOf<T> as Encode>::encode)
                     .fold(vec![], |mut acc: Vec<u8>, mut n: Vec<u8>| {
