@@ -67,7 +67,7 @@ pub mod pallet {
     /// Value: Unit
     #[pallet::storage]
     #[pallet::getter(fn approved_accounts)]
-    pub type FreelanceFellowship<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
+    pub type ApprovedAccounts<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
     /// The Briefs ready to be converted to a proposal.
     /// Key: BriefHash
@@ -118,6 +118,52 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Add a bounty to a brief.
+        /// A bounty must be fully contributed to before a piece of work is started.
+        ///
+        /// Todo: runtime api to return how much bounty exactly is left on a brief.
+        #[pallet::call_index(0)]
+        #[pallet::weight(10_000)]
+        pub fn add_bounty(
+            origin: OriginFor<T>,
+            brief_id: BriefHash,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            // Only allow if its not an auction or it is an auction and the price has been set
+            let who = ensure_signed(origin)?;
+            let brief_record = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            ensure!(
+                brief_record.brief_owners.contains(&who),
+                Error::<T>::NotAuthorised
+            );
+
+            let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
+
+            <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
+
+            Briefs::<T>::mutate_exists(brief_id, |maybe_brief| {
+                if let Some(brief) = maybe_brief {
+                    brief.current_contribution = new_amount;
+                }
+            });
+
+            Ok(())
+        }
+
+        /// Approve an account so that they can be accepted as an applicant.
+        #[pallet::call_index(1)]
+        #[pallet::weight(10_000)]
+        pub fn approve_account(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
+            <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
+
+            // Or if they are not voted by governance, be voted in by another approved freelancer?
+            // todo.
+
+            ApprovedAccounts::<T>::insert(&account_id, ());
+            Self::deposit_event(Event::<T>::AccountApproved(account_id));
+
+            Ok(())
+        }
 
         /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
@@ -212,12 +258,10 @@ pub mod pallet {
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
             ensure!(&who == &brief.applicant, Error::<T>::NotAuthorised);
-
-            // Is the freelancer in the fellowship?
-            // ensure!(
-            //     FreelanceFellowship::<T>::contains_key(who),
-            //     Error::<T>::FreelancerApprovalRequired
-            // );
+            ensure!(
+                BriefsForConversion::<T>::contains_key(brief_id),
+                Error::<T>::FreelancerApprovalRequired
+            );
 
             <T as Config>::BriefEvolver::convert_to_proposal(
                 brief.brief_owners.to_vec(),
@@ -262,7 +306,6 @@ pub mod pallet {
         created_at: BlockNumberFor<T>,
         ipfs_hash: IpfsHash,
         applicant: AccountIdOf<T>,
-        // TODO!!!
         // MILESTONES!!!
     }
 

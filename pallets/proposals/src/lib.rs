@@ -12,6 +12,7 @@ use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
+use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
@@ -37,8 +38,6 @@ type MaxStringFieldLen = ConstU32<255>;
 type MaxProjectKeysPerRound = ConstU32<1000>;
 type MaxMilestoneKeys = ConstU32<100>;
 type MaxProposedMilestones = ConstU32<100>;
-type MaxWebsiteUrlField = ConstU32<2048>;
-type MaxDescriptionField = ConstU32<5000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
 
 pub type RoundKey = u32;
@@ -62,8 +61,6 @@ type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
 type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
 type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
-type BoundedWebsiteUrlField = BoundedVec<u8, MaxWebsiteUrlField>;
-type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -204,13 +201,12 @@ pub mod pallet {
         /// You have created a project.
         ProjectCreated(
             T::AccountId,
-            Vec<u8>,
             ProjectKey,
             BalanceOf<T>,
             common_types::CurrencyId,
         ),
         // Project has been updated
-        ProjectUpdated(T::AccountId, Vec<u8>, ProjectKey, BalanceOf<T>),
+        ProjectUpdated(T::AccountId, ProjectKey, BalanceOf<T>),
         /// A funding round has been created.
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
         /// A voting round has been created.
@@ -339,9 +335,11 @@ pub mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            if StorageVersion::<T>::get() == Release::V0 {
-                weight += migration::v1::migrate::<T>();
-                StorageVersion::<T>::set(Release::V1);
+            if StorageVersion::<T>::get() == Release::V0
+                || StorageVersion::<T>::get() == Release::V1
+            {
+                weight += migration::v2::migrate::<T>();
+                StorageVersion::<T>::set(Release::V2);
             }
             weight
         }
@@ -432,24 +430,13 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn create_project(
             origin: OriginFor<T>,
-            name: BoundedStringField,
-            logo: BoundedStringField,
-            description: BoundedDescriptionField,
-            website: BoundedWebsiteUrlField,
+            agreement_hash: H256,
             proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             // Validation
-            ensure!(!name.is_empty(), Error::<T>::ProjectNameIsMandatory);
-            ensure!(!logo.is_empty(), Error::<T>::LogoIsMandatory);
-            ensure!(
-                !description.is_empty(),
-                Error::<T>::ProjectDescriptionIsMandatory
-            );
-            ensure!(!website.is_empty(), Error::<T>::WebsiteURLIsMandatory);
-
             let mut total_percentage = 0;
             for milestone in proposed_milestones.iter() {
                 total_percentage += milestone.percentage_to_unlock;
@@ -461,10 +448,7 @@ pub mod pallet {
 
             Self::new_project(
                 who,
-                name,
-                logo,
-                description,
-                website,
+                agreement_hash,
                 proposed_milestones,
                 required_funds,
                 currency_id,
@@ -476,13 +460,9 @@ pub mod pallet {
         pub fn update_project(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            name: BoundedStringField,
-            logo: BoundedStringField,
-            description: BoundedDescriptionField,
-            website: BoundedWebsiteUrlField,
             proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
-            currency_id: common_types::CurrencyId,
+            currency_id: CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -498,10 +478,6 @@ pub mod pallet {
             Self::update_existing_project(
                 who,
                 project_key,
-                name,
-                logo,
-                description,
-                website,
                 proposed_milestones,
                 required_funds,
                 currency_id,
@@ -905,10 +881,8 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 /// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
-    pub name: Vec<u8>,
-    pub logo: Vec<u8>,
-    pub description: Vec<u8>,
-    pub website: Vec<u8>,
+    pub work_started_at: Option<BlockNumber>,
+    pub agreement_hash: H256,
     pub milestones: BTreeMap<MilestoneKey, Milestone>,
     pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
     pub currency_id: common_types::CurrencyId,
