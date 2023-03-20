@@ -18,7 +18,7 @@ pub mod pallet {
 
     use crate::traits::BriefEvolver;
     use common_types::CurrencyId;
-    use frame_support::{pallet_prelude::*, traits::Get, sp_runtime::Saturating};
+    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
@@ -26,7 +26,8 @@ pub mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    pub(crate) type BoundedBriefOwners<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
+    pub(crate) type BoundedBriefOwners<T> =
+        BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 
     pub(crate) type BriefHash = H256;
     pub(crate) type IpfsHash = H256;
@@ -154,8 +155,8 @@ pub mod pallet {
         #[pallet::weight(10_000)]
         pub fn approve_account(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
             <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
-            
-            // Or if they are not voted by governance, be voted in by another approved freelancer? 
+
+            // Or if they are not voted by governance, be voted in by another approved freelancer?
             // todo.
 
             ApprovedAccounts::<T>::insert(&account_id, ());
@@ -192,7 +193,7 @@ pub mod pallet {
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             // add breifs to OCW list to verify.
-            
+
             let brief = BriefData::new(
                 brief_owners,
                 bounty_total,
@@ -220,7 +221,10 @@ pub mod pallet {
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
             ensure!(&who == &brief.applicant, Error::<T>::NotAuthorised);
-            ensure!(BriefsForConversion::<T>::contains_key(brief_id), Error::<T>::FreelancerApprovalRequired);
+            ensure!(
+                BriefsForConversion::<T>::contains_key(brief_id),
+                Error::<T>::FreelancerApprovalRequired
+            );
 
             <T as Config>::BriefEvolver::convert_to_proposal(
                 brief.brief_owners.to_vec(),
@@ -249,19 +253,20 @@ pub mod pallet {
         created_at: BlockNumberFor<T>,
         ipfs_hash: IpfsHash,
         applicant: AccountIdOf<T>,
-        // MILESTONES!!!          
+        // MILESTONES!!!
     }
 
     impl<T: Config> Pallet<T> {
         pub fn get_remaining_bounty(brief_id: BriefHash) -> BalanceOf<T> {
             if let Some(brief) = Briefs::<T>::get(brief_id) {
-                brief.bounty_total.saturating_sub(brief.current_contribution)
+                brief
+                    .bounty_total
+                    .saturating_sub(brief.current_contribution)
             } else {
                 Default::default()
             }
         }
     }
-
 
     impl<T: Config> BriefData<T> {
         pub fn new(
@@ -284,9 +289,11 @@ pub mod pallet {
             }
         }
 
-        pub fn into_hash(&self) -> Result<BriefHash, Error::<T>> {
-            let preimage = BriefPreImage { 
-                brief_owners: self.brief_owners.to_vec()
+        pub fn into_hash(&self) -> Result<BriefHash, Error<T>> {
+            let preimage = BriefPreImage {
+                brief_owners: self
+                    .brief_owners
+                    .to_vec()
                     .iter()
                     .map(<AccountIdOf<T> as Encode>::encode)
                     .fold(vec![], |mut acc: Vec<u8>, mut n: Vec<u8>| {
@@ -322,5 +329,4 @@ pub mod pallet {
         phantom: PhantomData<T>,
         applicant: Vec<u8>,
     }
-
 }

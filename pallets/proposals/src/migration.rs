@@ -41,6 +41,32 @@ mod v0 {
 pub mod v1 {
     use super::*;
 
+    #[derive(Encode, Clone, Decode)]
+    pub struct ProjectV1<AccountId, Balance, BlockNumber, Timestamp> {
+        pub name: Vec<u8>,
+        pub logo: Vec<u8>,
+        pub description: Vec<u8>,
+        pub website: Vec<u8>,
+        pub milestones: BTreeMap<MilestoneKey, Milestone>,
+        pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+        pub currency_id: common_types::CurrencyId,
+        pub required_funds: Balance,
+        pub withdrawn_funds: Balance,
+        pub raised_funds: Balance,
+        pub initiator: AccountId,
+        pub create_block_number: BlockNumber,
+        pub approved_for_funding: bool,
+        pub funding_threshold_met: bool,
+        pub cancelled: bool,
+    }
+
+    pub type ProjectV1Of<T> =
+        ProjectV1<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
+
+    #[storage_alias]
+    pub type Projects<T: Config> =
+        StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV1Of<T>, OptionQuery>;
+
     pub fn migrate<T: Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
 
@@ -76,12 +102,12 @@ pub mod v1 {
                 })
                 .collect::<Vec<_>>();
 
-            let migrated_project: Project<
+            let migrated_project: ProjectV1<
                 T::AccountId,
                 BalanceOf<T>,
                 T::BlockNumber,
                 TimestampOf<T>,
-            > = Project {
+            > = ProjectV1 {
                 name: project.name,
                 logo: project.logo,
                 description: project.description,
@@ -97,6 +123,47 @@ pub mod v1 {
                 funding_threshold_met: project.funding_threshold_met,
                 cancelled: project.cancelled,
                 raised_funds: raised_funds,
+            };
+            Some(migrated_project)
+        });
+        weight
+    }
+}
+
+pub mod v2 {
+    use super::*;
+
+    pub type ProjectV2Of<T> =
+        Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
+
+    // #[storage_alias]
+    // pub type ProjectsV02<T: Config> =
+    // StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV2Of<T>, OptionQuery>;
+
+    pub fn migrate<T: Config>() -> Weight {
+        let mut weight = T::DbWeight::get().reads_writes(1, 1);
+
+        Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
+            weight += T::DbWeight::get().reads_writes(1, 1);
+            let migrated_project: Project<
+                T::AccountId,
+                BalanceOf<T>,
+                T::BlockNumber,
+                TimestampOf<T>,
+            > = Project {
+                milestones: project.milestones,
+                contributions: project.contributions,
+                required_funds: project.required_funds,
+                currency_id: project.currency_id,
+                withdrawn_funds: project.withdrawn_funds,
+                initiator: project.initiator,
+                create_block_number: project.create_block_number,
+                work_started_at: Some(project.create_block_number),
+                agreement_hash: Default::default(),
+                approved_for_funding: project.approved_for_funding,
+                funding_threshold_met: project.funding_threshold_met,
+                cancelled: project.cancelled,
+                raised_funds: project.raised_funds,
             };
             Some(migrated_project)
         });
@@ -169,7 +236,7 @@ mod test {
 
             v0::Projects::<Test>::insert(project_key, &old_project);
             let _ = v1::migrate::<Test>();
-            let migrated_project = Projects::<Test>::get(&project_key).unwrap();
+            let migrated_project = v1::Projects::<Test>::get(&project_key).unwrap();
 
             assert_eq!(old_project.name, migrated_project.name);
 
@@ -187,6 +254,72 @@ mod test {
                 contribution_value.saturating_mul(2),
                 migrated_project.raised_funds
             );
+        })
+    }
+
+    #[test]
+    fn migrate_v1_to_v2() {
+        let contribution_value = 10_000_00u64;
+        build_test_externality().execute_with(|| {
+            let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+            let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+            let project_key = 1;
+
+            let mut contributions: BTreeMap<
+                AccountIdOf<Test>,
+                Contribution<BalanceOf<Test>, TimestampOf<Test>>,
+            > = BTreeMap::new();
+
+            contributions.insert(
+                alice,
+                Contribution {
+                    value: contribution_value,
+                    timestamp: TimestampOf::<Test>::default(),
+                },
+            );
+
+            contributions.insert(
+                bob,
+                Contribution {
+                    value: contribution_value,
+                    timestamp: TimestampOf::<Test>::default(),
+                },
+            );
+
+            let old_project = v1::ProjectV1 {
+                name: b"Project Pre-migrations".to_vec(),
+                logo: b"logo".to_vec(),
+                description: b"description".to_vec(),
+                website: b"https://imbue.network".to_vec(),
+                milestones: BTreeMap::new(),
+                contributions,
+                currency_id: CurrencyId::KSM,
+                required_funds: (100_000_000u32).into(),
+                raised_funds: (100_000_000u32).into(),
+                withdrawn_funds: (0u32).into(),
+                initiator: alice,
+                create_block_number: 100u64,
+                approved_for_funding: true,
+                funding_threshold_met: true,
+                cancelled: false,
+            };
+            v1::Projects::<Test>::insert(project_key, &old_project);
+            let _ = v2::migrate::<Test>();
+            let migrated_project = Projects::<Test>::get(&project_key).unwrap();
+
+            assert_eq!(
+                old_project.create_block_number,
+                migrated_project.create_block_number
+            );
+
+            assert_eq!(
+                &old_project.contributions.get(&alice).unwrap().value,
+                &migrated_project.contributions.get(&alice).unwrap().value
+            );
+
+            assert_eq!(Some(100), migrated_project.work_started_at);
+
+            assert_eq!(H256::default(), migrated_project.agreement_hash);
         })
     }
 }

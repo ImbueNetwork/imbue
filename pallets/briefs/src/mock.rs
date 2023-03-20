@@ -13,8 +13,11 @@ use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::trait
 use crate::pallet::IpfsHash;
 use crate::traits::BriefEvolver;
 use common_types::CurrencyId;
-use frame_support::once_cell::sync::Lazy;
+use core::marker::PhantomData;
 use frame_support::dispatch::EncodeLike;
+use frame_support::once_cell::sync::Lazy;
+use orml_traits::MultiCurrency;
+use proposals::{Project, Projects};
 use sp_core::sr25519;
 use sp_runtime::DispatchResult;
 use sp_runtime::{
@@ -22,15 +25,12 @@ use sp_runtime::{
     traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
     BuildStorage,
 };
-use core::marker::PhantomData;
+use sp_std::collections::btree_map::BTreeMap;
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
     vec::Vec,
 };
-use proposals::{Project, Projects};
-use sp_std::collections::btree_map::BTreeMap;
-use orml_traits::MultiCurrency;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -209,16 +209,20 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
 }
 
-
 // Requires binding howerver they may be a more succinct way of doing this.
-impl <T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber> for proposals::Pallet<T> 
-where 
-    Project<sp_core::sr25519::Public, u64, u64, u64>: 
-    EncodeLike<Project<<T as frame_system::Config>::AccountId,
-    <<T as proposals::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance,
-    <T as frame_system::Config>::BlockNumber,
-    <T as pallet_timestamp::Config>::Moment>> 
- {
+impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber> for proposals::Pallet<T>
+where
+    Project<sp_core::sr25519::Public, u64, u64, u64>: EncodeLike<
+        Project<
+            <T as frame_system::Config>::AccountId,
+            <<T as proposals::Config>::MultiCurrency as MultiCurrency<
+                <T as frame_system::Config>::AccountId,
+            >>::Balance,
+            <T as frame_system::Config>::BlockNumber,
+            <T as pallet_timestamp::Config>::Moment,
+        >,
+    >,
+{
     fn convert_to_proposal(
         brief_owners: Vec<AccountId>,
         bounty_total: Balance,
@@ -228,18 +232,17 @@ where
         ipfs_hash: IpfsHash,
         applicant: AccountId,
     ) -> Result<(), ()> {
-        
-    // todo: valicdation
-    // tests: 
-    // lots of tests.
-    
-        let project: Project<AccountId, Balance, BlockNumber, Moment > = Project {
+        // todo: valicdation
+        // tests:
+        // lots of tests.
+
+        let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
             name: vec![],
             logo: vec![],
             description: vec![],
             website: vec![],
             milestones: BTreeMap::new(),
-            contributions: BTreeMap::new(),// todo: keep track of contributions,
+            contributions: BTreeMap::new(), // todo: keep track of contributions,
             currency_id,
             required_funds: current_contribution,
             withdrawn_funds: 0u32.into(),
@@ -294,7 +297,6 @@ impl pallet_identity::Config for Test {
     type ForceOrigin = EnsureRoot<AccountId>;
     type WeightInfo = ();
 }
-
 
 parameter_types! {
     pub const UnitWeightCost: u64 = 10;
