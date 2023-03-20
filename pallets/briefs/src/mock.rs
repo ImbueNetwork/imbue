@@ -14,6 +14,7 @@ use crate::pallet::IpfsHash;
 use crate::traits::BriefEvolver;
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
+use frame_support::dispatch::EncodeLike;
 use sp_core::sr25519;
 use sp_runtime::DispatchResult;
 use sp_runtime::{
@@ -21,19 +22,22 @@ use sp_runtime::{
     traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
     BuildStorage,
 };
+use core::marker::PhantomData;
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
     vec::Vec,
 };
-
+use proposals::{Project, Projects};
+use sp_std::collections::btree_map::BTreeMap;
+use orml_traits::MultiCurrency;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-pub type BlockNumber = <Test as frame_system::Config>::BlockNumber;
+pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u64;
-
+pub type Moment = u64;
 //type AccountId = sp_core::sr25519::Public;
 
 parameter_types! {
@@ -63,6 +67,8 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
+        Proposals: proposals::{Pallet, Call, Storage, Event<T>},
+        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -169,7 +175,7 @@ parameter_types! {
     pub const MinimumPeriod: u64 = 1;
 }
 impl pallet_timestamp::Config for Test {
-    type Moment = u64;
+    type Moment = Moment;
     type OnTimestampSet = ();
     type MinimumPeriod = MinimumPeriod;
     type WeightInfo = ();
@@ -190,13 +196,29 @@ impl pallet_briefs::Config for Test {
     type MinimumBounty = MinimumBounty;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type BriefEvolver = DummyBriefEvolver;
+    type BriefEvolver = Proposals;
     type MaxBriefOwners = MaxBriefOwners;
 }
 
-pub struct DummyBriefEvolver;
+parameter_types! {
+    pub const TwoWeekBlockUnit: u32 = 100800u32;
+    pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
+    pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
+    pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub MaximumContributorsPerProject: u32 = 5000;
+    pub RefundsPerBlock: u8 = 2;
+}
 
-impl BriefEvolver<AccountId, Balance, BlockNumber> for DummyBriefEvolver {
+
+// Requires binding howerver they may be a more succinct way of doing this.
+impl <T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber> for proposals::Pallet<T> 
+where 
+    Project<sp_core::sr25519::Public, u64, u64, u64>: 
+    EncodeLike<Project<<T as frame_system::Config>::AccountId,
+    <<T as proposals::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance,
+    <T as frame_system::Config>::BlockNumber,
+    <T as pallet_timestamp::Config>::Moment>> 
+ {
     fn convert_to_proposal(
         brief_owners: Vec<AccountId>,
         bounty_total: Balance,
@@ -206,18 +228,81 @@ impl BriefEvolver<AccountId, Balance, BlockNumber> for DummyBriefEvolver {
         ipfs_hash: IpfsHash,
         applicant: AccountId,
     ) -> Result<(), ()> {
-        // Perform the necessary logic here
+        
+    // todo: valicdation
+    // tests: 
+    // lots of tests.
+    
+        let project: Project<AccountId, Balance, BlockNumber, Moment > = Project {
+            name: vec![],
+            logo: vec![],
+            description: vec![],
+            website: vec![],
+            milestones: BTreeMap::new(),
+            contributions: BTreeMap::new(),// todo: keep track of contributions,
+            currency_id,
+            required_funds: current_contribution,
+            withdrawn_funds: 0u32.into(),
+            raised_funds: current_contribution,
+            initiator: applicant,
+            create_block_number: 100,
+            approved_for_funding: true,
+            funding_threshold_met: true,
+            cancelled: false,
+        };
+
+        Projects::<T>::insert(0, project);
         Ok(())
     }
 }
+
+impl proposals::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type PalletId = ProposalsPalletId;
+    type AuthorityOrigin = EnsureRoot<AccountId>;
+    type MultiCurrency = Tokens;
+    type WeightInfo = ();
+    type MaxProjectsPerRound = ConstU32<4>;
+    // Adding 2 weeks as th expiration time
+    type MaxWithdrawalExpiration = TwoWeekBlockUnit;
+    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
+    type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
+    type MaximumContributorsPerProject = MaximumContributorsPerProject;
+    type RefundsPerBlock = RefundsPerBlock;
+}
+
+parameter_types! {
+    pub const BasicDeposit: u64 = 10;
+    pub const FieldDeposit: u64 = 10;
+    pub const SubAccountDeposit: u64 = 10;
+    pub const MaxSubAccounts: u32 = 2;
+    pub const MaxAdditionalFields: u32 = 2;
+    pub const MaxRegistrars: u32 = 20;
+}
+
+impl pallet_identity::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type Slashed = ();
+    type BasicDeposit = BasicDeposit;
+    type FieldDeposit = FieldDeposit;
+    type SubAccountDeposit = SubAccountDeposit;
+    type MaxSubAccounts = MaxSubAccounts;
+    type MaxAdditionalFields = MaxAdditionalFields;
+    type MaxRegistrars = MaxRegistrars;
+    type RegistrarOrigin = EnsureRoot<AccountId>;
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type WeightInfo = ();
+}
+
 
 parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
-pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([1u8; 32]));
-pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([2u8; 32]));
-pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([10u8; 32]));
+pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
+pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
+pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
@@ -230,7 +315,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         balances: {
             vec![*ALICE, *BOB, *CHARLIE]
                 .into_iter()
-                .map(|id| (id, CurrencyId::Native, 100000))
+                .map(|id| (id, CurrencyId::Native, 1000000))
                 .collect::<Vec<_>>()
         },
     }
