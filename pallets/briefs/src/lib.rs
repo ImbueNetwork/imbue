@@ -27,7 +27,7 @@ pub mod pallet {
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub(crate) type BoundedBriefOwners<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
-
+    pub(crate) type Bounded
     pub(crate) type BriefHash = H256;
     pub(crate) type IpfsHash = H256;
 
@@ -39,12 +39,7 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-        /// The minimum deposit required to submit a brief
-        // SHOULD THIS BE AS A PERCENT OF BOUNTY? TODO:.
-        type MinimumDeposit: Get<BalanceOf<Self>>;
-        /// The minimum bounty required to submit a brief.
-        type MinimumBounty: Get<BalanceOf<Self>>;
-        /// Maximum amount of applicants to a brief.
+        /// The hasher used to generate the brief id.
         type BriefHasher: Hasher;
 
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -52,8 +47,13 @@ pub mod pallet {
         /// The type that allows for evolution from brief to proposal.
         type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
 
-        /// The maximum amount of owners to a brief
+        /// The maximum amount of owners to a brief.
         type MaxBriefOwners: Get<u32>;
+
+        ///https://paritytech.github.io/substrate/master/frame_support/macro.defensive_assert.html
+        //todo add defensive assert in runtime to ensure this is compatible with proposals
+        /// Maximum milestones to a brief.
+        type MaxMilestones: Get<u32>;
     }
 
     #[pallet::storage]
@@ -67,13 +67,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn approved_accounts)]
     pub type ApprovedAccounts<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
-
-    /// The Briefs ready to be converted to a proposal.
-    /// Key: BriefHash
-    /// Value: ()
-    #[pallet::storage]
-    #[pallet::getter(fn briefs_for_convert)]
-    pub type BriefsForConversion<T> = StorageMap<_, Blake2_128Concat, BriefHash, (), ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -119,8 +112,6 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Add a bounty to a brief.
         /// A bounty must be fully contributed to before a piece of work is started.
-        ///
-        /// Todo: runtime api to return how much bounty exactly is left on a brief.
         #[pallet::call_index(0)]
         #[pallet::weight(10_000)]
         pub fn add_bounty(
@@ -220,7 +211,6 @@ pub mod pallet {
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
             ensure!(&who == &brief.applicant, Error::<T>::NotAuthorised);
-            ensure!(BriefsForConversion::<T>::contains_key(brief_id), Error::<T>::FreelancerApprovalRequired);
 
             <T as Config>::BriefEvolver::convert_to_proposal(
                 brief.brief_owners.to_vec(),
@@ -321,6 +311,14 @@ pub mod pallet {
         ipfs_hash: Vec<u8>,
         phantom: PhantomData<T>,
         applicant: Vec<u8>,
+    }
+
+    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
+    #[scale_info(skip_type_params(T))]
+    pub struct BriefMilestone<T: Config> {
+        milestone_key: MilestoneKey,
+        name: Vec<u8>,
+        percentage_to_unlock: u32,
     }
 
 }
