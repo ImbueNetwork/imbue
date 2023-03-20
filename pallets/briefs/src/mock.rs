@@ -234,7 +234,7 @@ where
         brief_owners: Vec<AccountId>,
         bounty_total: Balance,
         currency_id: CurrencyId,
-        current_contribution: Balance,
+        contributions: Balance,
         created_at: BlockNumber,
         brief_hash: BriefHash,
         applicant: AccountId,
@@ -245,18 +245,19 @@ where
         // lots of tests.
 
         let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
-            milestones: BTreeMap::new(),
-            contributions: BTreeMap::new(), // todo: keep track of contributions,
+            milestones: BTreeMap::new(), //milestones, todo: type conversion
+            contributions: BTreeMap::new(), // todo: keep track of contributions + type conversion,
             currency_id,
-            required_funds: current_contribution,
+            required_funds: Default::default(),//todo getsum,
             withdrawn_funds: 0u32.into(),
-            raised_funds: current_contribution,
+            raised_funds: Default::default(), //todo: getsum,
             initiator: applicant,
-            create_block_number: 100,
+            create_block_number: System::block_number(),
             approved_for_funding: true,
             funding_threshold_met: true,
             cancelled: false,
             agreement_hash: brief_hash,
+            // Maybe we dont need this new field because we have create_block_number 
             work_started_at: Some(System::block_number()),
         };
 
