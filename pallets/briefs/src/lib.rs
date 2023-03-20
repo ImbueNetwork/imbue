@@ -18,7 +18,12 @@ pub mod pallet {
 
     use crate::traits::BriefEvolver;
     use common_types::CurrencyId;
-    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get};
+    use frame_support::{
+        pallet_prelude::*, 
+        sp_runtime::Saturating, 
+        traits::Get, 
+        BoundedBTreeMap
+    };
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
@@ -26,11 +31,14 @@ pub mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 
+    pub(crate) type BoundedBriefMilestones<T> = BoundedBTreeMap<MilestoneKey, BriefMilestone, <T as Config>::MaxMilestones>;
+
     pub(crate) type BriefHash = H256;
-    pub(crate) type IpfsHash = H256;
+    pub(crate) type MilestoneKey = u32;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -46,7 +54,7 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The type that allows for evolution from brief to proposal.
-        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
+        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>, BriefMilestone>;
 
         /// The maximum amount of owners to a brief.
         type MaxBriefOwners: Get<u32>;
@@ -111,50 +119,22 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Add a bounty to a brief.
-        /// A bounty must be fully contributed to before a piece of work is started.
-        #[pallet::call_index(0)]
-        #[pallet::weight(10_000)]
-        pub fn add_bounty(
-            origin: OriginFor<T>,
-            brief_id: BriefHash,
-            amount: BalanceOf<T>,
-        ) -> DispatchResult {
-            // Only allow if its not an auction or it is an auction and the price has been set
-            let who = ensure_signed(origin)?;
-            let brief_record = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
-            ensure!(
-                brief_record.brief_owners.contains(&who),
-                Error::<T>::NotAuthorised
-            );
-
-            let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
-
-            <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
-
-            Briefs::<T>::mutate_exists(brief_id, |maybe_brief| {
-                if let Some(brief) = maybe_brief {
-                    brief.current_contribution = new_amount;
-                }
-            });
-
-            Ok(())
-        }
 
         /// Approve an account so that they can be accepted as an applicant.
         #[pallet::call_index(1)]
         #[pallet::weight(10_000)]
-        pub fn approve_account(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
+        pub fn add_to_fellowship(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
             <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
 
             // Or if they are not voted by governance, be voted in by another approved freelancer?
             // todo.
 
-            ApprovedAccounts::<T>::insert(&account_id, ());
+            //FreelanceFellowship::<T>::insert(&account_id, ());
             Self::deposit_event(Event::<T>::AccountApproved(account_id));
 
             Ok(())
         }
+
 
         /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
@@ -164,12 +144,11 @@ pub mod pallet {
             origin: OriginFor<T>,
             mut brief_owners: BoundedBriefOwners<T>,
             applicant: AccountIdOf<T>,
-            //budget
             budget: BalanceOf<T>,
-            //Add project milestones,
             initial_contribution: BalanceOf<T>,
-            ipfs_hash: BriefHash,
+            brief_hash: BriefHash,
             currency_id: CurrencyId,
+            milestones: BoundedBriefMilestones<T>,
         ) -> DispatchResult
         {
             let who = ensure_signed(origin)?;
@@ -180,14 +159,13 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::TooManyBriefOwners)?;
             }
 
-            ensure!(
-                FreelanceFellowship::<T>::contains_key(&applicant),
-                Error::<T>::OnlyApprovedAccountPermitted
-            );
+            // todo freelancer fellowship handler
+            //ensure!(
+            //    FreelanceFellowship::<T>::contains_key(&applicant),
+            //    Error::<T>::OnlyApprovedAccountPermitted
+            //);
 
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
-
-            // add breifs to OCW list to verify.
 
             let brief = BriefData::new(
                 brief_owners,
@@ -195,12 +173,11 @@ pub mod pallet {
                 initial_contribution,
                 currency_id,
                 frame_system::Pallet::<T>::block_number(),
-                ipfs_hash,
                 applicant,
-                // TODO: Milestones
+                milestones,
             );
 
-            Briefs::<T>::insert(ipfs_hash, brief);
+            Briefs::<T>::insert(brief_hash, brief);
 
             Self::deposit_event(Event::<T>::BriefSubmitted(brief_hash));
 
@@ -211,7 +188,7 @@ pub mod pallet {
         /// A bounty must be fully contributed to before a piece of work is started.
         ///
         /// Todo: runtime api to return how much bounty exactly is left on a brief.
-        #[pallet::call_index(0)]
+        #[pallet::call_index(3)]
         #[pallet::weight(10_000)]
         pub fn contribute_to_brief(
             origin: OriginFor<T>,
@@ -219,7 +196,6 @@ pub mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult
         {
-            // Only allow if its not an auction or it is an auction and the price has been set
             let who = ensure_signed(origin)?;
             let brief_record = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
             ensure!(
@@ -241,7 +217,7 @@ pub mod pallet {
 
         /// Once the freelancer is happy with both the milestones and the offering this can be called.
         /// It will call the hook (if we want to use the hook) to bypass approval in the proposals pallet.
-        #[pallet::call_index(3)]
+        #[pallet::call_index(4)]
         #[pallet::weight(10_000)]
         pub fn commence_work(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -255,27 +231,13 @@ pub mod pallet {
                 brief.currency_id,
                 brief.current_contribution,
                 brief.created_at,
-                brief.ipfs_hash,
+                brief_id.clone(),
                 brief.applicant,
+                brief.milestones.into(),
             )
             .map_err(|_| Error::<T>::BriefConversionFailedGeneric)?;
             // todo, finer grained err handling
             Self::deposit_event(Event::<T>::BriefEvolutionOccured(brief_id));
-            Ok(())
-        }
-
-        /// Approve an account so that they can be accepted as an applicant.
-        #[pallet::call_index(1)]
-        #[pallet::weight(10_000)]
-        pub fn add_to_fellowship(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
-            <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
-
-            // Or if they are not voted by governance, be voted in by another approved freelancer?
-            // todo.
-
-            FreelanceFellowship::<T>::insert(&account_id, ());
-            Self::deposit_event(Event::<T>::AccountApproved(account_id));
-
             Ok(())
         }
 
@@ -290,9 +252,8 @@ pub mod pallet {
         currency_id: CurrencyId,
         current_contribution: BalanceOf<T>,
         created_at: BlockNumberFor<T>,
-        ipfs_hash: IpfsHash,
         applicant: AccountIdOf<T>,
-        // MILESTONES!!!
+        milestones: BoundedBriefMilestones<T>,
     }
 
     impl<T: Config> Pallet<T> {
@@ -314,8 +275,8 @@ pub mod pallet {
             current_contribution: BalanceOf<T>,
             currency_id: CurrencyId,
             created_at: BlockNumberFor<T>,
-            ipfs_hash: IpfsHash,
             applicant: AccountIdOf<T>,
+            milestones: BoundedBriefMilestones<T>,
         ) -> Self {
             Self {
                 created_at,
@@ -323,18 +284,17 @@ pub mod pallet {
                 bounty_total,
                 currency_id,
                 current_contribution,
-                ipfs_hash,
                 applicant,
+                milestones,
             }
         }
     }
 
-    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
-    #[scale_info(skip_type_params(T))]
-    pub struct BriefMilestone<T: Config> {
-        milestone_key: u16,
-        percentage_to_unlock: u32,
-        name: Vec<u8>,
+    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+    pub struct BriefMilestone {
+        pub milestone_key: MilestoneKey,
+        pub percentage_to_unlock: u32,
+        pub name: BoundedVec<u8, ConstU32<1000>>,
     }
 
 }

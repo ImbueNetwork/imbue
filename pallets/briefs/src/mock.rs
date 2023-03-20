@@ -10,8 +10,13 @@ use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
-use crate::pallet::IpfsHash;
+use crate::pallet::{
+    BriefHash,
+    BriefMilestone
+};
 use crate::traits::BriefEvolver;
+use crate::MilestoneKey;
+
 use common_types::CurrencyId;
 use core::marker::PhantomData;
 use frame_support::dispatch::EncodeLike;
@@ -31,6 +36,7 @@ use sp_std::{
     str,
     vec::Vec,
 };
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -187,17 +193,18 @@ parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
     pub MaxBriefOwners: u32 = 100;
+    pub MaxMilestones: u32 = 100;
+
 }
 
 impl pallet_briefs::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Tokens;
-    type MinimumDeposit = MinimumDeposit;
-    type MinimumBounty = MinimumBounty;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type BriefEvolver = Proposals;
     type MaxBriefOwners = MaxBriefOwners;
+    type MaxMilestones = MaxMilestones;
 }
 
 parameter_types! {
@@ -210,7 +217,7 @@ parameter_types! {
 }
 
 // Requires binding howerver they may be a more succinct way of doing this.
-impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber> for proposals::Pallet<T>
+impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, BriefMilestone> for proposals::Pallet<T>
 where
     Project<sp_core::sr25519::Public, u64, u64, u64>: EncodeLike<
         Project<
@@ -229,18 +236,15 @@ where
         currency_id: CurrencyId,
         current_contribution: Balance,
         created_at: BlockNumber,
-        ipfs_hash: IpfsHash,
+        brief_hash: BriefHash,
         applicant: AccountId,
+        milestones: BTreeMap<MilestoneKey, BriefMilestone>
     ) -> Result<(), ()> {
         // todo: valicdation
         // tests:
         // lots of tests.
 
         let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
-            name: vec![],
-            logo: vec![],
-            description: vec![],
-            website: vec![],
             milestones: BTreeMap::new(),
             contributions: BTreeMap::new(), // todo: keep track of contributions,
             currency_id,
@@ -252,6 +256,8 @@ where
             approved_for_funding: true,
             funding_threshold_met: true,
             cancelled: false,
+            agreement_hash: brief_hash,
+            work_started_at: Some(System::block_number()),
         };
 
         Projects::<T>::insert(0, project);

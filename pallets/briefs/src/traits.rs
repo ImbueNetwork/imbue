@@ -1,7 +1,8 @@
-use crate::pallet::*;
+use crate::pallet::{BriefHash, MilestoneKey};
 use common_types::CurrencyId;
+use std::collections::BTreeMap;
 
-pub trait BriefEvolver<AccountId, Balance, BlockNumber> {
+pub trait BriefEvolver<AccountId, Balance, BlockNumber, Milestone> {
     /// Convert a brief into a proposal, the bounty must be fully funded before calling this.
     /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
     /// (if using proposals) This function should bypass the usual checks when creating a proposal and
@@ -12,7 +13,8 @@ pub trait BriefEvolver<AccountId, Balance, BlockNumber> {
         currency_id: CurrencyId,
         current_contribution: Balance,
         created_at: BlockNumber,
-        ipfs_hash: IpfsHash,
+        brief_hash: BriefHash,
         applicant: AccountId,
+        milestones: BTreeMap<MilestoneKey, Milestone>
     ) -> Result<(), ()>;
 }
