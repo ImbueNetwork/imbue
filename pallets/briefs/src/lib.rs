@@ -190,7 +190,6 @@ pub mod pallet {
             let brief = BriefData::new(
                 brief_owners,
                 budget,
-                initial_contribution,
                 currency_id,
                 frame_system::Pallet::<T>::block_number(),
                 applicant,
@@ -222,14 +221,8 @@ pub mod pallet {
                 Error::<T>::NotAuthorised
             );
 
-            let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
-            Briefs::<T>::mutate(&brief_id, |maybe_brief| {
-                if let Some(brief) = maybe_brief {
-                    brief.current_contribution = new_amount;
-                }
-            });
             BriefContributions::<T>::mutate(&brief_id, |contributions| {
                 if let Some(val) = contributions.get_mut(&who) {
                     val.saturating_add(amount);
@@ -253,11 +246,13 @@ pub mod pallet {
 
             ensure!(&who == &brief.applicant, Error::<T>::NotAuthorised);
 
+            let contributions = BriefContributions::<T>::get(brief_id);
+
             <T as Config>::BriefEvolver::convert_to_proposal(
                 brief.brief_owners.to_vec(),
-                brief.bounty_total,
+                brief.budget,
                 brief.currency_id,
-                brief.current_contribution,
+                contributions.into_inner(),
                 brief.created_at,
                 brief_id.clone(),
                 brief.applicant,
@@ -276,20 +271,20 @@ pub mod pallet {
     #[scale_info(skip_type_params(T))]
     pub struct BriefData<T: Config> {
         brief_owners: BoundedBriefOwners<T>,
-        bounty_total: BalanceOf<T>,
+        budget: BalanceOf<T>,
         currency_id: CurrencyId,
-        current_contribution: BalanceOf<T>,
         created_at: BlockNumberFor<T>,
         applicant: AccountIdOf<T>,
         milestones: BoundedBriefMilestones<T>,
     }
 
     impl<T: Config> Pallet<T> {
+        /// Used in the runtime api to quickly get the remainig funds as stated in the budget.
         pub fn get_remaining_bounty(brief_id: BriefHash) -> BalanceOf<T> {
+            // TODO ITERATE OVER
             if let Some(brief) = Briefs::<T>::get(brief_id) {
                 brief
-                    .bounty_total
-                    .saturating_sub(brief.current_contribution)
+                    .budget
             } else {
                 Default::default()
             }
@@ -299,8 +294,7 @@ pub mod pallet {
     impl<T: Config> BriefData<T> {
         pub fn new(
             brief_owners: BoundedBriefOwners<T>,
-            bounty_total: BalanceOf<T>,
-            current_contribution: BalanceOf<T>,
+            budget: BalanceOf<T>,
             currency_id: CurrencyId,
             created_at: BlockNumberFor<T>,
             applicant: AccountIdOf<T>,
@@ -309,9 +303,8 @@ pub mod pallet {
             Self {
                 created_at,
                 brief_owners,
-                bounty_total,
+                budget,
                 currency_id,
-                current_contribution,
                 applicant,
                 milestones,
             }

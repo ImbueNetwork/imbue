@@ -11,7 +11,7 @@ pub trait BriefEvolver<AccountId, Balance, BlockNumber, Milestone> {
         brief_owners: Vec<AccountId>,
         bounty_total: Balance,
         currency_id: CurrencyId,
-        current_contribution: Balance,
+        current_contribution: BTreeMap<AccountId, Balance>,
         created_at: BlockNumber,
         brief_hash: BriefHash,
         applicant: AccountId,
