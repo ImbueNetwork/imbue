@@ -756,6 +756,91 @@ impl proposals::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, BriefMilestone, BlockNumber> for proposals::Pallet<T>
+where
+    Project<sp_core::sr25519::Public, u64, u64, u64>: EncodeLike<
+        Project<
+            <T as frame_system::Config>::AccountId,
+            <<T as proposals::Config>::MultiCurrency as MultiCurrency<
+                <T as frame_system::Config>::AccountId,
+            >>::Balance,
+            <T as frame_system::Config>::BlockNumber,
+            <T as pallet_timestamp::Config>::Moment,
+        >,
+    >,
+{
+    fn convert_to_proposal(
+        brief_owners: Vec<AccountId>,
+        bounty_total: Balance,
+        currency_id: CurrencyId,
+        contributions: BTreeMap<AccountId, Contribution<Balance, Moment>>,
+        created_at: BlockNumber,
+        brief_hash: BriefHash,
+        applicant: AccountId,
+        milestones: BTreeMap<MilestoneKey, BriefMilestone>
+    ) -> Result<(), ()> {
+
+        let project_key = proposals::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
+        proposals::ProjectCount::<T>::put(project_key);
+
+        let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+        let _ = milestones.into_values().map(|m| {
+            project_milestones.insert(m.milestone_key, 
+                proposals::Milestone {
+                    project_key: project_key,
+                    milestone_key: m.milestone_key,
+                    name: m.name.into(),
+                    percentage_to_unlock: m.percentage_to_unlock,
+                    is_approved: false,
+                }
+            )
+        }).collect::<Vec<_>>();
+        
+        let sum_of_contributions = contributions.values().map(|c| {
+            c.value
+        }).sum();
+
+        let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
+            milestones: project_milestones,
+            contributions: contributions,
+            currency_id,
+            required_funds: sum_of_contributions,
+            withdrawn_funds: 0u32.into(),
+            raised_funds: sum_of_contributions,
+            initiator: applicant,
+            create_block_number: System::block_number(),
+            approved_for_funding: true,
+            funding_threshold_met: true,
+            cancelled: false,
+            agreement_hash: brief_hash,
+            // Maybe we dont need this new field because we have create_block_number 
+            work_started_at: Some(System::block_number()),
+        };
+
+        Projects::<T>::insert(project_key, project);
+
+        Ok(())
+    }
+}
+
+parameter_types! {
+    pub MaximumApplicants: u32 = 10_000u32;
+    pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
+    pub MaxBriefOwners: u32 = 100;
+    pub MaxMilestones: u32 = 100;
+
+}
+
+impl pallet_briefs::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type RMultiCurrency = Tokens;
+    type BriefHasher = BlakeTwo256;
+    type AuthorityOrigin = EnsureRoot<AccountId>;
+    type BriefEvolver = Proposals;
+    type MaxBriefOwners = MaxBriefOwners;
+    type MaxMilestones = MaxMilestones;
+}
+
 construct_runtime! {
     pub enum Runtime where
         Block = Block,
@@ -810,6 +895,7 @@ construct_runtime! {
 
         // Imbue Pallets
         ImbueProposals: proposals::{Pallet, Call, Storage, Event<T>} = 100,
+        ImbueBriefs: pallet_briefs::{Pallet, Call, Storage, Event<T>} = 101,
     }
 }
 
@@ -854,6 +940,7 @@ mod benches {
         [pallet_balances, Balances]
         [pallet_timestamp, Timestamp]
         [proposals, ImbueProposals]
+        [briefs, ImbueBriefs]
     );
 }
 

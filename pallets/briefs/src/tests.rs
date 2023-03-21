@@ -69,7 +69,7 @@ fn create_brief_brief_owner_overflow() {
 }
 
 #[test]
-fn test_create_brief_with_no_contribution() {
+fn test_create_brief_with_no_contribution_ok() {
     build_test_externality().execute_with(|| {
         assert!(false);
     });

@@ -3761,6 +3761,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
+ "pallet-briefs",
  "pallet-collator-selection",
  "pallet-collective",
  "pallet-democracy",

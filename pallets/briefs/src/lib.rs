@@ -307,10 +307,10 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Used in the runtime api to quickly get the remainig funds as stated in the budget.
         pub fn get_remaining_bounty(brief_id: BriefHash) -> BalanceOf<T> {
-            // TODO ITERATE OVER
             if let Some(brief) = Briefs::<T>::get(brief_id) {
-                brief
-                    .budget
+                let sum: BalanceOf<T> = BriefContributions::<T>::get(brief_id).values().fold(Default::default(), |acc, x| acc.saturating_add(x.value));
+
+                brief.budget.saturating_sub(sum)
             } else {
                 Default::default()
             }

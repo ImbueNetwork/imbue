@@ -189,8 +189,6 @@ impl pallet_timestamp::Config for Test {
 }
 
 parameter_types! {
-    pub MinimumBounty: Balance = 10_000u32.into();
-    pub MinimumDeposit: Balance = 1000u32.into();
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
     pub MaxBriefOwners: u32 = 100;
