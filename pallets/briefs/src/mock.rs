@@ -10,11 +10,19 @@ use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
-use crate::pallet::IpfsHash;
+use crate::pallet::{
+    BriefHash,
+    BriefMilestone
+};
 use crate::traits::BriefEvolver;
+use crate::MilestoneKey;
+
 use common_types::CurrencyId;
-use frame_support::once_cell::sync::Lazy;
+use core::marker::PhantomData;
 use frame_support::dispatch::EncodeLike;
+use frame_support::once_cell::sync::Lazy;
+use orml_traits::MultiCurrency;
+use proposals::{Project, Projects};
 use sp_core::sr25519;
 use sp_runtime::DispatchResult;
 use sp_runtime::{
@@ -22,15 +30,13 @@ use sp_runtime::{
     traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
     BuildStorage,
 };
-use core::marker::PhantomData;
+use sp_std::collections::btree_map::BTreeMap;
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
     vec::Vec,
 };
-use proposals::{Project, Projects};
-use sp_std::collections::btree_map::BTreeMap;
-use orml_traits::MultiCurrency;
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -187,17 +193,18 @@ parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
     pub MaxBriefOwners: u32 = 100;
+    pub MaxMilestones: u32 = 100;
+
 }
 
 impl pallet_briefs::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Tokens;
-    type MinimumDeposit = MinimumDeposit;
-    type MinimumBounty = MinimumBounty;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type BriefEvolver = Proposals;
     type MaxBriefOwners = MaxBriefOwners;
+    type MaxMilestones = MaxMilestones;
 }
 
 parameter_types! {
@@ -209,50 +216,49 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
 }
 
-
 // Requires binding howerver they may be a more succinct way of doing this.
-impl <T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber> for proposals::Pallet<T> 
-where 
-    Project<AccountId, Balance, BlockNumber, Moment>: EncodeLike<Project<<T as frame_system::Config>::AccountId,
-    <<T as proposals::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance,
-    <T as frame_system::Config>::BlockNumber,
-    <T as pallet_timestamp::Config>::Moment>> 
- {
+impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, BriefMilestone> for proposals::Pallet<T>
+where
+    Project<sp_core::sr25519::Public, u64, u64, u64>: EncodeLike<
+        Project<
+            <T as frame_system::Config>::AccountId,
+            <<T as proposals::Config>::MultiCurrency as MultiCurrency<
+                <T as frame_system::Config>::AccountId,
+            >>::Balance,
+            <T as frame_system::Config>::BlockNumber,
+            <T as pallet_timestamp::Config>::Moment,
+        >,
+    >,
+{
     fn convert_to_proposal(
         brief_owners: Vec<AccountId>,
         bounty_total: Balance,
         currency_id: CurrencyId,
-        current_contribution: Balance,
+        contributions: Balance,
         created_at: BlockNumber,
-        ipfs_hash: IpfsHash,
+        brief_hash: BriefHash,
         applicant: AccountId,
+        milestones: BTreeMap<MilestoneKey, BriefMilestone>
     ) -> Result<(), ()> {
-        
-    // todo: valicdation
-    // tests: 
-    // lots of tests.
-    
-        // create a project, transfer the reserved funds from the contributors.
-        // into he new projects account.
-        // ensureing that the project is approved, the milestones not.
-        
+        // todo: valicdation
+        // tests:
+        // lots of tests.
 
         let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
-            name: vec![],
-            logo: vec![],
-            description: vec![],
-            website: vec![],
-            milestones: BTreeMap::new(),
-            contributions: BTreeMap::new(),// todo: keep track of contributions,
+            milestones: BTreeMap::new(), //milestones, todo: type conversion
+            contributions: BTreeMap::new(), // todo: keep track of contributions + type conversion,
             currency_id,
-            required_funds: current_contribution,
+            required_funds: Default::default(),//todo getsum,
             withdrawn_funds: 0u32.into(),
-            raised_funds: current_contribution,
+            raised_funds: Default::default(), //todo: getsum,
             initiator: applicant,
-            create_block_number: 100,
+            create_block_number: System::block_number(),
             approved_for_funding: true,
             funding_threshold_met: true,
             cancelled: false,
+            agreement_hash: brief_hash,
+            // Maybe we dont need this new field because we have create_block_number 
+            work_started_at: Some(System::block_number()),
         };
 
         Projects::<T>::insert(0, project);
@@ -300,7 +306,6 @@ impl pallet_identity::Config for Test {
     type ForceOrigin = EnsureRoot<AccountId>;
     type WeightInfo = ();
 }
-
 
 parameter_types! {
     pub const UnitWeightCost: u64 = 10;

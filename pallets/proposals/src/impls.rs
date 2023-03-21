@@ -34,10 +34,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn new_project(
         who: T::AccountId,
-        name: BoundedStringField,
-        logo: BoundedStringField,
-        description: BoundedDescriptionField,
-        website: BoundedWebsiteUrlField,
+        agreement_hash: H256,
         proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
@@ -69,10 +66,7 @@ impl<T: Config> Pallet<T> {
 
         // Create a project
         let project = Project {
-            name: name.clone().to_vec(),
-            logo: logo.to_vec(),
-            description: description.to_vec(),
-            website: website.to_vec(),
+            agreement_hash,
             milestones,
             contributions: BTreeMap::new(),
             required_funds,
@@ -81,6 +75,7 @@ impl<T: Config> Pallet<T> {
             withdrawn_funds: (0_u32).into(),
             initiator: who.clone(),
             create_block_number: <frame_system::Pallet<T>>::block_number(),
+            work_started_at: None,
             approved_for_funding: false,
             funding_threshold_met: false,
             cancelled: false,
@@ -92,7 +87,6 @@ impl<T: Config> Pallet<T> {
 
         Self::deposit_event(Event::ProjectCreated(
             who,
-            name.to_vec(),
             project_key,
             required_funds,
             currency_id,
@@ -106,10 +100,6 @@ impl<T: Config> Pallet<T> {
     pub fn update_existing_project(
         who: T::AccountId,
         project_key: ProjectKey,
-        name: BoundedStringField,
-        logo: BoundedStringField,
-        description: BoundedDescriptionField,
-        website: BoundedWebsiteUrlField,
         proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
@@ -148,15 +138,6 @@ impl<T: Config> Pallet<T> {
         }
 
         // Update project
-        //Update project name
-        project.name = name.to_vec();
-        //Update project logo
-        project.logo = logo.to_vec();
-        //Update project description
-        project.description = description.to_vec();
-        //Update project website
-        project.website = website.to_vec();
-        //Update project milestones
         project.milestones = milestones;
         //Update funds required for project
         project.required_funds = required_funds;
@@ -166,12 +147,7 @@ impl<T: Config> Pallet<T> {
         // Add project to list
         <Projects<T>>::insert(project_key, project);
 
-        Self::deposit_event(Event::ProjectUpdated(
-            who,
-            name.to_vec(),
-            project_key,
-            required_funds,
-        ));
+        Self::deposit_event(Event::ProjectUpdated(who, project_key, required_funds));
 
         Ok(().into())
     }
