@@ -855,7 +855,7 @@ pub struct ProposedMilestone {
 pub struct Milestone {
     project_key: ProjectKey,
     milestone_key: MilestoneKey,
-    name: Vec<u8>,
+    name: Vec<u8>,  
     percentage_to_unlock: u32,
     is_approved: bool,
 }

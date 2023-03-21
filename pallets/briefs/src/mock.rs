@@ -217,7 +217,8 @@ parameter_types! {
 }
 
 // Requires binding howerver they may be a more succinct way of doing this.
-impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, BriefMilestone> for proposals::Pallet<T>
+// This should be in the proposals pallet maybe;
+impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, BriefMilestone, BlockNumber> for proposals::Pallet<T>
 where
     Project<sp_core::sr25519::Public, u64, u64, u64>: EncodeLike<
         Project<
@@ -234,23 +235,40 @@ where
         brief_owners: Vec<AccountId>,
         bounty_total: Balance,
         currency_id: CurrencyId,
-        contributions: BTreeMap<AccountId, Balance>,
+        contributions: BTreeMap<AccountId, Contribution<Balance, Moment>>,
         created_at: BlockNumber,
         brief_hash: BriefHash,
         applicant: AccountId,
         milestones: BTreeMap<MilestoneKey, BriefMilestone>
     ) -> Result<(), ()> {
-        // todo: valicdation
-        // tests:
-        // lots of tests.
+
+        let project_key = ProjectCount::<T>::get().checked_add(1).map_err(|_|Err(()));
+        ProjectCount::<T>::put(project_key);
+
+        let mut project_milestones: BTreeMap = BTreeMap::new();
+        let _ = milestones.into_values().map(|m| {
+            project_milestones.insert(m.milestone_key, 
+                proposals::Milestone {
+                    project_key: project_key,
+                    milestone_key: m.milestone_key,
+                    name: m.name,
+                    percentage_to_unlock: percentage,
+                    is_approved: false,
+                }
+            )
+        }).collect::<Vec<_>>();
+        
+        let sum_of_contributions = contributions.iter_values().map(|c| {
+            c.value
+        }).collect::<Balance>();
 
         let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
-            milestones: BTreeMap::new(), //milestones, todo: type conversion
-            contributions: BTreeMap::new(), // todo: keep track of contributions + type conversion,
+            milestones: project_milestones,
+            contributions: contributions,
             currency_id,
-            required_funds: Default::default(),//todo getsum,
+            required_funds: sum_of_contributions,
             withdrawn_funds: 0u32.into(),
-            raised_funds: Default::default(), //todo: getsum,
+            raised_funds: sum_of_contributions,
             initiator: applicant,
             create_block_number: System::block_number(),
             approved_for_funding: true,
@@ -261,8 +279,7 @@ where
             work_started_at: Some(System::block_number()),
         };
 
-        Projects::<T>::insert(0, project);
-    
+        Projects::<T>::insert(project_key, project);
 
         Ok(())
     }

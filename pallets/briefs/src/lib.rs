@@ -25,9 +25,10 @@ pub mod pallet {
         BoundedBTreeMap
     };
     use frame_system::pallet_prelude::*;
-    
+    use std::convert::From;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
+    use proposals::Contribution;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -58,6 +59,7 @@ pub mod pallet {
         type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>, BriefMilestone>;
 
         /// The maximum amount of owners to a brief.
+        /// Also used to define the maximum contributions.
         type MaxBriefOwners: Get<u32>;
 
         ///https://paritytech.github.io/substrate/master/frame_support/macro.defensive_assert.html
@@ -216,6 +218,8 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            // todo Minimum contribution.
+
             ensure!(
                 brief_record.brief_owners.contains(&who),
                 Error::<T>::NotAuthorised
@@ -258,8 +262,14 @@ pub mod pallet {
                 brief.applicant,
                 brief.milestones.into(),
             )
-            .map_err(|_| Error::<T>::BriefConversionFailedGeneric)?;
+            .map_err(|_|{
+                Error::<T>::BriefConversionFailedGeneric
+            })?;
             // todo, finer grained err handling
+
+            BriefContributions::<T>::remove(brief_id);
+            Briefs::<T>::remove(brief_id);
+
             Self::deposit_event(Event::<T>::BriefEvolution(brief_id));
             Ok(())
         }
@@ -317,5 +327,4 @@ pub mod pallet {
         pub percentage_to_unlock: u32,
         pub name: BoundedVec<u8, ConstU32<1000>>,
     }
-
 }
