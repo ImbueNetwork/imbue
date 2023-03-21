@@ -16,13 +16,14 @@ use crate::pallet::{
 };
 use crate::traits::BriefEvolver;
 use crate::MilestoneKey;
+use proposals::Contribution;
 
 use common_types::CurrencyId;
 use core::marker::PhantomData;
 use frame_support::dispatch::EncodeLike;
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
-use proposals::{Project, Projects};
+use proposals::{Project, Projects, Milestone};
 use sp_core::sr25519;
 use sp_runtime::DispatchResult;
 use sp_runtime::{
@@ -242,25 +243,25 @@ where
         milestones: BTreeMap<MilestoneKey, BriefMilestone>
     ) -> Result<(), ()> {
 
-        let project_key = ProjectCount::<T>::get().checked_add(1).map_err(|_|Err(()));
-        ProjectCount::<T>::put(project_key);
+        let project_key = proposals::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
+        proposals::ProjectCount::<T>::put(project_key);
 
-        let mut project_milestones: BTreeMap = BTreeMap::new();
+        let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
         let _ = milestones.into_values().map(|m| {
             project_milestones.insert(m.milestone_key, 
                 proposals::Milestone {
                     project_key: project_key,
                     milestone_key: m.milestone_key,
-                    name: m.name,
-                    percentage_to_unlock: percentage,
+                    name: m.name.into(),
+                    percentage_to_unlock: m.percentage_to_unlock,
                     is_approved: false,
                 }
             )
         }).collect::<Vec<_>>();
         
-        let sum_of_contributions = contributions.iter_values().map(|c| {
+        let sum_of_contributions = contributions.values().map(|c| {
             c.value
-        }).collect::<Balance>();
+        }).sum();
 
         let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
             milestones: project_milestones,

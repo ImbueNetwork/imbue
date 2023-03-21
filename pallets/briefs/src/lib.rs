@@ -34,7 +34,7 @@ pub mod pallet {
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-    pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, <T as Config>::MaxBriefOwners>;
+    pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>, <T as Config>::MaxBriefOwners>;
     pub(crate) type BoundedBriefMilestones<T> = BoundedBTreeMap<MilestoneKey, BriefMilestone, <T as Config>::MaxMilestones>;
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
@@ -56,7 +56,7 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The type that allows for evolution from brief to proposal.
-        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>, BriefMilestone>;
+        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>, BriefMilestone, BlockNumberFor<Self>>;
 
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
@@ -183,10 +183,17 @@ pub mod pallet {
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             if initial_contribution > 0u32.into() {
-                BriefContributions::<T>::mutate(&brief_id, |contributions| {
+                let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
                     // this should never fail as the the bound is ensure when a brief is created.
-                    contributions.try_insert(who, initial_contribution).map_err(|_|Error::<T>::TooManyBriefOwners);
-                });
+                    let res = contributions.try_insert(who, 
+                        Contribution {
+                            value: initial_contribution,
+                            timestamp: frame_system::Pallet::<T>::block_number() 
+                        }
+                    ).map_err(|_|Error::<T>::TooManyBriefOwners)?;
+
+                    Ok::<(), DispatchError>(())
+                })?;
             }
 
             let brief = BriefData::new(
@@ -227,14 +234,23 @@ pub mod pallet {
 
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
-            BriefContributions::<T>::mutate(&brief_id, |contributions| {
+            let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
                 if let Some(val) = contributions.get_mut(&who) {
-                    val.saturating_add(amount);
+                    val.value.saturating_add(amount);
+                    val.timestamp = frame_system::Pallet::<T>::block_number();
                 } else {
                     // this should never fail as the the bound is ensure when a brief is created.
-                    contributions.try_insert(who, amount).map_err(|_|Error::<T>::TooManyBriefOwners);
+                    contributions.try_insert(who, {
+                        Contribution {
+                            value: amount,
+                            timestamp: frame_system::Pallet::<T>::block_number(),
+                        }
+                    }
+                    ).map_err(|_|Error::<T>::TooManyBriefOwners)?;
                 }
-            });
+
+                Ok::<(), DispatchError>(())
+            })?;
 
             Self::deposit_event(Event::<T>::BriefContribution(brief_id));
             Ok(())

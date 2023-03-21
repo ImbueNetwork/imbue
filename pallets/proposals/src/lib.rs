@@ -853,11 +853,11 @@ pub struct ProposedMilestone {
 /// The contribution users made to a project project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Milestone {
-    project_key: ProjectKey,
-    milestone_key: MilestoneKey,
-    name: Vec<u8>,  
-    percentage_to_unlock: u32,
-    is_approved: bool,
+    pub project_key: ProjectKey,
+    pub milestone_key: MilestoneKey,
+    pub name: Vec<u8>,  
+    pub percentage_to_unlock: u32,
+    pub is_approved: bool,
 }
 
 /// The vote struct is used to
@@ -897,12 +897,12 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
 }
 
 /// The contribution users made to a proposal project.
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Contribution<Balance, Timestamp> {
     /// Contribution value.
-    value: Balance,
+    pub value: Balance,
     /// Timestamp of the last contribution.
-    timestamp: Timestamp,
+    pub timestamp: Timestamp,
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
