@@ -213,8 +213,7 @@ parameter_types! {
 // Requires binding howerver they may be a more succinct way of doing this.
 impl <T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber> for proposals::Pallet<T> 
 where 
-    Project<sp_core::sr25519::Public, u64, u64, u64>: 
-    EncodeLike<Project<<T as frame_system::Config>::AccountId,
+    Project<AccountId, Balance, BlockNumber, Moment>: EncodeLike<Project<<T as frame_system::Config>::AccountId,
     <<T as proposals::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance,
     <T as frame_system::Config>::BlockNumber,
     <T as pallet_timestamp::Config>::Moment>> 
@@ -233,7 +232,12 @@ where
     // tests: 
     // lots of tests.
     
-        let project: Project<AccountId, Balance, BlockNumber, Moment > = Project {
+        // create a project, transfer the reserved funds from the contributors.
+        // into he new projects account.
+        // ensureing that the project is approved, the milestones not.
+        
+
+        let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
             name: vec![],
             logo: vec![],
             description: vec![],
@@ -252,6 +256,8 @@ where
         };
 
         Projects::<T>::insert(0, project);
+    
+
         Ok(())
     }
 }

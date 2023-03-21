@@ -18,7 +18,7 @@ pub mod pallet {
 
     use crate::traits::BriefEvolver;
     use common_types::CurrencyId;
-    use frame_support::{pallet_prelude::*, traits::Get, sp_runtime::Saturating};
+    use frame_support::{pallet_prelude::*, traits::Get, sp_runtime::Saturating, BTreeMap, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
@@ -27,9 +27,8 @@ pub mod pallet {
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub(crate) type BoundedBriefOwners<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
-
+    pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, <T as Config>::MaxBriefOwners>;
     pub(crate) type BriefHash = H256;
-    pub(crate) type IpfsHash = H256;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -74,6 +73,14 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn briefs_for_convert)]
     pub type BriefsForConversion<T> = StorageMap<_, Blake2_128Concat, BriefHash, (), ValueQuery>;
+
+    /// The contributions to a brief, in a single currency.
+    /// Its in a BTree to reduce storage call when we have to inevitably iterate the keys. 
+    /// Key 1: BriefHash
+    /// Key 2: AccountIdOf<T>
+    /// Value: Balance 
+    pub type BriefContributions<T> = StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
+
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -128,7 +135,6 @@ pub mod pallet {
             brief_id: BriefHash,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
-            // Only allow if its not an auction or it is an auction and the price has been set
             let who = ensure_signed(origin)?;
             let brief_record = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
             ensure!(
@@ -140,11 +146,25 @@ pub mod pallet {
 
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
-            Briefs::<T>::mutate_exists(brief_id, |maybe_brief| {
+            Briefs::<T>::mutate(brief_id, |maybe_brief| {
                 if let Some(brief) = maybe_brief {
                     brief.current_contribution = new_amount;
                 }
             });
+            BriefContributions::<T>::mutate(brief_id, |maybe_cont| {
+                if let Some(mut contributions) = maybe_cont {
+                    if let Some(val) = contributions.get_mut(&who) {
+                        *val.saturating_add(amount);
+                    } else {
+                        contributions.insert(&who, amount);
+                    }
+                    Some(contributions)
+                } else {
+                    let btree: BoundedBriefContributions = BoundedBTreeMap::new();
+
+                    Some(Default::default());
+                }
+            })
 
             Ok(())
         }
@@ -191,7 +211,7 @@ pub mod pallet {
             );
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
-            // add breifs to OCW list to verify.
+            // Try create the contributions list if the initialcontribution > 0
             
             let brief = BriefData::new(
                 brief_owners,
