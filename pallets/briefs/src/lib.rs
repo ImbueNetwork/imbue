@@ -25,6 +25,7 @@ pub mod pallet {
         BoundedBTreeMap
     };
     use frame_system::pallet_prelude::*;
+    
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
 
@@ -75,13 +76,15 @@ pub mod pallet {
     /// Value: Unit
     #[pallet::storage]
     #[pallet::getter(fn approved_accounts)]
-    pub type ApprovedAccounts<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
+    pub type FreelanceFellowship<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
     /// The contributions to a brief, in a single currency.
     /// Its in a BTree to reduce storage call when we have to inevitably iterate the keys. 
     /// Key 1: BriefHash
     /// Key 2: AccountIdOf<T>
     /// Value: Balance 
+    #[pallet::storage]
+    #[pallet::getter(fn brief_contributions)]
     pub type BriefContributions<T> = StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
 
     #[pallet::event]
@@ -89,7 +92,8 @@ pub mod pallet {
     pub enum Event<T: Config> {
         BriefSubmitted(BriefHash),
         AccountApproved(AccountIdOf<T>),
-        BriefEvolutionOccured(BriefHash),
+        BriefEvolution(BriefHash),
+        BriefContribution(BriefHash),
     }
 
     #[pallet::error]
@@ -136,7 +140,7 @@ pub mod pallet {
             // Or if they are not voted by governance, be voted in by another approved freelancer?
             // todo.
 
-            //FreelanceFellowship::<T>::insert(&account_id, ());
+            FreelanceFellowship::<T>::insert(&account_id, ());
             Self::deposit_event(Event::<T>::AccountApproved(account_id));
 
             Ok(())
@@ -153,12 +157,14 @@ pub mod pallet {
             applicant: AccountIdOf<T>,
             budget: BalanceOf<T>,
             initial_contribution: BalanceOf<T>,
-            brief_hash: BriefHash,
+            brief_id: BriefHash,
             currency_id: CurrencyId,
             milestones: BoundedBriefMilestones<T>,
         ) -> DispatchResult
         {
             let who = ensure_signed(origin)?;
+
+            ensure!(Briefs::<T>::get(brief_id).is_none(), Error::<T>::BriefAlreadyExists);
 
             if !brief_owners.contains(&who) {
                 brief_owners
@@ -167,12 +173,19 @@ pub mod pallet {
             }
 
             // todo freelancer fellowship handler
-            //ensure!(
-            //    FreelanceFellowship::<T>::contains_key(&applicant),
-            //    Error::<T>::OnlyApprovedAccountPermitted
-            //);
+            ensure!(
+                FreelanceFellowship::<T>::contains_key(&applicant),
+                Error::<T>::OnlyApprovedAccountPermitted
+            );
 
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
+
+            if initial_contribution > 0u32.into() {
+                BriefContributions::<T>::mutate(&brief_id, |contributions| {
+                    // this should never fail as the the bound is ensure when a brief is created.
+                    contributions.try_insert(who, initial_contribution).map_err(|_|Error::<T>::TooManyBriefOwners);
+                });
+            }
 
             let brief = BriefData::new(
                 brief_owners,
@@ -184,9 +197,9 @@ pub mod pallet {
                 milestones,
             );
 
-            Briefs::<T>::insert(brief_hash, brief);
+            Briefs::<T>::insert(brief_id, brief);
 
-            Self::deposit_event(Event::<T>::BriefSubmitted(brief_hash));
+            Self::deposit_event(Event::<T>::BriefSubmitted(brief_id));
 
             Ok(())
         }
@@ -203,7 +216,7 @@ pub mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let brief_record = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            let brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
             ensure!(
                 brief_record.brief_owners.contains(&who),
                 Error::<T>::NotAuthorised
@@ -212,26 +225,21 @@ pub mod pallet {
             let new_amount: BalanceOf<T> = brief_record.current_contribution + amount;
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
-            Briefs::<T>::mutate(brief_id, |maybe_brief| {
+            Briefs::<T>::mutate(&brief_id, |maybe_brief| {
                 if let Some(brief) = maybe_brief {
                     brief.current_contribution = new_amount;
                 }
             });
-            BriefContributions::<T>::mutate(brief_id, |maybe_cont| {
-                if let Some(mut contributions) = maybe_cont {
-                    if let Some(val) = contributions.get_mut(&who) {
-                        *val.saturating_add(amount);
-                    } else {
-                        contributions.insert(&who, amount);
-                    }
-                    Some(contributions)
+            BriefContributions::<T>::mutate(&brief_id, |contributions| {
+                if let Some(val) = contributions.get_mut(&who) {
+                    val.saturating_add(amount);
                 } else {
-                    let contributions: BoundedBriefContributions = BoundedBTreeMap::new();
-                    contributions.try_insert(&who, amount).expect("first element in btree will be lower than sane bound; qed");
-                    Some(contributions)
+                    // this should never fail as the the bound is ensure when a brief is created.
+                    contributions.try_insert(who, amount).map_err(|_|Error::<T>::TooManyBriefOwners);
                 }
             });
 
+            Self::deposit_event(Event::<T>::BriefContribution(brief_id));
             Ok(())
         }
 
@@ -257,7 +265,7 @@ pub mod pallet {
             )
             .map_err(|_| Error::<T>::BriefConversionFailedGeneric)?;
             // todo, finer grained err handling
-            Self::deposit_event(Event::<T>::BriefEvolutionOccured(brief_id));
+            Self::deposit_event(Event::<T>::BriefEvolution(brief_id));
             Ok(())
         }
 

@@ -68,6 +68,58 @@ fn create_brief_brief_owner_overflow() {
     });
 }
 
+#[test]
+fn test_create_brief_with_no_contribution() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+#[test]
+fn test_create_brief_with_contribution_and_contribute() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+#[test]
+fn test_create_brief_no_contribution_and_contribute() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+#[test]
+fn contribute_to_brief_not_brief_owner() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+
+#[test]
+fn contribute_to_brief_more_than_total_ok() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+#[test]
+fn runtime_api_is_zero_not_negative() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+
+#[test]
+fn create_brief_already_exists() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+
 fn run_to_block(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);
@@ -95,13 +147,13 @@ fn get_milestones(mut n: u32) -> BoundedBriefMilestones<Test> {
     }
     let mut btree_map: BoundedBriefMilestones<Test> = BTreeMap::new().try_into().expect("qed");
 
-    (0..n)
+    let _ = (0..n)
         .map(|i|{
             btree_map.try_insert(
                 i,
                 BriefMilestone {
                     milestone_key: i,
-                    percentage_to_unlock: 100/i,
+                    percentage_to_unlock: 100/n,
                     name: vec![i as u8].try_into().expect("qed")
                 }
             ).expect("qed")
