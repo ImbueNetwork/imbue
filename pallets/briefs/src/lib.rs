@@ -26,14 +26,14 @@ pub mod pallet {
     use sp_std::convert::{From, TryInto};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
-    use proposals::{Contribution, Milestone};
+    use proposals::{Contribution, ProposedMilestone};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
     pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>, <T as Config>::MaxBriefOwners>;
-    pub(crate) type BoundedBriefMilestones<T> = BoundedBTreeMap<MilestoneKey, Milestone, <T as Config>::MaxMilestones>;
+    pub(crate) type BoundedBriefMilestones<T> = BoundedBTreeMap<MilestoneKey, ProposedMilestone, <T as Config>::MaxMilestones>;
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 

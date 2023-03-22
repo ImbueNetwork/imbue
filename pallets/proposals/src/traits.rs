@@ -1,6 +1,6 @@
 use common_types::CurrencyId;
 use crate::{AccountIdOf, BalanceOf, TimestampOf};
-use crate::{Project, Projects, Contribution, MilestoneKey, Milestone};
+use crate::{Project, Projects, Contribution, MilestoneKey, Milestone, ProposedMilestone};
 use sp_std::collections::btree_map::BTreeMap;
 use sp_core::H256;
 use frame_support::inherent::Vec;
@@ -22,7 +22,7 @@ pub trait BriefEvolver<AccountId, Balance, BlockNumber, TimeStamp> {
         created_at: BlockNumber,
         brief_hash: H256,
         applicant: AccountId,
-        milestones: BTreeMap<MilestoneKey, Milestone>
+        milestones: BTreeMap<MilestoneKey, ProposedMilestone>
     ) -> Result<(), ()>;
 }
 
@@ -49,16 +49,27 @@ where
         created_at: BlockNumberFor<T>,
         brief_hash: H256,
         applicant: AccountIdOf<T>,
-        milestones: BTreeMap<MilestoneKey, Milestone>
+        milestones: BTreeMap<MilestoneKey, ProposedMilestone>
     ) -> Result<(), ()> {
 
         let project_key = crate::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
         crate::ProjectCount::<T>::put(project_key);
 
         let sum_of_contributions = contributions.values().fold(Default::default(), |acc: BalanceOf<T>, x| acc.saturating_add(x.value));
+        let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+
+        let _ =  milestones.into_iter().map(|i: (MilestoneKey, ProposedMilestone)| {
+            project_milestones.insert(i.0, Milestone {
+                project_key,
+                milestone_key: i.0,
+                name: i.1.name,
+                percentage_to_unlock: i.1.percentage_to_unlock,
+                is_approved: false,
+            })
+        }).collect::<Vec<_>>();
 
         let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>> = Project {
-            milestones,
+            milestones: project_milestones,
             contributions: contributions,
             currency_id,
             required_funds: sum_of_contributions,
