@@ -15,11 +15,8 @@ pub trait BriefEvolver<AccountId, Balance, BlockNumber, TimeStamp> {
     /// (if using crate) This function should bypass the usual checks when creating a proposal and
     /// instantiate everything carefully.  
     fn convert_to_proposal(
-        brief_owners: Vec<AccountId>,
-        bounty_total: Balance,
         currency_id: CurrencyId,
         current_contribution: BTreeMap<AccountId, Contribution<Balance, TimeStamp>>,
-        created_at: BlockNumber,
         brief_hash: H256,
         applicant: AccountId,
         milestones: BTreeMap<MilestoneKey, ProposedMilestone>
@@ -42,11 +39,8 @@ where
     >,
 {
     fn convert_to_proposal(
-        brief_owners: Vec<AccountIdOf<T>>,
-        bounty_total: BalanceOf<T>,
         currency_id: CurrencyId,
         contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>>,
-        created_at: BlockNumberFor<T>,
         brief_hash: H256,
         applicant: AccountIdOf<T>,
         milestones: BTreeMap<MilestoneKey, ProposedMilestone>
@@ -62,7 +56,6 @@ where
             project_milestones.insert(i.0, Milestone {
                 project_key,
                 milestone_key: i.0,
-                name: i.1.name,
                 percentage_to_unlock: i.1.percentage_to_unlock,
                 is_approved: false,
             })

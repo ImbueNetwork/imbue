@@ -183,7 +183,7 @@ pub mod pallet {
             if initial_contribution > 0u32.into() {
                 let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
                     // this should never fail as the the bound is ensure when a brief is created.
-                    let res = contributions.try_insert(who, 
+                    let _ = contributions.try_insert(who,
                         Contribution {
                             value: initial_contribution,
                             timestamp: pallet_timestamp::Pallet::<T>::get() 
@@ -267,11 +267,8 @@ pub mod pallet {
             let contributions = BriefContributions::<T>::get(brief_id);
 
             <T as Config>::BriefEvolver::convert_to_proposal(
-                brief.brief_owners.to_vec(),
-                brief.budget,
                 brief.currency_id,
                 contributions.into_inner(),
-                brief.created_at,
                 brief_id.clone(),
                 brief.applicant,
                 brief.milestones.into(),

@@ -6,6 +6,7 @@ use frame_support::{assert_noop, assert_ok, once_cell::sync::Lazy};
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
 use sp_std::collections::btree_map::BTreeMap;
+use proposals::ProposedMilestone;
 
 pub fn gen_hash(seed: u8) -> BriefHash {
     H256::from([seed; 32])
@@ -151,7 +152,7 @@ fn get_milestones(mut n: u32) -> BoundedBriefMilestones<Test> {
         .map(|i|{
             btree_map.try_insert(
                 i,
-                BriefMilestone {
+                ProposedMilestone {
                     milestone_key: i,
                     percentage_to_unlock: 100/n,
                     name: vec![i as u8].try_into().expect("qed")

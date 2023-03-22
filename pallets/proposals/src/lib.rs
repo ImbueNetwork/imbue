@@ -857,7 +857,6 @@ pub struct ProposedMilestone {
 pub struct Milestone {
     pub project_key: ProjectKey,
     pub milestone_key: MilestoneKey,
-    pub name: BoundedStringField,  
     pub percentage_to_unlock: u32,
     pub is_approved: bool,
 }
