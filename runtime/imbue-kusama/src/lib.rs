@@ -771,7 +771,7 @@ impl pallet_briefs::Config for Runtime {
     type RMultiCurrency = Currencies;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type BriefEvolver = pallet_briefs::Pallet<Runtime>;
+    type BriefEvolver = proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestones = MaxMilestones;
 }

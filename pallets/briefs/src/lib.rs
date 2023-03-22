@@ -2,8 +2,6 @@
 
 pub use pallet::*;
 
-pub mod traits;
-
 #[cfg(test)]
 mod mock;
 
@@ -16,7 +14,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
 
-    use crate::traits::BriefEvolver;
+    use proposals::traits::BriefEvolver;
     use common_types::CurrencyId;
     use frame_support::{
         pallet_prelude::*, 
@@ -28,14 +26,14 @@ pub mod pallet {
     use sp_std::convert::{From, TryInto};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
-    use proposals::Contribution;
+    use proposals::{Contribution, Milestone};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
     pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>, <T as Config>::MaxBriefOwners>;
-    pub(crate) type BoundedBriefMilestones<T> = BoundedBTreeMap<MilestoneKey, BriefMilestone, <T as Config>::MaxMilestones>;
+    pub(crate) type BoundedBriefMilestones<T> = BoundedBTreeMap<MilestoneKey, Milestone, <T as Config>::MaxMilestones>;
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 
@@ -56,7 +54,7 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The type that allows for evolution from brief to proposal.
-        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>, BriefMilestone, <Self as pallet_timestamp::Config>::Moment>;
+        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>, <Self as pallet_timestamp::Config>::Moment>;
 
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
@@ -337,10 +335,4 @@ pub mod pallet {
         }
     }
 
-    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-    pub struct BriefMilestone {
-        pub milestone_key: MilestoneKey,
-        pub percentage_to_unlock: u32,
-        pub name: BoundedVec<u8, ConstU32<1000>>,
-    }
 }

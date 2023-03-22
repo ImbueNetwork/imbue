@@ -56,7 +56,7 @@ impl<T: Config> Pallet<T> {
             let milestone = Milestone {
                 project_key,
                 milestone_key,
-                name: milestone.name.to_vec(),
+                name: milestone.name,
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             };
@@ -129,7 +129,7 @@ impl<T: Config> Pallet<T> {
             let milestone = Milestone {
                 project_key,
                 milestone_key,
-                name: milestone.name.to_vec(),
+                name: milestone.name,
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             };

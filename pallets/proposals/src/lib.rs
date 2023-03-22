@@ -16,6 +16,7 @@ use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
+pub mod traits;
 
 #[cfg(test)]
 mod mock;
@@ -852,11 +853,11 @@ pub struct ProposedMilestone {
 }
 
 /// The contribution users made to a project project.
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Milestone {
     pub project_key: ProjectKey,
     pub milestone_key: MilestoneKey,
-    pub name: Vec<u8>,  
+    pub name: BoundedStringField,  
     pub percentage_to_unlock: u32,
     pub is_approved: bool,
 }
