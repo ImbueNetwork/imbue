@@ -7,10 +7,7 @@ use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
 use sp_std::collections::btree_map::BTreeMap;
 use proposals::ProposedMilestone;
-<<<<<<< HEAD
 use std::convert::TryInto;
-=======
->>>>>>> f82d660383d52264b73756c197a1b2164e406936
 
 pub fn gen_hash(seed: u8) -> BriefHash {
     H256::from([seed; 32])
