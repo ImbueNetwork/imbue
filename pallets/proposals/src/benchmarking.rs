@@ -399,7 +399,6 @@ fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     let website: BoundedWebsiteUrlField = b"https://imbue.network".to_vec().try_into().unwrap();
     let milestones: BoundedProposedMilestones = vec![
         ProposedMilestone {
-            name: project_logo.clone(),
             percentage_to_unlock: 100 / milestone_max_count as u32,
         };
         milestone_max_count
