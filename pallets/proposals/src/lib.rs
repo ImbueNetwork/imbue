@@ -848,8 +848,8 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
 /// The contribution users made to a project project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
-    name: BoundedStringField,
-    percentage_to_unlock: u32,
+    pub name: BoundedStringField,
+    pub percentage_to_unlock: u32,
 }
 
 /// The contribution users made to a project project.

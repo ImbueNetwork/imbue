@@ -10,20 +10,15 @@ use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
-use crate::pallet::{
-    BriefHash,
-    BriefMilestone
-};
-use crate::traits::BriefEvolver;
 use crate::MilestoneKey;
-use proposals::Contribution;
+use proposals::traits::BriefEvolver;
+use proposals::{Contribution, Milestone, ProposedMilestone, Project, Projects};
 
 use common_types::CurrencyId;
 use core::marker::PhantomData;
 use frame_support::dispatch::EncodeLike;
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
-use proposals::{Project, Projects, Milestone};
 use sp_core::sr25519;
 use sp_runtime::DispatchResult;
 use sp_runtime::{
@@ -215,9 +210,13 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
 }
 
+struct MockEvolver<T> {
+    phantom: std::marker::PhantomData<T>,
+}
+
 // Requires binding howerver they may be a more succinct way of doing this.
 // This should be in the proposals pallet maybe;
-impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, BriefMilestone, BlockNumber> for proposals::Pallet<T>
+impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
 where
     Project<sp_core::sr25519::Public, u64, u64, u64>: EncodeLike<
         Project<
@@ -236,30 +235,26 @@ where
         currency_id: CurrencyId,
         contributions: BTreeMap<AccountId, Contribution<Balance, Moment>>,
         created_at: BlockNumber,
-        brief_hash: BriefHash,
+        brief_hash: H256,
         applicant: AccountId,
-        milestones: BTreeMap<MilestoneKey, BriefMilestone>
+        milestones: BTreeMap<MilestoneKey, ProposedMilestone>
     ) -> Result<(), ()> {
 
         let project_key = proposals::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
         proposals::ProjectCount::<T>::put(project_key);
 
+        let sum_of_contributions = contributions.values().fold(Default::default(), |acc: Balance, x| acc.saturating_add(x.value));
         let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-        let _ = milestones.into_values().map(|m| {
-            project_milestones.insert(m.milestone_key, 
-                proposals::Milestone {
-                    project_key: project_key,
-                    milestone_key: m.milestone_key,
-                    name: m.name.into(),
-                    percentage_to_unlock: m.percentage_to_unlock,
-                    is_approved: false,
-                }
-            )
+
+        let _ =  milestones.into_iter().map(|i: (MilestoneKey, ProposedMilestone)| {
+            project_milestones.insert(i.0, Milestone {
+                project_key,
+                milestone_key: i.0,
+                name: i.1.name,
+                percentage_to_unlock: i.1.percentage_to_unlock,
+                is_approved: false,
+            })
         }).collect::<Vec<_>>();
-        
-        let sum_of_contributions = contributions.values().map(|c| {
-            c.value
-        }).sum();
 
         let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
             milestones: project_milestones,
