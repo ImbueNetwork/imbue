@@ -10,6 +10,9 @@ use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
+use crate::pallet::{
+    BriefHash,
+};
 use crate::MilestoneKey;
 use proposals::traits::BriefEvolver;
 use proposals::{Contribution, Milestone, ProposedMilestone, Project, Projects};
@@ -32,6 +35,7 @@ use sp_std::{
     str,
     vec::Vec,
 };
+use proposals::ProposedMilestone;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -111,6 +115,7 @@ impl pallet_transaction_payment::Config for Test {
     type FeeMultiplierUpdate = ();
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
+
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -217,31 +222,16 @@ struct MockEvolver<T> {
 // Requires binding howerver they may be a more succinct way of doing this.
 // This should be in the proposals pallet maybe;
 impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
-where
-    Project<sp_core::sr25519::Public, u64, u64, u64>: EncodeLike<
-        Project<
-            <T as frame_system::Config>::AccountId,
-            <<T as proposals::Config>::MultiCurrency as MultiCurrency<
-                <T as frame_system::Config>::AccountId,
-            >>::Balance,
-            <T as frame_system::Config>::BlockNumber,
-            <T as pallet_timestamp::Config>::Moment,
-        >,
-    >,
 {
     fn convert_to_proposal(
-        brief_owners: Vec<AccountId>,
-        bounty_total: Balance,
         currency_id: CurrencyId,
         contributions: BTreeMap<AccountId, Contribution<Balance, Moment>>,
-        created_at: BlockNumber,
-        brief_hash: H256,
+        brief_hash: BriefHash,
         applicant: AccountId,
         milestones: BTreeMap<MilestoneKey, ProposedMilestone>
     ) -> Result<(), ()> {
-
-        let project_key = proposals::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
-        proposals::ProjectCount::<T>::put(project_key);
+        let project_key = proposals::ProjectCount::<Test>::get().checked_add(1).ok_or(())?;
+        proposals::ProjectCount::<Test>::put(project_key);
 
         let sum_of_contributions = contributions.values().fold(Default::default(), |acc: Balance, x| acc.saturating_add(x.value));
         let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
@@ -269,7 +259,7 @@ where
             funding_threshold_met: true,
             cancelled: false,
             agreement_hash: brief_hash,
-            // Maybe we dont need this new field because we have create_block_number 
+            // Maybe we dont need this new field because we have create_block_number
             work_started_at: Some(System::block_number()),
         };
 

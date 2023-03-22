@@ -176,7 +176,6 @@ mod test {
     use super::*;
     use mock::*;
     use sp_core::sr25519;
-    use sp_std::vec::Vec;
     use v0::{ContributionV0, ProjectV0};
 
     #[test]
@@ -193,14 +192,12 @@ mod test {
                 Milestone {
                     project_key,
                     milestone_key: 0,
-                    name: Vec::new(),
                     percentage_to_unlock: 40,
                     is_approved: true,
                 },
                 Milestone {
                     project_key,
                     milestone_key: 1,
-                    name: Vec::new(),
                     percentage_to_unlock: 60,
                     is_approved: true,
                 },
