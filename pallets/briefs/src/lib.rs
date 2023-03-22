@@ -25,7 +25,7 @@ pub mod pallet {
         BoundedBTreeMap
     };
     use frame_system::pallet_prelude::*;
-    use std::convert::From;
+    use sp_std::convert::From;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
     use proposals::Contribution;

@@ -1,7 +1,9 @@
 use crate::pallet::{BriefHash, MilestoneKey};
 use proposals::Contribution;
 use common_types::CurrencyId;
-use std::collections::BTreeMap;
+use sp_std::collections::btree_map::BTreeMap;
+use frame_support::inherent::Vec;
+
 
 pub trait BriefEvolver<AccountId, Balance, BlockNumber, Milestone, Timestamp> {
     /// Convert a brief into a proposal, the bounty must be fully funded before calling this.
