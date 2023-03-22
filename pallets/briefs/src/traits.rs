@@ -29,7 +29,7 @@ pub trait BriefEvolver<AccountId, Balance, BlockNumber, Milestone, TimeStamp> {
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
-impl<T: proposals::Config> BriefEvolver<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, BriefMilestone, TimestampOf<T>> for proposals::Pallet<T>
+impl<T: proposals::Config> BriefEvolver<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, BriefMilestone, TimestampOf<T>> for crate::Pallet<T>
 where
     Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>: EncodeLike<
         Project<
