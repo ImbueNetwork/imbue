@@ -170,6 +170,8 @@ std = [
 	'cumulus-primitives-utility/std',
 	'common-traits/std',
 	'common-types/std',
+	'pallet-briefs/std'
+
 ]
 
 runtime-benchmarks = [
