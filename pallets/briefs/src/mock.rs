@@ -35,7 +35,6 @@ use sp_std::{
     str,
     vec::Vec,
 };
-use proposals::ProposedMilestone;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -222,6 +221,17 @@ struct MockEvolver<T> {
 // Requires binding howerver they may be a more succinct way of doing this.
 // This should be in the proposals pallet maybe;
 impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
+where
+    Project<AccountId, Balance, BlockNumber, Moment>: EncodeLike<
+        Project<
+            <T as frame_system::Config>::AccountId,
+            <<T as proposals::Config>::MultiCurrency as MultiCurrency<
+                <T as frame_system::Config>::AccountId,
+            >>::Balance,
+            <T as frame_system::Config>::BlockNumber,
+            <T as pallet_timestamp::Config>::Moment,
+        >,
+    >,
 {
     fn convert_to_proposal(
         currency_id: CurrencyId,
@@ -240,7 +250,6 @@ impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment>
             project_milestones.insert(i.0, Milestone {
                 project_key,
                 milestone_key: i.0,
-                name: i.1.name,
                 percentage_to_unlock: i.1.percentage_to_unlock,
                 is_approved: false,
             })

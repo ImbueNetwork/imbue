@@ -155,7 +155,6 @@ fn get_milestones(mut n: u32) -> BoundedBriefMilestones<Test> {
                 i,
                 ProposedMilestone {
                     percentage_to_unlock: 100/n,
-                    name: vec![i as u8].try_into().expect("qed")
                 }
             ).expect("qed")
         }).collect::<Vec<_>>();
