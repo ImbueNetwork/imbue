@@ -2,7 +2,7 @@
 
 pub use pallet::*;
 
-mod traits;
+pub mod traits;
 
 #[cfg(test)]
 mod mock;
@@ -25,7 +25,7 @@ pub mod pallet {
         BoundedBTreeMap
     };
     use frame_system::pallet_prelude::*;
-    use sp_std::convert::From;
+    use sp_std::convert::{From, TryInto};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_core::{Hasher, H256};
     use proposals::Contribution;
@@ -34,12 +34,12 @@ pub mod pallet {
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-    pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>, <T as Config>::MaxBriefOwners>;
+    pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>, <T as Config>::MaxBriefOwners>;
     pub(crate) type BoundedBriefMilestones<T> = BoundedBTreeMap<MilestoneKey, BriefMilestone, <T as Config>::MaxMilestones>;
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 
-    pub(crate) type BriefHash = H256;
+    pub type BriefHash = H256;
     pub(crate) type MilestoneKey = u32;
 
     #[pallet::pallet]
@@ -47,7 +47,7 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         /// The hasher used to generate the brief id.
@@ -56,7 +56,7 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The type that allows for evolution from brief to proposal.
-        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>, BriefMilestone, BlockNumberFor<Self>>;
+        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>, BriefMilestone, <Self as pallet_timestamp::Config>::Moment>;
 
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
@@ -188,7 +188,7 @@ pub mod pallet {
                     let res = contributions.try_insert(who, 
                         Contribution {
                             value: initial_contribution,
-                            timestamp: frame_system::Pallet::<T>::block_number() 
+                            timestamp: pallet_timestamp::Pallet::<T>::get() 
                         }
                     ).map_err(|_|Error::<T>::TooManyBriefOwners)?;
 
@@ -237,13 +237,13 @@ pub mod pallet {
             let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
                 if let Some(val) = contributions.get_mut(&who) {
                     val.value.saturating_add(amount);
-                    val.timestamp = frame_system::Pallet::<T>::block_number();
+                    val.timestamp = pallet_timestamp::Pallet::<T>::get();
                 } else {
                     // this should never fail as the the bound is ensure when a brief is created.
                     contributions.try_insert(who, {
                         Contribution {
                             value: amount,
-                            timestamp: frame_system::Pallet::<T>::block_number(),
+                            timestamp: pallet_timestamp::Pallet::<T>::get(),
                         }
                     }
                     ).map_err(|_|Error::<T>::TooManyBriefOwners)?;

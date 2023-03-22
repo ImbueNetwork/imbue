@@ -16,6 +16,7 @@ use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
+
 #[cfg(test)]
 mod mock;
 
@@ -43,10 +44,10 @@ type MaxWhitelistPerProject = ConstU32<10000>;
 pub type RoundKey = u32;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
-type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
+pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 pub type ProjectAccountId<T> = <T as frame_system::Config>::AccountId;
 pub type Refunds<T> = Vec<(
     AccountIdOf<T>,
