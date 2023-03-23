@@ -4,12 +4,12 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::pallet_prelude::Hooks;
 use frame_support::{assert_noop, assert_ok};
+use orml_traits::MultiCurrency;
+use proposals::ProposedMilestone;
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
 use sp_std::collections::btree_map::BTreeMap;
-use proposals::ProposedMilestone;
 use std::convert::TryInto;
-use orml_traits::MultiCurrency;
 
 pub fn gen_hash(seed: u8) -> BriefHash {
     H256::from([seed; 32])
@@ -106,14 +106,13 @@ fn test_create_brief_no_contribution_and_contribute() {
             get_milestones(10),
         ));
 
-        (0..5)
-            .for_each(|_| {
-                assert_ok!(BriefsMod::contribute_to_brief(
-                    RuntimeOrigin::signed(*BOB),
-                    brief_id,
-                    contribution_value,
-                ));
-            });
+        (0..5).for_each(|_| {
+            assert_ok!(BriefsMod::contribute_to_brief(
+                RuntimeOrigin::signed(*BOB),
+                brief_id,
+                contribution_value,
+            ));
+        });
 
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -122,9 +121,8 @@ fn test_create_brief_no_contribution_and_contribute() {
 
         assert_eq!(
             latest_event,
-            mock::RuntimeEvent::from(briefs::Event::BriefContribution(
-                brief_id
-            )));
+            mock::RuntimeEvent::from(briefs::Event::BriefContribution(brief_id))
+        );
 
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &*BOB),
@@ -149,11 +147,14 @@ fn contribute_to_brief_not_brief_owner() {
             get_milestones(10),
         ));
 
-        assert_noop!(BriefsMod::contribute_to_brief(
-                    RuntimeOrigin::signed(*ALICE),
-                    brief_id,
-                    contribution_value,
-                ), Error::<Test>::NotAuthorised);
+        assert_noop!(
+            BriefsMod::contribute_to_brief(
+                RuntimeOrigin::signed(*ALICE),
+                brief_id,
+                contribution_value,
+            ),
+            Error::<Test>::NotAuthorised
+        );
     });
 }
 
@@ -174,11 +175,10 @@ fn contribute_to_brief_more_than_total_ok() {
             get_milestones(10),
         ));
         assert_ok!(BriefsMod::contribute_to_brief(
-                    RuntimeOrigin::signed(*BOB),
-                    brief_id,
-                    contribution_value,
-                ));
-
+            RuntimeOrigin::signed(*BOB),
+            brief_id,
+            contribution_value,
+        ));
     });
 }
 
@@ -206,17 +206,19 @@ fn create_brief_already_exists() {
             get_milestones(10),
         ));
 
-        assert_noop!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
-            get_brief_owners(1),
-            *ALICE,
-            contribution_value,
-            contribution_value,
-            brief_id,
-            CurrencyId::Native,
-            get_milestones(10),
-        ),Error::<Test>::BriefAlreadyExists);
-
+        assert_noop!(
+            BriefsMod::create_brief(
+                RuntimeOrigin::signed(*BOB),
+                get_brief_owners(1),
+                *ALICE,
+                contribution_value,
+                contribution_value,
+                brief_id,
+                CurrencyId::Native,
+                get_milestones(10),
+            ),
+            Error::<Test>::BriefAlreadyExists
+        );
     });
 }
 
@@ -249,12 +251,15 @@ fn get_milestones(mut n: u32) -> BoundedBriefMilestones<Test> {
 
     let _ = (0..n)
         .map(|i| {
-            btree_map.try_insert(
-                i,
-                ProposedMilestone {
-                    percentage_to_unlock: 100 / n,
-                },
-            ).expect("qed")
-        }).collect::<Vec<_>>();
+            btree_map
+                .try_insert(
+                    i,
+                    ProposedMilestone {
+                        percentage_to_unlock: 100 / n,
+                    },
+                )
+                .expect("qed")
+        })
+        .collect::<Vec<_>>();
     btree_map
 }

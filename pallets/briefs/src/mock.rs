@@ -10,12 +10,10 @@ use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
-use crate::pallet::{
-    BriefHash,
-};
+use crate::pallet::BriefHash;
 use crate::MilestoneKey;
 use proposals::traits::BriefEvolver;
-use proposals::{Contribution, Milestone, ProposedMilestone, Project, Projects};
+use proposals::{Contribution, Milestone, Project, Projects, ProposedMilestone};
 
 use common_types::CurrencyId;
 use frame_support::dispatch::EncodeLike;
@@ -112,7 +110,6 @@ impl pallet_transaction_payment::Config for Test {
     type FeeMultiplierUpdate = ();
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
-
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -236,22 +233,34 @@ where
         contributions: BTreeMap<AccountId, Contribution<Balance, Moment>>,
         brief_hash: BriefHash,
         applicant: AccountId,
-        milestones: BTreeMap<MilestoneKey, ProposedMilestone>
+        milestones: BTreeMap<MilestoneKey, ProposedMilestone>,
     ) -> Result<(), ()> {
-        let project_key = proposals::ProjectCount::<Test>::get().checked_add(1).ok_or(())?;
+        let project_key = proposals::ProjectCount::<Test>::get()
+            .checked_add(1)
+            .ok_or(())?;
         proposals::ProjectCount::<Test>::put(project_key);
 
-        let sum_of_contributions = contributions.values().fold(Default::default(), |acc: Balance, x| acc.saturating_add(x.value));
+        let sum_of_contributions = contributions
+            .values()
+            .fold(Default::default(), |acc: Balance, x| {
+                acc.saturating_add(x.value)
+            });
         let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
 
-        let _ =  milestones.into_iter().map(|i: (MilestoneKey, ProposedMilestone)| {
-            project_milestones.insert(i.0, Milestone {
-                project_key,
-                milestone_key: i.0,
-                percentage_to_unlock: i.1.percentage_to_unlock,
-                is_approved: false,
+        let _ = milestones
+            .into_iter()
+            .map(|i: (MilestoneKey, ProposedMilestone)| {
+                project_milestones.insert(
+                    i.0,
+                    Milestone {
+                        project_key,
+                        milestone_key: i.0,
+                        percentage_to_unlock: i.1.percentage_to_unlock,
+                        is_approved: false,
+                    },
+                )
             })
-        }).collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
             milestones: project_milestones,

@@ -14,26 +14,26 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
 
-    use proposals::traits::BriefEvolver;
     use common_types::CurrencyId;
-    use frame_support::{
-        pallet_prelude::*, 
-        sp_runtime::Saturating, 
-        traits::Get, 
-        BoundedBTreeMap
-    };
+    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
-    use sp_std::convert::{From, TryInto};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use sp_core::{Hasher, H256};
+    use proposals::traits::BriefEvolver;
     use proposals::{Contribution, ProposedMilestone};
+    use sp_core::{Hasher, H256};
+    use sp_std::convert::{From, TryInto};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-    pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>, <T as Config>::MaxBriefOwners>;
-    pub(crate) type BoundedBriefMilestones<T> = BoundedBTreeMap<MilestoneKey, ProposedMilestone, <T as Config>::MaxMilestones>;
+    pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<
+        AccountIdOf<T>,
+        Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
+        <T as Config>::MaxBriefOwners,
+    >;
+    pub(crate) type BoundedBriefMilestones<T> =
+        BoundedBTreeMap<MilestoneKey, ProposedMilestone, <T as Config>::MaxMilestones>;
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 
@@ -54,7 +54,12 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The type that allows for evolution from brief to proposal.
-        type BriefEvolver: BriefEvolver<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>, <Self as pallet_timestamp::Config>::Moment>;
+        type BriefEvolver: BriefEvolver<
+            AccountIdOf<Self>,
+            BalanceOf<Self>,
+            BlockNumberFor<Self>,
+            <Self as pallet_timestamp::Config>::Moment,
+        >;
 
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
@@ -76,16 +81,18 @@ pub mod pallet {
     /// Value: Unit
     #[pallet::storage]
     #[pallet::getter(fn approved_accounts)]
-    pub type FreelanceFellowship<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
+    pub type FreelanceFellowship<T> =
+        StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
     /// The contributions to a brief, in a single currency.
-    /// Its in a BTree to reduce storage call when we have to inevitably iterate the keys. 
+    /// Its in a BTree to reduce storage call when we have to inevitably iterate the keys.
     /// Key 1: BriefHash
     /// Key 2: AccountIdOf<T>
-    /// Value: Balance 
+    /// Value: Balance
     #[pallet::storage]
     #[pallet::getter(fn brief_contributions)]
-    pub type BriefContributions<T> = StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
+    pub type BriefContributions<T> =
+        StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -130,11 +137,13 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-
         /// Approve an account so that they can be accepted as an applicant.
         #[pallet::call_index(1)]
         #[pallet::weight(10_000)]
-        pub fn add_to_fellowship(origin: OriginFor<T>, account_id: AccountIdOf<T>) -> DispatchResult {
+        pub fn add_to_fellowship(
+            origin: OriginFor<T>,
+            account_id: AccountIdOf<T>,
+        ) -> DispatchResult {
             <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
 
             // Or if they are not voted by governance, be voted in by another approved freelancer?
@@ -145,7 +154,6 @@ pub mod pallet {
 
             Ok(())
         }
-
 
         /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
@@ -160,11 +168,13 @@ pub mod pallet {
             brief_id: BriefHash,
             currency_id: CurrencyId,
             milestones: BoundedBriefMilestones<T>,
-        ) -> DispatchResult
-        {
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            ensure!(Briefs::<T>::get(brief_id).is_none(), Error::<T>::BriefAlreadyExists);
+            ensure!(
+                Briefs::<T>::get(brief_id).is_none(),
+                Error::<T>::BriefAlreadyExists
+            );
 
             if !brief_owners.contains(&who) {
                 brief_owners
@@ -183,17 +193,19 @@ pub mod pallet {
             if initial_contribution > 0u32.into() {
                 let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
                     // this should never fail as the the bound is ensure when a brief is created.
-                    let _ = contributions.try_insert(who,
-                        Contribution {
-                            value: initial_contribution,
-                            timestamp: pallet_timestamp::Pallet::<T>::get() 
-                        }
-                    ).map_err(|_|Error::<T>::TooManyBriefOwners)?;
+                    let _ = contributions
+                        .try_insert(
+                            who,
+                            Contribution {
+                                value: initial_contribution,
+                                timestamp: pallet_timestamp::Pallet::<T>::get(),
+                            },
+                        )
+                        .map_err(|_| Error::<T>::TooManyBriefOwners)?;
 
                     Ok::<(), DispatchError>(())
                 })?;
             }
-
 
             let brief = BriefData::new(
                 brief_owners,
@@ -239,13 +251,14 @@ pub mod pallet {
                     val.timestamp = pallet_timestamp::Pallet::<T>::get();
                 } else {
                     // this should never fail as the the bound is ensure when a brief is created.
-                    contributions.try_insert(who, {
-                        Contribution {
-                            value: amount,
-                            timestamp: pallet_timestamp::Pallet::<T>::get(),
-                        }
-                    }
-                    ).map_err(|_|Error::<T>::TooManyBriefOwners)?;
+                    contributions
+                        .try_insert(who, {
+                            Contribution {
+                                value: amount,
+                                timestamp: pallet_timestamp::Pallet::<T>::get(),
+                            }
+                        })
+                        .map_err(|_| Error::<T>::TooManyBriefOwners)?;
                 }
 
                 Ok::<(), DispatchError>(())
@@ -274,9 +287,7 @@ pub mod pallet {
                 brief.applicant,
                 brief.milestones.into(),
             )
-            .map_err(|_|{
-                Error::<T>::BriefConversionFailedGeneric
-            })?;
+            .map_err(|_| Error::<T>::BriefConversionFailedGeneric)?;
             // todo, finer grained err handling
 
             BriefContributions::<T>::remove(brief_id);
@@ -285,7 +296,6 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::BriefEvolution(brief_id));
             Ok(())
         }
-
     }
 
     /// The data assocaited with a Brief
@@ -304,7 +314,9 @@ pub mod pallet {
         /// Used in the runtime api to quickly get the remainig funds as stated in the budget.
         pub fn get_remaining_bounty(brief_id: BriefHash) -> BalanceOf<T> {
             if let Some(brief) = Briefs::<T>::get(brief_id) {
-                let sum: BalanceOf<T> = BriefContributions::<T>::get(brief_id).values().fold(Default::default(), |acc, x| acc.saturating_add(x.value));
+                let sum: BalanceOf<T> = BriefContributions::<T>::get(brief_id)
+                    .values()
+                    .fold(Default::default(), |acc, x| acc.saturating_add(x.value));
 
                 brief.budget.saturating_sub(sum)
             } else {
@@ -332,5 +344,4 @@ pub mod pallet {
             }
         }
     }
-
 }

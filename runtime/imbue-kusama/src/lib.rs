@@ -756,8 +756,6 @@ impl proposals::Config for Runtime {
     type WeightInfo = ();
 }
 
-
-
 parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
