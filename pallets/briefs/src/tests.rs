@@ -9,6 +9,7 @@ use sp_runtime::DispatchError::BadOrigin;
 use sp_std::collections::btree_map::BTreeMap;
 use proposals::ProposedMilestone;
 use std::convert::TryInto;
+use orml_traits::MultiCurrency;
 
 pub fn gen_hash(seed: u8) -> BriefHash {
     H256::from([seed; 32])
@@ -79,7 +80,7 @@ fn test_create_brief_with_no_contribution_ok() {
             get_brief_owners(1),
             *ALICE,
             100000,
-            0,
+            10,
             gen_hash(1),
             CurrencyId::Native,
             get_milestones(10),
@@ -88,24 +89,32 @@ fn test_create_brief_with_no_contribution_ok() {
 }
 
 #[test]
-fn test_create_brief_with_contribution_and_contribute() {
+fn test_create_brief_no_contribution_and_contribute() {
     build_test_externality().execute_with(|| {
-            let brief_id  = gen_hash(1);
-            assert_ok!(BriefsMod::create_brief(
+        let brief_id = gen_hash(1);
+        let contribution_value = 1000;
+        let bob_initial_balance = Tokens::free_balance(CurrencyId::Native, &*BOB);
+
+        assert_ok!(BriefsMod::create_brief(
             RuntimeOrigin::signed(*BOB),
             get_brief_owners(1),
             *ALICE,
             100000,
-            1000,
+            0,
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
         ));
-        assert_ok!(BriefsMod::contribute_to_brief(
-            RuntimeOrigin::signed(*BOB),
-            brief_id,
-            5000
-        ));
+
+        (0..5)
+            .for_each(|_| {
+                assert_ok!(BriefsMod::contribute_to_brief(
+                    RuntimeOrigin::signed(*BOB),
+                    brief_id,
+                    contribution_value,
+                ));
+            });
+
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
             .expect("Expected at least one RuntimeEventRecord to be found")
@@ -114,15 +123,13 @@ fn test_create_brief_with_contribution_and_contribute() {
         assert_eq!(
             latest_event,
             mock::RuntimeEvent::from(briefs::Event::BriefContribution(
-               brief_id
+                brief_id
             )));
-    });
-}
 
-#[test]
-fn test_create_brief_no_contribution_and_contribute() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &*BOB),
+            bob_initial_balance - contribution_value.saturating_mul(5)
+        );
     });
 }
 
@@ -185,12 +192,12 @@ fn get_milestones(mut n: u32) -> BoundedBriefMilestones<Test> {
     let mut btree_map: BoundedBriefMilestones<Test> = BTreeMap::new().try_into().expect("qed");
 
     let _ = (0..n)
-        .map(|i|{
+        .map(|i| {
             btree_map.try_insert(
                 i,
                 ProposedMilestone {
-                    percentage_to_unlock: 100/n,
-                }
+                    percentage_to_unlock: 100 / n,
+                },
             ).expect("qed")
         }).collect::<Vec<_>>();
     btree_map
