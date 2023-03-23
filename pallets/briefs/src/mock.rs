@@ -18,12 +18,10 @@ use proposals::traits::BriefEvolver;
 use proposals::{Contribution, Milestone, ProposedMilestone, Project, Projects};
 
 use common_types::CurrencyId;
-use core::marker::PhantomData;
 use frame_support::dispatch::EncodeLike;
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
 use sp_core::sr25519;
-use sp_runtime::DispatchResult;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},

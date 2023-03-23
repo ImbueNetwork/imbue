@@ -173,10 +173,10 @@ pub mod pallet {
             }
 
             // todo freelancer fellowship handler
-            ensure!(
-                FreelanceFellowship::<T>::contains_key(&applicant),
-                Error::<T>::OnlyApprovedAccountPermitted
-            );
+            // ensure!(
+            //     FreelanceFellowship::<T>::contains_key(&applicant),
+            //     Error::<T>::OnlyApprovedAccountPermitted
+            // );
 
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 

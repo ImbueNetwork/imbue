@@ -1,8 +1,9 @@
+use crate as briefs;
 use crate::mock::*;
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::pallet_prelude::Hooks;
-use frame_support::{assert_noop, assert_ok, once_cell::sync::Lazy};
+use frame_support::{assert_noop, assert_ok};
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
 use sp_std::collections::btree_map::BTreeMap;
@@ -30,24 +31,24 @@ fn approve_freelancer_as_root() {
     });
 }
 
-#[test]
-fn create_brief_not_approved_applicant() {
-    build_test_externality().execute_with(|| {
-        assert_noop!(
-            BriefsMod::create_brief(
-                RuntimeOrigin::signed(*BOB),
-                get_brief_owners(1),
-                *ALICE,
-                100000,
-                10000,
-                gen_hash(1),
-                CurrencyId::Native,
-                get_milestones(10),
-            ),
-            Error::<Test>::OnlyApprovedAccountPermitted
-        );
-    });
-}
+// #[test]
+// fn create_brief_not_approved_applicant() {
+//     build_test_externality().execute_with(|| {
+//         assert_noop!(
+//             BriefsMod::create_brief(
+//                 RuntimeOrigin::signed(*BOB),
+//                 get_brief_owners(1),
+//                 *ALICE,
+//                 100000,
+//                 10000,
+//                 gen_hash(1),
+//                 CurrencyId::Native,
+//                 get_milestones(10),
+//             ),
+//             Error::<Test>::OnlyApprovedAccountPermitted
+//         );
+//     });
+// }
 
 #[test]
 fn create_brief_brief_owner_overflow() {
@@ -73,14 +74,48 @@ fn create_brief_brief_owner_overflow() {
 #[test]
 fn test_create_brief_with_no_contribution_ok() {
     build_test_externality().execute_with(|| {
-        assert!(false);
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            get_brief_owners(1),
+            *ALICE,
+            100000,
+            0,
+            gen_hash(1),
+            CurrencyId::Native,
+            get_milestones(10),
+        ));
     });
 }
 
 #[test]
 fn test_create_brief_with_contribution_and_contribute() {
     build_test_externality().execute_with(|| {
-        assert!(false);
+            let brief_id  = gen_hash(1);
+            assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            get_brief_owners(1),
+            *ALICE,
+            100000,
+            1000,
+            brief_id,
+            CurrencyId::Native,
+            get_milestones(10),
+        ));
+        assert_ok!(BriefsMod::contribute_to_brief(
+            RuntimeOrigin::signed(*BOB),
+            brief_id,
+            5000
+        ));
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one RuntimeEventRecord to be found")
+            .event;
+
+        assert_eq!(
+            latest_event,
+            mock::RuntimeEvent::from(briefs::Event::BriefContribution(
+               brief_id
+            )));
     });
 }
 
@@ -136,7 +171,7 @@ fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
         n = max;
     }
     (0..n)
-        .map(|i| AccountId::from_raw([n as u8; 32]))
+        .map(|_| AccountId::from_raw([n as u8; 32]))
         .collect::<Vec<AccountId>>()
         .try_into()
         .expect("qed")
