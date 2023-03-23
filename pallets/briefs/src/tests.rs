@@ -136,15 +136,49 @@ fn test_create_brief_no_contribution_and_contribute() {
 #[test]
 fn contribute_to_brief_not_brief_owner() {
     build_test_externality().execute_with(|| {
-        assert!(false);
+        let brief_id = gen_hash(1);
+        let contribution_value = 1000;
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            get_brief_owners(1),
+            *ALICE,
+            100000,
+            100,
+            brief_id,
+            CurrencyId::Native,
+            get_milestones(10),
+        ));
+
+        assert_noop!(BriefsMod::contribute_to_brief(
+                    RuntimeOrigin::signed(*ALICE),
+                    brief_id,
+                    contribution_value,
+                ), Error::<Test>::NotAuthorised);
     });
 }
-
 
 #[test]
 fn contribute_to_brief_more_than_total_ok() {
     build_test_externality().execute_with(|| {
-        assert!(false);
+        let brief_id = gen_hash(1);
+        let contribution_value = 1000;
+
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            get_brief_owners(1),
+            *ALICE,
+            contribution_value,
+            contribution_value,
+            brief_id,
+            CurrencyId::Native,
+            get_milestones(10),
+        ));
+        assert_ok!(BriefsMod::contribute_to_brief(
+                    RuntimeOrigin::signed(*BOB),
+                    brief_id,
+                    contribution_value,
+                ));
+
     });
 }
 
@@ -155,14 +189,36 @@ fn runtime_api_is_zero_not_negative() {
     });
 }
 
-
 #[test]
 fn create_brief_already_exists() {
     build_test_externality().execute_with(|| {
-        assert!(false);
+        let brief_id = gen_hash(1);
+        let contribution_value = 1000;
+
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            get_brief_owners(1),
+            *ALICE,
+            contribution_value,
+            contribution_value,
+            brief_id,
+            CurrencyId::Native,
+            get_milestones(10),
+        ));
+
+        assert_noop!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            get_brief_owners(1),
+            *ALICE,
+            contribution_value,
+            contribution_value,
+            brief_id,
+            CurrencyId::Native,
+            get_milestones(10),
+        ),Error::<Test>::BriefAlreadyExists);
+
     });
 }
-
 
 fn run_to_block(n: u64) {
     while System::block_number() < n {

@@ -194,6 +194,7 @@ pub mod pallet {
                 })?;
             }
 
+
             let brief = BriefData::new(
                 brief_owners,
                 budget,
