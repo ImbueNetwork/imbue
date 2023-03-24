@@ -180,6 +180,7 @@ mod test {
 
     #[test]
     fn migrate_v0_to_v1() {
+
         let contribution_value = 10_000_00u64;
 
         build_test_externality().execute_with(|| {
@@ -244,7 +245,7 @@ mod test {
 
             assert_eq!(
                 &old_project.contributions[0].value,
-                &migrated_project.contributions.get(&alice).unwrap().value
+                &migrated_project.contributions.get(&ALICE).unwrap().value
             );
 
             assert_eq!(
@@ -257,9 +258,11 @@ mod test {
     #[test]
     fn migrate_v1_to_v2() {
         let contribution_value = 10_000_00u64;
+
         build_test_externality().execute_with(|| {
             let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
             let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+
             let project_key = 1;
 
             let mut contributions: BTreeMap<
@@ -268,7 +271,7 @@ mod test {
             > = BTreeMap::new();
 
             contributions.insert(
-                alice,
+                *ALICE,
                 Contribution {
                     value: contribution_value,
                     timestamp: TimestampOf::<Test>::default(),
@@ -310,8 +313,8 @@ mod test {
             );
 
             assert_eq!(
-                &old_project.contributions.get(&alice).unwrap().value,
-                &migrated_project.contributions.get(&alice).unwrap().value
+                &old_project.contributions.get(&*ALICE).unwrap().value,
+                &migrated_project.contributions.get(&*ALICE).unwrap().value
             );
 
             assert_eq!(Some(100), migrated_project.work_started_at);

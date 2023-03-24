@@ -10,6 +10,10 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, Pair, Public, H256};
 
+use sp_runtime::BuildStorage;
+
+use frame_support::once_cell::sync::Lazy;
+use sp_core::sr25519;
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
@@ -246,10 +250,28 @@ parameter_types! {
     pub const MaxInstructions: u32 = 100;
 }
 
-pub fn build_test_externality() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
+pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
+pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
+pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
+
+pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
+    let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
+
+    GenesisConfig::default().assimilate_storage(&mut t).unwrap();
+
+    orml_tokens::GenesisConfig::<Test> {
+        balances: {
+            vec![*ALICE, *BOB, *CHARLIE]
+                .into_iter()
+                .map(|id| (id, CurrencyId::Native, 1000000))
+                .collect::<Vec<_>>()
+        },
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
+
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| System::set_block_number(1));
     ext

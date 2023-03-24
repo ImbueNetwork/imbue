@@ -61,6 +61,7 @@ type BoundedWhitelistSpots<T> =
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
 type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
+pub type AgreementHash = H256;
 
 #[frame_support::pallet]
 pub mod pallet {
