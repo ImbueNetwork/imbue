@@ -180,12 +180,11 @@ mod test {
 
     #[test]
     fn migrate_v0_to_v1() {
-
         let contribution_value = 10_000_00u64;
 
         build_test_externality().execute_with(|| {
-            let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-            let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+            // let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+            // let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
 
             let project_key = 1;
 
@@ -206,11 +205,11 @@ mod test {
 
             let old_contributions = vec![
                 ContributionV0 {
-                    account_id: alice,
+                    account_id: *ALICE,
                     value: contribution_value,
                 },
                 ContributionV0 {
-                    account_id: bob,
+                    account_id: *BOB,
                     value: contribution_value,
                 },
             ];
@@ -225,7 +224,7 @@ mod test {
                 currency_id: CurrencyId::KSM,
                 required_funds: (100_000_000u32).into(),
                 withdrawn_funds: (0u32).into(),
-                initiator: alice,
+                initiator: *ALICE,
                 create_block_number: 100u64,
                 approved_for_funding: true,
                 funding_threshold_met: true,
@@ -260,8 +259,8 @@ mod test {
         let contribution_value = 10_000_00u64;
 
         build_test_externality().execute_with(|| {
-            let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-            let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
+            // let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+            // let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
 
             let project_key = 1;
 
@@ -279,7 +278,7 @@ mod test {
             );
 
             contributions.insert(
-                bob,
+                *BOB,
                 Contribution {
                     value: contribution_value,
                     timestamp: TimestampOf::<Test>::default(),
@@ -297,7 +296,7 @@ mod test {
                 required_funds: (100_000_000u32).into(),
                 raised_funds: (100_000_000u32).into(),
                 withdrawn_funds: (0u32).into(),
-                initiator: alice,
+                initiator: *ALICE,
                 create_block_number: 100u64,
                 approved_for_funding: true,
                 funding_threshold_met: true,

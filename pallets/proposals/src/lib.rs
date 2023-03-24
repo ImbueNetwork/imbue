@@ -403,23 +403,6 @@ pub mod pallet {
         }
     }
 
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config>(core::marker::PhantomData<T>);
-
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self(core::marker::PhantomData)
-        }
-    }
-
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-        fn build(&self) {
-            StorageVersion::<T>::put(Release::V1);
-        }
-    }
-
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.

@@ -1,4 +1,3 @@
-use super::*;
 use crate as proposals;
 use frame_support::{
     parameter_types,
@@ -8,43 +7,36 @@ use frame_support::{
 };
 
 use frame_system::EnsureRoot;
-use sp_core::{sr25519::Signature, Pair, Public, H256};
+use sp_core::{sr25519::Signature, H256};
 
-use sp_runtime::BuildStorage;
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
+use crate::MilestoneKey;
+use proposals::{Contribution, Milestone, Project, Projects, ProposedMilestone};
 
+use common_types::CurrencyId;
+use frame_support::dispatch::EncodeLike;
 use frame_support::once_cell::sync::Lazy;
+use orml_traits::MultiCurrency;
 use sp_core::sr25519;
+use sp_runtime::{
+    testing::Header,
+    traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+    BuildStorage,
+};
+use sp_std::collections::btree_map::BTreeMap;
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
     vec::Vec,
 };
 
-use sp_runtime::{
-    testing::Header,
-    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-};
-
-use common_types::CurrencyId;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-pub type BlockNumber = u32;
+pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u64;
-
-fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
-
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
+pub type Moment = u64;
 
 parameter_types! {
     pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
@@ -68,11 +60,11 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Proposals: proposals::{Pallet, Call, Storage, Event<T>},
         Tokens: orml_tokens::{Pallet, Storage, Event<T>},
         Currencies: orml_currencies::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
+        Proposals: proposals::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -130,7 +122,7 @@ impl frame_system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = sp_core::sr25519::Public;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type BlockHashCount = BlockHashCount;
@@ -147,7 +139,6 @@ impl frame_system::Config for Test {
 }
 
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-pub type AccountPublic = <Signature as Verify>::Signer;
 
 impl frame_system::offchain::SigningTypes for Test {
     type Public = <Signature as Verify>::Signer;
@@ -176,22 +167,23 @@ impl pallet_balances::Config for Test {
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
-/*pub struct DoNothingRouter;
-impl SendXcm for DoNothingRouter {
-    fn send_xcm(_dest: impl Into<MultiLocation>, _msg: Xcm<()>) -> SendResult {
-        Ok(())
-    }
-}*/
-// For testing the module, we construct a mock runtime.
 
 parameter_types! {
     pub const MinimumPeriod: u64 = 1;
 }
 impl pallet_timestamp::Config for Test {
-    type Moment = u64;
+    type Moment = Moment;
     type OnTimestampSet = ();
     type MinimumPeriod = MinimumPeriod;
     type WeightInfo = ();
+}
+
+parameter_types! {
+    pub MaximumApplicants: u32 = 10_000u32;
+    pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
+    pub MaxBriefOwners: u32 = 100;
+    pub MaxMilestones: u32 = 100;
+
 }
 
 parameter_types! {
@@ -202,11 +194,12 @@ parameter_types! {
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
 }
+
 impl proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type MultiCurrency = Currencies;
+    type MultiCurrency = Tokens;
     type WeightInfo = ();
     type MaxProjectsPerRound = ConstU32<4>;
     // Adding 2 weeks as th expiration time
@@ -225,10 +218,6 @@ parameter_types! {
     pub const MaxAdditionalFields: u32 = 2;
     pub const MaxRegistrars: u32 = 20;
 }
-//ord_parameter_types! {
-//    pub const One: u64 = 1;
-//    pub const Two: u64 = 2;
-//}
 
 impl pallet_identity::Config for Test {
     type RuntimeEvent = RuntimeEvent;
@@ -249,7 +238,6 @@ parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
-
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
@@ -259,7 +247,9 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         .build_storage::<Test>()
         .unwrap();
 
-    GenesisConfig::default().assimilate_storage(&mut t).unwrap();
+    orml_tokens::GenesisConfig::<Test>::default()
+        .assimilate_storage(&mut t)
+        .unwrap();
 
     orml_tokens::GenesisConfig::<Test> {
         balances: {
