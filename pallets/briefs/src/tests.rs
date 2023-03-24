@@ -2,7 +2,6 @@ use crate as briefs;
 use crate::mock::*;
 use crate::*;
 use common_types::CurrencyId;
-use frame_support::pallet_prelude::Hooks;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 use proposals::ProposedMilestone;
@@ -73,7 +72,7 @@ fn create_brief_brief_owner_overflow() {
 }
 
 #[test]
-fn test_create_brief_with_no_contribution_ok() {
+fn create_brief_with_no_contribution_ok() {
     build_test_externality().execute_with(|| {
         assert_ok!(BriefsMod::create_brief(
             RuntimeOrigin::signed(*BOB),
@@ -89,7 +88,7 @@ fn test_create_brief_with_no_contribution_ok() {
 }
 
 #[test]
-fn test_create_brief_no_contribution_and_contribute() {
+fn create_brief_no_contribution_and_contribute() {
     build_test_externality().execute_with(|| {
         let brief_id = gen_hash(1);
         let contribution_value = 1000;
@@ -222,12 +221,33 @@ fn create_brief_already_exists() {
     });
 }
 
-fn run_to_block(n: u64) {
-    while System::block_number() < n {
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-        BriefsMod::on_initialize(System::block_number());
-    }
+#[test]
+fn only_applicant_can_start_work() {
+    build_test_externality().execute_with(|| {
+        let brief_id = gen_hash(1);
+        let contribution_value = 1000;
+
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            get_brief_owners(1),
+            *ALICE,
+            contribution_value,
+            contribution_value,
+            brief_id,
+            CurrencyId::Native,
+            get_milestones(10),
+        ));
+
+        assert_noop!(
+            BriefsMod::commence_work(RuntimeOrigin::signed(*BOB), brief_id,),
+            Error::<Test>::NotAuthorised
+        );
+
+        assert_ok!(BriefsMod::commence_work(
+            RuntimeOrigin::signed(*ALICE),
+            brief_id,
+        ));
+    });
 }
 
 fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
