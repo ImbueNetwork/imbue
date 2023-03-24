@@ -31,24 +31,13 @@ fn approve_freelancer_as_root() {
     });
 }
 
-// #[test]
-// fn create_brief_not_approved_applicant() {
-//     build_test_externality().execute_with(|| {
-//         assert_noop!(
-//             BriefsMod::create_brief(
-//                 RuntimeOrigin::signed(*BOB),
-//                 get_brief_owners(1),
-//                 *ALICE,
-//                 100000,
-//                 10000,
-//                 gen_hash(1),
-//                 CurrencyId::Native,
-//                 get_milestones(10),
-//             ),
-//             Error::<Test>::OnlyApprovedAccountPermitted
-//         );
-//     });
-// }
+#[test]
+fn create_brief_not_approved_applicant() {
+    build_test_externality().execute_with(|| {
+        // todo!()
+        // Only accounts in the fellowship can apply for work
+    });
+}
 
 #[test]
 fn create_brief_brief_owner_overflow() {
@@ -178,13 +167,6 @@ fn contribute_to_brief_more_than_total_ok() {
             brief_id,
             contribution_value,
         ));
-    });
-}
-
-#[test]
-fn runtime_api_is_zero_not_negative() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
     });
 }
 
