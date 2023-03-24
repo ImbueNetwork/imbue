@@ -338,7 +338,6 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         .unwrap();
 
     GenesisConfig::default().assimilate_storage(&mut t).unwrap();
-
     orml_tokens::GenesisConfig::<Test> {
         balances: {
             vec![*ALICE, *BOB, *CHARLIE]
@@ -351,6 +350,16 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
+    ext.execute_with(|| {
+        let initial_balance = 10_000_000_000u64;
+        System::set_block_number(1);
+        Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
+        Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
+        Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
+
+        let uu = Tokens::free_balance(CurrencyId::Native, &*ALICE);
+        let uus = Tokens::free_balance(CurrencyId::Native, &*BOB);
+        let uusd = Tokens::free_balance(CurrencyId::Native, &*CHARLIE);
+    });
     ext
 }
