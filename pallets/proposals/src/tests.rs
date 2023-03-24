@@ -7,6 +7,7 @@ use frame_support::{
     assert_noop, assert_ok, bounded_btree_map, bounded_vec,
     dispatch::{DispatchErrorWithPostInfo, PostDispatchInfo},
 };
+use orml_currencies::Currency;
 use sp_core::sr25519;
 use sp_core::H256;
 use sp_runtime::DispatchError::Token;
@@ -680,7 +681,7 @@ fn test_submit_milestone() {
 
         run_to_block(3);
 
-        //Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
 
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
@@ -1265,7 +1266,6 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
 #[test]
 fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone_completed() {
-    let required_funds = 1000000u64;
 
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
@@ -1285,8 +1285,8 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
     let proposed_milestones1 = proposed_milestones.clone();
 
     build_test_externality().execute_with(|| {
-        let additional_amount = 100000000u64;
-
+        let alice_initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
+        let required_funds = 1_000_000u64;
         create_project_multiple_milestones(proposed_milestones);
 
         let project_key = 0;
@@ -1301,9 +1301,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         )
         .unwrap();
 
-        let value = 500000u64;
-        Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, value).unwrap();
-        Proposals::contribute(RuntimeOrigin::signed(*CHARLIE), None, project_key, value).unwrap();
+        let contribution_value = 500000u64;
+        Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, contribution_value).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(*CHARLIE), None, project_key, contribution_value).unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
@@ -1331,13 +1331,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
-        assert_ne!(
-            Balances::free_balance(&*ALICE),
-            additional_amount + required_funds
-        );
         assert_eq!(
-            Balances::free_balance(&*ALICE),
-            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
+            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            alice_initial_balance - contribution_value  + (contribution_value.saturating_mul(4) * (total_percentage_to_withdraw as u64) / 100)
         );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
@@ -1548,6 +1544,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
     build_test_externality().execute_with(|| {
         //create_project extrinsic
         create_project();
+        let alice_initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
@@ -1577,10 +1574,9 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
         .unwrap();
 
         //ensuring ALICE's balance has reduced after contribution
-        let ALICE_balance_post_contribute: u64 = 8_000;
         assert_eq!(
-            ALICE_balance_post_contribute,
-            Balances::free_balance(&*ALICE)
+            Tokens::free_balance(CurrencyId::Native, &ALICE),
+            alice_initial_balance - contribution_amount
         );
 
         Proposals::refund(RuntimeOrigin::root(), project_key).unwrap();
@@ -1601,7 +1597,10 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
         run_to_block(System::block_number() + 1);
 
         //ensuring the refunded amount was transferred back successfully
-        assert_eq!(additional_amount, Balances::free_balance(&*ALICE));
+        assert_eq!(
+            alice_initial_balance,
+            Tokens::free_balance(CurrencyId::Native, &*ALICE)
+        );
     });
 }
 
