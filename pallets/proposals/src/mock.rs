@@ -7,7 +7,7 @@ use frame_support::{
 };
 
 use frame_system::EnsureRoot;
-use sp_core::{sr25519::Signature, H256};
+use sp_core::{sr25519::Signature, Pair, Public, H256};
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::MilestoneKey;
@@ -241,6 +241,21 @@ parameter_types! {
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
+pub type AccountPublic = <Signature as Verify>::Signer;
+
+fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+    TPublic::Pair::from_string(&format!("//{}", seed), None)
+        .expect("static values are valid; qed")
+        .public()
+}
+
+pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+    where
+        AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+{
+    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()

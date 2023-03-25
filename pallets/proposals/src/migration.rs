@@ -183,11 +183,7 @@ mod test {
         let contribution_value = 10_000_00u64;
 
         build_test_externality().execute_with(|| {
-            // let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-            // let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-
             let project_key = 1;
-
             let old_milestones = vec![
                 Milestone {
                     project_key,
