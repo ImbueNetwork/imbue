@@ -7,10 +7,10 @@ use frame_support::{
     assert_noop, assert_ok, bounded_btree_map, bounded_vec,
     dispatch::{DispatchErrorWithPostInfo, PostDispatchInfo},
 };
-use orml_currencies::Currency;
+
 use sp_core::sr25519;
 use sp_core::H256;
-use sp_runtime::DispatchError::Token;
+
 use sp_std::vec::Vec;
 
 #[test]
@@ -345,7 +345,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
         )
         .unwrap();
 
-        let additional_amount = 10_000;
+        let _additional_amount = 10_000;
 
         run_to_block(4);
         //contribute extrinsic
@@ -415,7 +415,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
         )
         .unwrap();
 
-        let additional_amount = contribution_amount;
+        let _additional_amount = contribution_amount;
 
         run_to_block(4);
 
@@ -472,7 +472,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
         )
         .unwrap();
 
-        let additional_amount = contribution_amount;
+        let _additional_amount = contribution_amount;
 
         run_to_block(4);
 
@@ -578,7 +578,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
         )
         .unwrap();
 
-        let additional_amount = contribution_amount;
+        let _additional_amount = contribution_amount;
 
         run_to_block(4);
         //contribute extrinsic
@@ -628,7 +628,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
         )
         .unwrap();
 
-        let additional_amount = contribution_amount;
+        let _additional_amount = contribution_amount;
 
         run_to_block(4);
         //contribute extrinsic
@@ -1285,7 +1285,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 
     build_test_externality().execute_with(|| {
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
-        let required_funds = 1_000_000u64;
+        let _required_funds = 1_000_000u64;
         create_project_multiple_milestones(proposed_milestones);
 
         let project_key = 0;
@@ -1571,7 +1571,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
         )
         .unwrap();
 
-        let additional_amount = 10_000;
+        let _additional_amount = 10_000;
 
         run_to_block(4);
         //contribute extrinsic
@@ -2277,7 +2277,7 @@ fn test_refunds_state_is_handled_correctly() {
             run_to_block_with_no_idle_space(System::block_number() + 1u64);
 
             // Get the total number of refunds completed.
-            let refunds_after_block = accounts
+            let _refunds_after_block = accounts
                 .iter()
                 .map(|acc| Tokens::free_balance(CurrencyId::Native, acc))
                 .filter(|balance| balance == &20_000u64)
@@ -2288,7 +2288,7 @@ fn test_refunds_state_is_handled_correctly() {
             // assert_eq!(refunds_after_block - refunds_completed, 2usize);
             refunds_completed += 2;
 
-            let test = RefundQueue::<Test>::get().len();
+            let _test = RefundQueue::<Test>::get().len();
             // And that they have been removed from the refund list.
             assert_eq!(
                 RefundQueue::<Test>::get().len(),

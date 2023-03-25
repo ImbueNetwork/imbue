@@ -9,21 +9,16 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, Pair, Public, H256};
 
-use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
-use crate::MilestoneKey;
-use proposals::{Contribution, Milestone, Project, Projects, ProposedMilestone};
-
 use common_types::CurrencyId;
-use frame_support::dispatch::EncodeLike;
+
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
 use sp_core::sr25519;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-    BuildStorage,
 };
-use sp_std::collections::btree_map::BTreeMap;
+
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
@@ -257,7 +252,7 @@ where
 }
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default()
+    let t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
 
@@ -280,9 +275,9 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     ext.execute_with(|| {
         let initial_balance = 10_000_000u64;
         System::set_block_number(1);
-        Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
-        Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
-        Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
     });
     ext
 }

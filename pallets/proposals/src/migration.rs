@@ -175,7 +175,7 @@ pub mod v2 {
 mod test {
     use super::*;
     use mock::*;
-    use sp_core::sr25519;
+    
     use v0::{ContributionV0, ProjectV0};
 
     #[test]
