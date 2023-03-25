@@ -112,7 +112,7 @@ impl<T: Config> Pallet<T> {
         let mut project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-        ensure!(project.initiator == who, Error::<T>::InvalidAccount);
+        ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
 
         ensure!(
             project.approved_for_funding == false,

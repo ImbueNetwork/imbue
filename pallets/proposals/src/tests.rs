@@ -50,7 +50,7 @@ fn create_a_test_project_and_add_whitelist() {
     let max_cap = 1_000_000u64;
     let project_key = 0;
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
         let whitelist = bounded_btree_map!(*ALICE => max_cap);
 
         Proposals::add_project_whitelist(RuntimeOrigin::signed(*ALICE), project_key, whitelist)
@@ -72,7 +72,8 @@ fn create_a_test_project_and_add_whitelist_from_non_initiator_fail() {
     let max_cap = 1000000u64;
     let project_key = 0;
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
+
         let whitelist = bounded_btree_map!(*ALICE => max_cap);
 
         assert_noop!(
@@ -91,7 +92,8 @@ fn create_a_test_project_and_add_whitelist_from_non_initiator_fail() {
 #[test]
 fn create_a_test_project_remove_whitelist() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
+
         Proposals::remove_project_whitelist(RuntimeOrigin::signed(*ALICE), 0).unwrap();
         let latest_event = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -107,7 +109,7 @@ fn create_a_test_project_remove_whitelist() {
 #[test]
 fn create_a_test_project_and_schedule_round() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         assert_ok!(Proposals::schedule_round(
             RuntimeOrigin::root(),
@@ -123,7 +125,7 @@ fn create_a_test_project_and_schedule_round() {
 #[test]
 fn schedule_round_invalid_project_key() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         assert_noop!(
             Proposals::schedule_round(
@@ -148,7 +150,7 @@ fn schedule_round_invalid_project_key() {
 #[test]
 fn schedule_round_invalid_end_block_no() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         assert_noop!(
             Proposals::schedule_round(
@@ -173,7 +175,7 @@ fn schedule_round_invalid_end_block_no() {
 #[test]
 fn cancel_round_no_active_round() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
@@ -202,7 +204,7 @@ fn test_funding_round_is_created_on_schedule_round() {
 
     //create_project extrinsic
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         Proposals::schedule_round(
             RuntimeOrigin::root(),
@@ -232,7 +234,8 @@ fn test_funding_round_is_created_on_schedule_round() {
 fn cancel_round() {
     //create_project extrinsic
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
+
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         //schedule_round extrinsic
         Proposals::schedule_round(
@@ -266,7 +269,7 @@ fn cancel_round() {
 #[test]
 fn test_cancelling_started_round() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
@@ -298,7 +301,7 @@ fn test_cancelling_started_round() {
 //only user with root privilege can cancel the round
 fn test_cancelling_round_without_root_privilege() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
@@ -328,7 +331,7 @@ fn test_cancelling_round_without_root_privilege() {
 fn create_a_test_project_and_schedule_round_and_contribute() {
     build_test_externality().execute_with(|| {
         //create_project extrinsic
-        create_project();
+        assert_ok!(create_project());
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
@@ -393,7 +396,7 @@ fn create_a_test_project_and_schedule_round_and_contribute() {
 fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contribute() {
     build_test_externality().execute_with(|| {
         //create_project extrinsic
-        create_project();
+        assert_ok!(create_project());
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
@@ -450,7 +453,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contr
 fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap_and_contribute() {
     build_test_externality().execute_with(|| {
         //create_project extrinsic
-        create_project();
+        assert_ok!(create_project());
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
@@ -507,7 +510,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap
 fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_over_capfail() {
     build_test_externality().execute_with(|| {
         //create_project extrinsic
-        create_project();
+        assert_ok!(create_project());
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key: u32 = 0;
@@ -561,7 +564,7 @@ fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_ove
 fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
     build_test_externality().execute_with(|| {
         //create_project extrinsic
-        create_project();
+        assert_ok!(create_project());
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key = 0;
@@ -611,7 +614,7 @@ fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
 fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
     build_test_externality().execute_with(|| {
         //create_project extrinsic
-        create_project();
+        assert_ok!(create_project());
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         let project_key = 0;
@@ -659,7 +662,7 @@ fn test_submit_milestone() {
     let voting_round_key = 2;
 
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -707,7 +710,7 @@ fn test_submit_milestone() {
 //negative test case - cannot submit milestones for unapproved projects
 fn test_submit_milestone_without_approval() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -751,7 +754,7 @@ fn test_submit_milestone_without_approval() {
 fn test_voting_on_a_milestone() {
     let milestone1_key = 0;
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -812,7 +815,7 @@ fn test_voting_on_a_cancelled_round() {
     let round_key = 1;
 
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![project_key];
@@ -885,7 +888,7 @@ fn test_finalize_a_milestone_without_voting() {
     proposed_milestones.push(milestone3);
 
     build_test_externality().execute_with(|| {
-        create_project_multiple_milestones(proposed_milestones);
+        assert_ok!(create_project_multiple_milestones(proposed_milestones));
 
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -977,7 +980,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
     proposed_milestones.push(milestone3);
 
     build_test_externality().execute_with(|| {
-        create_project_multiple_milestones(proposed_milestones);
+        assert_ok!(create_project_multiple_milestones(proposed_milestones));
 
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -1102,7 +1105,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
     let proposed_milestones1 = proposed_milestones.clone();
 
     build_test_externality().execute_with(|| {
-        create_project_multiple_milestones(proposed_milestones);
+        assert_ok!(create_project_multiple_milestones(proposed_milestones));
 
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -1286,7 +1289,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
     build_test_externality().execute_with(|| {
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
         let _required_funds = 1_000_000u64;
-        create_project_multiple_milestones(proposed_milestones);
+        assert_ok!(create_project_multiple_milestones(proposed_milestones));
 
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -1370,7 +1373,8 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 fn test_withdraw_upon_project_approval_and_finalised_voting() {
     let milestone1_key = 0;
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
+
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &*ALICE);
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -1447,7 +1451,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
 #[test]
 fn test_withdraw_from_non_initiator_account() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         let project_key = 0;
 
@@ -1482,7 +1486,7 @@ fn submit_multiple_milestones() {
     let project_keys: BoundedProjectKeys = bounded_vec![0];
 
     build_test_externality().execute_with(|| {
-        create_project_multiple_milestones(proposed_milestones);
+        assert_ok!(create_project_multiple_milestones(proposed_milestones));
 
         let project_key = 0;
         let milestone_index_1 = 0;
@@ -1553,7 +1557,8 @@ fn submit_multiple_milestones() {
 fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
     build_test_externality().execute_with(|| {
         //create_project extrinsic
-        create_project();
+        assert_ok!(create_project());
+
         let alice_initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -1639,7 +1644,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
 
     build_test_externality().execute_with(|| {
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &*ALICE);
-        create_project_multiple_milestones(proposed_milestones);
+        assert_ok!(create_project_multiple_milestones(proposed_milestones));
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         let milestone1_key = 0;
@@ -1801,7 +1806,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
 #[test]
 fn test_schedule_round_fails_gracefully_with_empty_vec() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
 
         assert_noop!(
             Proposals::schedule_round(
@@ -1823,7 +1828,7 @@ fn test_raising_a_vote_of_no_confidence() {
 
     build_test_externality().execute_with(|| {
         // Create a project for both ALICE and BOB.
-        create_project();
+        assert_ok!(create_project());
 
         // Schedule a round to allow for contributions.
         Proposals::schedule_round(
@@ -1883,7 +1888,7 @@ fn test_adding_vote_of_no_confidence() {
     let project_key = 0u32;
     build_test_externality().execute_with(|| {
         // Create a project for both ALICE and BOB.
-        create_project();
+        assert_ok!(create_project());
 
         //schedule a round to allow for contributions.
         Proposals::schedule_round(
@@ -1975,7 +1980,7 @@ fn test_finalise_vote_of_no_confidence_with_threshold_met() {
     let project_key = 0u32;
     build_test_externality().execute_with(|| {
         // Create a project for both ALICE and BOB.
-        create_project();
+        assert_ok!(create_project());
 
         //schedule a round to allow for contributions.
         Proposals::schedule_round(
@@ -2056,7 +2061,7 @@ fn test_finalise_vote_of_no_confidence_below_threshold() {
     let project_key = 0u32;
     build_test_externality().execute_with(|| {
         // Create a project for both ALICE and BOB.
-        create_project();
+        assert_ok!(create_project());
 
         //schedule a round to allow for contributions.
         Proposals::schedule_round(
@@ -2129,7 +2134,8 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &*BOB);
         let project_key = 0u32;
         // Create a project for both ALICE and BOB.
-        create_project();
+        assert_ok!(create_project());
+
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
             System::block_number(),
@@ -2205,7 +2211,8 @@ fn test_refunds_go_back_to_contributors() {
     build_test_externality().execute_with(|| {
         let mut accounts: Vec<<Test as frame_system::Config>::AccountId> = vec![];
         let num_of_refunds: u32 = 100;
-        create_project();
+        assert_ok!(create_project());
+
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
             System::block_number(),
@@ -2250,7 +2257,8 @@ fn test_refunds_state_is_handled_correctly() {
         // Only works if
         let num_of_refunds: u32 = 20;
 
-        create_project();
+        assert_ok!(create_project());
+
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
             System::block_number(),
@@ -2305,7 +2313,10 @@ fn test_refunds_state_is_handled_correctly() {
 #[test]
 fn test_finalise_milestone_is_ok_on_threshold_vote() {
     build_test_externality().execute_with(|| {
-        create_project();
+        assert_ok!(create_project());
+        let project_id = 0;
+        let round_id = 1;
+
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
             System::block_number(),
@@ -2323,13 +2334,18 @@ fn test_finalise_milestone_is_ok_on_threshold_vote() {
 
         let _ = Proposals::contribute(
             RuntimeOrigin::signed(*ALICE),
-            Some(1),
-            0u32,
+            Some(round_id),
+            project_id,
             yes_contribution,
         )
         .unwrap();
-        let _ = Proposals::contribute(RuntimeOrigin::signed(*BOB), Some(1), 0u32, no_contribution)
-            .unwrap();
+        let _ = Proposals::contribute(
+            RuntimeOrigin::signed(*BOB),
+            Some(round_id),
+            project_id,
+            no_contribution,
+        )
+        .unwrap();
 
         run_to_block(System::block_number() + 100);
 
@@ -2353,141 +2369,103 @@ fn test_finalise_milestone_is_ok_on_threshold_vote() {
     })
 }
 
-// #[test]
-//update project required funds and milestones - positive test case
-// fn update_an_existing_project() {
-//
-//     let BOB = get_account_id_from_seed::<sr25519::Public>("Bob");
-//     let updated_project_name = b"Farmer's Project Sudan2"
-//         .to_vec()
-//         .try_into()
-//         .expect("Invalid input");
-//     let expected_project_name_in_event = b"Farmer's Project Sudan2"
-//         .to_vec()
-//         .try_into()
-//         .expect("Invalid input");
-//     let updated_project_logo = b"Some logo".to_vec().try_into().expect("Invalid input");
-//     let updated_project_description = b"Raise funds for Farmer's project phase 2"
-//         .to_vec()
-//         .try_into()
-//         .expect("Invalid input");
-//     let updated_project_website = b"www.ab.com".to_vec().try_into().expect("Invalid input");
-//     let additional_amount = 100000000u64;
-//     let updated_required_funds = 2_500_000u64;
-//     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
-//     let milestone1: ProposedMilestone = ProposedMilestone {
-//         name: b"milestone 1"
-//             .to_vec()
-//             .try_into()
-//             .expect("input should be of decent length"),
-//         percentage_to_unlock: 20,
-//     };
-//     let milestone2: ProposedMilestone = ProposedMilestone {
-//         name: b"milestone 2"
-//             .to_vec()
-//             .try_into()
-//             .expect("input should be of decent length"),
-//         percentage_to_unlock: 30,
-//     };
-//
-//     let milestone3: ProposedMilestone = ProposedMilestone {
-//         name: b"milestone 3"
-//             .to_vec()
-//             .try_into()
-//             .expect("input should be of decent length"),
-//         percentage_to_unlock: 50,
-//     };
-//     proposed_milestones.push(milestone1);
-//     proposed_milestones.push(milestone2);
-//     proposed_milestones.push(milestone3);
-//
-//     let mut updated_proposed_milestones: Vec<ProposedMilestone> = Vec::new();
-//     let updated_milestone1: ProposedMilestone = ProposedMilestone {
-//         name: b"milestone 1"
-//             .to_vec()
-//             .try_into()
-//             .expect("input should be of decent length"),
-//         percentage_to_unlock: 70,
-//     };
-//     let updated_milestone2: ProposedMilestone = ProposedMilestone {
-//         name: b"milestone 2"
-//             .to_vec()
-//             .try_into()
-//             .expect("input should be of decent length"),
-//         percentage_to_unlock: 30,
-//     };
-//
-//     updated_proposed_milestones.push(updated_milestone1);
-//     updated_proposed_milestones.push(updated_milestone2);
-//
-//     build_test_externality().execute_with(|| {
-//
-//         create_project_multiple_milestones(proposed_milestones);
-//
-//         let project_key = 0;
-//
-//         assert_ok!(Proposals::update_project(
-//             RuntimeOrigin::signed(*ALICE),
-//             project_key,
-//             updated_project_name,
-//             updated_project_logo,
-//             updated_project_description,
-//             updated_project_website,
-//             updated_proposed_milestones
-//                 .try_into()
-//                 .expect("Invalid proposed milestones"),
-//             updated_required_funds,
-//             CurrencyId::Native,
-//         ));
-//
-//         let latest_event = <frame_system::Pallet<Test>>::events()
-//             .pop()
-//             .expect("Expected at least one RuntimeEventRecord to be found")
-//             .event;
-//         assert_eq!(
-//             latest_event,
-//             mock::RuntimeEvent::from(proposals::Event::ProjectUpdated(
-//                 ALICE,
-//                 expected_project_name_in_event,
-//                 project_key,
-//                 updated_required_funds
-//             ))
-//         );
-//     });
-// }
+#[test]
+// update project required funds and milestones - positive test case
+fn update_an_existing_project() {
+    let updated_required_funds = 2_500_000u64;
+    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
+    let milestone1: ProposedMilestone = ProposedMilestone {
+        percentage_to_unlock: 20,
+    };
+    let milestone2: ProposedMilestone = ProposedMilestone {
+        percentage_to_unlock: 30,
+    };
 
-// #[test]
-// fn only_the_initiator_can_update_project() {
-//
-//     let BOB = get_account_id_from_seed::<sr25519::Public>("Bob");
-//
-//     build_test_externality().execute_with(|| {
-//         deposit_initial_balance(&ALICE, &BOB, 1000000);
-//         create_project(ALICE.clone());
-//         let updated_milestone1: ProposedMilestone = ProposedMilestone {
-//             name: b"milestone 1"
-//                 .to_vec()
-//                 .try_into()
-//                 .expect("input should be of decent length"),
-//             percentage_to_unlock: 70,
-//         };
-//
-//         assert_noop!(
-//             Proposals::update_project(
-//                 RuntimeOrigin::signed(*BOB),
-//                 100000u32,
-//                 b"abc".to_vec().try_into().expect("qed"),
-//                 b"abc".to_vec().try_into().expect("qed"),
-//                 b"abc".to_vec().try_into().expect("qed"),
-//                 b"abc".to_vec().try_into().expect("qed"),
-//                 vec![updated_milestone1].try_into().expect("qed"),
-//                 10000,
-//                 CurrencyId::Native,
-//             ),
-//             Error::<Test>::InvalidAccount
-//         );
-//     })
-// }
+    let milestone3: ProposedMilestone = ProposedMilestone {
+        percentage_to_unlock: 50,
+    };
+    proposed_milestones.push(milestone1);
+    proposed_milestones.push(milestone2);
+    proposed_milestones.push(milestone3);
+
+    let mut updated_proposed_milestones: Vec<ProposedMilestone> = Vec::new();
+    let updated_milestone1: ProposedMilestone = ProposedMilestone {
+        percentage_to_unlock: 70,
+    };
+    let updated_milestone2: ProposedMilestone = ProposedMilestone {
+        percentage_to_unlock: 30,
+    };
+
+    updated_proposed_milestones.push(updated_milestone1);
+    updated_proposed_milestones.push(updated_milestone2);
+
+    build_test_externality().execute_with(|| {
+        assert_ok!(create_project_multiple_milestones(proposed_milestones));
+
+        let project_key = 0;
+
+        assert_ok!(Proposals::update_project(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            updated_proposed_milestones
+                .try_into()
+                .expect("Invalid proposed milestones"),
+            updated_required_funds,
+            CurrencyId::Native,
+        ));
+
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one RuntimeEventRecord to be found")
+            .event;
+        assert_eq!(
+            latest_event,
+            mock::RuntimeEvent::from(proposals::Event::ProjectUpdated(
+                *ALICE,
+                project_key,
+                updated_required_funds
+            ))
+        );
+    });
+}
+
+#[test]
+fn only_the_initiator_can_update_project() {
+    build_test_externality().execute_with(|| {
+        assert_ok!(create_project());
+        let project_id = 0;
+        let updated_funds = 1_000;
+        let updated_milestone1: ProposedMilestone = ProposedMilestone {
+            percentage_to_unlock: 70,
+        };
+
+        let updated_milestone2: ProposedMilestone = ProposedMilestone {
+            percentage_to_unlock: 30,
+        };
+
+        assert_noop!(
+            Proposals::update_project(
+                RuntimeOrigin::signed(*BOB),
+                project_id,
+                vec![updated_milestone1.clone()].try_into().expect("qed"),
+                updated_funds,
+                CurrencyId::Native,
+            ),
+            Error::<Test>::MilestonesTotalPercentageMustEqual100
+        );
+
+        assert_noop!(
+            Proposals::update_project(
+                RuntimeOrigin::signed(*BOB),
+                project_id,
+                vec![updated_milestone1, updated_milestone2].try_into().expect("qed"),
+                updated_funds,
+                CurrencyId::Native,
+            ),
+            Error::<Test>::UserIsNotInitiator
+        );
+    })
+}
 
 //common helper methods
 fn create_project() -> DispatchResultWithPostInfo {
@@ -2503,7 +2481,9 @@ fn create_project() -> DispatchResultWithPostInfo {
     )
 }
 
-fn create_project_multiple_milestones(proposed_milestones: Vec<ProposedMilestone>) {
+fn create_project_multiple_milestones(
+    proposed_milestones: Vec<ProposedMilestone>,
+) -> DispatchResultWithPostInfo {
     Proposals::create_project(
         RuntimeOrigin::signed(*ALICE),
         gen_hash(1),
@@ -2513,7 +2493,7 @@ fn create_project_multiple_milestones(proposed_milestones: Vec<ProposedMilestone
         //funds required
         1_000_000u64,
         CurrencyId::Native,
-    );
+    )
 }
 
 fn run_to_block(n: u64) {
