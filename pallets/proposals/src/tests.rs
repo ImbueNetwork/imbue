@@ -2314,7 +2314,7 @@ fn test_refunds_state_is_handled_correctly() {
 fn test_finalise_milestone_is_ok_on_threshold_vote() {
     build_test_externality().execute_with(|| {
         assert_ok!(create_project());
-        let project_id = 0;
+        let project_key = 0;
         let round_id = 1;
 
         let _ = Proposals::schedule_round(
@@ -2335,14 +2335,14 @@ fn test_finalise_milestone_is_ok_on_threshold_vote() {
         let _ = Proposals::contribute(
             RuntimeOrigin::signed(*ALICE),
             Some(round_id),
-            project_id,
+            project_key,
             yes_contribution,
         )
         .unwrap();
         let _ = Proposals::contribute(
             RuntimeOrigin::signed(*BOB),
             Some(round_id),
-            project_id,
+            project_key,
             no_contribution,
         )
         .unwrap();
@@ -2373,6 +2373,7 @@ fn test_finalise_milestone_is_ok_on_threshold_vote() {
 // update project required funds and milestones - positive test case
 fn update_an_existing_project() {
     let updated_required_funds = 2_500_000u64;
+    let updated_agreement_hash = gen_hash(200);
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
         percentage_to_unlock: 20,
@@ -2412,6 +2413,7 @@ fn update_an_existing_project() {
                 .expect("Invalid proposed milestones"),
             updated_required_funds,
             CurrencyId::Native,
+            gen_hash(200)
         ));
 
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -2426,6 +2428,11 @@ fn update_an_existing_project() {
                 updated_required_funds
             ))
         );
+
+        let updated_project = Projects::<Test>::get(&project_key).unwrap();
+
+        assert_eq!(updated_project.required_funds, updated_required_funds);
+        assert_eq!(updated_project.agreement_hash, updated_agreement_hash);
     });
 }
 
@@ -2433,7 +2440,7 @@ fn update_an_existing_project() {
 fn only_the_initiator_can_update_project() {
     build_test_externality().execute_with(|| {
         assert_ok!(create_project());
-        let project_id = 0;
+        let project_key = 0;
         let updated_funds = 1_000;
         let updated_milestone1: ProposedMilestone = ProposedMilestone {
             percentage_to_unlock: 70,
@@ -2446,10 +2453,11 @@ fn only_the_initiator_can_update_project() {
         assert_noop!(
             Proposals::update_project(
                 RuntimeOrigin::signed(*BOB),
-                project_id,
+                project_key,
                 vec![updated_milestone1.clone()].try_into().expect("qed"),
                 updated_funds,
                 CurrencyId::Native,
+                gen_hash(1),
             ),
             Error::<Test>::MilestonesTotalPercentageMustEqual100
         );
@@ -2457,10 +2465,13 @@ fn only_the_initiator_can_update_project() {
         assert_noop!(
             Proposals::update_project(
                 RuntimeOrigin::signed(*BOB),
-                project_id,
-                vec![updated_milestone1, updated_milestone2].try_into().expect("qed"),
+                project_key,
+                vec![updated_milestone1, updated_milestone2]
+                    .try_into()
+                    .expect("qed"),
                 updated_funds,
                 CurrencyId::Native,
+                gen_hash(1),
             ),
             Error::<Test>::UserIsNotInitiator
         );

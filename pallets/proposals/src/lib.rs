@@ -447,6 +447,7 @@ pub mod pallet {
             proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
             currency_id: CurrencyId,
+            agreement_hash: H256,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -465,6 +466,7 @@ pub mod pallet {
                 proposed_milestones,
                 required_funds,
                 currency_id,
+                agreement_hash,
             )
         }
 

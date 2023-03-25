@@ -101,7 +101,8 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
-        currency_id: common_types::CurrencyId,
+        currency_id: CurrencyId,
+        agreement_hash: H256,
     ) -> DispatchResultWithPostInfo {
         // Check if identity is required
         if IsIdentityRequired::<T>::get() {
@@ -137,10 +138,9 @@ impl<T: Config> Pallet<T> {
 
         // Update project
         project.milestones = milestones;
-        //Update funds required for project
         project.required_funds = required_funds;
-        //Update currency id for funds
         project.currency_id = currency_id;
+        project.agreement_hash = agreement_hash;
 
         // Add project to list
         <Projects<T>>::insert(project_key, project);
