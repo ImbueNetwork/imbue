@@ -250,12 +250,11 @@ fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public
 }
 
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-    where
-        AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+where
+    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
-
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()

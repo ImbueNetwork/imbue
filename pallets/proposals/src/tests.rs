@@ -1266,7 +1266,6 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
 #[test]
 fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone_completed() {
-
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
@@ -1302,8 +1301,20 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         .unwrap();
 
         let contribution_value = 500000u64;
-        Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, contribution_value).unwrap();
-        Proposals::contribute(RuntimeOrigin::signed(*CHARLIE), None, project_key, contribution_value).unwrap();
+        Proposals::contribute(
+            RuntimeOrigin::signed(*BOB),
+            None,
+            project_key,
+            contribution_value,
+        )
+        .unwrap();
+        Proposals::contribute(
+            RuntimeOrigin::signed(*CHARLIE),
+            None,
+            project_key,
+            contribution_value,
+        )
+        .unwrap();
 
         let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
         let _ = milestone_index.try_push(0);
@@ -1333,7 +1344,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &*ALICE),
-            initial_balance - contribution_value  + (contribution_value.saturating_mul(4) * (total_percentage_to_withdraw as u64) / 100)
+            initial_balance - contribution_value
+                + (contribution_value.saturating_mul(4) * (total_percentage_to_withdraw as u64)
+                    / 100)
         );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
@@ -1357,7 +1370,6 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 fn test_withdraw_upon_project_approval_and_finalised_voting() {
     let milestone1_key = 0;
     build_test_externality().execute_with(|| {
-
         create_project();
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &*ALICE);
         let project_key = 0;
@@ -1643,8 +1655,20 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         .unwrap();
 
         let contribution_value = 500000u64;
-        Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, contribution_value).unwrap();
-        Proposals::contribute(RuntimeOrigin::signed(*CHARLIE), None, project_key, contribution_value).unwrap();
+        Proposals::contribute(
+            RuntimeOrigin::signed(*BOB),
+            None,
+            project_key,
+            contribution_value,
+        )
+        .unwrap();
+        Proposals::contribute(
+            RuntimeOrigin::signed(*CHARLIE),
+            None,
+            project_key,
+            contribution_value,
+        )
+        .unwrap();
 
         //validating contributor current balance
         assert_eq!(
@@ -1743,8 +1767,6 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
                 CurrencyId::Native
             ))
         );
-
-
 
         Proposals::refund(RuntimeOrigin::root(), project_key).unwrap();
 
@@ -2104,7 +2126,6 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
     // The contributors.
 
     build_test_externality().execute_with(|| {
-
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &*BOB);
         let project_key = 0u32;
         // Create a project for both ALICE and BOB.
@@ -2135,8 +2156,14 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         run_to_block(System::block_number() + 101);
 
         // assert that the voters have had their funds transferred.
-        assert_eq!(Tokens::free_balance(CurrencyId::Native, &BOB), initial_balance - 250_000u64);
-        assert_eq!(Tokens::free_balance(CurrencyId::Native, &CHARLIE), initial_balance - 750_000);
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &BOB),
+            initial_balance - 250_000u64
+        );
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &CHARLIE),
+            initial_balance - 750_000
+        );
 
         // approve and raise votees
         let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, None).unwrap();
@@ -2161,8 +2188,14 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         // Wait a block so that refunds occur;
         run_to_block(System::block_number() + 1);
         // assert that the voters have had their funds refunded.
-        assert_eq!(Tokens::free_balance(CurrencyId::Native, &CHARLIE), initial_balance);
-        assert_eq!(Tokens::free_balance(CurrencyId::Native, &BOB), initial_balance);
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &CHARLIE),
+            initial_balance
+        );
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &BOB),
+            initial_balance
+        );
     });
 }
 
@@ -2184,11 +2217,12 @@ fn test_refunds_go_back_to_contributors() {
 
         run_to_block(System::block_number() + 2u64);
         let input: Vec<String> = (0..num_of_refunds).map(|i| i.to_string()).collect();
-        for i in 0..num_of_refunds   {
+        for i in 0..num_of_refunds {
             let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
             accounts.push(acc.clone());
             let _ = Tokens::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
-            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64).unwrap();
+            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64)
+                .unwrap();
         }
 
         assert_ok!(Proposals::refund(RuntimeOrigin::root(), 0));
@@ -2228,11 +2262,12 @@ fn test_refunds_state_is_handled_correctly() {
 
         run_to_block(System::block_number() + 2u64);
         let input: Vec<String> = (0..num_of_refunds).map(|i| i.to_string()).collect();
-        for i in 0..num_of_refunds   {
+        for i in 0..num_of_refunds {
             let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
             accounts.push(acc.clone());
             let _ = Tokens::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
-            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64).unwrap();
+            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64)
+                .unwrap();
         }
 
         assert_ok!(Proposals::refund(RuntimeOrigin::root(), 0));
@@ -2253,7 +2288,6 @@ fn test_refunds_state_is_handled_correctly() {
             // assert_eq!(refunds_after_block - refunds_completed, 2usize);
             refunds_completed += 2;
 
-
             let test = RefundQueue::<Test>::get().len();
             // And that they have been removed from the refund list.
             assert_eq!(
@@ -2262,9 +2296,7 @@ fn test_refunds_state_is_handled_correctly() {
             );
         }
 
-        assert!(
-            Tokens::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64
-        )
+        assert!(Tokens::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64)
     });
 }
 
