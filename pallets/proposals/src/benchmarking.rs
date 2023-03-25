@@ -26,15 +26,15 @@ benchmarks! {
 
     update_project {
         let bounded_str_f: BoundedStringField = "a".repeat(<MaxStringFieldLen as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
-        
+
         let bounded_desc_f: BoundedDescriptionField = "b".repeat(<MaxDescriptionField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
-        
+
         let bounded_website_f: BoundedWebsiteUrlField = "c".repeat(<MaxWebsiteUrlField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
         let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
             name: bounded_str_f.clone(),
             percentage_to_unlock: 1,
         }; 100].try_into().unwrap();
-        
+
         let caller = create_project_common::<T>(u32::MAX.into());
 
         let required_funds: BalanceOf<T> = u32::MAX.into();
