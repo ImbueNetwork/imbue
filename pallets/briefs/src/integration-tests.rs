@@ -10,3 +10,9 @@ use sp_runtime::DispatchError::BadOrigin;
 use sp_std::collections::btree_map::BTreeMap;
 
 // all the integration tests for a brief to proposal conversion
+#[test]
+fn approve_freelancer_as_root() {
+    build_test_externality().execute_with(|| {
+        assert_ok!(BriefsMod::add_to_fellowship(RuntimeOrigin::root(), *BOB));
+    });
+}
