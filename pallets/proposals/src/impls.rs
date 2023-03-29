@@ -94,8 +94,6 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    //update new project
-    /// IF IT IS A BRIEF THIS CANNOT HAPPEN AS THE WORKER IS THE INITIATOR
     pub fn update_existing_project(
         who: T::AccountId,
         project_key: ProjectKey,

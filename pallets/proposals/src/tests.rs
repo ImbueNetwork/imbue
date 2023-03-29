@@ -2479,7 +2479,7 @@ fn only_the_initiator_can_update_project() {
 }
 
 //common helper methods
-fn create_project() -> DispatchResultWithPostInfo {
+pub fn create_project() -> DispatchResultWithPostInfo {
     Proposals::create_project(
         RuntimeOrigin::signed(*ALICE),
         gen_hash(1),
@@ -2492,7 +2492,7 @@ fn create_project() -> DispatchResultWithPostInfo {
     )
 }
 
-fn create_project_multiple_milestones(
+pub fn create_project_multiple_milestones(
     proposed_milestones: Vec<ProposedMilestone>,
 ) -> DispatchResultWithPostInfo {
     Proposals::create_project(
