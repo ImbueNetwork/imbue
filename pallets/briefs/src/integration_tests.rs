@@ -1,22 +1,22 @@
 use crate::mock::*;
+use crate::tests::get_milestones;
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::pallet_prelude::Hooks;
-use frame_support::{assert_noop, assert_ok, once_cell::sync::Lazy, bounded_vec};
+use frame_support::{assert_noop, assert_ok, bounded_vec, once_cell::sync::Lazy};
+use pallet_proposals::RoundType;
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
 use sp_std::collections::btree_map::BTreeMap;
 use std::convert::TryInto;
-use pallet_proposals::RoundType;
-use crate::tests::{get_milestones};
 
 // all the integration tests for a brief to proposal conversion
 #[test]
 fn create_proposal_from_brief() {
-    build_test_externality().execute_with(|| {        
+    build_test_externality().execute_with(|| {
         let brief_id = H256::from([12; 32]);
         let contribution_value: Balance = 10000;
-        
+
         let _ = BriefsMod::create_brief(
             RuntimeOrigin::signed(*BOB),
             tests::get_brief_owners(1),
@@ -37,7 +37,7 @@ fn create_proposal_from_brief() {
 
 #[test]
 fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
-    build_test_externality().execute_with(|| {        
+    build_test_externality().execute_with(|| {
         let brief_id = H256::from([12; 32]);
         let milestones = get_milestones(10);
         let mut project_key = 1;
@@ -53,11 +53,8 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             CurrencyId::Native,
             milestones.clone(),
         );
-        
-        let _ = BriefsMod::commence_work(
-            RuntimeOrigin::signed(*ALICE),
-            brief_id
-        );
+
+        let _ = BriefsMod::commence_work(RuntimeOrigin::signed(*ALICE), brief_id);
 
         // Now we create a proposal with the same parameters.
         // The state of each of the project should be the same and therefore will function the same.
@@ -82,14 +79,26 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             RoundType::ContributionRound,
         )
         .unwrap();
-        
+
         let _ = Proposals::contribute(
             RuntimeOrigin::signed(*BOB),
             Some(1),
             project_key + 1,
             contribution_value,
         );
-        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, Some(milestones.keys().cloned().collect::<Vec<_>>().try_into().expect("qed"))).unwrap();
-
+        let _ = Proposals::approve(
+            RuntimeOrigin::root(),
+            Some(1),
+            project_key,
+            Some(
+                milestones
+                    .keys()
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .expect("qed"),
+            ),
+        )
+        .unwrap();
     });
 }

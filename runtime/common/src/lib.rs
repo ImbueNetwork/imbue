@@ -268,7 +268,6 @@ pub mod asset_registry {
     }
 }
 pub mod common_xcm {
-    
 
     use xcm::v3::Junction::GeneralKey;
     pub fn general_key(key: &[u8]) -> xcm::v3::Junction {

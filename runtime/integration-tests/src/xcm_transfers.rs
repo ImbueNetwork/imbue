@@ -356,7 +356,7 @@ fn kar_fee() -> Balance {
 
 // The fee associated with transferring KSM tokens
 fn ksm_fee() -> Balance {
-    let (_asset, fee, _ ) = KsmPerSecond::get();
+    let (_asset, fee, _) = KsmPerSecond::get();
     // NOTE: it is possible that in different machines this value may differ. We shall see.
     fee.div_euclid(10_000) * 8
 }
