@@ -9,6 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
+use xcm::{v3::prelude::*};
 
 use pallet_collective::EnsureProportionAtLeast;
 use sp_runtime::{
@@ -75,7 +76,6 @@ pub use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdj
 
 use common_runtime::currency::*;
 pub use common_runtime::Index;
-pub use xcm::latest::prelude::*;
 
 /// common types for the runtime.
 pub use common_runtime::*;
@@ -115,7 +115,7 @@ pub fn native_version() -> NativeVersion {
 /// We allow for .5 seconds of compute with a 12 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
     WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-    cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64,
+    cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
 );
 
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
@@ -280,6 +280,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ControllerOrigin = EnsureRoot<AccountId>;
     type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
     type WeightInfo = ();
+    type PriceForSiblingDelivery = ();
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -413,6 +414,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
     type MaxMembers = CouncilMaxMembers;
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+    type SetMembersOrigin = MoreThanHalfCouncil;
 }
 
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
@@ -424,6 +426,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
     type MaxMembers = TechCommitteeMaxMembers;
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+    type SetMembersOrigin = MoreThanHalfCouncil;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
@@ -504,6 +507,7 @@ impl pallet_democracy::Config for Runtime {
     type Preimages = Preimage;
     type MaxDeposits = ConstU32<100>;
     type MaxBlacklisted = ConstU32<100>;
+    type SubmitOrigin = frame_system::EnsureSigned<AccountId>;
 }
 
 parameter_types! {
@@ -513,8 +517,6 @@ parameter_types! {
 // We only use find_author to pay in anchor pallet
 impl pallet_authorship::Config for Runtime {
     type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = (CollatorSelection,);
 }
 
@@ -794,7 +796,7 @@ construct_runtime! {
         TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 12,
 
         CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 13,
-        Authorship: pallet_authorship::{Pallet, Call, Storage} = 14,
+        Authorship: pallet_authorship::{Pallet, Storage} = 14,
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 15,
 
         Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 16,
@@ -858,7 +860,6 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (),
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -997,6 +998,12 @@ impl_runtime_apis! {
             len: u32,
         ) -> pallet_transaction_payment::FeeDetails<Balance> {
             TransactionPayment::query_fee_details(uxt, len)
+        }
+        fn query_weight_to_fee(weight: Weight) -> Balance {
+            TransactionPayment::weight_to_fee(weight)
+        }
+        fn query_length_to_fee(length: u32) -> Balance {
+            TransactionPayment::length_to_fee(length)
         }
     }
 
