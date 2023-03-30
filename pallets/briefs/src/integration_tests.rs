@@ -2,12 +2,12 @@ use crate::mock::*;
 use crate::tests::get_milestones;
 use crate::*;
 use common_types::CurrencyId;
-use frame_support::pallet_prelude::Hooks;
-use frame_support::{assert_noop, assert_ok, bounded_vec, once_cell::sync::Lazy};
+
+use frame_support::{assert_ok, bounded_vec};
 use pallet_proposals::RoundType;
 use sp_core::H256;
-use sp_runtime::DispatchError::BadOrigin;
-use sp_std::collections::btree_map::BTreeMap;
+
+
 use std::convert::TryInto;
 
 // all the integration tests for a brief to proposal conversion
@@ -40,7 +40,7 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
     build_test_externality().execute_with(|| {
         let brief_id = H256::from([12; 32]);
         let milestones = get_milestones(10);
-        let mut project_key = 1;
+        let project_key = 1;
         let contribution_value: Balance = 10000;
         // This is the minimum path to a proposal from the briefs pallet.
         let _ = BriefsMod::create_brief(
@@ -58,7 +58,7 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
 
         // Now we create a proposal with the same parameters.
         // The state of each of the project should be the same and therefore will function the same.
-        Proposals::create_project(
+        assert_ok!(Proposals::create_project(
             RuntimeOrigin::signed(*ALICE),
             brief_id,
             milestones
@@ -69,7 +69,7 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
                 .expect("proposed milestones are too long"),
             contribution_value,
             CurrencyId::Native,
-        );
+        ));
 
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
