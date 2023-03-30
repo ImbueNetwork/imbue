@@ -18,8 +18,8 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use proposals::traits::BriefEvolver;
-    use proposals::{Contribution, ProposedMilestone};
+    use pallet_proposals::traits::BriefEvolver;
+    use pallet_proposals::{Contribution, ProposedMilestone};
     use sp_core::{Hasher, H256};
     use sp_std::convert::{From, TryInto};
 

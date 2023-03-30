@@ -9,7 +9,6 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
-use xcm::{v3::prelude::*};
 
 use pallet_collective::EnsureProportionAtLeast;
 use sp_runtime::{
@@ -744,7 +743,7 @@ parameter_types! {
     pub const RefundsPerBlock: u8 = 20;
 }
 
-impl proposals::Config for Runtime {
+impl pallet_proposals::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Currencies;
@@ -771,7 +770,7 @@ impl pallet_briefs::Config for Runtime {
     type RMultiCurrency = Currencies;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type BriefEvolver = proposals::Pallet<Runtime>;
+    type BriefEvolver = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestones = MaxMilestones;
 }
@@ -829,7 +828,7 @@ construct_runtime! {
 
 
         // Imbue Pallets
-        ImbueProposals: proposals::{Pallet, Call, Storage, Event<T>} = 100,
+        ImbueProposals: pallet_proposals::{Pallet, Call, Storage, Event<T>} = 100,
         ImbueBriefs: pallet_briefs::{Pallet, Call, Storage, Event<T>} = 101,
     }
 }

@@ -12,8 +12,8 @@ use sp_core::{sr25519::Signature, H256};
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::pallet::BriefHash;
 use crate::MilestoneKey;
-use proposals::traits::BriefEvolver;
-use proposals::{Contribution, Milestone, Project, Projects, ProposedMilestone};
+use pallet_proposals::traits::BriefEvolver;
+use pallet_proposals::{Contribution, Milestone, Project, Projects, ProposedMilestone};
 
 use common_types::CurrencyId;
 use frame_support::dispatch::EncodeLike;
@@ -68,7 +68,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
-        Proposals: proposals::{Pallet, Call, Storage, Event<T>},
+        Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -215,12 +215,12 @@ struct MockEvolver<T> {
 
 // Requires binding howerver they may be a more succinct way of doing this.
 // This should be in the proposals pallet maybe;
-impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
+impl<T: pallet_proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
 where
     Project<AccountId, Balance, BlockNumber, Moment>: EncodeLike<
         Project<
             <T as frame_system::Config>::AccountId,
-            <<T as proposals::Config>::MultiCurrency as MultiCurrency<
+            <<T as pallet_proposals::Config>::MultiCurrency as MultiCurrency<
                 <T as frame_system::Config>::AccountId,
             >>::Balance,
             <T as frame_system::Config>::BlockNumber,
@@ -235,10 +235,10 @@ where
         applicant: AccountId,
         milestones: BTreeMap<MilestoneKey, ProposedMilestone>,
     ) -> Result<(), ()> {
-        let project_key = proposals::ProjectCount::<Test>::get()
+        let project_key = pallet_proposals::ProjectCount::<Test>::get()
             .checked_add(1)
             .ok_or(())?;
-        proposals::ProjectCount::<Test>::put(project_key);
+        pallet_proposals::ProjectCount::<Test>::put(project_key);
 
         let sum_of_contributions = contributions
             .values()
@@ -285,7 +285,7 @@ where
     }
 }
 
-impl proposals::Config for Test {
+impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;

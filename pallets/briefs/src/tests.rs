@@ -4,7 +4,7 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
-use proposals::ProposedMilestone;
+use pallet_proposals::ProposedMilestone;
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
 use sp_std::collections::btree_map::BTreeMap;

@@ -1,5 +1,5 @@
 [package]
-name = "proposals"
+name = "pallet-proposals"
 authors = ['Imbue <https://github.com/ImbueNetwork>']
 description = "Proposals pallet is used for creating on chain funding propositions"
 version = '3.0.0'

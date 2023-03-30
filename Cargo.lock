@@ -3746,6 +3746,7 @@ dependencies = [
  "pallet-membership",
  "pallet-multisig",
  "pallet-preimage",
+ "pallet-proposals",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -3760,7 +3761,6 @@ dependencies = [
  "parity-scale-codec 3.4.0",
  "polkadot-parachain",
  "polkadot-runtime-common",
- "proposals",
  "scale-info 2.3.1",
  "serde",
  "sp-api",
@@ -5963,10 +5963,10 @@ dependencies = [
  "orml-traits",
  "pallet-balances",
  "pallet-identity",
+ "pallet-proposals",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "parity-scale-codec 3.4.0",
- "proposals",
  "scale-info 2.3.1",
  "serde",
  "sp-api",
@@ -6384,6 +6384,41 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-proposals"
+version = "3.0.0"
+dependencies = [
+ "common-traits",
+ "common-types",
+ "cumulus-pallet-xcm",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "integer-sqrt",
+ "lite-json",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-identity",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-xcm",
+ "parity-scale-codec 3.4.0",
+ "scale-info 2.3.1",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -8548,41 +8583,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "proposals"
-version = "3.0.0"
-dependencies = [
- "common-traits",
- "common-types",
- "cumulus-pallet-xcm",
- "cumulus-primitives-core",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex",
- "integer-sqrt",
- "lite-json",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-identity",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-xcm",
- "parity-scale-codec 3.4.0",
- "scale-info 2.3.1",
- "serde",
- "sp-core",
- "sp-io",
- "sp-keystore",
- "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]
