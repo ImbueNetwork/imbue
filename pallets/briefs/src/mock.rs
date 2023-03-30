@@ -46,7 +46,7 @@ parameter_types! {
 }
 
 pub type AdaptedBasicCurrency =
-    orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
 impl orml_currencies::Config for Test {
     type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -195,7 +195,7 @@ impl pallet_briefs::Config for Test {
     type RMultiCurrency = Tokens;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type BriefEvolver = Proposals;
+    type BriefEvolver = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestones = MaxMilestones;
 }
@@ -209,81 +209,76 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
 }
 
-struct MockEvolver<T> {
-    phantom: std::marker::PhantomData<T>,
-}
-
 // Requires binding howerver they may be a more succinct way of doing this.
-// This should be in the proposals pallet maybe;
-impl<T: pallet_proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
-where
-    Project<AccountId, Balance, BlockNumber, Moment>: EncodeLike<
-        Project<
-            <T as frame_system::Config>::AccountId,
-            <<T as pallet_proposals::Config>::MultiCurrency as MultiCurrency<
-                <T as frame_system::Config>::AccountId,
-            >>::Balance,
-            <T as frame_system::Config>::BlockNumber,
-            <T as pallet_timestamp::Config>::Moment,
-        >,
-    >,
-{
-    fn convert_to_proposal(
-        currency_id: CurrencyId,
-        contributions: BTreeMap<AccountId, Contribution<Balance, Moment>>,
-        brief_hash: BriefHash,
-        applicant: AccountId,
-        milestones: BTreeMap<MilestoneKey, ProposedMilestone>,
-    ) -> Result<(), ()> {
-        let project_key = pallet_proposals::ProjectCount::<Test>::get()
-            .checked_add(1)
-            .ok_or(())?;
-        pallet_proposals::ProjectCount::<Test>::put(project_key);
-
-        let sum_of_contributions = contributions
-            .values()
-            .fold(Default::default(), |acc: Balance, x| {
-                acc.saturating_add(x.value)
-            });
-        let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-
-        let _ = milestones
-            .into_iter()
-            .map(|i: (MilestoneKey, ProposedMilestone)| {
-                project_milestones.insert(
-                    i.0,
-                    Milestone {
-                        project_key,
-                        milestone_key: i.0,
-                        percentage_to_unlock: i.1.percentage_to_unlock,
-                        is_approved: false,
-                    },
-                )
-            })
-            .collect::<Vec<_>>();
-
-        let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
-            milestones: project_milestones,
-            contributions: contributions,
-            currency_id,
-            required_funds: sum_of_contributions,
-            withdrawn_funds: 0u32.into(),
-            raised_funds: sum_of_contributions,
-            initiator: applicant,
-            create_block_number: System::block_number(),
-            approved_for_funding: true,
-            funding_threshold_met: true,
-            cancelled: false,
-            agreement_hash: brief_hash,
-            // Maybe we dont need this new field because we have create_block_number
-            work_started_at: Some(System::block_number()),
-        };
-
-        Projects::<T>::insert(project_key, project);
-
-        Ok(())
-    }
-}
+//impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
+//where
+//    Project<AccountId, Balance, BlockNumber, Moment>: EncodeLike<
+//        Project<
+//            <T as frame_system::Config>::AccountId,
+//            <<T as proposals::Config>::MultiCurrency as MultiCurrency<
+//                <T as frame_system::Config>::AccountId,
+//            >>::Balance,
+//            <T as frame_system::Config>::BlockNumber,
+//            <T as pallet_timestamp::Config>::Moment,
+//        >,
+//    >,
+//{
+//    fn convert_to_proposal(
+//        currency_id: CurrencyId,
+//        contributions: BTreeMap<AccountId, Contribution<Balance, Moment>>,
+//        brief_hash: BriefHash,
+//        applicant: AccountId,
+//        milestones: BTreeMap<MilestoneKey, ProposedMilestone>,
+//    ) -> Result<(), ()> {
+//        let project_key = proposals::ProjectCount::<Test>::get()
+//            .checked_add(1)
+//            .ok_or(())?;
+//        proposals::ProjectCount::<Test>::put(project_key);
+//
+//        let sum_of_contributions = contributions
+//            .values()
+//            .fold(Default::default(), |acc: Balance, x| {
+//                acc.saturating_add(x.value)
+//            });
+//        let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+//
+//        let _ = milestones
+//            .into_iter()
+//            .map(|i: (MilestoneKey, ProposedMilestone)| {
+//                project_milestones.insert(
+//                    i.0,
+//                    Milestone {
+//                        project_key,
+//                        milestone_key: i.0,
+//                        percentage_to_unlock: i.1.percentage_to_unlock,
+//                        is_approved: false,
+//                    },
+//                )
+//            })
+//            .collect::<Vec<_>>();
+//
+//        let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
+//            milestones: project_milestones,
+//            contributions: contributions,
+//            currency_id,
+//            required_funds: sum_of_contributions,
+//            withdrawn_funds: 0u32.into(),
+//            raised_funds: sum_of_contributions,
+//            initiator: applicant,
+//            create_block_number: System::block_number(),
+//            approved_for_funding: true,
+//            funding_threshold_met: true,
+//            cancelled: false,
+//            agreement_hash: brief_hash,
+//            // Maybe we dont need this new field because we have create_block_number
+//            work_started_at: Some(System::block_number()),
+//        };
+//
+//        Projects::<T>::insert(project_key, project);
+//
+//        Ok(())
+//    }
+//}
 
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
@@ -346,8 +341,8 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
                 .collect::<Vec<_>>()
         },
     }
-    .assimilate_storage(&mut t)
-    .unwrap();
+        .assimilate_storage(&mut t)
+        .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {

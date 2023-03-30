@@ -232,7 +232,21 @@ fn only_applicant_can_start_work() {
     });
 }
 
-fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
+#[test]
+fn initial_contribution_and_extra_contribution_aggregates() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+#[test]
+fn test_remaining_bounty_api() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
     let max = <Test as Config>::MaxBriefOwners::get();
     if n > max {
         n = max;
@@ -244,7 +258,7 @@ fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
         .expect("qed")
 }
 
-fn get_milestones(mut n: u32) -> BoundedBriefMilestones<Test> {
+pub(crate) fn get_milestones(mut n: u32) -> BoundedBriefMilestones<Test> {
     let max = <Test as Config>::MaxMilestones::get();
     if n > max {
         n = max
