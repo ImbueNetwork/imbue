@@ -8,6 +8,15 @@ mod v0 {
     pub type ProjectV0Of<T> = ProjectV0<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>;
 
     #[derive(Encode, Clone, Decode)]
+    pub struct MilestoneV0 {
+        pub project_key: u32,
+        pub milestone_key: u32,
+        pub name: Vec<u8>,
+        pub percentage_to_unlock: u32,
+        pub is_approved: bool,
+    }
+
+    #[derive(Encode, Clone, Decode)]
     pub struct ContributionV0<AccountId, Balance> {
         pub account_id: AccountId,
         pub value: Balance,
@@ -19,7 +28,7 @@ mod v0 {
         pub logo: Vec<u8>,
         pub description: Vec<u8>,
         pub website: Vec<u8>,
-        pub milestones: Vec<Milestone>,
+        pub milestones: Vec<MilestoneV0>,
         /// A collection of the accounts which have contributed and their contributions.
         pub contributions: Vec<ContributionV0<AccountId, Balance>>,
         pub currency_id: common_types::CurrencyId,
@@ -40,6 +49,7 @@ mod v0 {
 
 pub mod v1 {
     use super::*;
+    use crate::migration::v0::MilestoneV0;
 
     #[derive(Encode, Clone, Decode)]
     pub struct ProjectV1<AccountId, Balance, BlockNumber, Timestamp> {
@@ -47,7 +57,7 @@ pub mod v1 {
         pub logo: Vec<u8>,
         pub description: Vec<u8>,
         pub website: Vec<u8>,
-        pub milestones: BTreeMap<MilestoneKey, Milestone>,
+        pub milestones: BTreeMap<MilestoneKey, MilestoneV0>,
         pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
         pub currency_id: common_types::CurrencyId,
         pub required_funds: Balance,
@@ -70,17 +80,15 @@ pub mod v1 {
     pub fn migrate<T: Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
 
-        Projects::<T>::translate(|_project_key, project: v0::ProjectV0Of<T>| {
+        v1::Projects::<T>::translate(|_project_key, project: v0::ProjectV0Of<T>| {
             weight += T::DbWeight::get().reads_writes(1, 1);
 
             let mut migrated_contributions: BTreeMap<
                 AccountIdOf<T>,
                 Contribution<BalanceOf<T>, TimestampOf<T>>,
             > = BTreeMap::new();
-            let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-
+            let mut migrated_milestones: BTreeMap<MilestoneKey, MilestoneV0> = BTreeMap::new();
             let mut raised_funds: BalanceOf<T> = (0u32).into();
-
             let _ = project
                 .contributions
                 .into_iter()
@@ -98,7 +106,7 @@ pub mod v1 {
                 .milestones
                 .into_iter()
                 .map(|milestone| {
-                    migrated_milestones.insert(milestone.milestone_key, milestone.clone())
+                    migrated_milestones.insert(milestone.milestone_key, milestone)
                 })
                 .collect::<Vec<_>>();
 
@@ -136,14 +144,25 @@ pub mod v2 {
     pub type ProjectV2Of<T> =
         Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
 
-    // #[storage_alias]
-    // pub type ProjectsV02<T: Config> =
-    // StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV2Of<T>, OptionQuery>;
-
     pub fn migrate<T: Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
+        let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
 
         Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
+            let _ = project
+                .milestones
+                .into_iter()
+                .map(|(_,milestone)| {
+                    let migrated_milestone = Milestone {
+                        project_key: milestone.project_key,
+                        milestone_key: milestone.milestone_key,
+                        percentage_to_unlock: milestone.percentage_to_unlock,
+                        is_approved: milestone.is_approved,
+                    };
+                    migrated_milestones.insert(milestone.milestone_key, migrated_milestone)
+                })
+                .collect::<Vec<_>>();
+
             weight += T::DbWeight::get().reads_writes(1, 1);
             let migrated_project: Project<
                 T::AccountId,
@@ -151,7 +170,7 @@ pub mod v2 {
                 T::BlockNumber,
                 TimestampOf<T>,
             > = Project {
-                milestones: project.milestones,
+                milestones: migrated_milestones.clone(),
                 contributions: project.contributions,
                 required_funds: project.required_funds,
                 currency_id: project.currency_id,
@@ -176,7 +195,7 @@ mod test {
     use super::*;
     use mock::*;
 
-    use v0::{ContributionV0, ProjectV0};
+    use v0::{ContributionV0, ProjectV0, MilestoneV0};
 
     #[test]
     fn migrate_v0_to_v1() {
@@ -185,14 +204,16 @@ mod test {
         build_test_externality().execute_with(|| {
             let project_key = 1;
             let old_milestones = vec![
-                Milestone {
+                MilestoneV0 {
                     project_key,
+                    name: b"milestone 1".to_vec(),
                     milestone_key: 0,
                     percentage_to_unlock: 40,
                     is_approved: true,
                 },
-                Milestone {
+                MilestoneV0 {
                     project_key,
+                    name: b"milestone 2".to_vec(),
                     milestone_key: 1,
                     percentage_to_unlock: 60,
                     is_approved: true,
@@ -234,8 +255,13 @@ mod test {
             assert_eq!(old_project.name, migrated_project.name);
 
             assert_eq!(
-                &old_project.milestones[0],
-                migrated_project.milestones.get(&0).unwrap()
+                old_project.milestones[0].percentage_to_unlock,
+                migrated_project.milestones.get(&0).unwrap().percentage_to_unlock
+            );
+
+            assert_eq!(
+                old_project.milestones[0].name,
+                migrated_project.milestones.get(&0).unwrap().name
             );
 
             assert_eq!(

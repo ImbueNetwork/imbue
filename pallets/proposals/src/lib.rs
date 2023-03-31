@@ -345,6 +345,7 @@ pub mod pallet {
             weight
         }
 
+
         fn on_initialize(_b: T::BlockNumber) -> Weight {
             let mut weight = Weight::default();
 
