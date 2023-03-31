@@ -250,7 +250,7 @@ pub mod pallet {
 
             let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
                 if let Some(val) = contributions.get_mut(&who) {
-                    val.value.saturating_add(amount);
+                    val.value = val.value.saturating_add(amount);
                     val.timestamp = pallet_timestamp::Pallet::<T>::get();
                 } else {
                     // this should never fail as the the bound is ensure when a brief is created.
