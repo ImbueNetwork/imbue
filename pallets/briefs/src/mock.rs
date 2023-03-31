@@ -46,7 +46,7 @@ parameter_types! {
 }
 
 pub type AdaptedBasicCurrency =
-    orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
 impl orml_currencies::Config for Test {
     type GetNativeCurrencyId = GetNativeCurrencyId;
@@ -341,8 +341,8 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
                 .collect::<Vec<_>>()
         },
     }
-    .assimilate_storage(&mut t)
-    .unwrap();
+        .assimilate_storage(&mut t)
+        .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
