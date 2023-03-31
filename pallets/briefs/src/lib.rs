@@ -103,7 +103,7 @@ pub mod pallet {
         BriefSubmitted(BriefHash),
         AccountApproved(AccountIdOf<T>),
         BriefEvolution(BriefHash),
-        BriefContribution(BriefHash),
+        BriefContribution(T::AccountId, BriefHash),
     }
 
     #[pallet::error]
@@ -267,7 +267,7 @@ pub mod pallet {
                 } else {
                     // this should never fail as the the bound is ensure when a brief is created.
                     contributions
-                        .try_insert(who, {
+                        .try_insert(who.clone(), {
                             Contribution {
                                 value: amount,
                                 timestamp: pallet_timestamp::Pallet::<T>::get(),
@@ -279,7 +279,7 @@ pub mod pallet {
                 Ok::<(), DispatchError>(())
             })?;
 
-            Self::deposit_event(Event::<T>::BriefContribution(brief_id));
+            Self::deposit_event(Event::<T>::BriefContribution(who, brief_id));
             Ok(())
         }
 

@@ -7,7 +7,6 @@ use orml_traits::MultiCurrency;
 use pallet_proposals::{Projects, ProposedMilestone};
 
 use sp_runtime::DispatchError::BadOrigin;
-use sp_std::collections::btree_map::BTreeMap;
 use std::convert::TryInto;
 
 #[test]
@@ -105,7 +104,7 @@ fn create_brief_no_contribution_and_contribute() {
 
         assert_eq!(
             latest_event,
-            mock::RuntimeEvent::from(briefs::Event::BriefContribution(brief_id))
+            mock::RuntimeEvent::from(briefs::Event::BriefContribution(*BOB, brief_id))
         );
 
         assert_eq!(
@@ -276,24 +275,18 @@ pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
         .expect("qed")
 }
 
-pub(crate) fn get_milestones(mut n: u32) -> BoundedBriefMilestones<Test> {
-    let max = <Test as Config>::MaxMilestones::get();
+pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
+    let max = <Test as Config>::MaxBriefOwners::get();
     if n > max {
-        n = max
+        n = max;
     }
-    let mut btree_map: BoundedBriefMilestones<Test> = BTreeMap::new().try_into().expect("qed");
-
-    let _ = (0..n)
-        .map(|i| {
-            btree_map
-                .try_insert(
-                    i,
-                    ProposedMilestone {
-                        percentage_to_unlock: 100 / n,
-                    },
-                )
-                .expect("qed")
+    let milestones = (0..n)
+        .map(|_| ProposedMilestone {
+            percentage_to_unlock: 100 / n,
         })
-        .collect::<Vec<_>>();
-    btree_map
+        .collect::<Vec<ProposedMilestone>>()
+        .try_into()
+        .expect("qed");
+
+    milestones
 }
