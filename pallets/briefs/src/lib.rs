@@ -35,13 +35,12 @@ pub mod pallet {
         Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
         <T as Config>::MaxBriefOwners,
     >;
-    pub(crate) type BoundedBriefMilestones<T> =
-        BoundedBTreeMap<MilestoneKey, ProposedMilestone, <T as Config>::MaxMilestones>;
+    pub(crate) type BoundedProposedMilestones<T> = BoundedVec<ProposedMilestone, <T as Config>::MaxMilestones>;
+
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
 
     pub type BriefHash = H256;
-    pub(crate) type MilestoneKey = u32;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -134,8 +133,10 @@ pub mod pallet {
         NotAuthorised,
         /// The brief conversion failed
         BriefConversionFailedGeneric,
-        /// The brief hasnt yet been approved to commence by the freelancer.
+        /// The brief has not yet been approved to commence by the freelancer.
         FreelancerApprovalRequired,
+        /// Milestones totals do not add up to 100%.
+        MilestonesTotalPercentageMustEqual100,
     }
 
     #[pallet::call]
@@ -170,13 +171,23 @@ pub mod pallet {
             initial_contribution: BalanceOf<T>,
             brief_id: BriefHash,
             currency_id: CurrencyId,
-            milestones: BoundedBriefMilestones<T>,
+            milestones: BoundedProposedMilestones<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             ensure!(
                 Briefs::<T>::get(brief_id).is_none(),
                 Error::<T>::BriefAlreadyExists
+            );
+
+            // Validation
+            let mut total_percentage = 0;
+            for milestone in milestones.iter() {
+                total_percentage += milestone.percentage_to_unlock;
+            }
+            ensure!(
+                total_percentage == 100,
+                Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
             if !brief_owners.contains(&who) {
@@ -310,7 +321,7 @@ pub mod pallet {
         currency_id: CurrencyId,
         created_at: BlockNumberFor<T>,
         applicant: AccountIdOf<T>,
-        milestones: BoundedBriefMilestones<T>,
+        milestones: BoundedProposedMilestones<T>,
     }
 
     impl<T: Config> Pallet<T> {
@@ -335,7 +346,7 @@ pub mod pallet {
             currency_id: CurrencyId,
             created_at: BlockNumberFor<T>,
             applicant: AccountIdOf<T>,
-            milestones: BoundedBriefMilestones<T>,
+            milestones: BoundedProposedMilestones<T>,
         ) -> Self {
             Self {
                 created_at,

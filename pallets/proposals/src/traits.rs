@@ -18,7 +18,7 @@ pub trait BriefEvolver<AccountId, Balance, BlockNumber, TimeStamp> {
         current_contribution: BTreeMap<AccountId, Contribution<Balance, TimeStamp>>,
         brief_hash: H256,
         applicant: AccountId,
-        milestones: BTreeMap<MilestoneKey, ProposedMilestone>,
+        milestones: Vec<ProposedMilestone>,
     ) -> Result<(), ()>;
 }
 
@@ -43,7 +43,7 @@ where
         contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>>,
         brief_hash: H256,
         applicant: AccountIdOf<T>,
-        milestones: BTreeMap<MilestoneKey, ProposedMilestone>,
+        proposed_milestones: Vec<ProposedMilestone>,
     ) -> Result<(), ()> {
         let project_key = crate::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
         crate::ProjectCount::<T>::put(project_key);
@@ -53,26 +53,23 @@ where
             .fold(Default::default(), |acc: BalanceOf<T>, x| {
                 acc.saturating_add(x.value)
             });
-        let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
 
-        let _ = milestones
-            .into_iter()
-            .map(|i: (MilestoneKey, ProposedMilestone)| {
-                project_milestones.insert(
-                    i.0,
-                    Milestone {
-                        project_key,
-                        milestone_key: i.0,
-                        percentage_to_unlock: i.1.percentage_to_unlock,
-                        is_approved: false,
-                    },
-                )
-            })
-            .collect::<Vec<_>>();
+        let mut milestone_key: u32 = 0;
+        let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+        for milestone in proposed_milestones {
+            let milestone = Milestone {
+                project_key,
+                milestone_key,
+                percentage_to_unlock: milestone.percentage_to_unlock,
+                is_approved: false,
+            };
+            milestones.insert(milestone_key, milestone);
+            milestone_key = milestone_key.checked_add(1).unwrap_or(0);
+        }
 
         let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>> =
             Project {
-                milestones: project_milestones,
+                milestones,
                 contributions: contributions,
                 currency_id,
                 required_funds: sum_of_contributions,
