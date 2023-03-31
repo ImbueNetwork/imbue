@@ -35,7 +35,8 @@ pub mod pallet {
         Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
         <T as Config>::MaxBriefOwners,
     >;
-    pub(crate) type BoundedProposedMilestones<T> = BoundedVec<ProposedMilestone, <T as Config>::MaxMilestones>;
+    pub(crate) type BoundedProposedMilestones<T> =
+        BoundedVec<ProposedMilestone, <T as Config>::MaxMilestones>;
 
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;

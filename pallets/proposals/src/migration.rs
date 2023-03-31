@@ -105,9 +105,7 @@ pub mod v1 {
             let _ = project
                 .milestones
                 .into_iter()
-                .map(|milestone| {
-                    migrated_milestones.insert(milestone.milestone_key, milestone)
-                })
+                .map(|milestone| migrated_milestones.insert(milestone.milestone_key, milestone))
                 .collect::<Vec<_>>();
 
             let migrated_project: ProjectV1<
@@ -152,7 +150,7 @@ pub mod v2 {
             let _ = project
                 .milestones
                 .into_iter()
-                .map(|(_,milestone)| {
+                .map(|(_, milestone)| {
                     let migrated_milestone = Milestone {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,
@@ -195,7 +193,7 @@ mod test {
     use super::*;
     use mock::*;
 
-    use v0::{ContributionV0, ProjectV0, MilestoneV0};
+    use v0::{ContributionV0, MilestoneV0, ProjectV0};
 
     #[test]
     fn migrate_v0_to_v1() {
@@ -256,7 +254,11 @@ mod test {
 
             assert_eq!(
                 old_project.milestones[0].percentage_to_unlock,
-                migrated_project.milestones.get(&0).unwrap().percentage_to_unlock
+                migrated_project
+                    .milestones
+                    .get(&0)
+                    .unwrap()
+                    .percentage_to_unlock
             );
 
             assert_eq!(
