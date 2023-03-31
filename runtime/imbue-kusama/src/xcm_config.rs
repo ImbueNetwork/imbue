@@ -1,7 +1,16 @@
+use crate::{AllPalletsWithSystem, Balances, ConstU32};
 use sp_runtime::traits::{Convert, Zero};
 use sp_std::{marker::PhantomData, prelude::*};
 
 // A few exports that help ease life for downstream crates.
+pub use common_runtime::{
+    asset_registry::AuthorityOrigin,
+    common_xcm::general_key,
+    parachains,
+    xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
+    EnsureRootOr,
+};
+pub use common_types::{currency_decimals, CurrencyId, CustomMetadata};
 pub use frame_support::{
     construct_runtime,
     dispatch::DispatchClass,
@@ -16,33 +25,24 @@ pub use frame_support::{
     },
     PalletId, StorageValue,
 };
-
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
     location::AbsoluteReserveProvider, parameter_type_with_key, FixedConversionRateProvider,
 };
 use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
-
-pub use common_runtime::{
-    asset_registry::AuthorityOrigin,
-    common_xcm::general_key,
-    parachains,
-    xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
-    EnsureRootOr,
-};
-pub use common_types::{currency_decimals, CurrencyId, CustomMetadata};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use xcm::v3::Junction::GeneralKey;
+use xcm::{v3::prelude::*, v3::Weight as XcmWeight};
 
 use pallet_xcm::XcmPassthrough;
-use xcm::latest::prelude::*;
 use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
     AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
-    LocationInverter, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
-    SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-    SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
+    ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
+    SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+    SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::XcmExecutor;
 
@@ -52,7 +52,7 @@ use sp_runtime::DispatchError;
 
 parameter_types! {
     // One XCM operation is 100_000_000 weight - almost certainly a conservative estimate.
-    pub UnitWeightCost: u64 = 200_000_000;
+    pub UnitWeightCost: XcmWeight = XcmWeight::from_ref_time(200_000_000);
     pub const MaxInstructions: u32 = 100;
 }
 
@@ -61,24 +61,6 @@ use super::{
     ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, UnknownTokens,
     XcmpQueue,
 };
-
-pub struct XcmConfig;
-impl xcm_executor::Config for XcmConfig {
-    type RuntimeCall = RuntimeCall;
-    type AssetClaims = PolkadotXcm;
-    type AssetTransactor = LocalAssetTransactor;
-    type AssetTrap = PolkadotXcm;
-    type Barrier = Barrier;
-    type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
-    type IsTeleporter = ();
-    type LocationInverter = LocationInverter<Ancestry>;
-    type OriginConverter = XcmOriginToTransactDispatchOrigin;
-    type ResponseHandler = PolkadotXcm;
-    type SubscriptionService = PolkadotXcm;
-    type Trader = Trader;
-    type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-    type XcmSender = XcmRouter;
-}
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
@@ -127,10 +109,39 @@ pub type Barrier = (
 
 parameter_types! {
     pub const KsmLocation: MultiLocation = MultiLocation::parent();
+    pub const MaxAssetsIntoHolding: u32 = 64;
+    pub UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
     pub const RelayNetwork: NetworkId = NetworkId::Kusama;
     pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
     pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+}
+
+pub struct XcmConfig;
+impl xcm_executor::Config for XcmConfig {
+    type RuntimeCall = RuntimeCall;
+    type AssetClaims = PolkadotXcm;
+    type AssetTransactor = LocalAssetTransactor;
+    type AssetTrap = PolkadotXcm;
+    type Barrier = Barrier;
+    type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
+    type IsTeleporter = ();
+    type OriginConverter = XcmOriginToTransactDispatchOrigin;
+    type ResponseHandler = PolkadotXcm;
+    type SubscriptionService = PolkadotXcm;
+    type Trader = Trader;
+    type UniversalLocation = UniversalLocation;
+    type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+    type XcmSender = XcmRouter;
+    type AssetLocker = ();
+    type AssetExchanger = ();
+    type FeeManager = ();
+    type MessageExporter = ();
+    type UniversalAliases = ();
+    type PalletInstancesInfo = AllPalletsWithSystem;
+    type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
+    type CallDispatcher = RuntimeCall;
+    type SafeCallFilter = Everything;
 }
 
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
@@ -159,46 +170,51 @@ impl TakeRevenue for ToTreasury {
 }
 
 parameter_types! {
-    pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
+    pub KsmPerSecond: (AssetId, u128, u128) = (MultiLocation::parent().into(), ksm_per_second(), ksm_per_second());
 
-    pub CanonicalImbuePerSecond: (AssetId, u128) = (
+    pub CanonicalImbuePerSecond: (AssetId, u128, u128) = (
         MultiLocation::new(
             0,
             X1(general_key(parachains::kusama::imbue::IMBU_KEY)),
         ).into(),
         native_per_second(),
+        native_per_second(),
     );
 
-    pub ImbuPerSecond: (AssetId, u128) = (
+    pub ImbuPerSecond: (AssetId, u128, u128) = (
         MultiLocation::new(
             1,
             X2(Parachain(parachains::kusama::imbue::ID), general_key(parachains::kusama::imbue::IMBU_KEY))
         ).into(),
         native_per_second(),
+        native_per_second(),
     );
 
-    pub MgxPerSecond: (AssetId, u128) = (
+    pub MgxPerSecond: (AssetId, u128, u128) = (
         MultiLocation::new(
             1,
             X2(Parachain(parachains::kusama::mangata::ID), general_key(parachains::kusama::mangata::MGX_KEY))
         ).into(),
+        ksm_per_second() * 50,
         ksm_per_second() * 50
     );
 
-    pub AUsdPerSecond: (AssetId, u128) = (
+    pub AUsdPerSecond: (AssetId, u128, u128) = (
         MultiLocation::new(
             1,
             X2(Parachain(parachains::kusama::karura::ID), general_key(parachains::kusama::karura::AUSD_KEY))
         ).into(),
+        ksm_per_second() * 50,
         ksm_per_second() * 50
     );
 
-    pub KarPerSecond: (AssetId, u128) = (
+    pub KarPerSecond: (AssetId, u128, u128) = (
         MultiLocation::new(
             1,
             X2(Parachain(parachains::kusama::karura::ID), general_key(parachains::kusama::karura::KAR_KEY))
         ).into(),
-        ksm_per_second() * 100
+        ksm_per_second() * 100,
+        ksm_per_second() * 100,
     );
 }
 
@@ -216,7 +232,7 @@ pub type Trader = (
 /// queues.
 pub type XcmRouter = (
     // Two routers - use UMP to communicate with the relay chain:
-    cumulus_primitives_utility::ParentAsUmp<ParachainSystem, ()>,
+    cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
     // ..and XCMP to communicate with the sibling chains.
     XcmpQueue,
 );
@@ -233,10 +249,15 @@ impl pallet_xcm::Config for Runtime {
     type XcmTeleportFilter = Everything;
     type XcmReserveTransferFilter = Nothing;
     type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-    type LocationInverter = LocationInverter<Ancestry>;
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
-
+    type Currency = Balances;
+    type CurrencyMatcher = ();
+    type TrustedLockers = ();
+    type UniversalLocation = UniversalLocation;
+    type SovereignAccountOf = LocationToAccountId;
+    type MaxLockers = ConstU32<8>;
+    type WeightInfo = pallet_xcm::TestWeightInfo;
     const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
     // ^ Override for AdvertisedXcmVersion default
     type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
@@ -280,33 +301,32 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
         match location.clone() {
             MultiLocation {
                 parents: 0,
-                interior: X1(GeneralKey(key)),
-            } => match &key[..] {
+                interior: X1(GeneralKey { data, length }),
+            } => match &data[..(length as usize)] {
                 parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
                 _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
             },
             MultiLocation {
                 parents: 1,
-                interior: X2(Parachain(para_id), GeneralKey(key)),
+                interior: X2(Parachain(para_id), GeneralKey { data, length }),
             } => match para_id {
-                parachains::kusama::karura::ID => match &key[..] {
+                parachains::kusama::karura::ID => match &data[..(length as usize)] {
                     parachains::kusama::karura::AUSD_KEY => Some(CurrencyId::AUSD),
                     parachains::kusama::karura::KAR_KEY => Some(CurrencyId::KAR),
                     parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
                     _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
                 },
-                parachains::kusama::mangata::ID => match &key[..] {
+                parachains::kusama::mangata::ID => match &data[..(length as usize)] {
                     parachains::kusama::mangata::MGX_KEY => Some(CurrencyId::MGX),
                     parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
                     _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
                 },
-
-                parachains::kusama::imbue::ID => match &key[..] {
+                parachains::kusama::imbue::ID => match &data[..(length as usize)] {
                     parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
                     _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
                 },
 
-                id if id == u32::from(ParachainInfo::get()) => match &key[..] {
+                id if id == u32::from(ParachainInfo::get()) => match &data[..(length as usize)] {
                     parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
                     _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
                 },
@@ -382,7 +402,7 @@ pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, R
 
 parameter_types! {
     //TODO(Sam): we may need to fine tune this value later on
-    pub const BaseXcmWeight: u64 = 100_000_000;
+    pub const BaseXcmWeight: XcmWeight = XcmWeight::from_ref_time(100_000_000);
     pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -396,11 +416,11 @@ impl orml_xtokens::Config for Runtime {
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
     type BaseXcmWeight = BaseXcmWeight;
-    type LocationInverter = LocationInverter<Ancestry>;
     type MaxAssetsForTransfer = MaxAssetsForTransfer;
     type MinXcmFee = ParachainMinFee;
     type MultiLocationsFilter = Everything;
     type ReserveProvider = AbsoluteReserveProvider;
+    type UniversalLocation = UniversalLocation;
 }
 
 parameter_types! {
@@ -427,7 +447,7 @@ pub struct AccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
     fn convert(account: AccountId) -> MultiLocation {
         X1(AccountId32 {
-            network: NetworkId::Any,
+            network: Some(NetworkId::Kusama),
             id: account.into(),
         })
         .into()

@@ -21,8 +21,8 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use proposals::traits::BriefEvolver;
-    use proposals::{Contribution, ProposedMilestone};
+    use pallet_proposals::traits::BriefEvolver;
+    use pallet_proposals::{Contribution, ProposedMilestone};
     use sp_core::{Hasher, H256};
     use sp_std::convert::{From, TryInto};
 
@@ -250,7 +250,7 @@ pub mod pallet {
 
             let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
                 if let Some(val) = contributions.get_mut(&who) {
-                    val.value.saturating_add(amount);
+                    val.value = val.value.saturating_add(amount);
                     val.timestamp = pallet_timestamp::Pallet::<T>::get();
                 } else {
                     // this should never fail as the the bound is ensure when a brief is created.

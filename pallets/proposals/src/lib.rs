@@ -439,7 +439,6 @@ pub mod pallet {
             )
         }
 
-
         #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::update_project())]
         pub fn update_project(

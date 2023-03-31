@@ -4,15 +4,11 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
-use proposals::ProposedMilestone;
-use sp_core::H256;
+use pallet_proposals::{Projects, ProposedMilestone};
+
 use sp_runtime::DispatchError::BadOrigin;
 use sp_std::collections::btree_map::BTreeMap;
 use std::convert::TryInto;
-
-pub fn gen_hash(seed: u8) -> BriefHash {
-    H256::from([seed; 32])
-}
 
 #[test]
 fn approve_freelancer_not_root() {
@@ -235,14 +231,36 @@ fn only_applicant_can_start_work() {
 #[test]
 fn initial_contribution_and_extra_contribution_aggregates() {
     build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
+        let brief_id = gen_hash(1);
+        let contribution_value = 1000;
 
-#[test]
-fn test_remaining_bounty_api() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            get_brief_owners(1),
+            *ALICE,
+            contribution_value,
+            contribution_value,
+            brief_id,
+            CurrencyId::Native,
+            get_milestones(10),
+        ));
+
+        assert_ok!(BriefsMod::contribute_to_brief(
+            RuntimeOrigin::signed(*BOB),
+            brief_id,
+            contribution_value,
+        ));
+
+        assert_ok!(BriefsMod::commence_work(
+            RuntimeOrigin::signed(*ALICE),
+            brief_id,
+        ));
+
+        let created_project = Projects::<Test>::get(1).unwrap();
+        assert_eq!(
+            created_project.raised_funds,
+            contribution_value.saturating_mul(2)
+        );
     });
 }
 

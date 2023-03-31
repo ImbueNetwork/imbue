@@ -11,21 +11,18 @@ use sp_core::{sr25519::Signature, H256};
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use crate::pallet::BriefHash;
-use crate::MilestoneKey;
-use proposals::traits::BriefEvolver;
-use proposals::{Contribution, Milestone, Project, Projects, ProposedMilestone};
 
 use common_types::CurrencyId;
-use frame_support::dispatch::EncodeLike;
+
 use frame_support::once_cell::sync::Lazy;
-use orml_traits::MultiCurrency;
+
 use sp_core::sr25519;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
     BuildStorage,
 };
-use sp_std::collections::btree_map::BTreeMap;
+
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
@@ -68,7 +65,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
-        Proposals: proposals::{Pallet, Call, Storage, Event<T>},
+        Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -195,7 +192,7 @@ impl pallet_briefs::Config for Test {
     type RMultiCurrency = Tokens;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type BriefEvolver = proposals::Pallet<Test>;
+    type BriefEvolver = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestones = MaxMilestones;
 }
@@ -280,7 +277,7 @@ parameter_types! {
 //    }
 //}
 
-impl proposals::Config for Test {
+impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
@@ -326,6 +323,10 @@ parameter_types! {
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
+
+pub fn gen_hash(seed: u8) -> BriefHash {
+    H256::from([seed; 32])
+}
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()

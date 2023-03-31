@@ -122,7 +122,7 @@ pub mod constants {
     /// We allow for 0.5 seconds of compute with a 6 second average block time.
     pub const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
         WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-        cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64,
+        polkadot_primitives::MAX_POV_SIZE as u64,
     );
 }
 
@@ -269,14 +269,13 @@ pub mod asset_registry {
 }
 pub mod common_xcm {
 
-    use sp_runtime::{traits::ConstU32, WeakBoundedVec};
-
-    use xcm::opaque::v2::Junction::GeneralKey;
-
-    pub fn general_key(key: &[u8]) -> xcm::v2::Junction {
-        GeneralKey(WeakBoundedVec::<u8, ConstU32<32>>::force_from(
-            key.into(),
-            None,
-        ))
+    use xcm::v3::Junction::GeneralKey;
+    pub fn general_key(key: &[u8]) -> xcm::v3::Junction {
+        let mut data = [0u8; 32];
+        data[..key.len()].copy_from_slice(&key[..]);
+        GeneralKey {
+            length: key.len() as u8,
+            data,
+        }
     }
 }

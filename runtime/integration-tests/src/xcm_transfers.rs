@@ -58,14 +58,14 @@ fn transfer_native_to_sibling() {
                     X2(
                         Parachain(PARA_ID_SIBLING),
                         Junction::AccountId32 {
-                            network: NetworkId::Any,
+                            network: Some(NetworkId::Kusama),
                             id: BOB.into(),
                         }
                     )
                 )
                 .into()
             ),
-            xcm_emulator::Limited(1_000_000_000),
+            xcm_emulator::Limited(1_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial balance - amount transferred
@@ -137,14 +137,14 @@ fn transfer_ausd_to_development() {
                     X2(
                         Parachain(PARA_ID_DEVELOPMENT),
                         Junction::AccountId32 {
-                            network: NetworkId::Any,
+                            network: Some(NetworkId::Kusama),
                             id: BOB.into(),
                         }
                     )
                 )
                 .into()
             ),
-            xcm_emulator::Limited(8_000_000_000),
+            xcm_emulator::Limited(8_000_000_000.into()),
         ));
 
         assert_eq!(
@@ -218,14 +218,14 @@ fn transfer_kar_to_development() {
                     X2(
                         Parachain(PARA_ID_DEVELOPMENT),
                         Junction::AccountId32 {
-                            network: NetworkId::Any,
+                            network: Some(NetworkId::Kusama),
                             id: BOB.into(),
                         }
                     )
                 )
                 .into()
             ),
-            xcm_emulator::Limited(8_000_000_000),
+            xcm_emulator::Limited(8_000_000_000.into()),
         ));
 
         assert_eq!(
@@ -256,13 +256,12 @@ fn transfer_from_relay_chain() {
     KusamaNet::execute_with(|| {
         assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
             kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
-            Box::new(Parachain(PARA_ID_DEVELOPMENT).into().into()),
+            Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
             Box::new(
                 Junction::AccountId32 {
-                    network: NetworkId::Any,
+                    network: Some(NetworkId::Kusama),
                     id: BOB,
                 }
-                .into()
                 .into()
             ),
             Box::new((Here, transfer_amount).into()),
@@ -290,19 +289,19 @@ fn transfer_ksm_to_relay_chain() {
                     1,
                     X1(Junction::AccountId32 {
                         id: BOB,
-                        network: NetworkId::Any,
+                        network: Some(NetworkId::Kusama),
                     })
                 )
                 .into()
             ),
-            xcm_emulator::Limited(4_000_000_000)
+            xcm_emulator::Limited(4_000_000_000.into())
         ));
     });
 
     KusamaNet::execute_with(|| {
         assert_eq!(
             kusama_runtime::Balances::free_balance(&BOB.into()),
-            999895428355
+            999904479336
         );
     });
 }
@@ -336,28 +335,28 @@ fn currency_id_convert_imbu() {
 
 // The fee associated with transferring Native tokens
 fn native_fee() -> Balance {
-    let (_asset, fee) = CanonicalImbuePerSecond::get();
+    let (_asset, fee, _) = CanonicalImbuePerSecond::get();
     // NOTE: it is possible that in different machines this value may differ. We shall see.
     fee.div_euclid(10_000) * 8
 }
 
 // The fee associated with transferring AUSD tokens
 fn ausd_fee() -> Balance {
-    let (_asset, fee) = AUsdPerSecond::get();
+    let (_asset, fee, _) = AUsdPerSecond::get();
     // NOTE: it is possible that in different machines this value may differ. We shall see.
     fee.div_euclid(10_000) * 8
 }
 
 // The fee associated with transferring AUSD tokens
 fn kar_fee() -> Balance {
-    let (_asset, fee) = KarPerSecond::get();
+    let (_asset, fee, _) = KarPerSecond::get();
     // NOTE: it is possible that in different machines this value may differ. We shall see.
     fee.div_euclid(10_000) * 8
 }
 
 // The fee associated with transferring KSM tokens
 fn ksm_fee() -> Balance {
-    let (_asset, fee) = KsmPerSecond::get();
+    let (_asset, fee, _) = KsmPerSecond::get();
     // NOTE: it is possible that in different machines this value may differ. We shall see.
     fee.div_euclid(10_000) * 8
 }

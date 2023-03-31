@@ -1,4 +1,4 @@
-use crate as proposals;
+use crate as pallet_proposals;
 use frame_support::{
     parameter_types,
     traits::{ConstU32, Nothing},
@@ -59,7 +59,7 @@ frame_support::construct_runtime!(
         Currencies: orml_currencies::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-        Proposals: proposals::{Pallet, Call, Storage, Event<T>},
+        Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -190,7 +190,7 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
 }
 
-impl proposals::Config for Test {
+impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
