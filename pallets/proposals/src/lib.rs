@@ -202,6 +202,7 @@ pub mod pallet {
         /// You have created a project.
         ProjectCreated(
             T::AccountId,
+            H256,
             ProjectKey,
             BalanceOf<T>,
             common_types::CurrencyId,
@@ -338,7 +339,6 @@ pub mod pallet {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             if StorageVersion::<T>::get() == Release::V0
                 || StorageVersion::<T>::get() == Release::V1
-                || StorageVersion::<T>::get() == Release::V2
             {
                 weight += migration::v2::migrate::<T>();
                 StorageVersion::<T>::set(Release::V2);

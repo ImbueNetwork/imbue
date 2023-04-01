@@ -1,5 +1,5 @@
 use crate::{AccountIdOf, BalanceOf, TimestampOf};
-use crate::{Contribution, Milestone, MilestoneKey, Project, Projects, ProposedMilestone};
+use crate::{Contribution, Event, Milestone, MilestoneKey, Project, Projects, ProposedMilestone};
 use common_types::CurrencyId;
 use frame_support::dispatch::EncodeLike;
 use frame_support::inherent::Vec;
@@ -75,7 +75,7 @@ where
                 required_funds: sum_of_contributions,
                 withdrawn_funds: 0u32.into(),
                 raised_funds: sum_of_contributions,
-                initiator: applicant,
+                initiator: applicant.clone(),
                 created_on: frame_system::Pallet::<T>::block_number(),
                 approved_for_funding: true,
                 funding_threshold_met: true,
@@ -84,6 +84,14 @@ where
             };
 
         Projects::<T>::insert(project_key, project);
+
+        Self::deposit_event(Event::ProjectCreated(
+            applicant,
+            brief_hash,
+            project_key,
+            sum_of_contributions,
+            currency_id,
+        ));
 
         Ok(())
     }

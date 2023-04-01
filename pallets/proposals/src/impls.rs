@@ -85,6 +85,7 @@ impl<T: Config> Pallet<T> {
 
         Self::deposit_event(Event::ProjectCreated(
             who,
+            agreement_hash,
             project_key,
             required_funds,
             currency_id,
