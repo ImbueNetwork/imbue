@@ -268,7 +268,6 @@ parameter_types! {
 //            cancelled: false,
 //            agreement_hash: brief_hash,
 //            // Maybe we dont need this new field because we have create_block_number
-//            work_started_at: Some(System::block_number()),
 //        };
 //
 //        Projects::<T>::insert(project_key, project);

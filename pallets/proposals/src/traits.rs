@@ -70,19 +70,17 @@ where
         let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>> =
             Project {
                 milestones,
-                contributions: contributions,
+                contributions,
                 currency_id,
                 required_funds: sum_of_contributions,
                 withdrawn_funds: 0u32.into(),
                 raised_funds: sum_of_contributions,
                 initiator: applicant,
-                create_block_number: frame_system::Pallet::<T>::block_number(),
+                created_on: frame_system::Pallet::<T>::block_number(),
                 approved_for_funding: true,
                 funding_threshold_met: true,
                 cancelled: false,
                 agreement_hash: brief_hash,
-                // Maybe we dont need this new field because we have create_block_number
-                work_started_at: Some(frame_system::Pallet::<T>::block_number()),
             };
 
         Projects::<T>::insert(project_key, project);

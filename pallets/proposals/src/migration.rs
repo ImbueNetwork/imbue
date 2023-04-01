@@ -139,13 +139,29 @@ pub mod v1 {
 pub mod v2 {
     use super::*;
 
+    #[derive(Encode, Clone, Decode)]
+    pub struct ProjectV2<AccountId, Balance, BlockNumber, Timestamp> {
+        pub work_started_at: Option<BlockNumber>,
+        pub agreement_hash: H256,
+        pub milestones: BTreeMap<MilestoneKey, Milestone>,
+        pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+        pub currency_id: common_types::CurrencyId,
+        pub required_funds: Balance,
+        pub withdrawn_funds: Balance,
+        pub raised_funds: Balance,
+        pub initiator: AccountId,
+        pub create_block_number: BlockNumber,
+        pub approved_for_funding: bool,
+        pub funding_threshold_met: bool,
+        pub cancelled: bool,
+    }
+
     pub type ProjectV2Of<T> =
-        Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
+        ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
 
     pub fn migrate<T: Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
         let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-
         Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
             let _ = project
                 .milestones
@@ -174,8 +190,7 @@ pub mod v2 {
                 currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
                 initiator: project.initiator,
-                create_block_number: project.create_block_number,
-                work_started_at: Some(project.create_block_number),
+                created_on: project.create_block_number,
                 agreement_hash: Default::default(),
                 approved_for_funding: project.approved_for_funding,
                 funding_threshold_met: project.funding_threshold_met,
@@ -330,17 +345,12 @@ mod test {
             let _ = v2::migrate::<Test>();
             let migrated_project = Projects::<Test>::get(&project_key).unwrap();
 
-            assert_eq!(
-                old_project.create_block_number,
-                migrated_project.create_block_number
-            );
+            assert_eq!(old_project.create_block_number, migrated_project.created_on);
 
             assert_eq!(
                 &old_project.contributions.get(&*ALICE).unwrap().value,
                 &migrated_project.contributions.get(&*ALICE).unwrap().value
             );
-
-            assert_eq!(Some(100), migrated_project.work_started_at);
 
             assert_eq!(H256::default(), migrated_project.agreement_hash);
         })

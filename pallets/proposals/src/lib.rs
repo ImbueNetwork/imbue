@@ -338,6 +338,7 @@ pub mod pallet {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             if StorageVersion::<T>::get() == Release::V0
                 || StorageVersion::<T>::get() == Release::V1
+                || StorageVersion::<T>::get() == Release::V2
             {
                 weight += migration::v2::migrate::<T>();
                 StorageVersion::<T>::set(Release::V2);
@@ -865,7 +866,6 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 /// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
-    pub work_started_at: Option<BlockNumber>,
     pub agreement_hash: H256,
     pub milestones: BTreeMap<MilestoneKey, Milestone>,
     pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
@@ -874,7 +874,7 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     pub withdrawn_funds: Balance,
     pub raised_funds: Balance,
     pub initiator: AccountId,
-    pub create_block_number: BlockNumber,
+    pub created_on: BlockNumber,
     pub approved_for_funding: bool,
     pub funding_threshold_met: bool,
     pub cancelled: bool,
