@@ -2,10 +2,9 @@ use crate as briefs;
 use crate::mock::*;
 use crate::*;
 use common_types::CurrencyId;
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::MultiCurrency;
-use pallet_proposals::{Projects, ProposedMilestone};
-
+use pallet_proposals::{Projects, ProposedMilestone, BoundedProposedMilestones};
 use sp_runtime::DispatchError::BadOrigin;
 use std::convert::TryInto;
 
@@ -275,7 +274,7 @@ pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
         .expect("qed")
 }
 
-pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
+pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones {
     let max = <Test as Config>::MaxBriefOwners::get();
     if n > max {
         n = max;
@@ -289,4 +288,13 @@ pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
         .expect("qed");
 
     milestones
+}
+
+pub(crate) fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Proposals::on_initialize(System::block_number());
+        //BriefsMod::on_initialize(System::block_number());
+    }
 }

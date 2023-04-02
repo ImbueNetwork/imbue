@@ -3,10 +3,10 @@ use crate::tests::get_milestones;
 use crate::*;
 use common_types::CurrencyId;
 
-use frame_support::assert_ok;
-use pallet_proposals::Projects;
+use frame_support::{assert_ok, bounded_vec};
+use pallet_proposals::{Projects, RoundType};
 use sp_core::H256;
-use std::convert::TryFrom;
+use std::convert::TryInto;
 
 
 // all the integration tests for a brief to proposal conversion
@@ -66,13 +66,13 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
 
         // Now we create a proposal with the same parameters.
         // The state of each of the project should be the same and therefore will function the same.
-        Proposals::create_project(
+        let _ = Proposals::create_project(
             RuntimeOrigin::signed(*ALICE),
             brief_id,
-            milestones
+            milestones.clone(),
             contribution_value,
             CurrencyId::Native,
-        );
+        ).unwrap();
 
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
@@ -82,14 +82,16 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             RoundType::ContributionRound,
         )
         .unwrap();
-        
+
+        tests::run_to_block(System::block_number() + 1u64);
+
         let _ = Proposals::contribute(
             RuntimeOrigin::signed(*BOB),
             Some(1),
             project_key + 1,
             contribution_value,
         );
-        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, Some(milestones.keys().cloned().collect::<Vec<_>>().try_into().expect("qed"))).unwrap();
+        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, Some((0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().expect("qed"))).unwrap();
 
-    });
+        });
 }

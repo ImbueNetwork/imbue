@@ -60,7 +60,7 @@ type BoundedWhitelistSpots<T> =
     BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, MaxWhitelistPerProject>;
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
-type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
+pub type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
 pub type AgreementHash = H256;
 
 #[frame_support::pallet]

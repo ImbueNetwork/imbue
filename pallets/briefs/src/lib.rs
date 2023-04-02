@@ -22,7 +22,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_proposals::traits::BriefEvolver;
-    use pallet_proposals::{Contribution, ProposedMilestone};
+    use pallet_proposals::{Contribution, ProposedMilestone, BoundedProposedMilestones};
     use sp_core::{Hasher, H256};
     use sp_std::convert::{From, TryInto};
 
@@ -35,8 +35,6 @@ pub mod pallet {
         Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
         <T as Config>::MaxBriefOwners,
     >;
-    pub(crate) type BoundedProposedMilestones<T> =
-        BoundedVec<ProposedMilestone, <T as Config>::MaxMilestones>;
 
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
@@ -67,11 +65,6 @@ pub mod pallet {
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
         type MaxBriefOwners: Get<u32>;
-
-        ///https://paritytech.github.io/substrate/master/frame_support/macro.defensive_assert.html
-        //todo add defensive assert in runtime to ensure this is compatible with proposals
-        /// Maximum milestones to a brief.
-        type MaxMilestones: Get<u32>;
     }
 
     #[pallet::storage]
@@ -172,7 +165,7 @@ pub mod pallet {
             initial_contribution: BalanceOf<T>,
             brief_id: BriefHash,
             currency_id: CurrencyId,
-            milestones: BoundedProposedMilestones<T>,
+            milestones: BoundedProposedMilestones,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -322,7 +315,7 @@ pub mod pallet {
         currency_id: CurrencyId,
         created_at: BlockNumberFor<T>,
         applicant: AccountIdOf<T>,
-        milestones: BoundedProposedMilestones<T>,
+        milestones: BoundedProposedMilestones,
     }
 
     impl<T: Config> Pallet<T> {
@@ -347,7 +340,7 @@ pub mod pallet {
             currency_id: CurrencyId,
             created_at: BlockNumberFor<T>,
             applicant: AccountIdOf<T>,
-            milestones: BoundedProposedMilestones<T>,
+            milestones: BoundedProposedMilestones,
         ) -> Self {
             Self {
                 created_at,

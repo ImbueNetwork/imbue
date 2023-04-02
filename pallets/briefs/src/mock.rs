@@ -183,8 +183,6 @@ parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
     pub MaxBriefOwners: u32 = 100;
-    pub MaxMilestones: u32 = 100;
-
 }
 
 impl pallet_briefs::Config for Test {
@@ -194,7 +192,6 @@ impl pallet_briefs::Config for Test {
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type BriefEvolver = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
-    type MaxMilestones = MaxMilestones;
 }
 
 parameter_types! {
