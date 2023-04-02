@@ -45,7 +45,7 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
     build_test_externality().execute_with(|| {        
         let brief_id = H256::from([12; 32]);
         let milestones = get_milestones(10);
-        let mut project_key = 1;
+        let project_key = 1;
         let contribution_value: Balance = 10000;
         // This is the minimum path to a proposal from the briefs pallet.
         let _ = BriefsMod::create_brief(
@@ -92,6 +92,23 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             contribution_value,
         );
         let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, Some((0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().expect("qed"))).unwrap();
+        let brief_p = Projects::<Test>::get(project_key).unwrap();
+        let standard_p = Projects::<Test>::get(project_key + 1).unwrap();
 
-        });
+
+        //assert!(brief_p.milestones.values().all(|v| standard_p.milestones.values().contains(v)));
+        //assert!(brief_p.contributions.values().iter().all(|v| standard_p.contributions.values().iter().contains(v)));
+        assert_eq!(brief_p.currency_id, standard_p.currency_id);
+        assert_eq!(brief_p.required_funds, standard_p.required_funds);
+        assert_eq!(brief_p.withdrawn_funds, standard_p.withdrawn_funds);
+        assert_eq!(brief_p.raised_funds, standard_p.raised_funds);
+        assert_eq!(brief_p.initiator, standard_p.initiator);
+        assert_eq!(brief_p.created_on, standard_p.created_on);
+        assert_eq!(brief_p.approved_for_funding, true);
+        assert_eq!(brief_p.approved_for_funding, standard_p.approved_for_funding);
+        assert_eq!(brief_p.funding_threshold_met, true);
+        assert_eq!(brief_p.funding_threshold_met, standard_p.funding_threshold_met);
+        assert_eq!(brief_p.cancelled, false);
+        assert_eq!(brief_p.cancelled, standard_p.cancelled);
+    });
 }
