@@ -772,7 +772,6 @@ impl pallet_briefs::Config for Runtime {
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type BriefEvolver = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
-    type MaxMilestones = MaxMilestones;
 }
 
 construct_runtime! {
