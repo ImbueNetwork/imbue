@@ -49,20 +49,20 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
         let contribution_value: Balance = 10000;
         // This is the minimum path to a proposal from the briefs pallet.
         let _ = BriefsMod::create_brief(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(*BOB),
             tests::get_brief_owners(1),
-            *BOB,
+            *ALICE,
             contribution_value,
             contribution_value,
             brief_id.clone(),
             CurrencyId::Native,
             milestones.clone(),
-        );
+        ).unwrap();
         
         let _ = BriefsMod::commence_work(
             RuntimeOrigin::signed(*ALICE),
             brief_id
-        );
+        ).unwrap();
 
         // Now we create a proposal with the same parameters.
         // The state of each of the project should be the same and therefore will function the same.
@@ -74,11 +74,12 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             CurrencyId::Native,
         ).unwrap();
 
+
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
             System::block_number(),
-            System::block_number() + 100,
-            bounded_vec![0u32],
+            System::block_number() + 5,
+            bounded_vec![project_key + 1],
             RoundType::ContributionRound,
         )
         .unwrap();
@@ -91,7 +92,10 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             project_key + 1,
             contribution_value,
         );
-        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, Some((0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().expect("qed"))).unwrap();
+
+        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key + 1, Some((0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().expect("qed"))).unwrap();
+
+        dbg!(Projects::<Test>::iter_keys().collect::<Vec<_>>());
         let brief_p = Projects::<Test>::get(project_key).unwrap();
         let standard_p = Projects::<Test>::get(project_key + 1).unwrap();
 

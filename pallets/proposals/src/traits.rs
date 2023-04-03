@@ -1,5 +1,5 @@
 use crate::{AccountIdOf, BalanceOf, TimestampOf};
-use crate::{Contribution, Event, Milestone, MilestoneKey, Project, Projects, ProposedMilestone};
+use crate::{Contribution, Event, Milestone, MilestoneKey, Project, Projects, ProposedMilestone, ProjectCount};
 use common_types::CurrencyId;
 use frame_support::dispatch::EncodeLike;
 use frame_support::inherent::Vec;
@@ -84,7 +84,7 @@ where
             };
 
         Projects::<T>::insert(project_key, project);
-
+        ProjectCount::<T>::mutate(|c| *c += 1);
         Self::deposit_event(Event::ProjectCreated(
             applicant,
             brief_hash,

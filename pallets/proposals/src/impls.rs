@@ -303,12 +303,14 @@ impl<T: Config> Pallet<T> {
         project.funding_threshold_met = true;
         // set is_approved
         if milestone_keys.is_some() {
+            // USE IF LET
             for milestone_key in milestone_keys.unwrap().into_iter() {
                 ensure!(
                     project.milestones.contains_key(&milestone_key),
                     Error::<T>::MilestoneDoesNotExist
                 );
 
+            // USE IF LET
                 let mut milestone = project.milestones.get_mut(&milestone_key).unwrap().clone();
                 milestone.is_approved = true;
 
@@ -516,7 +518,6 @@ impl<T: Config> Pallet<T> {
         // TODO: No need to clone
         for (_milestone_key, milestone) in project.milestones.clone() {
             // Todo: milestone is approved at the point of the approve extrinsic
-            // CRITICAL BUG
             if milestone.is_approved {
                 unlocked_funds += (total_contribution_amount
                     * milestone.percentage_to_unlock.into())
