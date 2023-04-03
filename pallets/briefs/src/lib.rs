@@ -22,7 +22,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_proposals::traits::BriefEvolver;
-    use pallet_proposals::{Contribution, ProposedMilestone, BoundedProposedMilestones};
+    use pallet_proposals::{BoundedProposedMilestones, Contribution};
     use sp_core::{Hasher, H256};
     use sp_std::convert::{From, TryInto};
 

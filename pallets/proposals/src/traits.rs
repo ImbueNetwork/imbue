@@ -1,5 +1,8 @@
 use crate::{AccountIdOf, BalanceOf, TimestampOf};
-use crate::{Contribution, Event, Milestone, MilestoneKey, Project, Projects, ProposedMilestone, ProjectCount};
+use crate::{
+    Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
+    ProposedMilestone,
+};
 use common_types::CurrencyId;
 use frame_support::dispatch::EncodeLike;
 use frame_support::inherent::Vec;

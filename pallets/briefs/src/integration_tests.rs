@@ -8,7 +8,6 @@ use pallet_proposals::{Projects, RoundType};
 use sp_core::H256;
 use std::convert::TryInto;
 
-
 // all the integration tests for a brief to proposal conversion
 #[test]
 fn create_proposal_from_brief() {
@@ -42,7 +41,7 @@ fn create_proposal_from_brief() {
 
 #[test]
 fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
-    build_test_externality().execute_with(|| {        
+    build_test_externality().execute_with(|| {
         let brief_id = H256::from([12; 32]);
         let milestones = get_milestones(10);
         let project_key = 1;
@@ -57,12 +56,10 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             brief_id.clone(),
             CurrencyId::Native,
             milestones.clone(),
-        ).unwrap();
-        
-        let _ = BriefsMod::commence_work(
-            RuntimeOrigin::signed(*ALICE),
-            brief_id
-        ).unwrap();
+        )
+        .unwrap();
+
+        let _ = BriefsMod::commence_work(RuntimeOrigin::signed(*ALICE), brief_id).unwrap();
 
         // Now we create a proposal with the same parameters.
         // The state of each of the project should be the same and therefore will function the same.
@@ -72,7 +69,8 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             milestones.clone(),
             contribution_value,
             CurrencyId::Native,
-        ).unwrap();
+        )
+        .unwrap();
 
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
@@ -92,15 +90,33 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             contribution_value,
         );
 
-        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key + 1, Some((0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().expect("qed"))).unwrap();
+        let _ = Proposals::approve(
+            RuntimeOrigin::root(),
+            Some(1),
+            project_key + 1,
+            Some(
+                (0u32..milestones.len() as u32)
+                    .collect::<Vec<u32>>()
+                    .try_into()
+                    .expect("qed"),
+            ),
+        )
+        .unwrap();
 
         let brief_p = Projects::<Test>::get(project_key).unwrap();
         let standard_p = Projects::<Test>::get(project_key + 1).unwrap();
 
         // Here we assert that the two projects have the same state, as the inputs were the same.
-        // Milestones have a different project key. 
-        assert_eq!(brief_p.milestones.values().len(), standard_p.milestones.values().len());
-        assert!(brief_p.contributions.values().all(|v| standard_p.contributions.values().collect::<Vec<_>>().contains(&v)));
+        // Milestones have a different project key.
+        assert_eq!(
+            brief_p.milestones.values().len(),
+            standard_p.milestones.values().len()
+        );
+        assert!(brief_p.contributions.values().all(|v| standard_p
+            .contributions
+            .values()
+            .collect::<Vec<_>>()
+            .contains(&v)));
         assert_eq!(brief_p.currency_id, standard_p.currency_id);
         assert_eq!(brief_p.required_funds, standard_p.required_funds);
         assert_eq!(brief_p.withdrawn_funds, standard_p.withdrawn_funds);
@@ -108,9 +124,15 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
         assert_eq!(brief_p.initiator, standard_p.initiator);
         assert_eq!(brief_p.created_on, standard_p.created_on);
         assert_eq!(brief_p.approved_for_funding, true);
-        assert_eq!(brief_p.approved_for_funding, standard_p.approved_for_funding);
+        assert_eq!(
+            brief_p.approved_for_funding,
+            standard_p.approved_for_funding
+        );
         assert_eq!(brief_p.funding_threshold_met, true);
-        assert_eq!(brief_p.funding_threshold_met, standard_p.funding_threshold_met);
+        assert_eq!(
+            brief_p.funding_threshold_met,
+            standard_p.funding_threshold_met
+        );
         assert_eq!(brief_p.cancelled, false);
         assert_eq!(brief_p.cancelled, standard_p.cancelled);
     });

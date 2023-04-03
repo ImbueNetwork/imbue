@@ -4,7 +4,7 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::MultiCurrency;
-use pallet_proposals::{Projects, ProposedMilestone, BoundedProposedMilestones};
+use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
 use sp_runtime::DispatchError::BadOrigin;
 use std::convert::TryInto;
 

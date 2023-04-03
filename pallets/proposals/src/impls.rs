@@ -310,7 +310,7 @@ impl<T: Config> Pallet<T> {
                     Error::<T>::MilestoneDoesNotExist
                 );
 
-            // USE IF LET
+                // USE IF LET
                 let mut milestone = project.milestones.get_mut(&milestone_key).unwrap().clone();
                 milestone.is_approved = true;
 
