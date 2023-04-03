@@ -93,7 +93,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        BriefSubmitted(BriefHash),
+        BriefSubmitted(T::AccountId, BriefHash),
         AccountApproved(AccountIdOf<T>),
         BriefEvolution(BriefHash),
         BriefContribution(T::AccountId, BriefHash),
@@ -203,7 +203,7 @@ pub mod pallet {
                     // this should never fail as the the bound is ensure when a brief is created.
                     let _ = contributions
                         .try_insert(
-                            who,
+                            who.clone(),
                             Contribution {
                                 value: initial_contribution,
                                 timestamp: pallet_timestamp::Pallet::<T>::get(),
@@ -226,7 +226,7 @@ pub mod pallet {
 
             Briefs::<T>::insert(brief_id, brief);
 
-            Self::deposit_event(Event::<T>::BriefSubmitted(brief_id));
+            Self::deposit_event(Event::<T>::BriefSubmitted(who, brief_id));
 
             Ok(())
         }
