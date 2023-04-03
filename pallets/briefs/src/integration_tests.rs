@@ -100,8 +100,8 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
         let standard_p = Projects::<Test>::get(project_key + 1).unwrap();
 
 
-        //assert!(brief_p.milestones.values().all(|v| standard_p.milestones.values().contains(v)));
-        //assert!(brief_p.contributions.values().iter().all(|v| standard_p.contributions.values().iter().contains(v)));
+        assert_eq!(brief_p.milestones.values().len(), standard_p.milestones.values().len());
+        assert!(brief_p.contributions.values().all(|v| standard_p.contributions.values().collect::<Vec<_>>().contains(&v)));
         assert_eq!(brief_p.currency_id, standard_p.currency_id);
         assert_eq!(brief_p.required_funds, standard_p.required_funds);
         assert_eq!(brief_p.withdrawn_funds, standard_p.withdrawn_funds);
