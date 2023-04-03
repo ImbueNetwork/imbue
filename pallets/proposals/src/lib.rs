@@ -14,7 +14,7 @@ pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
+use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*, PartialEq};
 
 pub mod traits;
 

@@ -74,7 +74,6 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             CurrencyId::Native,
         ).unwrap();
 
-
         let _ = Proposals::schedule_round(
             RuntimeOrigin::root(),
             System::block_number(),
@@ -95,11 +94,11 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
 
         let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key + 1, Some((0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().expect("qed"))).unwrap();
 
-        dbg!(Projects::<Test>::iter_keys().collect::<Vec<_>>());
         let brief_p = Projects::<Test>::get(project_key).unwrap();
         let standard_p = Projects::<Test>::get(project_key + 1).unwrap();
 
-
+        // Here we assert that the two projects have the same state, as the inputs were the same.
+        // Milestones have a different project key. 
         assert_eq!(brief_p.milestones.values().len(), standard_p.milestones.values().len());
         assert!(brief_p.contributions.values().all(|v| standard_p.contributions.values().collect::<Vec<_>>().contains(&v)));
         assert_eq!(brief_p.currency_id, standard_p.currency_id);

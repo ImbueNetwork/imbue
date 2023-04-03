@@ -277,7 +277,6 @@ pub mod pallet {
         }
 
         /// Once the freelancer is happy with both the milestones and the offering this can be called.
-        /// It will call the hook (if we want to use the hook) to bypass approval in the proposals pallet.
         #[pallet::call_index(4)]
         #[pallet::weight(10_000)]
         pub fn commence_work(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
@@ -296,7 +295,6 @@ pub mod pallet {
                 brief.milestones.into(),
             )
             .map_err(|_| Error::<T>::BriefConversionFailedGeneric)?;
-            // todo, finer grained err handling
 
             BriefContributions::<T>::remove(brief_id);
             Briefs::<T>::remove(brief_id);
