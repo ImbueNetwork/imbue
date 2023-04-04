@@ -1,4 +1,6 @@
 use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
+use imbue_kusama_runtime::currency::IMBU;
 use imbue_kusama_runtime::{
     AccountId, AuraId, CouncilConfig, CouncilMembershipConfig, DemocracyConfig, Signature,
     TechnicalCommitteeConfig, TechnicalMembershipConfig,
@@ -7,15 +9,13 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use std::convert::TryInto;
-use hex_literal::hex;
-use imbue_kusama_runtime::currency::IMBU;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     AccountId32,
 };
+use std::convert::TryInto;
+use std::str::FromStr;
 
 /// Properties for imbue.
 pub fn imbue_properties() -> Properties {
@@ -89,12 +89,10 @@ pub fn development_local_config(environment: &str) -> ImbueKusamaChainSpec {
         move || {
             development_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
-                vec![
-                    (
-                        get_account_id_from_seed::<sr25519::Public>("Alice"),
-                        get_collator_keys_from_seed("Alice"),
-                    )
-                ],
+                vec![(
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_collator_keys_from_seed("Alice"),
+                )],
                 endowed_accounts_local(),
                 Some(250_000_000 * IMBU),
                 council_members(),
@@ -132,7 +130,7 @@ pub fn development_environment_config(environment: &str) -> ImbueKusamaChainSpec
                             .into(),
                         hex!["72992197d9d63d698428f1d94354e8ac6aba3a451d666c6bb433e046499a3665"]
                             .unchecked_into(),
-                    )
+                    ),
                 ],
                 endowed_accounts(),
                 Some(200_000_000 * IMBU),
@@ -154,10 +152,10 @@ pub fn development_environment_config(environment: &str) -> ImbueKusamaChainSpec
 }
 
 pub fn imbue_kusama_config() -> ImbueKusamaChainSpec {
-	ImbueKusamaChainSpec::from_json_bytes(
-		&include_bytes!("../../res/genesis/imbue-kusama-raw.json")[..],
-	)
-	.unwrap()
+    ImbueKusamaChainSpec::from_json_bytes(
+        &include_bytes!("../../res/genesis/imbue-kusama-raw.json")[..],
+    )
+    .unwrap()
 }
 
 fn endowed_accounts() -> Vec<AccountId> {
@@ -192,7 +190,9 @@ fn endowed_accounts_local() -> Vec<AccountId> {
     ]
 }
 
-pub fn get_dev_session_keys(keys: imbue_kusama_runtime::AuraId) -> imbue_kusama_runtime::SessionKeys {
+pub fn get_dev_session_keys(
+    keys: imbue_kusama_runtime::AuraId,
+) -> imbue_kusama_runtime::SessionKeys {
     imbue_kusama_runtime::SessionKeys { aura: keys }
 }
 
@@ -256,7 +256,9 @@ fn development_genesis(
             phantom: Default::default(),
         },
         technical_membership: TechnicalMembershipConfig {
-            members: technical_committee_membership.try_into().expect("convert error!"),
+            members: technical_committee_membership
+                .try_into()
+                .expect("convert error!"),
             phantom: Default::default(),
         },
         session: imbue_kusama_runtime::SessionConfig {

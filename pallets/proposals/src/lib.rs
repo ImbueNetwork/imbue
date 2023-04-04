@@ -2,9 +2,6 @@
 
 use codec::{Decode, Encode};
 use common_types::CurrencyId;
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
 use frame_support::{
     pallet_prelude::*,
     storage::bounded_btree_map::BoundedBTreeMap,
@@ -12,11 +9,14 @@ use frame_support::{
     transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
+use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
+
+pub mod traits;
 
 #[cfg(test)]
 mod mock;
@@ -36,32 +36,32 @@ pub mod impls;
 pub use impls::*;
 
 // The Constants associated with the bounded parameters
-type MaxStringFieldLen = ConstU32<255>;
 type MaxProjectKeysPerRound = ConstU32<1000>;
 type MaxMilestoneKeys = ConstU32<100>;
 type MaxProposedMilestones = ConstU32<100>;
-type MaxWebsiteUrlField = ConstU32<2048>;
-type MaxDescriptionField = ConstU32<5000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
 
 pub type RoundKey = u32;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
-type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
+pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 pub type ProjectAccountId<T> = <T as frame_system::Config>::AccountId;
-pub type Refunds<T> =  Vec<(AccountIdOf<T>, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>;
+pub type Refunds<T> = Vec<(
+    AccountIdOf<T>,
+    ProjectAccountId<T>,
+    BalanceOf<T>,
+    CurrencyId,
+)>;
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedWhitelistSpots<T> =
     BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, MaxWhitelistPerProject>;
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
 type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
-type BoundedStringField = BoundedVec<u8, MaxStringFieldLen>;
-type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
-type BoundedWebsiteUrlField = BoundedVec<u8, MaxWebsiteUrlField>;
-type BoundedDescriptionField = BoundedVec<u8, MaxDescriptionField>;
+pub type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
+pub type AgreementHash = H256;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -72,13 +72,13 @@ pub mod pallet {
         frame_system::Config + pallet_identity::Config + pallet_timestamp::Config
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type PalletId: Get<PalletId>;
 
-        type AuthorityOrigin: EnsureOrigin<Self::Origin>;
+        type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+        type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
         type MaxProjectsPerRound: Get<u32>;
 
@@ -180,10 +180,19 @@ pub mod pallet {
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
     /// The refund queue is used to store the list of accounts that have been involved in a do_refund call.
-    /// The queue will be sent to the hooks which will inturn actually carry out the 
+    /// The queue will be sent to the hooks which will inturn actually carry out the
     #[pallet::storage]
     #[pallet::getter(fn refund_queue)]
-    pub type RefundQueue<T> = StorageValue<_, Vec<(AccountIdOf<T>, ProjectAccountId<T>, BalanceOf<T>, CurrencyId)>, ValueQuery>;
+    pub type RefundQueue<T> = StorageValue<
+        _,
+        Vec<(
+            AccountIdOf<T>,
+            ProjectAccountId<T>,
+            BalanceOf<T>,
+            CurrencyId,
+        )>,
+        ValueQuery,
+    >;
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -193,18 +202,13 @@ pub mod pallet {
         /// You have created a project.
         ProjectCreated(
             T::AccountId,
-            Vec<u8>,
+            H256,
             ProjectKey,
             BalanceOf<T>,
             common_types::CurrencyId,
         ),
         // Project has been updated
-        ProjectUpdated(
-            T::AccountId,
-            Vec<u8>,
-            ProjectKey,
-            BalanceOf<T>
-        ),  
+        ProjectUpdated(T::AccountId, ProjectKey, BalanceOf<T>),
         /// A funding round has been created.
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
         /// A voting round has been created.
@@ -333,9 +337,11 @@ pub mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            if StorageVersion::<T>::get() == Release::V0 {
-                weight += migration::v1::migrate::<T>();
-                StorageVersion::<T>::set(Release::V1);
+            if StorageVersion::<T>::get() == Release::V0
+                || StorageVersion::<T>::get() == Release::V1
+            {
+                weight += migration::v2::migrate::<T>();
+                StorageVersion::<T>::set(Release::V2);
             }
             weight
         }
@@ -346,13 +352,14 @@ pub mod pallet {
             let mut refunds = RefundQueue::<T>::get();
             // Overestimate.
             weight += T::DbWeight::get().reads(2);
-            
+
             // A counter is used to know how many elements to split off.
             let mut c = 0u32;
-            for i in 0..T::RefundsPerBlock::get(){
+            for i in 0..T::RefundsPerBlock::get() {
                 if let Some(refund) = refunds.get(i as usize) {
-                    Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);                    
-                    weight.saturating_add(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
+                    Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);
+                    weight
+                        .saturating_add(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
                     c += 1;
                 } else {
                     break;
@@ -371,44 +378,29 @@ pub mod pallet {
             remaining_weight.saturating_sub(T::DbWeight::get().reads(2));
 
             // A little extra than required for safety.
-            let weight_required_to_finish_hook = 
-                <T as pallet::Config>::WeightInfo::refund_item_in_queue() + <T as pallet::Config>::WeightInfo::split_off_refunds();
+            let weight_required_to_finish_hook =
+                <T as pallet::Config>::WeightInfo::refund_item_in_queue()
+                    + <T as pallet::Config>::WeightInfo::split_off_refunds();
 
             // A counter is used to know how many elements to split off.
             let mut c = 0u32;
 
-            // While the weight has enough weight to finish off the 
-            while remaining_weight > weight_required_to_finish_hook {
+            // While the weight has enough weight to finish off the
+            while remaining_weight.ref_time() > weight_required_to_finish_hook.ref_time() {
                 if let Some(refund) = refunds.get(c as usize) {
                     let _ = Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);
-                    remaining_weight.saturating_sub(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
+                    remaining_weight
+                        .saturating_sub(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
                     c += 1;
                 } else {
-                    break
+                    break;
                 }
             }
 
             let _ = Self::split_off_refunds(&mut refunds, c);
             remaining_weight.saturating_sub(<T as pallet::Config>::WeightInfo::split_off_refunds());
-            
+
             remaining_weight
-        }
-    }
-
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config>(core::marker::PhantomData<T>);
-
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self(core::marker::PhantomData)
-        }
-    }
-
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-        fn build(&self) {
-            StorageVersion::<T>::put(Release::V1);
         }
     }
 
@@ -419,27 +411,17 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Step 1 (INITIATOR)
         /// Create project.
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::create_project())]
         pub fn create_project(
             origin: OriginFor<T>,
-            name: BoundedStringField,
-            logo: BoundedStringField,
-            description: BoundedDescriptionField,
-            website: BoundedWebsiteUrlField,
+            agreement_hash: H256,
             proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             // Validation
-            ensure!(!name.is_empty(), Error::<T>::ProjectNameIsMandatory);
-            ensure!(!logo.is_empty(), Error::<T>::LogoIsMandatory);
-            ensure!(
-                !description.is_empty(),
-                Error::<T>::ProjectDescriptionIsMandatory
-            );
-            ensure!(!website.is_empty(), Error::<T>::WebsiteURLIsMandatory);
-
             let mut total_percentage = 0;
             for milestone in proposed_milestones.iter() {
                 total_percentage += milestone.percentage_to_unlock;
@@ -451,30 +433,25 @@ pub mod pallet {
 
             Self::new_project(
                 who,
-                name,
-                logo,
-                description,
-                website,
+                agreement_hash,
                 proposed_milestones,
                 required_funds,
                 currency_id,
             )
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::update_project())]
         pub fn update_project(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            name: BoundedStringField,
-            logo: BoundedStringField,
-            description: BoundedDescriptionField,
-            website: BoundedWebsiteUrlField,
             proposed_milestones: BoundedProposedMilestones,
             required_funds: BalanceOf<T>,
-            currency_id: common_types::CurrencyId,
+            currency_id: CurrencyId,
+            agreement_hash: H256,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            
+
             let mut total_percentage = 0;
             for milestone in proposed_milestones.iter() {
                 total_percentage += milestone.percentage_to_unlock;
@@ -487,18 +464,16 @@ pub mod pallet {
             Self::update_existing_project(
                 who,
                 project_key,
-                name,
-                logo,
-                description,
-                website,
                 proposed_milestones,
                 required_funds,
                 currency_id,
+                agreement_hash,
             )
         }
 
         /// Step 1.5 (INITIATOR)
         /// Add whitelist to a project
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::add_project_whitelist())]
         pub fn add_project_whitelist(
             origin: OriginFor<T>,
@@ -518,6 +493,7 @@ pub mod pallet {
 
         /// Step 1.5 (INITIATOR)
         /// Remove a whitelist
+        #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::remove_project_whitelist())]
         pub fn remove_project_whitelist(
             origin: OriginFor<T>,
@@ -534,6 +510,7 @@ pub mod pallet {
         /// Step 2 (ADMIN)
         /// Schedule a round
         /// project_keys: the projects were selected for this round
+        #[pallet::call_index(4)]
         #[pallet::weight(<T as Config>::WeightInfo::schedule_round())]
         pub fn schedule_round(
             origin: OriginFor<T>,
@@ -552,7 +529,10 @@ pub mod pallet {
             ensure!(!project_keys.is_empty(), Error::<T>::LengthMustExceedZero);
 
             // Project keys is bounded to 5 projects maximum.
-            let max_project_key = project_keys.iter().max().ok_or(Error::<T>::LengthMustExceedZero)?;
+            let max_project_key = project_keys
+                .iter()
+                .max()
+                .ok_or(Error::<T>::LengthMustExceedZero)?;
             Projects::<T>::get(max_project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             Self::new_round(start, end, project_keys, round_type)
         }
@@ -560,6 +540,7 @@ pub mod pallet {
         /// Step 2.5 (ADMIN)
         /// Cancel a round
         /// This round must have not started yet
+        #[pallet::call_index(5)]
         #[pallet::weight(<T as Config>::WeightInfo::cancel_round())]
         pub fn cancel_round(
             origin: OriginFor<T>,
@@ -584,6 +565,7 @@ pub mod pallet {
 
         /// Step 3 (CONTRIBUTOR/FUNDER)
         /// Contribute to a project
+        #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
         #[transactional]
         pub fn contribute(
@@ -600,6 +582,7 @@ pub mod pallet {
         /// Step 4 (ADMIN)
         /// Approve project
         /// If the project is approved, the project initiator can withdraw funds for approved milestones
+        #[pallet::call_index(7)]
         #[pallet::weight(<T as Config>::WeightInfo::approve())]
         pub fn approve(
             origin: OriginFor<T>,
@@ -613,6 +596,7 @@ pub mod pallet {
         }
 
         /// Step 5 (INITIATOR)
+        #[pallet::call_index(8)]
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
@@ -625,6 +609,7 @@ pub mod pallet {
 
         /// Step 6 (CONTRIBUTOR/FUNDER)
         /// Vote on a milestone
+        #[pallet::call_index(9)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_milestone())]
         pub fn vote_on_milestone(
             origin: OriginFor<T>,
@@ -646,6 +631,7 @@ pub mod pallet {
 
         /// Step 7 (INITATOR)
         /// Finalise the voting on a milestone.
+        #[pallet::call_index(10)]
         #[pallet::weight(<T as Config>::WeightInfo::finalise_milestone_voting())]
         pub fn finalise_milestone_voting(
             origin: OriginFor<T>,
@@ -659,6 +645,7 @@ pub mod pallet {
 
         /// Step 8 (INITATOR)
         /// Withdraw some avaliable funds from the project.
+        #[pallet::call_index(11)]
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
@@ -671,6 +658,7 @@ pub mod pallet {
         /// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
         /// This will start a round which each contributor can vote on.
         /// The round will last as long as set in the Config.
+        #[pallet::call_index(12)]
         #[pallet::weight(<T as Config>::WeightInfo::raise_vote_of_no_confidence())]
         pub fn raise_vote_of_no_confidence(
             origin: OriginFor<T>,
@@ -683,6 +671,7 @@ pub mod pallet {
         /// Vote on an already existing "Vote of no condidence" round.
         /// is_yay is FOR the project's continuation.
         /// so is_yay = false == against the project from continuing perhaps should be flipped.
+        #[pallet::call_index(13)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         pub fn vote_on_no_confidence_round(
             origin: OriginFor<T>,
@@ -697,6 +686,7 @@ pub mod pallet {
 
         /// Finalise a "vote of no condidence" round.
         /// Votes must pass a threshold as defined in the config trait for the vote to succeed.
+        #[pallet::call_index(14)]
         #[pallet::weight(<T as Config>::WeightInfo::finalise_no_confidence_round())]
         pub fn finalise_no_confidence_round(
             origin: OriginFor<T>,
@@ -716,6 +706,7 @@ pub mod pallet {
         // Root Extrinsics:
 
         /// Set max project count per round
+        #[pallet::call_index(15)]
         #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_max_project_count_per_round(
             origin: OriginFor<T>,
@@ -732,6 +723,7 @@ pub mod pallet {
         }
 
         /// Set milestone voting window
+        #[pallet::call_index(16)]
         #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_milestone_voting_window(
             origin: OriginFor<T>,
@@ -748,6 +740,7 @@ pub mod pallet {
         }
 
         /// Set withdrawal expiration
+        #[pallet::call_index(17)]
         #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_withdrawal_expiration(
             origin: OriginFor<T>,
@@ -764,6 +757,7 @@ pub mod pallet {
         }
 
         /// set is_identity_required
+        #[pallet::call_index(18)]
         #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
         pub fn set_is_identity_required(
             origin: OriginFor<T>,
@@ -777,6 +771,7 @@ pub mod pallet {
 
         /// Ad Hoc Step (ADMIN)
         /// This will add the refunds to a queue to eventually be processed, Hooks will show refunds themselves.
+        #[pallet::call_index(19)]
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
             //ensure only admin can perform refund
@@ -836,20 +831,18 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
 }
 
 /// The contribution users made to a project project.
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
-    name: BoundedStringField,
-    percentage_to_unlock: u32,
+    pub percentage_to_unlock: u32,
 }
 
 /// The contribution users made to a project project.
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Milestone {
-    project_key: ProjectKey,
-    milestone_key: MilestoneKey,
-    name: Vec<u8>,
-    percentage_to_unlock: u32,
-    is_approved: bool,
+    pub project_key: ProjectKey,
+    pub milestone_key: MilestoneKey,
+    pub percentage_to_unlock: u32,
+    pub is_approved: bool,
 }
 
 /// The vote struct is used to
@@ -873,32 +866,27 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 /// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
-    name: Vec<u8>,
-    logo: Vec<u8>,
-    description: Vec<u8>,
-    website: Vec<u8>,
-    milestones: BTreeMap<MilestoneKey, Milestone>,
-    /// A collection of the accounts which have contributed and their contributions.
-    contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
-    currency_id: common_types::CurrencyId,
-    required_funds: Balance,
-    withdrawn_funds: Balance,
-    raised_funds: Balance,
-    /// The account that will receive the funds if the campaign is successful
-    initiator: AccountId,
-    create_block_number: BlockNumber,
-    approved_for_funding: bool,
-    funding_threshold_met: bool,
-    cancelled: bool,
+    pub agreement_hash: H256,
+    pub milestones: BTreeMap<MilestoneKey, Milestone>,
+    pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+    pub currency_id: common_types::CurrencyId,
+    pub required_funds: Balance,
+    pub withdrawn_funds: Balance,
+    pub raised_funds: Balance,
+    pub initiator: AccountId,
+    pub created_on: BlockNumber,
+    pub approved_for_funding: bool,
+    pub funding_threshold_met: bool,
+    pub cancelled: bool,
 }
 
 /// The contribution users made to a proposal project.
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Contribution<Balance, Timestamp> {
     /// Contribution value.
-    value: Balance,
+    pub value: Balance,
     /// Timestamp of the last contribution.
-    timestamp: Timestamp,
+    pub timestamp: Timestamp,
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]

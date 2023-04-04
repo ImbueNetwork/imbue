@@ -1,4 +1,4 @@
-use crate as pallet_proposals;
+use crate as pallet_briefs;
 use frame_support::{
     parameter_types,
     traits::{ConstU32, Nothing},
@@ -7,16 +7,20 @@ use frame_support::{
 };
 
 use frame_system::EnsureRoot;
-use sp_core::{sr25519::Signature, Pair, Public, H256};
+use sp_core::{sr25519::Signature, H256};
+
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
+use crate::pallet::BriefHash;
 
 use common_types::CurrencyId;
 
 use frame_support::once_cell::sync::Lazy;
-use orml_traits::MultiCurrency;
+
 use sp_core::sr25519;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+    BuildStorage,
 };
 
 use sp_std::{
@@ -32,6 +36,7 @@ pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u64;
 pub type Moment = u64;
+//type AccountId = sp_core::sr25519::Public;
 
 parameter_types! {
     pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
@@ -59,6 +64,7 @@ frame_support::construct_runtime!(
         Currencies: orml_currencies::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
+        BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
         Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
@@ -177,8 +183,15 @@ parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
     pub MaxBriefOwners: u32 = 100;
-    pub MaxMilestones: u32 = 100;
+}
 
+impl pallet_briefs::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type RMultiCurrency = Tokens;
+    type BriefHasher = BlakeTwo256;
+    type AuthorityOrigin = EnsureRoot<AccountId>;
+    type BriefEvolver = pallet_proposals::Pallet<Test>;
+    type MaxBriefOwners = MaxBriefOwners;
 }
 
 parameter_types! {
@@ -189,6 +202,76 @@ parameter_types! {
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
 }
+
+// Requires binding howerver they may be a more succinct way of doing this.
+//impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
+//where
+//    Project<AccountId, Balance, BlockNumber, Moment>: EncodeLike<
+//        Project<
+//            <T as frame_system::Config>::AccountId,
+//            <<T as proposals::Config>::MultiCurrency as MultiCurrency<
+//                <T as frame_system::Config>::AccountId,
+//            >>::Balance,
+//            <T as frame_system::Config>::BlockNumber,
+//            <T as pallet_timestamp::Config>::Moment,
+//        >,
+//    >,
+//{
+//    fn convert_to_proposal(
+//        currency_id: CurrencyId,
+//        contributions: BTreeMap<AccountId, Contribution<Balance, Moment>>,
+//        brief_hash: BriefHash,
+//        applicant: AccountId,
+//        milestones: BTreeMap<MilestoneKey, ProposedMilestone>,
+//    ) -> Result<(), ()> {
+//        let project_key = proposals::ProjectCount::<Test>::get()
+//            .checked_add(1)
+//            .ok_or(())?;
+//        proposals::ProjectCount::<Test>::put(project_key);
+//
+//        let sum_of_contributions = contributions
+//            .values()
+//            .fold(Default::default(), |acc: Balance, x| {
+//                acc.saturating_add(x.value)
+//            });
+//        let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+//
+//        let _ = milestones
+//            .into_iter()
+//            .map(|i: (MilestoneKey, ProposedMilestone)| {
+//                project_milestones.insert(
+//                    i.0,
+//                    Milestone {
+//                        project_key,
+//                        milestone_key: i.0,
+//                        percentage_to_unlock: i.1.percentage_to_unlock,
+//                        is_approved: false,
+//                    },
+//                )
+//            })
+//            .collect::<Vec<_>>();
+//
+//        let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
+//            milestones: project_milestones,
+//            contributions: contributions,
+//            currency_id,
+//            required_funds: sum_of_contributions,
+//            withdrawn_funds: 0u32.into(),
+//            raised_funds: sum_of_contributions,
+//            initiator: applicant,
+//            create_block_number: System::block_number(),
+//            approved_for_funding: true,
+//            funding_threshold_met: true,
+//            cancelled: false,
+//            agreement_hash: brief_hash,
+//            // Maybe we dont need this new field because we have create_block_number
+//        };
+//
+//        Projects::<T>::insert(project_key, project);
+//
+//        Ok(())
+//    }
+//}
 
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
@@ -236,48 +319,31 @@ parameter_types! {
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
-pub type AccountPublic = <Signature as Verify>::Signer;
 
-fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
-
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+pub fn gen_hash(seed: u8) -> BriefHash {
+    H256::from([seed; 32])
 }
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
+    let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
 
-    // orml_tokens::GenesisConfig::<Test>::default()
-    //     .assimilate_storage(&mut t)
-    //     .unwrap();
-
-    // orml_tokens::GenesisConfig::<Test> {
-    //     balances: {
-    //         vec![*ALICE, *BOB, *CHARLIE]
-    //             .into_iter()
-    //             .map(|id| (id, CurrencyId::Native, 1000000))
-    //             .collect::<Vec<_>>()
-    //     },
-    // }
-    // .assimilate_storage(&mut t)
-    // .unwrap();
+    GenesisConfig::default().assimilate_storage(&mut t).unwrap();
+    orml_tokens::GenesisConfig::<Test> {
+        balances: {
+            vec![*ALICE, *BOB, *CHARLIE]
+                .into_iter()
+                .map(|id| (id, CurrencyId::Native, 1000000))
+                .collect::<Vec<_>>()
+        },
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
-        let initial_balance = 10_000_000u64;
         System::set_block_number(1);
-        let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
-        let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
-        let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
     });
     ext
 }
