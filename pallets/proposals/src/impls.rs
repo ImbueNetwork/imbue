@@ -34,10 +34,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn new_project(
         who: T::AccountId,
-        name: BoundedStringField,
-        logo: BoundedStringField,
-        description: BoundedDescriptionField,
-        website: BoundedWebsiteUrlField,
+        agreement_hash: H256,
         proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
@@ -59,7 +56,6 @@ impl<T: Config> Pallet<T> {
             let milestone = Milestone {
                 project_key,
                 milestone_key,
-                name: milestone.name.to_vec(),
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             };
@@ -69,10 +65,7 @@ impl<T: Config> Pallet<T> {
 
         // Create a project
         let project = Project {
-            name: name.clone().to_vec(),
-            logo: logo.to_vec(),
-            description: description.to_vec(),
-            website: website.to_vec(),
+            agreement_hash,
             milestones,
             contributions: BTreeMap::new(),
             required_funds,
@@ -80,7 +73,7 @@ impl<T: Config> Pallet<T> {
             raised_funds: (0_u32).into(),
             withdrawn_funds: (0_u32).into(),
             initiator: who.clone(),
-            create_block_number: <frame_system::Pallet<T>>::block_number(),
+            created_on: <frame_system::Pallet<T>>::block_number(),
             approved_for_funding: false,
             funding_threshold_met: false,
             cancelled: false,
@@ -92,7 +85,7 @@ impl<T: Config> Pallet<T> {
 
         Self::deposit_event(Event::ProjectCreated(
             who,
-            name.to_vec(),
+            agreement_hash,
             project_key,
             required_funds,
             currency_id,
@@ -101,78 +94,59 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-//update new project
-pub fn update_existing_project(
-    who: T::AccountId,
-    project_key: ProjectKey,
-    name: BoundedStringField,
-    logo: BoundedStringField,
-    description: BoundedDescriptionField,
-    website: BoundedWebsiteUrlField,
-    proposed_milestones: BoundedProposedMilestones,
-    required_funds: BalanceOf<T>,
-    currency_id: common_types::CurrencyId,
-) -> DispatchResultWithPostInfo {
-    // Check if identity is required
-    if IsIdentityRequired::<T>::get() {
-        let _ = Self::ensure_identity_is_decent(&who)?;
+    pub fn update_existing_project(
+        who: T::AccountId,
+        project_key: ProjectKey,
+        proposed_milestones: BoundedProposedMilestones,
+        required_funds: BalanceOf<T>,
+        currency_id: CurrencyId,
+        agreement_hash: H256,
+    ) -> DispatchResultWithPostInfo {
+        // Check if identity is required
+        if IsIdentityRequired::<T>::get() {
+            let _ = Self::ensure_identity_is_decent(&who)?;
+        }
+
+        //check to ensure valid and existing project
+        let mut project =
+            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
+        ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
+
+        ensure!(
+            project.approved_for_funding == false,
+            Error::<T>::ProjectAlreadyApproved
+        );
+
+        let mut milestone_key: u32 = 0;
+
+        let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+
+        // Fill in the projects structure in advance
+        for milestone in proposed_milestones {
+            let milestone = Milestone {
+                project_key,
+                milestone_key,
+                percentage_to_unlock: milestone.percentage_to_unlock,
+                is_approved: false,
+            };
+            milestones.insert(milestone_key.clone(), milestone.clone());
+            milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
+        }
+
+        // Update project
+        project.milestones = milestones;
+        project.required_funds = required_funds;
+        project.currency_id = currency_id;
+        project.agreement_hash = agreement_hash;
+
+        // Add project to list
+        <Projects<T>>::insert(project_key, project);
+
+        Self::deposit_event(Event::ProjectUpdated(who, project_key, required_funds));
+
+        Ok(().into())
     }
-
-    //check to ensure valid and existing project
-    let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-
-    ensure!(
-    project.approved_for_funding == false,
-    Error::<T>::ProjectAlreadyApproved
-    );
-
-    let mut milestone_key: u32 = 0;
-
-    let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-
-    // Fill in the projects structure in advance
-    for milestone in proposed_milestones {
-        let milestone = Milestone { 
-            project_key,
-            milestone_key,
-            name: milestone.name.to_vec(),
-            percentage_to_unlock: milestone.percentage_to_unlock,
-            is_approved: false,
-        };
-        milestones.insert(milestone_key, milestone);
-        milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
-    }
-
-    // Update project
-    //Update project name
-    project.name = name.to_vec();
-    //Update project logo
-    project.logo = logo.to_vec();
-    //Update project description
-    project.description = description.to_vec();
-    //Update project website
-    project.website = website.to_vec();
-    //Update project milestones
-    project.milestones = milestones;
-    //Update funds required for project
-    project.required_funds = required_funds;
-    //Update currency id for funds
-    project.currency_id = currency_id;
-
-
-    // Add project to list
-    <Projects<T>>::insert(project_key, project);
-
-    Self::deposit_event(Event::ProjectUpdated(
-        who,
-        name.to_vec(),
-        project_key,
-        required_funds,
-    ));
-
-    Ok(().into())
-}
-
 
     pub fn new_round(
         start: T::BlockNumber,
@@ -227,22 +201,15 @@ pub fn update_existing_project(
 
         // round list must be not none
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
-        
+
         ensure!(
             round.round_type == RoundType::ContributionRound,
             Error::<T>::InvalidRoundType
         );
 
-        ensure!(
-            round.start <= now,
-            Error::<T>::StartBlockNumberInvalid
+        ensure!(round.start <= now, Error::<T>::StartBlockNumberInvalid);
 
-        );
-        
-        ensure!(
-            round.end >= now,
-            Error::<T>::EndBlockNumberInvalid
-        );
+        ensure!(round.end >= now, Error::<T>::EndBlockNumberInvalid);
 
         ensure!(
             round.project_keys.contains(&project_key),
@@ -330,17 +297,20 @@ pub fn update_existing_project(
         if !funds_matched {
             // If the funds have not been matched then check if the round is over
             ensure!(round.end < now, Error::<T>::RoundNotEnded);
+            // TODO: PR for this exists.
             // Once the round ends, check for the funding threshold met. (set threshold for 75%)
         }
         project.funding_threshold_met = true;
         // set is_approved
         if milestone_keys.is_some() {
+            // USE IF LET
             for milestone_key in milestone_keys.unwrap().into_iter() {
                 ensure!(
                     project.milestones.contains_key(&milestone_key),
                     Error::<T>::MilestoneDoesNotExist
                 );
 
+                // USE IF LET
                 let mut milestone = project.milestones.get_mut(&milestone_key).unwrap().clone();
                 milestone.is_approved = true;
 
@@ -388,7 +358,7 @@ pub fn update_existing_project(
         );
 
         let end = now + MilestoneVotingWindow::<T>::get().into();
-        
+
         let round_key = RoundCount::<T>::get()
             .checked_add(1)
             .ok_or(Error::<T>::Overflow)?;
@@ -425,16 +395,9 @@ pub fn update_existing_project(
             Error::<T>::InvalidRoundType
         );
 
-        ensure!(
-            round.start < now,
-            Error::<T>::StartBlockNumberInvalid
+        ensure!(round.start < now, Error::<T>::StartBlockNumberInvalid);
 
-        );
-        
-        ensure!(
-            round.end > now,
-            Error::<T>::EndBlockNumberInvalid
-        );
+        ensure!(round.end > now, Error::<T>::EndBlockNumberInvalid);
 
         ensure!(
             round.project_keys.contains(&project_key),
@@ -508,13 +471,16 @@ pub fn update_existing_project(
         let vote = Self::milestone_votes(vote_lookup_key).ok_or(Error::<T>::KeyNotFound)?;
 
         // let the 100 x threshold required = total_votes * majority required
-        let threshold_votes: BalanceOf<T> = project.raised_funds * T::PercentRequiredForVoteToPass::get().into();
-        let percent_multiple : BalanceOf<T> = 100u32.into();
+        let threshold_votes: BalanceOf<T> =
+            project.raised_funds * T::PercentRequiredForVoteToPass::get().into();
+        let percent_multiple: BalanceOf<T> = 100u32.into();
         ensure!(
-             (percent_multiple * (vote.yay + vote.nay)) >= threshold_votes,
+            (percent_multiple * (vote.yay + vote.nay)) >= threshold_votes,
             Error::<T>::MilestoneVotingNotComplete
         );
         if vote.yay > vote.nay {
+            // todo:
+            // THIS FLAG FLIPS IN THE APPROVE EXTRINSIC, WHY IS IT HAPPENING HERE?
             milestone.is_approved = true;
             let updated_vote = Vote {
                 yay: vote.yay,
@@ -545,11 +511,13 @@ pub fn update_existing_project(
 
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
-        
+
         let total_contribution_amount: BalanceOf<T> = project.raised_funds;
 
         let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
+        // TODO: No need to clone
         for (_milestone_key, milestone) in project.milestones.clone() {
+            // Todo: milestone is approved at the point of the approve extrinsic
             if milestone.is_approved {
                 unlocked_funds += (total_contribution_amount
                     * milestone.percentage_to_unlock.into())
@@ -587,10 +555,10 @@ pub fn update_existing_project(
         Ok(().into())
     }
 
-
     /// Appends a list of refunds to the queue to be used by the hooks.
     pub fn add_refunds_to_queue(project_key: ProjectKey) -> DispatchResultWithPostInfo {
-        let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project =
+            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         //getting the locked milestone percentage - these are also milestones that have not been approved
         let mut refunded_funds: BalanceOf<T> = 0_u32.into();
@@ -606,12 +574,16 @@ pub fn update_existing_project(
         // TODO: How can we refund all contributions without looping?
         for (who, contribution) in project.contributions.iter() {
             let project_account_id = Self::project_account_id(project_key);
-            
-            let refund_amount: BalanceOf<T> = ((contribution).value
-                * locked_milestone_percentage.into())
-                / MAX_PERCENTAGE.into();
 
-            current_refunds.push((who.clone(), project_account_id.clone(), refund_amount, project.currency_id));
+            let refund_amount: BalanceOf<T> =
+                ((contribution).value * locked_milestone_percentage.into()) / MAX_PERCENTAGE.into();
+
+            current_refunds.push((
+                who.clone(),
+                project_account_id.clone(),
+                refund_amount,
+                project.currency_id,
+            ));
             refunded_funds += refund_amount;
         }
 
@@ -627,49 +599,47 @@ pub fn update_existing_project(
         Ok(().into())
     }
 
-    /// Using the parameters provided (which should be from the refund queue), 
-    /// Process a refund. 
-    /// Used in hooks so cannot error.
-    pub fn refund_item_in_queue(from: &T::AccountId, to: &T::AccountId, amount: BalanceOf<T>, currency_id: CurrencyId) -> bool {
-        let can_withraw: DispatchResult = T::MultiCurrency::ensure_can_withdraw(
-            currency_id, 
-            from,
-            amount,
-        );
+    /// Using the parameters provided (which should be from the refund queue),
+    /// Process a refund.
+    /// Used in hooks so cannot panic.
+    pub fn refund_item_in_queue(
+        from: &T::AccountId,
+        to: &T::AccountId,
+        amount: BalanceOf<T>,
+        currency_id: CurrencyId,
+    ) -> bool {
+        let can_withraw: DispatchResult =
+            T::MultiCurrency::ensure_can_withdraw(currency_id, from, amount);
         if can_withraw.is_ok() {
             // this should pass now, but i will not return early
-            let _ = T::MultiCurrency::transfer(
-                currency_id,
-                from,
-                to,
-                amount,
-            );
-            return true
+            let _ = T::MultiCurrency::transfer(currency_id, from, to, amount);
+            return true;
         } else {
-            return false
+            return false;
         }
     }
 
     /// Split off an amount of refunds off the vector and place into refund storage.
     /// Returns a boolean if a split off has succeeded.
-    /// Used in hooks so cannot error.
-    pub fn split_off_refunds(refunds:&mut Refunds<T>, c: u32) -> bool {
-        // split_off panics when at > len: 
+    /// Used in hooks so cannot panic.
+    pub fn split_off_refunds(refunds: &mut Refunds<T>, c: u32) -> bool {
+        // split_off panics when at > len:
         // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
         // If the length is zero do nothing
-        if c == 0 {return false}
+        if c == 0 {
+            return false;
+        }
 
         if c as usize <= refunds.len() {
             // If its a legitimate operation, split off.
             RefundQueue::<T>::put(refunds.split_off(c as usize));
-            return true
-        } else  {
+            return true;
+        } else {
             // panic case we will place in an empty vec as the counter is wrong.
             RefundQueue::<T>::kill();
-            return false
+            return false;
         }
     }
-
 
     /// This function raises a vote of no confidence.
     /// This round can only be called once and there after can only be voted on.
