@@ -29,10 +29,23 @@ pub mod pallet {
 	#[pallet::getter(fn something)]
 	pub type Something<T> = StorageValue<_, u32>;
 
+	///// This holds the votes when a no confidence round is raised.
+	//#[pallet::storage]
+	//#[pallet::getter(fn no_confidence_votes)]
+	//pub(super) type NoConfidenceVotes<T: Config> =
+	//	StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
+
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		SomethingStored { something: u32, who: T::AccountId },
+		///// You have created a vote of no confidence.
+        //NoConfidenceRoundCreated(RoundKey, ProjectKey),
+        ///// You have voted upon a round of no confidence.
+        //NoConfidenceRoundVotedUpon(RoundKey, ProjectKey),
+        ///// You have finalised a vote of no confidence.
+        //NoConfidenceRoundFinalised(RoundKey, ProjectKey),
 	}
 
 	#[pallet::error]

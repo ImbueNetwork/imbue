@@ -86,7 +86,6 @@ pub mod pallet {
 
         type WeightInfo: WeightInfo;
 
-        
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<u8>;
 
@@ -137,12 +136,6 @@ pub mod pallet {
     #[pallet::getter(fn milestone_votes)]
     pub(super) type MilestoneVotes<T: Config> =
         StorageMap<_, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, OptionQuery>;
-
-    /// This holds the votes when a no confidence round is raised.
-    #[pallet::storage]
-    #[pallet::getter(fn no_confidence_votes)]
-    pub(super) type NoConfidenceVotes<T: Config> =
-        StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn project_count)]
@@ -239,12 +232,6 @@ pub mod pallet {
         WhitelistRemoved(ProjectKey, T::BlockNumber),
         /// A project has been added to refund queue.
         ProjectFundsAddedToRefundQueue(ProjectKey, BalanceOf<T>),
-        /// You have created a vote of no confidence.
-        NoConfidenceRoundCreated(RoundKey, ProjectKey),
-        /// You have voted upon a round of no confidence.
-        NoConfidenceRoundVotedUpon(RoundKey, ProjectKey),
-        /// You have finalised a vote of no confidence.
-        NoConfidenceRoundFinalised(RoundKey, ProjectKey),
     }
 
     // Errors inform users that something went wrong.
@@ -739,9 +726,7 @@ pub mod pallet {
 pub enum RoundType {
     ContributionRound,
     VotingRound,
-    VoteOfNoConfidence,
 }
-
 #[derive(Encode, Decode, TypeInfo, PartialEq)]
 #[repr(u32)]
 pub enum Release {
