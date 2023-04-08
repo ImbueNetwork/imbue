@@ -189,6 +189,7 @@ parameter_types! {
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
+    pub MilestoneVotingWindow: BlockNumber  =  100800u64;
 }
 
 impl pallet_proposals::Config for Test {
@@ -205,6 +206,7 @@ impl pallet_proposals::Config for Test {
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type RefundsPerBlock = RefundsPerBlock;
     type IsIdentityRequired = IsIdentityRequired;
+    type MilestoneVotingWindow = MilestoneVotingWindow;
 }
 
 parameter_types! {

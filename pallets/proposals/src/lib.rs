@@ -100,13 +100,12 @@ pub mod pallet {
         type RefundsPerBlock: Get<u8>;
 
         // Defines wether an identity is required when creating a proposal.
-        type IdentityRequired: Get<bool>
+        type IsIdentityRequired: Get<bool>;
+
+        type MilestoneVotingWindow: Get<Self::BlockNumber>;
     }
 
-    #[pallet::type_value]
-    pub fn InitialMilestoneVotingWindow() -> u32 {
-        100800u32
-    }
+        
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -164,15 +163,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn max_project_count_per_round)]
     pub type MaxProjectCountPerRound<T> = StorageValue<_, u32, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn milestone_voting_window)]
-    pub type MilestoneVotingWindow<T> =
-        StorageValue<_, u32, ValueQuery, InitialMilestoneVotingWindow>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn withdrawal_expiration)]
-    pub type WithdrawalExpiration<T> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
@@ -717,40 +707,6 @@ pub mod pallet {
                 Error::<T>::ParamLimitExceed
             );
             MaxProjectCountPerRound::<T>::put(max_project_count_per_round);
-
-            Ok(().into())
-        }
-
-        /// Set milestone voting window
-        #[pallet::call_index(16)]
-        #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
-        pub fn set_milestone_voting_window(
-            origin: OriginFor<T>,
-            new_milestone_voting_window: u32,
-        ) -> DispatchResultWithPostInfo {
-            T::AuthorityOrigin::ensure_origin(origin)?;
-            ensure!(
-                new_milestone_voting_window > 0,
-                Error::<T>::ParamLimitExceed
-            );
-            MilestoneVotingWindow::<T>::put(new_milestone_voting_window);
-
-            Ok(().into())
-        }
-
-        /// Set withdrawal expiration
-        #[pallet::call_index(17)]
-        #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
-        pub fn set_withdrawal_expiration(
-            origin: OriginFor<T>,
-            withdrawal_expiration: T::BlockNumber,
-        ) -> DispatchResultWithPostInfo {
-            T::AuthorityOrigin::ensure_origin(origin)?;
-            ensure!(
-                withdrawal_expiration > (0_u32).into(),
-                Error::<T>::InvalidParam
-            );
-            <WithdrawalExpiration<T>>::put(withdrawal_expiration);
 
             Ok(().into())
         }
