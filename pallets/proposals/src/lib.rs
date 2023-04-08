@@ -98,6 +98,9 @@ pub mod pallet {
         /// Defines the amount of refunds that occur in the on initialise method.
         /// Does not include the remaining refunds that may occur in the on_idle hook.
         type RefundsPerBlock: Get<u8>;
+
+        // Defines wether an identity is required when creating a proposal.
+        type IdentityRequired: Get<bool>
     }
 
     #[pallet::type_value]
@@ -170,10 +173,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn withdrawal_expiration)]
     pub type WithdrawalExpiration<T> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn is_identity_required)]
-    pub type IsIdentityRequired<T> = StorageValue<_, bool, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
@@ -752,19 +751,6 @@ pub mod pallet {
                 Error::<T>::InvalidParam
             );
             <WithdrawalExpiration<T>>::put(withdrawal_expiration);
-
-            Ok(().into())
-        }
-
-        /// set is_identity_required
-        #[pallet::call_index(18)]
-        #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
-        pub fn set_is_identity_required(
-            origin: OriginFor<T>,
-            is_identity_required: bool,
-        ) -> DispatchResultWithPostInfo {
-            T::AuthorityOrigin::ensure_origin(origin)?;
-            IsIdentityRequired::<T>::put(is_identity_required);
 
             Ok(().into())
         }
