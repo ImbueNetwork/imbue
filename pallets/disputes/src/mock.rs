@@ -6,6 +6,8 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use frame_support::parameter_types;
+use sp_std::convert::{TryInto, TryFrom};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -18,7 +20,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
-		Disptute: Dispute,
+		Disptute: pallet_dispute,
 	}
 );
 
@@ -49,9 +51,13 @@ impl system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
+parameter_types! {
+	//NoConfidenceTimeLimit: BlockNumber = 1000;
+}
+
 impl pallet_dispute::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type NoConfidenceTimeLimit: BlockNumber;
+	//type NoConfidenceTimeLimit = BlockNumber;
 
 }
 

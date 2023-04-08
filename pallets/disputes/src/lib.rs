@@ -15,6 +15,7 @@ mod benchmarking;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+    use sp_std::convert::TryInto;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -29,7 +30,7 @@ pub mod pallet {
 	#[pallet::getter(fn something)]
 	pub type Something<T> = StorageValue<_, u32>;
 
-	///// This holds the votes when a no confidence round is raised.
+	//This holds the votes when a no confidence round is raised.
 	//#[pallet::storage]
 	//#[pallet::getter(fn no_confidence_votes)]
 	//pub(super) type NoConfidenceVotes<T: Config> =
@@ -40,11 +41,11 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		SomethingStored { something: u32, who: T::AccountId },
-		///// You have created a vote of no confidence.
+		// You have created a vote of no confidence.
         //NoConfidenceRoundCreated(RoundKey, ProjectKey),
-        ///// You have voted upon a round of no confidence.
+        // You have voted upon a round of no confidence.
         //NoConfidenceRoundVotedUpon(RoundKey, ProjectKey),
-        ///// You have finalised a vote of no confidence.
+        // You have finalised a vote of no confidence.
         //NoConfidenceRoundFinalised(RoundKey, ProjectKey),
 	}
 
@@ -58,9 +59,9 @@ pub mod pallet {
 	// Currently unimplemented
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		        /// Vote on an already existing "Vote of no condidence" round.
-        /// is_yay is FOR the project's continuation.
-        /// so is_yay = false == against the project from continuing perhaps should be flipped.
+		        // Vote on an already existing "Vote of no condidence" round.
+        // is_yay is FOR the project's continuation.
+        // so is_yay = false == against the project from continuing perhaps should be flipped.
         // #[pallet::call_index(13)]
         // #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         // pub fn vote_on_no_confidence_round(
@@ -92,9 +93,9 @@ pub mod pallet {
         //         T::PercentRequiredForVoteToPass::get(),
         //     )
         // }
-		/// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
-        /// This will start a round which each contributor can vote on.
-        /// The round will last as long as set in the Config.
+		// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
+        // This will start a round which each contributor can vote on.
+        // The round will last as long as set in the Config.
         //#[pallet::call_index(12)]
         //#[pallet::weight(<T as Config>::WeightInfo::raise_vote_of_no_confidence())]
         //pub fn raise_vote_of_no_confidence(
@@ -104,11 +105,12 @@ pub mod pallet {
         //    let who = ensure_signed(origin)?;
         //    Self::raise_no_confidence_round(who, project_key)
         //}
-	}
+	//}
 }
-/// This function raises a vote of no confidence.
-    /// This round can only be called once and there after can only be voted on.
-//    /// The person calling it must be a contributor.
+}
+// This function raises a vote of no confidence.
+    // This round can only be called once and there after can only be voted on.
+//    // The person calling it must be a contributor.
 //    pub fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
 //        //ensure that who is a contributor or root
 //        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
@@ -149,8 +151,8 @@ pub mod pallet {
 //        Ok(()).into()
 //    }
 //
-//    /// Allows a contributer to agree or disagree with a vote of no confidence.
-//    /// Additional contributions after the vote is set are not counted and cannot be voted on again, todo?
+//     Allows a contributer to agree or disagree with a vote of no confidence.
+//     Additional contributions after the vote is set are not counted and cannot be voted on again, todo?
 //    pub fn add_vote_no_confidence(
 //        who: T::AccountId,
 //        round_key: RoundKey,
@@ -192,10 +194,10 @@ pub mod pallet {
 //        Ok(()).into()
 //    }
 //
-//    /// Called when a contributor wants to finalise a vote of no confidence.
-//    /// Votes for the vote of no confidence must reach the majority requred for the vote to pass.
-//    /// As defined in the config.
-//    /// This also calls a refund of funds to the users.
+//    // Called when a contributor wants to finalise a vote of no confidence.
+//    // Votes for the vote of no confidence must reach the majority requred for the vote to pass.
+//    // As defined in the config.
+//    // This also calls a refund of funds to the users.
 //    pub fn call_finalise_no_confidence_vote(
 //        who: T::AccountId,
 //        round_key: RoundKey,
