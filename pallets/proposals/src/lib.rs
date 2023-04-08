@@ -160,6 +160,8 @@ pub mod pallet {
     #[pallet::getter(fn round_count)]
     pub type RoundCount<T> = StorageValue<_, RoundKey, ValueQuery>;
 
+
+    // An interesting attack vector here and i think it still needs considering. Would need a bound instorage to ensure.
     #[pallet::storage]
     #[pallet::getter(fn max_project_count_per_round)]
     pub type MaxProjectCountPerRound<T> = StorageValue<_, u32, ValueQuery>;
@@ -690,25 +692,6 @@ pub mod pallet {
                 project_key,
                 T::PercentRequiredForVoteToPass::get(),
             )
-        }
-
-        // Root Extrinsics:
-
-        /// Set max project count per round
-        #[pallet::call_index(15)]
-        #[pallet::weight(<T as Config>::WeightInfo::set_storage_variable())]
-        pub fn set_max_project_count_per_round(
-            origin: OriginFor<T>,
-            max_project_count_per_round: u32,
-        ) -> DispatchResultWithPostInfo {
-            T::AuthorityOrigin::ensure_origin(origin)?;
-            ensure!(
-                max_project_count_per_round > 0,
-                Error::<T>::ParamLimitExceed
-            );
-            MaxProjectCountPerRound::<T>::put(max_project_count_per_round);
-
-            Ok(().into())
         }
 
         /// Ad Hoc Step (ADMIN)
