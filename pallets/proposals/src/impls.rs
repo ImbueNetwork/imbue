@@ -40,7 +40,7 @@ impl<T: Config> Pallet<T> {
         currency_id: common_types::CurrencyId,
     ) -> DispatchResultWithPostInfo {
         // Check if identity is required
-        if IsIdentityRequired::<T>::get() {
+        if <T as Config>::IdentityRequired::get() {
             let _ = Self::ensure_identity_is_decent(&who)?;
         }
 

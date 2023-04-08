@@ -741,6 +741,7 @@ parameter_types! {
     pub const PercentRequiredForVoteToPass: u8 = 75;
     pub const MaximumContributorsPerProject: u32 = 5000;
     pub const RefundsPerBlock: u8 = 20;
+    pub const IsIdentityRequired: bool = false;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -755,6 +756,7 @@ impl pallet_proposals::Config for Runtime {
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type RefundsPerBlock = RefundsPerBlock;
     type WeightInfo = ();
+    type IsIdentityRequired = IsIdentityRequired;
 }
 
 parameter_types! {
