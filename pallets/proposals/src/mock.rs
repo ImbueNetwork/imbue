@@ -199,7 +199,6 @@ impl pallet_proposals::Config for Test {
     type MaxProjectsPerRound = ConstU32<4>;
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type RefundsPerBlock = RefundsPerBlock;

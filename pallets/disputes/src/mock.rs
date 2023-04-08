@@ -9,7 +9,7 @@ use sp_runtime::{
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
+type BlockNumber = u64;
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -30,7 +30,7 @@ impl system::Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type Index = u64;
-	type BlockNumber = u64;
+	type BlockNumber = BlockNumber;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
@@ -51,6 +51,8 @@ impl system::Config for Test {
 
 impl pallet_dispute::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type NoConfidenceTimeLimit: BlockNumber;
+
 }
 
 // Build genesis storage according to the mock runtime.

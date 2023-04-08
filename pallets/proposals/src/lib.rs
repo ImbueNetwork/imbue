@@ -86,9 +86,7 @@ pub mod pallet {
 
         type WeightInfo: WeightInfo;
 
-        /// The amount of time given, up to point of decision, when a vote of no confidence is held.
-        type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
-
+        
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<u8>;
 
@@ -655,53 +653,9 @@ pub mod pallet {
             Self::new_withdrawal(who, project_key)
         }
 
-        /// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
-        /// This will start a round which each contributor can vote on.
-        /// The round will last as long as set in the Config.
-        #[pallet::call_index(12)]
-        #[pallet::weight(<T as Config>::WeightInfo::raise_vote_of_no_confidence())]
-        pub fn raise_vote_of_no_confidence(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            Self::raise_no_confidence_round(who, project_key)
-        }
+        
 
-        /// Vote on an already existing "Vote of no condidence" round.
-        /// is_yay is FOR the project's continuation.
-        /// so is_yay = false == against the project from continuing perhaps should be flipped.
-        #[pallet::call_index(13)]
-        #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
-        pub fn vote_on_no_confidence_round(
-            origin: OriginFor<T>,
-            round_key: Option<RoundKey>,
-            project_key: ProjectKey,
-            is_yay: bool,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            let voting_round_key = round_key.unwrap_or(RoundCount::<T>::get());
-            Self::add_vote_no_confidence(who, voting_round_key, project_key, is_yay)
-        }
 
-        /// Finalise a "vote of no condidence" round.
-        /// Votes must pass a threshold as defined in the config trait for the vote to succeed.
-        #[pallet::call_index(14)]
-        #[pallet::weight(<T as Config>::WeightInfo::finalise_no_confidence_round())]
-        pub fn finalise_no_confidence_round(
-            origin: OriginFor<T>,
-            round_key: Option<RoundKey>,
-            project_key: ProjectKey,
-        ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            let voting_round_key = round_key.unwrap_or(RoundCount::<T>::get());
-            Self::call_finalise_no_confidence_vote(
-                who,
-                voting_round_key,
-                project_key,
-                T::PercentRequiredForVoteToPass::get(),
-            )
-        }
 
         // Root Extrinsics:
 

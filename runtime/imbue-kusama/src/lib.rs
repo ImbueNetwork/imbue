@@ -750,7 +750,6 @@ impl pallet_proposals::Config for Runtime {
     type AuthorityOrigin = AdminOrigin;
     type MaxProjectsPerRound = MaxProjectsPerRound;
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type RefundsPerBlock = RefundsPerBlock;
