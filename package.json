@@ -1,0 +1,10 @@
+{
+  "name": "imbue-e2e",
+  "version": "0.1.0",
+  "description": "e2e tests for imbue",
+  "main": "index.js",
+  "repository": "git@github.com:ImbueNetwork/imbue.git",
+  "author": "felix",
+  "license": "No License",
+  "private": false
+}
