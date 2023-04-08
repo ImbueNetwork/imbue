@@ -742,7 +742,7 @@ parameter_types! {
     pub const MaximumContributorsPerProject: u32 = 5000;
     pub const RefundsPerBlock: u8 = 20;
     pub const IsIdentityRequired: bool = false;
-    pub const MilestoneVotingWindow: BlockNumber = 100800u32.into();
+    pub const MilestoneVotingWindow: BlockNumber = 100800;
 }
 
 impl pallet_proposals::Config for Runtime {
