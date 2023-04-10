@@ -14,6 +14,10 @@ mod benchmarking;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use orml_traits::{MultiCurrency, MultiReservableCurrency};
+	use common_types::CurrencyId;
+	
+	pub type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -22,6 +26,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type MultiCurrency: RMultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 	}
 
 	#[pallet::storage]

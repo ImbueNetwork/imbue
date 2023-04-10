@@ -136,4 +136,32 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
         assert_eq!(brief_p.cancelled, false);
         assert_eq!(brief_p.cancelled, standard_p.cancelled);
     });
+
+#[test]
+fn reserved_funds_are_transferred_to_project_kitty() {
+    build_test_externality().execute_with(|| {
+        let brief_id = gen_hash(100);
+        let contribution_value: Balance = 10000;
+
+        let _ = BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            tests::get_brief_owners(1),
+            *ALICE,
+            contribution_value,
+            contribution_value,
+            brief_id.clone(),
+            CurrencyId::Native,
+            get_milestones(10),
+        );
+
+        assert_ok!(BriefsMod::commence_work(
+            RuntimeOrigin::signed(*ALICE),
+            brief_id
+        ));
+
+        let created_project = Projects::<Test>::get(1).unwrap();
+        let project_id: AccountId = Proposals::project_account_id(1);
+        ensure_eq!(Tokens::free_balance(CurrencyId::Native, project_id), contribution_value);
+    });
+}
 }

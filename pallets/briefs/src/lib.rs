@@ -21,7 +21,7 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use pallet_proposals::traits::BriefEvolver;
+    use pallet_proposals::traits::IntoProposal;
     use pallet_proposals::{BoundedProposedMilestones, Contribution};
     use sp_core::{Hasher, H256};
     use sp_std::convert::{From, TryInto};
@@ -55,7 +55,7 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The type that allows for evolution from brief to proposal.
-        type BriefEvolver: BriefEvolver<
+        type IntoProposal: IntoProposal<
             AccountIdOf<Self>,
             BalanceOf<Self>,
             BlockNumberFor<Self>,
@@ -287,7 +287,7 @@ pub mod pallet {
 
             let contributions = BriefContributions::<T>::get(brief_id);
 
-            <T as Config>::BriefEvolver::convert_to_proposal(
+            <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
                 contributions.into_inner(),
                 brief_id.clone(),

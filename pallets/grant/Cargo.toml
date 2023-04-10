@@ -20,6 +20,10 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 frame-benchmarking = { version = "4.0.0-dev", default-features = false, optional = true, path = "../../../../frame/benchmarking" }
 frame-support = { version = "4.0.0-dev", default-features = false, path = "../../../../frame/support" }
 frame-system = { version = "4.0.0-dev", default-features = false, path = "../../../../frame/system" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39", default-features = false }
+
+common-traits = { path = "../../libs/common-traits", default-features = false }
+common-types = { path = "../../libs/common-types", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "7.0.0", default-features = false, path = "../../../../primitives/core" }
