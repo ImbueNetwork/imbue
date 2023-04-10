@@ -11,8 +11,8 @@ use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_std::collections::btree_map::BTreeMap;
 
-pub trait BriefEvolver<AccountId, Balance, BlockNumber, TimeStamp> {
-    /// Convert a brief into a proposal, the bounty must be fully funded before calling this.
+pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
+    /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.
     /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
     /// (if using crate) This function should bypass the usual checks when creating a proposal and
     /// instantiate everything carefully.  
@@ -27,7 +27,7 @@ pub trait BriefEvolver<AccountId, Balance, BlockNumber, TimeStamp> {
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
-impl<T: crate::Config> BriefEvolver<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>
+impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>
     for crate::Pallet<T>
 where
     Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>: EncodeLike<

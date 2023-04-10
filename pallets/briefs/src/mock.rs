@@ -190,7 +190,7 @@ impl pallet_briefs::Config for Test {
     type RMultiCurrency = Tokens;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type BriefEvolver = pallet_proposals::Pallet<Test>;
+    type IntoProposal = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
 }
 
@@ -204,7 +204,7 @@ parameter_types! {
 }
 
 // Requires binding howerver they may be a more succinct way of doing this.
-//impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
+//impl<T: proposals::Config> IntoProposal<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
 //where
 //    Project<AccountId, Balance, BlockNumber, Moment>: EncodeLike<
 //        Project<

@@ -39,5 +39,42 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+        
+		#[pallet::call_index(0)]
+        #[pallet::weight(100_000)]
+        pub fn submit_initial_grant(
+            origin: OriginFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+			// take deposit to prevent spam
+
+            Self::deposit_event(Event::GrantSubmitted(now));
+
+            Ok(().into())
+        }
+
+		#[pallet::call_index(1)]
+        #[pallet::weight(100_000)]
+        pub fn vote_on_grant(
+            origin: OriginFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+			// take deposit to prevent spam
+
+            Self::deposit_event(Event::GrantSubmitted(now));
+
+            Ok(().into())
+        }
+
+		#[pallet::call_index(2)]
+        #[pallet::weight(100_000)]
+        pub fn commence_work(
+            origin: OriginFor<T>,
+        ) -> DispatchResultWithPostInfo {
+
+        }
+
+		// RUNTIME API TO GET THE DEPOSIT ADDRESS FOR THE GRANT ON APPROVAL
+
 	}
 }
