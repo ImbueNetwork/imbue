@@ -431,13 +431,24 @@ pub mod pallet {
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
-            Self::new_project(
-                who,
+            let project_key = Self::new_project(
+                // TODO: Optimise
+                who.clone(),
                 agreement_hash,
                 proposed_milestones,
                 required_funds,
                 currency_id,
-            )
+            )?;
+            
+            Self::deposit_event(Event::ProjectCreated(
+                who,
+                agreement_hash,
+                project_key,
+                required_funds,
+                currency_id,
+            ));
+
+            Ok(().into())
         }
 
         #[pallet::call_index(1)]
@@ -461,15 +472,19 @@ pub mod pallet {
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
-            Self::update_existing_project(
-                who,
+            Self::try_update_existing_project(
+                // TODO: Optimise
+                who.clone(),
                 project_key,
                 proposed_milestones,
                 required_funds,
                 currency_id,
                 agreement_hash,
-            )
+            )?;
+
             Self::deposit_event(Event::ProjectUpdated(who, project_key, required_funds));
+
+            Ok(().into())
         }
 
         /// Step 1.5 (INITIATOR)
