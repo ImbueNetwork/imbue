@@ -133,6 +133,8 @@ benchmarks! {
         // Progress the blocks to allow contribution.
         run_to_block::<T>(5u32.into());
 
+
+
         //(Origin, RoundKey, ProjectKey, Contribution)
     }: _(RawOrigin::Signed(alice.clone()), Some(1u32), a.into(), 10_000u32.into())
     verify {
@@ -356,7 +358,7 @@ benchmarks! {
         run_to_block::<T>(5u32.into());
         let mut accounts: Vec<T::AccountId> = vec![];
         for i in 0..2 {
-            let acc = create_funded_user::<T>("contributor", i, 100_000);
+            let acc = create_funded_user::<T>("contributor", i, 10_000);
             accounts.push(acc);
         }
 
@@ -365,7 +367,7 @@ benchmarks! {
         Proposals::<T>::refund_item_in_queue(&accounts[0], &accounts[1], 10_000u32.into(), CurrencyId::Native)
     }
      verify {
-        assert!(T::Currency::total_balance(&accounts[1]) - T::Currency::total_balance(&accounts[0]) == 20_000u32.into());
+        assert!(<T::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::total_balance(CurrencyId::Native ,&accounts[1]) - <T::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::total_balance(CurrencyId::Native, &accounts[0]) == 20_000u32.into());
     }
 
     split_off_refunds {
@@ -401,7 +403,7 @@ where
 
 fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     let milestone_max_count = <MaxProposedMilestones as Get<u32>>::get() as usize;
-    let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
+    let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000);
     let milestones: BoundedProposedMilestones = vec![
         ProposedMilestone {
             percentage_to_unlock: 100 / milestone_max_count as u32,
@@ -443,8 +445,8 @@ fn create_funded_user<T: Config>(
     balance_factor: u32,
 ) -> T::AccountId {
     let user = account(string, n, SEED);
-    let balance = T::Currency::minimum_balance() * balance_factor.into();
-    let _ = T::Currency::make_free_balance_be(&user, balance);
+    let balance: BalanceOf<T> = balance_factor.into();
+    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(CurrencyId::Native, &user, balance);
     user
 }
 
