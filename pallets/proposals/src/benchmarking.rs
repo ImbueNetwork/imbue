@@ -10,8 +10,11 @@ use frame_support::{
 };
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use sp_std::str;
+use sp_core::H256;
+
 const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
+
 //accumulate_dummy {
 //    let b in 1 .. 1000;
 //    let caller = account("caller", 0, 0);
@@ -26,7 +29,6 @@ benchmarks! {
 
     update_project {
         let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
-            name: bounded_str_f.clone(),
             percentage_to_unlock: 1,
         }; 100].try_into().unwrap();
 
@@ -34,32 +36,28 @@ benchmarks! {
 
         let required_funds: BalanceOf<T> = u32::MAX.into();
         let currency_id = CurrencyId::Native;
+        let agg_hash = H256::from([2; 32]);
+
         //origin, project_key, proposed_milestones, required_funds, currency_id
-    }: _(RawOrigin::Signed(caller.clone()), 0,  milestones, required_funds, currency_id)
+    }: _(RawOrigin::Signed(caller.clone()), 0,  milestones, required_funds, currency_id, agg_hash)
     verify {
-        assert_last_event::<T>(Event::ProjectUpdated(caller, bounded_str_f.to_vec(), 0, required_funds).into());
+        assert_last_event::<T>(Event::ProjectUpdated(caller, 0, required_funds).into());
     }
 
     create_project {
         let caller: T::AccountId = whitelisted_caller();
 
-        let bounded_str_f: BoundedStringField = "a".repeat(<MaxStringFieldLen as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
-
-        let bounded_desc_f: BoundedDescriptionField = "b".repeat(<MaxDescriptionField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
-
-        let bounded_website_f: BoundedWebsiteUrlField = "c".repeat(<MaxWebsiteUrlField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
         let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
-            name: bounded_str_f.clone(),
             percentage_to_unlock: 1,
         }; 100].try_into().unwrap();
 
         let required_funds: BalanceOf<T> = u32::MAX.into();
         let currency_id = CurrencyId::Native;
-
-        // (Origin, ProjectName, Logo, Description, Website, ProposedMilestones, RequiredFunds, CurrencyId)
-    }: _(RawOrigin::Signed(whitelisted_caller()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f, bounded_website_f, milestones, required_funds, CurrencyId::Native)
+        let agg_hash = H256::from([10u8; 32]);
+        // (Origin, ipfs_hash, ProposedMilestones, RequiredFunds, CurrencyId)
+    }: _(RawOrigin::Signed(whitelisted_caller()), agg_hash, milestones, required_funds, CurrencyId::Native)
     verify {
-        assert_last_event::<T>(Event::<T>::ProjectCreated(caller, bounded_str_f.to_vec(), 0, required_funds, CurrencyId::Native).into());
+        assert_last_event::<T>(Event::<T>::ProjectCreated(caller, agg_hash, 0, required_funds, CurrencyId::Native).into());
     }
 
     add_project_whitelist {
@@ -404,15 +402,6 @@ where
 fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     let milestone_max_count = <MaxProposedMilestones as Get<u32>>::get() as usize;
     let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
-    let project_name: BoundedStringField =
-        b"Imbue's Awesome Initiative".to_vec().try_into().unwrap();
-    let project_logo: BoundedStringField = b"Imbue Logo".to_vec().try_into().unwrap();
-    let project_description: BoundedDescriptionField =
-        b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding."
-            .to_vec()
-            .try_into()
-            .unwrap();
-    let website: BoundedWebsiteUrlField = b"https://imbue.network".to_vec().try_into().unwrap();
     let milestones: BoundedProposedMilestones = vec![
         ProposedMilestone {
             percentage_to_unlock: 100 / milestone_max_count as u32,
@@ -421,18 +410,14 @@ fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     ]
     .try_into()
     .unwrap();
-
+    
+    let agg_hash = H256::from([20; 32]);
     let required_funds: BalanceOf<T> = contribution.into();
     let currency_id = CurrencyId::Native;
 
-    let _start_block: T::BlockNumber = 0u32.into();
-
     assert_ok!(Proposals::<T>::create_project(
         RawOrigin::Signed(bob.clone()).into(),
-        project_name.clone(),
-        project_logo,
-        project_description,
-        website,
+        agg_hash,
         milestones,
         required_funds,
         currency_id
