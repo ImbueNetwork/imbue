@@ -469,6 +469,7 @@ pub mod pallet {
                 currency_id,
                 agreement_hash,
             )
+            Self::deposit_event(Event::ProjectUpdated(who, project_key, required_funds));
         }
 
         /// Step 1.5 (INITIATOR)

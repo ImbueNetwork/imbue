@@ -143,8 +143,6 @@ impl<T: Config> Pallet<T> {
         // Add project to list
         <Projects<T>>::insert(project_key, project);
 
-        Self::deposit_event(Event::ProjectUpdated(who, project_key, required_funds));
-
         Ok(().into())
     }
 
