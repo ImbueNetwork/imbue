@@ -6407,7 +6407,6 @@ dependencies = [
  "pallet-identity",
  "pallet-timestamp",
  "pallet-transaction-payment",
- "pallet-xcm",
  "parity-scale-codec 3.4.0",
  "scale-info 2.3.1",
  "serde",
@@ -6417,8 +6416,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]
