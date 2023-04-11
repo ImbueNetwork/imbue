@@ -10,8 +10,11 @@ use frame_support::{
 };
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use sp_std::str;
+use sp_core::H256;
+
 const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
+
 //accumulate_dummy {
 //    let b in 1 .. 1000;
 //    let caller = account("caller", 0, 0);
@@ -25,13 +28,7 @@ benchmarks! {
     }
 
     update_project {
-        let bounded_str_f: BoundedStringField = "a".repeat(<MaxStringFieldLen as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
-
-        let bounded_desc_f: BoundedDescriptionField = "b".repeat(<MaxDescriptionField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
-
-        let bounded_website_f: BoundedWebsiteUrlField = "c".repeat(<MaxWebsiteUrlField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
         let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
-            name: bounded_str_f.clone(),
             percentage_to_unlock: 1,
         }; 100].try_into().unwrap();
 
@@ -39,32 +36,28 @@ benchmarks! {
 
         let required_funds: BalanceOf<T> = u32::MAX.into();
         let currency_id = CurrencyId::Native;
-        //origin, project_key, name, logo, description, website, proposed_milestones, required_funds, currency_id
-    }: _(RawOrigin::Signed(caller.clone()), 0, bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f, bounded_website_f, milestones, required_funds, currency_id)
+        let agg_hash = H256::from([2; 32]);
+
+        //origin, project_key, proposed_milestones, required_funds, currency_id
+    }: _(RawOrigin::Signed(caller.clone()), 0,  milestones, required_funds, currency_id, agg_hash)
     verify {
-        assert_last_event::<T>(Event::ProjectUpdated(caller, bounded_str_f.to_vec(), 0, required_funds).into());
+        assert_last_event::<T>(Event::ProjectUpdated(caller, 0, required_funds).into());
     }
 
     create_project {
         let caller: T::AccountId = whitelisted_caller();
 
-        let bounded_str_f: BoundedStringField = "a".repeat(<MaxStringFieldLen as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
-
-        let bounded_desc_f: BoundedDescriptionField = "b".repeat(<MaxDescriptionField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
-
-        let bounded_website_f: BoundedWebsiteUrlField = "c".repeat(<MaxWebsiteUrlField as Get<u32>>::get() as usize).as_bytes().to_vec().try_into().unwrap();
         let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
-            name: bounded_str_f.clone(),
             percentage_to_unlock: 1,
         }; 100].try_into().unwrap();
 
         let required_funds: BalanceOf<T> = u32::MAX.into();
         let currency_id = CurrencyId::Native;
-
-        // (Origin, ProjectName, Logo, Description, Website, ProposedMilestones, RequiredFunds, CurrencyId)
-    }: _(RawOrigin::Signed(whitelisted_caller()), bounded_str_f.clone(), bounded_str_f.clone(), bounded_desc_f, bounded_website_f, milestones, required_funds, CurrencyId::Native)
+        let agg_hash = H256::from([10u8; 32]);
+        // (Origin, ipfs_hash, ProposedMilestones, RequiredFunds, CurrencyId)
+    }: _(RawOrigin::Signed(whitelisted_caller()), agg_hash, milestones, required_funds, CurrencyId::Native)
     verify {
-        assert_last_event::<T>(Event::<T>::ProjectCreated(caller, bounded_str_f.to_vec(), 0, required_funds, CurrencyId::Native).into());
+        assert_last_event::<T>(Event::<T>::ProjectCreated(caller, agg_hash, 0, required_funds, CurrencyId::Native).into());
     }
 
     add_project_whitelist {
@@ -139,6 +132,8 @@ benchmarks! {
 
         // Progress the blocks to allow contribution.
         run_to_block::<T>(5u32.into());
+
+
 
         //(Origin, RoundKey, ProjectKey, Contribution)
     }: _(RawOrigin::Signed(alice.clone()), Some(1u32), a.into(), 10_000u32.into())
@@ -363,7 +358,7 @@ benchmarks! {
         run_to_block::<T>(5u32.into());
         let mut accounts: Vec<T::AccountId> = vec![];
         for i in 0..2 {
-            let acc = create_funded_user::<T>("contributor", i, 100_000);
+            let acc = create_funded_user::<T>("contributor", i, 10_000);
             accounts.push(acc);
         }
 
@@ -372,7 +367,7 @@ benchmarks! {
         Proposals::<T>::refund_item_in_queue(&accounts[0], &accounts[1], 10_000u32.into(), CurrencyId::Native)
     }
      verify {
-        assert!(T::Currency::total_balance(&accounts[1]) - T::Currency::total_balance(&accounts[0]) == 20_000u32.into());
+        assert!(<T::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::total_balance(CurrencyId::Native ,&accounts[1]) - <T::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::total_balance(CurrencyId::Native, &accounts[0]) == 20_000u32.into());
     }
 
     split_off_refunds {
@@ -405,19 +400,10 @@ where
     let EventRecord { event, .. } = &events[events.len() - 1];
     assert_eq!(event, &system_event);
 }
-//
+
 fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     let milestone_max_count = <MaxProposedMilestones as Get<u32>>::get() as usize;
-    let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
-    let project_name: BoundedStringField =
-        b"Imbue's Awesome Initiative".to_vec().try_into().unwrap();
-    let project_logo: BoundedStringField = b"Imbue Logo".to_vec().try_into().unwrap();
-    let project_description: BoundedDescriptionField =
-        b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding."
-            .to_vec()
-            .try_into()
-            .unwrap();
-    let website: BoundedWebsiteUrlField = b"https://imbue.network".to_vec().try_into().unwrap();
+    let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000);
     let milestones: BoundedProposedMilestones = vec![
         ProposedMilestone {
             percentage_to_unlock: 100 / milestone_max_count as u32,
@@ -426,18 +412,14 @@ fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     ]
     .try_into()
     .unwrap();
-
+    
+    let agg_hash = H256::from([20; 32]);
     let required_funds: BalanceOf<T> = contribution.into();
     let currency_id = CurrencyId::Native;
 
-    let _start_block: T::BlockNumber = 0u32.into();
-
     assert_ok!(Proposals::<T>::create_project(
         RawOrigin::Signed(bob.clone()).into(),
-        project_name.clone(),
-        project_logo,
-        project_description,
-        website,
+        agg_hash,
         milestones,
         required_funds,
         currency_id
@@ -463,8 +445,8 @@ fn create_funded_user<T: Config>(
     balance_factor: u32,
 ) -> T::AccountId {
     let user = account(string, n, SEED);
-    let balance = T::Currency::minimum_balance() * balance_factor.into();
-    let _ = T::Currency::make_free_balance_be(&user, balance);
+    let balance: BalanceOf<T> = balance_factor.into();
+    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(CurrencyId::Native, &user, balance);
     user
 }
 
