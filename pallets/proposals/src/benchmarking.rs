@@ -327,12 +327,6 @@ benchmarks! {
         assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(2, 0).into());
     }
 
-    set_storage_variable {
-    }: set_max_project_count_per_round(RawOrigin::Root, u32::MAX)
-    verify {
-        assert_eq!(MaxProjectCountPerRound::<T>::get(), u32::MAX)
-    }
-
     refund {
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
         let contribution_amount = 10_000u32;
