@@ -31,7 +31,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn something)]
-	pub type Something<T> = StorageValue<_, u32>;
+	pub type PendingGrants<T> = ;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -49,6 +49,8 @@ pub mod pallet {
         #[pallet::weight(100_000)]
         pub fn submit_initial_grant(
             origin: OriginFor<T>,
+			ipfs_hash: [u8; 32],
+			
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 			// take deposit to prevent spam
