@@ -204,9 +204,10 @@ pub mod asset_registry {
     use codec::{Decode, Encode};
     use common_types::{CurrencyId, CustomMetadata};
     use frame_support::{
-        dispatch::RawOrigin,
+        dispatch::{RawOrigin},
         sp_std::marker::PhantomData,
         traits::{EnsureOrigin, EnsureOriginWithArg},
+        error::BadOrigin,
     };
     use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
     use scale_info::TypeInfo;
@@ -253,17 +254,22 @@ pub mod asset_registry {
 
         fn try_origin(
             origin: Origin,
-            asset_id: &Option<CurrencyId>,
+            asset_id: &Option<CurrencyId>
         ) -> Result<Self::Success, Origin> {
             match asset_id {
                 // Any other `asset_id` defaults to EnsureRoot
                 _ => DefaultEnsureOrigin::try_origin(origin).map(|_| ()),
             }
         }
-
+        
+        fn ensure_origin(o: Origin, _: &Option<CurrencyId>) -> Result<Self::Success, BadOrigin> {
+            let _ = DefaultEnsureOrigin::ensure_origin(o)?;
+            Ok(())
+        }
+        
         #[cfg(feature = "runtime-benchmarks")]
-        fn successful_origin(_asset_id: &Option<CurrencyId>) -> Origin {
-            unimplemented!()
+        fn try_successful_origin(_: &Option<CurrencyId>) -> Result<Origin, ()> { 
+            Err(())
         }
     }
 }
