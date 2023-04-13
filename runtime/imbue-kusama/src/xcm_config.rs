@@ -54,6 +54,10 @@ parameter_types! {
     // One XCM operation is 100_000_000 weight - almost certainly a conservative estimate.
     pub UnitWeightCost: XcmWeight = XcmWeight::from_ref_time(200_000_000);
     pub const MaxInstructions: u32 = 100;
+
+    // A `MultiLocation` that can be reached via `XcmRouter`. Used only in benchmarks.
+	// If `None`, the benchmarks that depend on a reachable destination will be skipped.
+    pub const ReachableDest: Option<MultiLocation> = None;
 }
 
 use super::{
@@ -261,6 +265,7 @@ impl pallet_xcm::Config for Runtime {
     const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
     // ^ Override for AdvertisedXcmVersion default
     type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+    type ReachableDest = ReachableDest;
 }
 
 impl orml_xcm::Config for Runtime {

@@ -261,15 +261,11 @@ pub mod asset_registry {
                 _ => DefaultEnsureOrigin::try_origin(origin).map(|_| ()),
             }
         }
-        
-        fn ensure_origin(o: Origin, _: &Option<CurrencyId>) -> Result<Self::Success, BadOrigin> {
-            let _ = DefaultEnsureOrigin::ensure_origin(o)?;
-            Ok(())
-        }
-        
+
+        /// Only for benchmarks.
         #[cfg(feature = "runtime-benchmarks")]
         fn try_successful_origin(_: &Option<CurrencyId>) -> Result<Origin, ()> { 
-            Err(())
+            unimplemented!()
         }
     }
 }

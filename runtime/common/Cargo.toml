@@ -32,10 +32,8 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.39" }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39", default-features = false }
 
-
 #Cumulus
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.39"  , default-features = false }
-
 
 # Local Dependencies
 common-traits = { path = "../../libs/common-traits", default-features = false }
@@ -50,7 +48,7 @@ hex = "0.4.3"
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 
 [features]
-default = ['std']
+ 	default = ['std']
 std = [
 	"serde/std",
     "codec/std",
@@ -66,3 +64,4 @@ std = [
 	"polkadot-primitives/std",
 	"xcm/std",
 ]
+runtime-benchmarks = []
