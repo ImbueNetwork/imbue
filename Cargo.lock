@@ -9501,6 +9501,7 @@ dependencies = [
  "common-traits",
  "common-types",
  "cumulus-primitives-core",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "imbue-kusama-runtime",

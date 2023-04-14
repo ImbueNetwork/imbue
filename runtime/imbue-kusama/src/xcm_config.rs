@@ -268,6 +268,7 @@ impl pallet_xcm::Config for Runtime {
     const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
     // ^ Override for AdvertisedXcmVersion default
     type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+    #[cfg(feature = "runtime-benchmarks")]
     type ReachableDest = ReachableDest;
 }
 
