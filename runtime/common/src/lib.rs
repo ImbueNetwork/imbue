@@ -234,7 +234,6 @@ pub mod asset_registry {
             Ok(())
         }
     }
-
     /// The OrmlAssetRegistry::AuthorityOrigin impl
     pub struct AuthorityOrigin<
         // The origin type
@@ -245,16 +244,16 @@ pub mod asset_registry {
     >(PhantomData<(Origin, DefaultEnsureOrigin)>);
 
     impl<
-            Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
-            DefaultEnsureOrigin: EnsureOrigin<Origin>,
-        > EnsureOriginWithArg<Origin, Option<CurrencyId>>
-        for AuthorityOrigin<Origin, DefaultEnsureOrigin>
+        Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
+        DefaultEnsureOrigin: EnsureOrigin<Origin>,
+    > EnsureOriginWithArg<Origin, Option<CurrencyId>> for AuthorityOrigin<Origin, DefaultEnsureOrigin>
+
     {
         type Success = ();
 
         fn try_origin(
             origin: Origin,
-            asset_id: &Option<CurrencyId>
+            asset_id: &Option<CurrencyId>,
         ) -> Result<Self::Success, Origin> {
             match asset_id {
                 // Any other `asset_id` defaults to EnsureRoot
@@ -262,11 +261,11 @@ pub mod asset_registry {
             }
         }
 
-        /// Only for benchmarks.
         #[cfg(feature = "runtime-benchmarks")]
-        fn try_successful_origin(_: &Option<CurrencyId>) -> Result<Origin, ()> { 
+        fn try_successful_origin(_asset_id: &Option<CurrencyId>) -> Result<Origin, ()> {
             unimplemented!()
         }
+
     }
 }
 pub mod common_xcm {

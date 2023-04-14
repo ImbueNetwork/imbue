@@ -21,6 +21,8 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate" , branch = "polkadot-v0.9.39",  default-features = false }
 pallet-authorship = { git = "https://github.com/paritytech/substrate" , branch = "polkadot-v0.9.39",  default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate" , branch = "polkadot-v0.9.39",  default-features = false }
+frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39", optional = true }
+frame-system-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39", optional = true }
 
 ## Substrate Primitive Dependencies
 sp-arithmetic = { git = "https://github.com/paritytech/substrate" , branch = "polkadot-v0.9.39",  default-features = false }
@@ -49,11 +51,13 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", bran
 
 [features]
  	default = ['std']
+
 std = [
 	"serde/std",
     "codec/std",
 	'cumulus-primitives-core/std',
 	'frame-support/std',
+	'frame-system/std',
 	'sp-core/std',
 	'sp-consensus-aura/std',
 	'sp-runtime/std',
@@ -62,6 +66,11 @@ std = [
 	"common-types/std",
 	"orml-traits/std",
 	"polkadot-primitives/std",
+	"pallet-balances/std",
 	"xcm/std",
 ]
-runtime-benchmarks = []
+runtime-benchmarks = [
+	'frame-support/runtime-benchmarks',
+	"frame-system/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+]

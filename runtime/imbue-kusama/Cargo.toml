@@ -187,6 +187,7 @@ runtime-benchmarks = [
 	'pallet-timestamp/runtime-benchmarks',
 	'pallet-xcm/runtime-benchmarks',
 	'xcm-builder/runtime-benchmarks',
+	"common-runtime/runtime-benchmarks"
 ]
 
 # A feature that should be enabled when the runtime should be build for on-chain
