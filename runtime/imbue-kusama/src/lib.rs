@@ -878,7 +878,7 @@ mod benches {
         [pallet_balances, Balances]
         [pallet_timestamp, Timestamp]
         [proposals, ImbueProposals]
-        [briefs, ImbueBriefs]
+        //[briefs, ImbueBriefs]
     );
 }
 

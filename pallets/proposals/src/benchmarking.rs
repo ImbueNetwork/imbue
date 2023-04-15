@@ -1,4 +1,4 @@
-#![cfg(feature = "runtime-benchmarks")]
+:#![cfg(feature = "runtime-benchmarks")]
 use super::*;
 use crate::Pallet as Proposals;
 use common_types::CurrencyId;
@@ -6,7 +6,7 @@ use frame_benchmarking::vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{
     assert_ok,
-    traits::{Currency, Get},
+    traits::{Get},
 };
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use sp_std::str;
@@ -14,12 +14,6 @@ use sp_core::H256;
 
 const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
-
-//accumulate_dummy {
-//    let b in 1 .. 1000;
-//    let caller = account("caller", 0, 0);
-//  }: _ (RawOrigin::Signed(caller), b.into())
-//
 
 benchmarks! {
     where_clause {
