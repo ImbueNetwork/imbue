@@ -21,14 +21,11 @@ pub trait WeightInfo {
     fn vote_on_milestone() -> Weight;
     fn finalise_milestone_voting() -> Weight;
     fn withdraw() -> Weight;
-    fn raise_vote_of_no_confidence() -> Weight;
-    fn vote_on_no_confidence_round() -> Weight;
-    fn finalise_no_confidence_round() -> Weight;
-    fn set_storage_variable() -> Weight;
     fn refund() -> Weight;
     fn fund() -> Weight;
     fn refund_item_in_queue() -> Weight;
     fn split_off_refunds() -> Weight;
+    fn set_storage_variable() -> Weight;
 }
 
 /// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
@@ -90,21 +87,6 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn withdraw() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
-            .saturating_add(T::DbWeight::get().reads(4_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
-    }
-    fn raise_vote_of_no_confidence() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
-            .saturating_add(T::DbWeight::get().reads(4_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
-    }
-    fn vote_on_no_confidence_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
-            .saturating_add(T::DbWeight::get().reads(4_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
-    }
-    fn finalise_no_confidence_round() -> Weight {
         Weight::from_ref_time(49_000_000 as u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
@@ -194,21 +176,6 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn withdraw() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
-            .saturating_add(RocksDbWeight::get().reads(4_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
-    }
-    fn raise_vote_of_no_confidence() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
-            .saturating_add(RocksDbWeight::get().reads(4_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
-    }
-    fn vote_on_no_confidence_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
-            .saturating_add(RocksDbWeight::get().reads(4_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
-    }
-    fn finalise_no_confidence_round() -> Weight {
         Weight::from_ref_time(49_000_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
