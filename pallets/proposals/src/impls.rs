@@ -38,7 +38,7 @@ impl<T: Config> Pallet<T> {
         proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
-    ) -> DispatchResultWithPostInfo {
+    ) -> Result<ProjectKey, DispatchError> {
         // Check if identity is required
         if IsIdentityRequired::<T>::get() {
             let _ = Self::ensure_identity_is_decent(&who)?;
@@ -83,18 +83,10 @@ impl<T: Config> Pallet<T> {
         <Projects<T>>::insert(project_key, project);
         ProjectCount::<T>::put(next_project_key);
 
-        Self::deposit_event(Event::ProjectCreated(
-            who,
-            agreement_hash,
-            project_key,
-            required_funds,
-            currency_id,
-        ));
-
-        Ok(().into())
+        Ok(project_key)
     }
 
-    pub fn update_existing_project(
+    pub fn try_update_existing_project(
         who: T::AccountId,
         project_key: ProjectKey,
         proposed_milestones: BoundedProposedMilestones,
@@ -142,8 +134,6 @@ impl<T: Config> Pallet<T> {
 
         // Add project to list
         <Projects<T>>::insert(project_key, project);
-
-        Self::deposit_event(Event::ProjectUpdated(who, project_key, required_funds));
 
         Ok(().into())
     }
