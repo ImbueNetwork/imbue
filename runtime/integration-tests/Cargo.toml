@@ -13,12 +13,13 @@ repository = "https://github.com/ImbueNetwork/imbue"
 # Substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", optional = true }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 
 # Polkadot
-kusama-runtime = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39" }
+kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39" }
 polkadot-parachain = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39" }
 polkadot-primitives = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39" }
@@ -45,3 +46,22 @@ common-types = { path = "../../libs/common-types", default-features = false }
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 xcm-emulator = { git = "https://github.com/imbuenetwork/xcm-simulator", branch = "polkadot-v0.9.39" }
+
+
+[features]
+default = []
+runtime-benchmarks = [
+    "default",
+    "frame-benchmarking/runtime-benchmarks",
+    "kusama-runtime/runtime-benchmarks",
+    "imbue-kusama-runtime/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "orml-tokens/runtime-benchmarks",
+    "orml-xtokens/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-xcm/runtime-benchmarks",
+    "polkadot-parachain/runtime-benchmarks",
+    "polkadot-primitives/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
