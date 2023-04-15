@@ -1,4 +1,4 @@
-:#![cfg(feature = "runtime-benchmarks")]
+#![cfg(feature = "runtime-benchmarks")]
 use super::*;
 use crate::Pallet as Proposals;
 use common_types::CurrencyId;
