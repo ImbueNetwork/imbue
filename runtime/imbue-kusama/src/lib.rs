@@ -741,6 +741,8 @@ parameter_types! {
     pub const PercentRequiredForVoteToPass: u8 = 75;
     pub const MaximumContributorsPerProject: u32 = 5000;
     pub const RefundsPerBlock: u8 = 20;
+    pub const IsIdentityRequired: bool = false;
+    pub const MilestoneVotingWindow: BlockNumber = 100800;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -754,7 +756,10 @@ impl pallet_proposals::Config for Runtime {
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type RefundsPerBlock = RefundsPerBlock;
+    // TODO: weight info.
     type WeightInfo = ();
+    type IsIdentityRequired = IsIdentityRequired;
+    type MilestoneVotingWindow = MilestoneVotingWindow;
 }
 
 parameter_types! {
@@ -772,6 +777,7 @@ impl pallet_briefs::Config for Runtime {
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type BriefEvolver = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
+    // TODO: Weight info
 }
 
 construct_runtime! {

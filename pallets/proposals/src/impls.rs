@@ -40,7 +40,7 @@ impl<T: Config> Pallet<T> {
         currency_id: common_types::CurrencyId,
     ) -> Result<ProjectKey, DispatchError> {
         // Check if identity is required
-        if IsIdentityRequired::<T>::get() {
+        if <T as Config>::IsIdentityRequired::get() {
             let _ = Self::ensure_identity_is_decent(&who)?;
         }
 
@@ -95,7 +95,7 @@ impl<T: Config> Pallet<T> {
         agreement_hash: H256,
     ) -> DispatchResultWithPostInfo {
         // Check if identity is required
-        if IsIdentityRequired::<T>::get() {
+        if <T as Config>::IsIdentityRequired::get() {
             let _ = Self::ensure_identity_is_decent(&who)?;
         }
 
@@ -347,7 +347,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::OnlyApprovedProjectsCanSubmitMilestones
         );
 
-        let end = now + MilestoneVotingWindow::<T>::get().into();
+        let end = now + <T as Config>::MilestoneVotingWindow::get();
 
         let round_key = RoundCount::<T>::get()
             .checked_add(1)
