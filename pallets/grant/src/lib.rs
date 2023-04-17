@@ -75,6 +75,14 @@ pub mod pallet {
 		MaxGrantsPerBlockReached,
 	}
 
+	
+	#[pallet::hooks]
+	impl<T: Config> Pallet<T> {
+		pub fn on_initialize() -> Weight {
+			// TODO: Expire grants if the block is now.
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
         
@@ -147,6 +155,8 @@ pub mod pallet {
         }
 		// TODO: runtime api to get the deposit address of the grant sovereign account.
 	}
+
+
 
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
