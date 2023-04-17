@@ -77,9 +77,10 @@ pub mod pallet {
 
 	
 	#[pallet::hooks]
-	impl<T: Config> Pallet<T> {
-		pub fn on_initialize() -> Weight {
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			// TODO: Expire grants if the block is now.
+			Weight::default()
 		}
 	}
 
