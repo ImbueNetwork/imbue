@@ -4,24 +4,30 @@ use frame_support::{assert_noop, assert_ok};
 #[test]
 fn ensure_milestone_percent_equal_100() {
 	new_test_ext().execute_with(|| {
-		// Go past genesis block so events get deposited
-		System::set_block_number(1);
-		// Dispatch a signed extrinsic.
-		assert_ok!(Grant::do_something(RuntimeOrigin::signed(1), 42));
-		// Read pallet storage and assert an expected result.
-		assert_eq!(Grant::something(), Some(42));
-		// Assert that the correct event was deposited
-		System::assert_last_event(Event::SomethingStored { something: 42, who: 1 }.into());
+		assert!(false);
 	});
 }
 
 #[test]
-fn correct_error_for_none_value() {
+fn create_grant_too_many_in_exp_block() {
 	new_test_ext().execute_with(|| {
-		// Ensure the expected error is thrown when no value is present.
-		assert_noop!(
-			Grant::cause_error(RuntimeOrigin::signed(1)),
-			Error::<Test>::NoneValue
-		);
+		assert!(false);
 	});
 }
+
+
+#[test]
+fn vote_on_grant_not_found() {
+	new_test_ext().execute_with(|| {
+		assert!(false);
+	});
+}
+
+
+#[test]
+fn only_approvers_can_vote() {
+	new_test_ext().execute_with(|| {
+		assert!(false);
+	});
+}
+

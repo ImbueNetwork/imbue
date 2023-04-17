@@ -27,6 +27,7 @@ pub mod pallet {
 	pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	type BoundedPMilestones<T> = BoundedVec<ProposedMilestoneWithInfo, <T as Config>::MaxMilestonesPerGrant>;
 	type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
+	type MaxGrantsExpiringPerBlock = ConstU32<100>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -41,20 +42,19 @@ pub mod pallet {
 		type MaxMilestonesPerGrant: Get<u32>;
 		type MaxApprovers: Get<u32>;
 	
-		// TODO: Use this for the voting window on grant creation.
-		// If its passed the voting period check in hook and remove the grant.
+		// Used to remove ignored grants and keep a clean system.
 		type GrantVotingPeriod: Get<<Self as frame_system::Config>::BlockNumber>;
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
 	pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128, T::GrantId, Grant<T>, OptionQuery>;
 
-	//TODO: Come up with efficient way of holding votes.
 	//#[pallet::storage]
 	//#[pallet::getter(fn something)]
-	//pub type GrantVotes<T: Config> = StorageMap<_, Blake2_128, T::GrantId, BTreeMap>;
+	//pub type GrantVotes<T: Config> = StorageMap<_, Blake2_128, (T::GrantId), BTreeMap>;
 
+	#[pallet::storage]
+	pub type GrantVotingExpiration<T: Config> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedVec<T::GrantId, MaxGrantsExpiringPerBlock>, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -71,6 +71,8 @@ pub mod pallet {
 		GrantNotFound,
 		/// Only appointed approvers and vote on a grant submission.
 		OnlyApproversCanVote,
+		/// Maximum grants per block reached try again next block.
+		MaxGrantsPerBlockReached,
 	}
 
 	#[pallet::call]
@@ -103,8 +105,12 @@ pub mod pallet {
 				approvers: assigned_approvers
 			};
 
+			let exp_block: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number() + <T as Config>::GrantVotingPeriod::get();
+			let _ = GrantVotingExpiration::<T>::try_mutate(exp_block, |grant_ids| {
+				let _ = grant_ids.try_push(grant_id).map_err(|_| Error::<T>::MaxGrantsPerBlockReached)?;
+				Ok::<(), DispatchError>(())
+			})?;
 			PendingGrants::<T>::insert(&grant_id, grant);
-			// TODO: Add to the voting expiration window.
 
             Self::deposit_event(Event::<T>::GrantSubmitted{submitter, grant_id});
             Ok(().into())
