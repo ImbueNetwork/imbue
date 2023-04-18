@@ -49,9 +49,8 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128, T::GrantId, Grant<T>, OptionQuery>;
 
-	//#[pallet::storage]
-	//#[pallet::getter(fn something)]
-	//pub type GrantVotes<T: Config> = StorageMap<_, Blake2_128, (T::GrantId), BTreeMap>;
+	#[pallet::storage]
+	pub type GrantVotes<T: Config> = StorageDoubleMap<_, Blake2_128, T::GrantId, Blake2_128, AccountIdOf<T>, VoteType, OptionQuery>;
 
 	#[pallet::storage]
 	pub type GrantVotingExpiration<T: Config> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedVec<T::GrantId, MaxGrantsExpiringPerBlock>, ValueQuery>;
@@ -78,15 +77,23 @@ pub mod pallet {
 	
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
-			// TODO: Expire grants if the block is now.
-			Weight::default()
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			let mut weight = Weight::default();
+			let expiring_grants = GrantVotingExpiration::<T>::get(n);
+            weight += T::DbWeight::get().reads(2);
+			
+			// Remove all the grants from storage that have reached expiry 
+			let _ = expiring_grants.iter().map(|grant_id| {
+            	weight += T::DbWeight::get().reads_writes(1, 1);
+				PendingGrants::<T>::remove(grant_id);
+			}).collect::<Vec<_>>();
+
+			weight + T::DbWeight::get().reads(1)
 		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-        
 		/// A grant starts here with nothing agreed upon and 
 		/// probably awaiting much back and forth.
 		#[pallet::call_index(0)]
@@ -111,7 +118,8 @@ pub mod pallet {
 			let grant = Grant {
 				milestones: proposed_milestones,
 				submitter: submitter.clone(),
-				approvers: assigned_approvers
+				approvers: assigned_approvers,
+				ipfs_hash,
 			};
 
 			let exp_block: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number() + <T as Config>::GrantVotingPeriod::get();
@@ -125,7 +133,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-		/// For the people approving, they must submit the vote to accept or decline the grant proposal. 
+		/// For the people approving, they must submit the vote register their intention on the grant proposal. 
+		/// This can be called multiple times to allow for editing of the vote.
 		#[pallet::call_index(1)]
         #[pallet::weight(100_000)]
         pub fn vote_on_grant(
@@ -137,15 +146,38 @@ pub mod pallet {
 			let grant: Grant<T> = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
 			ensure!(grant.approvers.iter().any(|approver|approver == &voter), Error::<T>::OnlyApproversCanVote);
-			// generate a vote key
-			// insert into vote storage
-			// add hook to see if at the start of the block there is a super majority and close.
+			
+			GrantVotes::<T>::mutate(&grant_id, &voter, |v|{
+				*v = Some(vote.clone()); 
+			});
+			// TODO:? If everyone has voted, remove from grant expiration.
 
             Self::deposit_event(Event::<T>::GrantVotedUpon{voter, grant_id, way: vote});
             Ok(().into())
         }
 
+		/// Accept a grant to stop it from auto expiring.
+		/// Call this if you want to keep a grant but one or many approvers is not responding.
 		#[pallet::call_index(2)]
+        #[pallet::weight(100_000)]
+        pub fn keep_grant_from_expiring(
+            origin: OriginFor<T>,
+        ) -> DispatchResultWithPostInfo {
+
+			Ok(().into())
+        }
+
+		/// Remove the grant from storage.
+		#[pallet::call_index(3)]
+        #[pallet::weight(100_000)]
+        pub fn cancel_grant(
+            origin: OriginFor<T>,
+        ) -> DispatchResultWithPostInfo {
+			
+			Ok(().into())
+        }
+
+		#[pallet::call_index(4)]
         #[pallet::weight(100_000)]
         pub fn convert_to_milestones(
             origin: OriginFor<T>,
@@ -165,6 +197,7 @@ pub mod pallet {
 		milestones: BoundedPMilestones<T>,
 		submitter: AccountIdOf<T>,
 		approvers: BoundedApprovers<T>,
+		ipfs_hash: [u8; 32],
 	}
 	
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
