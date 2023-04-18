@@ -40,18 +40,36 @@ pub mod pallet {
 		/// The grant ID type.
 		type GrantId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + codec::FullCodec + MaxEncodedLen;
 		type MaxMilestonesPerGrant: Get<u32>;
+		/// The maximum approvers for a given grant, should be set to < 100.
 		type MaxApprovers: Get<u32>;
 	
 		// Used to remove ignored grants and keep a clean system.
 		type GrantVotingPeriod: Get<<Self as frame_system::Config>::BlockNumber>;
 	}
 
+	/// Stores all the Grants waiting for unanimous approval and eventual conversion into milestones.
+	/// Key 1: GrantId
+	/// Value: Grant<T>
 	#[pallet::storage]
 	pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128, T::GrantId, Grant<T>, OptionQuery>;
 
+	/// Used to hold all the votes by the approvers on a given grant.
+	/// Key 1: GrantId
+	/// Key 2: AccountId
+	/// Value: VoteType
 	#[pallet::storage]
 	pub type GrantVotes<T: Config> = StorageDoubleMap<_, Blake2_128, T::GrantId, Blake2_128, AccountIdOf<T>, VoteType, OptionQuery>;
 
+	/// Used to hold to votes count of a grant, an optimisation over iterating keys.
+	/// Key 1: GrantId
+	/// Value: u32 (Amount of distinct votes on a given grant)
+	#[pallet::storage]
+	pub type GrantVoteCount<T: Config> = StorageMap<_, Blake2_128, T::GrantId, u32, ValueQuery>;
+
+	/// The grants the expire on a given block.
+	/// Used to clean up storage and remove unwanted proposals.
+    /// Key 1: BlockNumber
+    /// Value: BoundedVec<GrantIds>
 	#[pallet::storage]
 	pub type GrantVotingExpiration<T: Config> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedVec<T::GrantId, MaxGrantsExpiringPerBlock>, ValueQuery>;
 
@@ -72,6 +90,8 @@ pub mod pallet {
 		OnlyApproversCanVote,
 		/// Maximum grants per block reached try again next block.
 		MaxGrantsPerBlockReached,
+		/// Overflow Error in pallet-grants.
+		Overflow,
 	}
 
 	
@@ -120,6 +140,7 @@ pub mod pallet {
 				submitter: submitter.clone(),
 				approvers: assigned_approvers,
 				ipfs_hash,
+				created_on: frame_system::Pallet::<T>::block_number(),
 			};
 
 			let exp_block: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number() + <T as Config>::GrantVotingPeriod::get();
@@ -143,14 +164,35 @@ pub mod pallet {
 			grant_id: T::GrantId,
         ) -> DispatchResultWithPostInfo {
             let voter = ensure_signed(origin)?;
-			let grant: Grant<T> = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
+			let grant: Grant<T> = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)? ;
+			let mut is_new_vote = true;
 
 			ensure!(grant.approvers.iter().any(|approver|approver == &voter), Error::<T>::OnlyApproversCanVote);
 			
 			GrantVotes::<T>::mutate(&grant_id, &voter, |v|{
+				if v.is_some() {is_new_vote = false};
 				*v = Some(vote.clone()); 
 			});
-			// TODO:? If everyone has voted, remove from grant expiration.
+
+			if is_new_vote {
+				let count_of_votes = GrantVoteCount::<T>::take(&grant_id).saturating_add(1);
+				GrantVoteCount::<T>::insert(&grant_id, count_of_votes);
+				// This shouldnt be too expensive as there is a limit of how many approvers there are (MaxApprovers)
+				if count_of_votes as usize == grant.approvers.len() {
+					let exp_block = grant.created_on + <T as Config>::GrantVotingPeriod::get();
+					GrantVotingExpiration::<T>::try_mutate(exp_block, |grant_ids| {
+						*grant_ids = grant_ids
+						.iter()
+						.cloned()
+						.filter(|&id| id != grant_id)
+						.collect::<Vec<_>>()
+						.try_into()
+						.map_err(|_| Error::<T>::Overflow)?;
+						
+						Ok::<(), DispatchError>(())
+					})?;
+				}
+			}
 
             Self::deposit_event(Event::<T>::GrantVotedUpon{voter, grant_id, way: vote});
             Ok(().into())
@@ -198,6 +240,7 @@ pub mod pallet {
 		submitter: AccountIdOf<T>,
 		approvers: BoundedApprovers<T>,
 		ipfs_hash: [u8; 32],
+		created_on: BlockNumberFor<T>,
 	}
 	
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]

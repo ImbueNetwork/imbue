@@ -42,3 +42,25 @@ fn expired_grant_removed_in_hook_fails_gracefully_if_does_not_exist() {
 		assert!(false);
 	});
 }
+
+#[test]
+fn assert_votes_set_state() {
+	new_test_ext().execute_with(|| {
+		assert!(false);
+	});
+}
+
+#[test]
+fn assert_when_everyone_votes_it_doesnt_expire() {
+	new_test_ext().execute_with(|| {
+		assert!(false);
+	});
+}
+
+
+#[test]
+fn when_everyone_votes_the_grant_id_is_removed_from_expiry() {
+	new_test_ext().execute_with(|| {
+		assert!(false);
+	});
+}
