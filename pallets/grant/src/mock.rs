@@ -110,8 +110,7 @@ parameter_types! {
 
 impl pallet_grant::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type RMultiCurrency = Tokens; 
-	type GrantId = u64;
+    type RMultiCurrency = Tokens;
 	type MaxMilestonesPerGrant = MaxMilestonesPerGrant;
 	type MaxApprovers = MaxApprovers;
 	type IntoProposal = pallet_proposals::Pallet<Test>;

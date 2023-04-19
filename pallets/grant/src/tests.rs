@@ -76,6 +76,29 @@ fn cancel_grant_not_submitter() {
 		assert!(false);
 	});
 }
+
+#[test]
+fn convert_to_proposal_cancelled() {
+	new_test_ext().execute_with(|| {
+		assert!(false);
+	});
+}
+
+#[test]
+fn convert_to_proposal_not_submitter() {
+	new_test_ext().execute_with(|| {
+		assert!(false);
+	});
+}
+
+
+#[test]
+fn convert_to_proposal_already_converted() {
+	new_test_ext().execute_with(|| {
+		assert!(false);
+	});
+}
+
 #[test]
 fn e2e() {
 	new_test_ext().execute_with(|| {

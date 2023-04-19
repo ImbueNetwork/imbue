@@ -22,14 +22,18 @@ pub mod pallet {
 	use orml_traits::arithmetic::Bounded;
 	use common_types::CurrencyId;
 	use sp_runtime::traits::AtLeast32BitUnsigned;
-	use pallet_proposals::traits::IntoProposal;
+	use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
+	use sp_core::H256;
+	use sp_std::collections::btree_map::BTreeMap;
 
-	pub(crate) type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 	pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+	pub(crate) type BalanceOf<T> =
+	<<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
 	type BoundedPMilestones<T> = BoundedVec<ProposedMilestoneWithInfo, <T as Config>::MaxMilestonesPerGrant>;
 	type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
-	
-	type BoundedGrantsSubmitted<T> = BoundedVec<<T as Config>::GrantId, ConstU32<500>>;
+	type BoundedGrantsSubmitted = BoundedVec<GrantId, ConstU32<500>>;
+	type GrantId = H256;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -38,14 +42,11 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_timestamp::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        /// orml reservable multicurrency.
-		type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-		/// The grant ID type.
-		type GrantId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + codec::FullCodec + MaxEncodedLen;
 		/// Maximum amount of milestones per grant.
 		type MaxMilestonesPerGrant: Get<u32>;
 		/// The maximum approvers for a given grant.
 		type MaxApprovers: Get<u32>;
+        type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
 		/// The type that converts into a proposal for milestone submission.
 		type IntoProposal: IntoProposal<
@@ -62,7 +63,7 @@ pub mod pallet {
 	/// Key 1: GrantId
 	/// Value: Grant<T>
 	#[pallet::storage]
-	pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128, T::GrantId, Grant<T>, OptionQuery>;
+	pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128, GrantId, Grant<T>, OptionQuery>;
 
 
 	/// Stores all the grants a user has submitted.
@@ -70,15 +71,15 @@ pub mod pallet {
 	/// Key 2: GrantId
 	/// Value: ()
 	#[pallet::storage]
-	pub type GrantsSubmittedBy<T: Config> = StorageDoubleMap<_, Blake2_128, AccountIdOf<T>, Blake2_128, T::GrantId, (), ValueQuery>;
+	pub type GrantsSubmittedBy<T: Config> = StorageDoubleMap<_, Blake2_128, AccountIdOf<T>, Blake2_128, GrantId, (), ValueQuery>;
 	
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		GrantSubmitted{submitter: AccountIdOf<T>, grant_id: T::GrantId},
-		GrantEdited{grant_id: T::GrantId},
-		GrantCancelled{grant_id: T::GrantId},
+		GrantSubmitted{submitter: AccountIdOf<T>, grant_id: GrantId},
+		GrantEdited{grant_id: GrantId},
+		GrantCancelled{grant_id: GrantId},
 
 	}
 
@@ -96,13 +97,16 @@ pub mod pallet {
 		OnlySubmitterCanEdit, 
 		/// Cannot use a cancelled grant.
 		GrantCancelled,
+		/// This grant has already been converted.
+		AlreadyConverted,
+		/// The conversion to proposals failed.
+		GrantConversionFailedGeneric,
 	}
 
 	
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-			
 			Weight::default()
 		}
 	}
@@ -118,6 +122,8 @@ pub mod pallet {
 			ipfs_hash: [u8; 32],
 			proposed_milestones: BoundedPMilestones<T>,
 			assigned_approvers: BoundedApprovers<T>,
+			currency_id: CurrencyId,
+			amount_requested: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let submitter = ensure_signed(origin)?;
 			let total_percentage = proposed_milestones.iter().fold(0u32, |acc, x| acc.saturating_add(x.percent.into()));
@@ -126,7 +132,7 @@ pub mod pallet {
 			// TODO: Ensure that the approvers are in a select group??
 			// TODO: take deposit to prevent spam? how else can we prevent spam
 			// TODO: GENERATE grant_id. properly. or get as param
-			let grant_id: T::GrantId = Default::default();
+			let grant_id: GrantId = Default::default();
 			ensure!(!PendingGrants::<T>::contains_key(grant_id), Error::<T>::GrantAlreadyExists);
 
 			let grant = Grant {
@@ -136,6 +142,9 @@ pub mod pallet {
 				ipfs_hash,
 				created_on: frame_system::Pallet::<T>::block_number(),
 				is_cancelled: false,
+				is_converted: false,
+				currency_id,
+				amount_requested,
 			};
 
 
@@ -152,10 +161,12 @@ pub mod pallet {
         #[pallet::weight(100_000)]
         pub fn edit_grant(
             origin: OriginFor<T>,
-			grant_id: T::GrantId,
+			grant_id: GrantId,
 			edited_milestones: Option<BoundedPMilestones<T>>,
 			edited_approvers: Option<BoundedApprovers<T>>,
 			edited_ipfs: Option<[u8; 32]>,
+			edited_currency_id: Option<CurrencyId>,
+			edited_amount_requested: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
@@ -172,6 +183,12 @@ pub mod pallet {
 			if let Some(ipfs) = edited_ipfs {
 				grant.ipfs_hash = ipfs;
 			}
+			if let Some(currency_id) = edited_currency_id {
+				grant.currency_id = currency_id;
+			}
+			if let Some(balance) = edited_amount_requested {
+				grant.amount_requested = balance;
+			}
 
 			PendingGrants::<T>::insert(&grant_id, grant);
             Self::deposit_event(Event::<T>::GrantEdited{grant_id});
@@ -184,7 +201,7 @@ pub mod pallet {
         #[pallet::weight(100_000)]
         pub fn cancel_grant(
             origin: OriginFor<T>,
-			grant_id: T::GrantId,
+			grant_id: GrantId,
 			as_authority: bool,
         ) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin.clone())?;
@@ -208,9 +225,43 @@ pub mod pallet {
         #[pallet::weight(100_000)]
         pub fn convert_to_milestones(
             origin: OriginFor<T>,
+			grant_id: GrantId,
         ) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			// Ensure grant is not cancelled
+			let grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
+			
+			ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
+			ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
+			ensure!(!grant.is_converted, Error::<T>::AlreadyConverted);
+
+			
+			let mut contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>> = BTreeMap::new();
+			let _ = grant.approvers.iter().map(|approver_id| {
+				contributions.insert(
+					approver_id.clone(), 
+					Contribution {
+						value: grant.amount_requested / (grant.approvers.len() as u32).into(),
+						timestamp: pallet_timestamp::Pallet::<T>::get(),
+					}
+				)
+			}).collect::<Vec<_>>();
+
+			// TODO: fix this
+			// For now we have to do a conversion into a simpler proposed milestone as pallet_proposals does not support ipfs data for them.
+			let standard_proposed_ms = grant.milestones.iter().map(|ms| {
+				ProposedMilestone {
+					percentage_to_unlock: ms.percent as u32
+				}	
+			}).collect::<Vec<ProposedMilestone>>();
+
+			let _ = <T as Config>::IntoProposal::convert_to_proposal(
+				grant.currency_id,
+				contributions,
+				grant_id,
+				grant.submitter,
+				standard_proposed_ms,
+			).map_err(|_|Error::<T>::GrantConversionFailedGeneric)?;
+				
 			Ok(().into())
         }
 
@@ -226,6 +277,9 @@ pub mod pallet {
 		ipfs_hash: [u8; 32],
 		created_on: BlockNumberFor<T>,
 		is_cancelled: bool,
+		is_converted: bool,
+		currency_id: CurrencyId,
+		amount_requested: BalanceOf<T>,
 	}
 	
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]

@@ -20,7 +20,7 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
         currency_id: CurrencyId,
         current_contribution: BTreeMap<AccountId, Contribution<Balance, TimeStamp>>,
         brief_hash: H256,
-        applicant: AccountId,
+        benificiary: AccountId,
         milestones: Vec<ProposedMilestone>,
     ) -> Result<(), ()>;
 }
@@ -45,7 +45,7 @@ where
         currency_id: CurrencyId,
         contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>>,
         brief_hash: H256,
-        applicant: AccountIdOf<T>,
+        benificiary: AccountIdOf<T>,
         proposed_milestones: Vec<ProposedMilestone>,
     ) -> Result<(), ()> {
         let project_key = crate::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
@@ -78,7 +78,7 @@ where
                 required_funds: sum_of_contributions,
                 withdrawn_funds: 0u32.into(),
                 raised_funds: sum_of_contributions,
-                initiator: applicant.clone(),
+                initiator: benificiary.clone(),
                 created_on: frame_system::Pallet::<T>::block_number(),
                 approved_for_funding: true,
                 funding_threshold_met: true,
@@ -89,7 +89,7 @@ where
         Projects::<T>::insert(project_key, project);
         ProjectCount::<T>::mutate(|c| *c += 1);
         Self::deposit_event(Event::ProjectCreated(
-            applicant,
+            benificiary,
             brief_hash,
             project_key,
             sum_of_contributions,

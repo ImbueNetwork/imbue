@@ -24,6 +24,8 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false}
 pallet-proposals = {path= "../proposals", default-features = false}
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false}
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false}
 
 # Local
 common-traits = { path = "../../libs/common-traits", default-features = false }
@@ -38,6 +40,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "
 pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-proposals = {path= "../proposals"}
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 
 [features]
 default = ["std"]
