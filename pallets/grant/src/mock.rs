@@ -115,6 +115,7 @@ impl pallet_grant::Config for Test {
 	type MaxMilestonesPerGrant = MaxMilestonesPerGrant;
 	type MaxApprovers = MaxApprovers;
 	type IntoProposal = pallet_proposals::Pallet<Test>;
+	type CancellingAuthority = EnsureRoot<AccountId>;
 }
 
 parameter_types! {

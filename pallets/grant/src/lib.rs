@@ -54,6 +54,8 @@ pub mod pallet {
 			BlockNumberFor<Self>,
 			<Self as pallet_timestamp::Config>::Moment,
 		>;
+		/// The authority allowed to cancel a pending grant.
+		type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
 	}
 
 	/// Stores all the Grants waiting for approval, funding and eventual conversion into milestones.
@@ -76,6 +78,8 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		GrantSubmitted{submitter: AccountIdOf<T>, grant_id: T::GrantId},
 		GrantEdited{grant_id: T::GrantId},
+		GrantCancelled{grant_id: T::GrantId},
+
 	}
 
 	#[pallet::error]
@@ -90,6 +94,8 @@ pub mod pallet {
 		Overflow,
 		/// Only the submitter can edit this grant.
 		OnlySubmitterCanEdit, 
+		/// Cannot use a cancelled grant.
+		GrantCancelled,
 	}
 
 	
@@ -129,6 +135,7 @@ pub mod pallet {
 				approvers: assigned_approvers,
 				ipfs_hash,
 				created_on: frame_system::Pallet::<T>::block_number(),
+				is_cancelled: false,
 			};
 
 
@@ -153,7 +160,9 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
+			ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
 			ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
+
 			if let Some(milestones) = edited_milestones {
 				grant.milestones = milestones;
 			}
@@ -170,14 +179,26 @@ pub mod pallet {
 			Ok(().into())
         }
 
-		/// Remove the grant from storage.
+		/// Set the grant as cancelled
 		#[pallet::call_index(2)]
         #[pallet::weight(100_000)]
         pub fn cancel_grant(
             origin: OriginFor<T>,
+			grant_id: T::GrantId,
+			as_authority: bool,
         ) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin.clone())?;
+			let mut grant = PendingGrants::<T>::get(&grant_id).ok_or(Error::<T>::GrantNotFound)?;
+			if as_authority {
+				<T as Config>::CancellingAuthority::ensure_origin(origin)?;
+			} else {
+				ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
+			}
 
-
+			grant.is_cancelled = true;
+			PendingGrants::<T>::insert(&grant_id, grant);
+            Self::deposit_event(Event::<T>::GrantCancelled{grant_id});
+			
 			Ok(().into())
         }
 
@@ -188,6 +209,8 @@ pub mod pallet {
         pub fn convert_to_milestones(
             origin: OriginFor<T>,
         ) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			// Ensure grant is not cancelled
 			Ok(().into())
         }
 
@@ -202,6 +225,7 @@ pub mod pallet {
 		approvers: BoundedApprovers<T>,
 		ipfs_hash: [u8; 32],
 		created_on: BlockNumberFor<T>,
+		is_cancelled: bool,
 	}
 	
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
