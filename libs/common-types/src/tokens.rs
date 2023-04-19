@@ -1,9 +1,8 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use frame_support::{Deserialize, Serialize};
 
-//#[cfg(feature = "std")]
-//use serde::{Deserialize, Serialize};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 
 #[derive(

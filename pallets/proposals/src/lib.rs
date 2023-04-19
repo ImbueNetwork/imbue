@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use common_types::CurrencyId;
+use common_types::{CurrencyId, RefundType, TreasuryOrigin};
 use frame_support::{
     pallet_prelude::*,
     storage::bounded_btree_map::BoundedBTreeMap,
@@ -160,8 +160,7 @@ pub mod pallet {
     #[pallet::getter(fn round_count)]
     pub type RoundCount<T> = StorageValue<_, RoundKey, ValueQuery>;
 
-
-    // An interesting attack vector here and i think it still needs considering. Would need a bound instorage to ensure.
+    // TODO: An interesting attack vector here and i think it still needs considering. Would need a bound instorage to ensure.
     #[pallet::storage]
     #[pallet::getter(fn max_project_count_per_round)]
     pub type MaxProjectCountPerRound<T> = StorageValue<_, u32, ValueQuery>;
@@ -170,8 +169,7 @@ pub mod pallet {
     #[pallet::getter(fn storage_version)]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
-    /// The refund queue is used to store the list of accounts that have been involved in a do_refund call.
-    /// The queue will be sent to the hooks which will inturn actually carry out the
+    /// TODO: Use a multilocation for the refunds
     #[pallet::storage]
     #[pallet::getter(fn refund_queue)]
     pub type RefundQueue<T> = StorageValue<
@@ -185,8 +183,8 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    // Pallets use events to inform users when important changes are made.
-    // https://substrate.dev/docs/en/knowledgebase/runtime/events
+
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -259,21 +257,10 @@ pub mod pallet {
         InvalidAccount,
         /// Project does not exist.
         ProjectDoesNotExist,
-        /// Project name is a mandatory field.
-        ProjectNameIsMandatory,
-        /// Project logo is a mandatory field.
-        LogoIsMandatory,
-        /// Project description is a mandatory field.
-        ProjectDescriptionIsMandatory,
-        /// Website url is a mandatory field.
-        WebsiteURLIsMandatory,
         /// Milestones totals do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
-        MilestoneDoesNotExist,
         /// Currently no active round to participate in.
         NoActiveRound,
-        // TODO: NOT IN USE
-        NoActiveProject,
         /// There was an overflow.
         Overflow,
         /// A project must be approved before the submission of milestones.
@@ -286,14 +273,10 @@ pub mod pallet {
         OnlyInitiatorOrAdminCanApproveMilestone,
         /// You do not have permission to do this.
         OnlyWhitelistedAccountsCanContribute,
-        // TODO: not in use
-        ProjectAmountExceed,
         /// The selected project does not exist in the round.
         ProjectNotInRound,
         /// The project has been cancelled.
         ProjectWithdrawn,
-        // TODO: not in use.
-        ProjectApproved,
         /// Parameter limit exceeded.
         ParamLimitExceed,
         /// Round has already started and cannot be modified.
@@ -308,8 +291,6 @@ pub mod pallet {
         VoteAlreadyExists,
         /// The voting threshhold has not been met.
         MilestoneVotingNotComplete,
-        // TODO: not in use
-        WithdrawalExpirationExceed,
         /// The given key must exist in storage.
         KeyNotFound,
         /// The input vector must exceed length zero.
@@ -322,6 +303,8 @@ pub mod pallet {
         InvalidRoundType,
         /// The project already be approved, cannot be updated.
         ProjectAlreadyApproved,
+        /// The milestone does not exist.
+        MilestoneDoesNotExist,
     }
 
     #[pallet::hooks]
@@ -336,6 +319,12 @@ pub mod pallet {
             }
             weight
         }
+
+
+
+        //TODO: use the refund_origin to correclty refund the funders
+        //TODO: use the refund_origin to correclty refund the funders
+        //TODO: use the refund_origin to correclty refund the funders
 
         fn on_initialize(_b: T::BlockNumber) -> Weight {
             let mut weight = Weight::default();
@@ -395,9 +384,6 @@ pub mod pallet {
         }
     }
 
-    // Dispatchable functions allows users to interact with the pallet and invoke state changes.
-    // These functions materialize as "extrinsics", which are often compared to transactions.
-    // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Step 1 (INITIATOR)
@@ -429,6 +415,7 @@ pub mod pallet {
                 proposed_milestones,
                 required_funds,
                 currency_id,
+                RefundType::Contributors,                
             )?;
             
             Self::deposit_event(Event::ProjectCreated(
@@ -771,13 +758,17 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
     }
 }
 
-/// The contribution users made to a project project.
+/// The milestones provided by the user to define the milestones of a project.
+/// TODO: add ipfs hash like in the grant pallet and 
+/// TODO: move these to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
     pub percentage_to_unlock: u32,
 }
 
 /// The contribution users made to a project project.
+/// TODO: move these to a common repo (common_types will do)
+/// TODO: add ipfs hash like in the grant pallet and 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Milestone {
     pub project_key: ProjectKey,
@@ -819,9 +810,12 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     pub approved_for_funding: bool,
     pub funding_threshold_met: bool,
     pub cancelled: bool,
+    // Used to define
+    pub refund_type: RefundType,
 }
 
 /// The contribution users made to a proposal project.
+/// TODO: Move to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Contribution<Balance, Timestamp> {
     /// Contribution value.

@@ -20,7 +20,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};
 	use orml_traits::arithmetic::Bounded;
-	use common_types::CurrencyId;
+	use common_types::{CurrencyId, TreasuryOrigin, milestone_origin::RefundType};
 	use sp_runtime::traits::AtLeast32BitUnsigned;
 	use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
 	use sp_core::H256;
@@ -124,6 +124,7 @@ pub mod pallet {
 			assigned_approvers: BoundedApprovers<T>,
 			currency_id: CurrencyId,
 			amount_requested: BalanceOf<T>,
+			treasury_origin: TreasuryOrigin,
         ) -> DispatchResultWithPostInfo {
             let submitter = ensure_signed(origin)?;
 			let total_percentage = proposed_milestones.iter().fold(0u32, |acc, x| acc.saturating_add(x.percent.into()));
@@ -145,8 +146,8 @@ pub mod pallet {
 				is_converted: false,
 				currency_id,
 				amount_requested,
+				treasury_origin,
 			};
-
 
 			PendingGrants::<T>::insert(&grant_id, grant);
 			GrantsSubmittedBy::<T>::insert(&submitter, &grant_id, ());
@@ -260,6 +261,7 @@ pub mod pallet {
 				grant_id,
 				grant.submitter,
 				standard_proposed_ms,
+				RefundType::Treasury(grant.treasury_origin),
 			).map_err(|_|Error::<T>::GrantConversionFailedGeneric)?;
 				
 			Ok(().into())
@@ -280,6 +282,7 @@ pub mod pallet {
 		is_converted: bool,
 		currency_id: CurrencyId,
 		amount_requested: BalanceOf<T>,
+		treasury_origin: TreasuryOrigin,
 	}
 	
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
