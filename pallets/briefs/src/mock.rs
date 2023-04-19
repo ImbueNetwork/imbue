@@ -201,6 +201,7 @@ parameter_types! {
     pub PercentRequiredForVoteToPass: u8 = 75u8;
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
+    pub IsIdentityRequired: bool = false;
 }
 
 // Requires binding howerver they may be a more succinct way of doing this.
@@ -286,6 +287,9 @@ impl pallet_proposals::Config for Test {
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type RefundsPerBlock = RefundsPerBlock;
+    type IsIdentityRequired = IsIdentityRequired;
+    type MilestoneVotingWindow = TwoWeekBlockUnit;
+
 }
 
 parameter_types! {
