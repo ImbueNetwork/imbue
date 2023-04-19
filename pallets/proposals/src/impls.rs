@@ -25,13 +25,6 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_sub_account_truncating(key)
     }
 
-    pub fn get_project(
-        project_key: u32,
-    ) -> Result<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>, Error<T>>
-    {
-        Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)
-    }
-
     pub fn new_project(
         who: T::AccountId,
         agreement_hash: H256,

@@ -22,7 +22,10 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false}
+pallet-proposals = {path= "../proposals", default-features = false}
 
+# Local
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 
@@ -31,6 +34,10 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39"}
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+pallet-proposals = {path= "../proposals"}
 
 [features]
 default = ["std"]
@@ -40,6 +47,18 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"scale-info/std",
+	"orml-tokens/std",
+	"pallet-timestamp/std",
+	"pallet-identity/std",
+	"pallet-balances/std",
+	"pallet-proposals/std",
 ]
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"orml-tokens/runtime-benchmarks",
+	"pallet-timestamp/runtime-benchmarks",
+	"pallet-identity/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+	"pallet-proposals/runtime-benchmarks",
+]
 try-runtime = ["frame-support/try-runtime"]

@@ -22,62 +22,60 @@ pub mod pallet {
 	use orml_traits::arithmetic::Bounded;
 	use common_types::CurrencyId;
 	use sp_runtime::traits::AtLeast32BitUnsigned;
+	use pallet_proposals::traits::IntoProposal;
 
 	pub(crate) type BalanceOf<T> = <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 	pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	type BoundedPMilestones<T> = BoundedVec<ProposedMilestoneWithInfo, <T as Config>::MaxMilestonesPerGrant>;
 	type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
-	type MaxGrantsExpiringPerBlock = ConstU32<100>;
+	
+	type BoundedGrantsSubmitted<T> = BoundedVec<<T as Config>::GrantId, ConstU32<500>>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_timestamp::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+        /// orml reservable multicurrency.
+		type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 		/// The grant ID type.
 		type GrantId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + Bounded + codec::FullCodec + MaxEncodedLen;
+		/// Maximum amount of milestones per grant.
 		type MaxMilestonesPerGrant: Get<u32>;
-		/// The maximum approvers for a given grant, should be set to < 100.
+		/// The maximum approvers for a given grant.
 		type MaxApprovers: Get<u32>;
-	
-		// Used to remove ignored grants and keep a clean system.
-		type GrantVotingPeriod: Get<<Self as frame_system::Config>::BlockNumber>;
+
+		/// The type that converts into a proposal for milestone submission.
+		type IntoProposal: IntoProposal<
+			AccountIdOf<Self>,
+			BalanceOf<Self>,
+			BlockNumberFor<Self>,
+			<Self as pallet_timestamp::Config>::Moment,
+		>;
 	}
 
-	/// Stores all the Grants waiting for unanimous approval and eventual conversion into milestones.
+	/// Stores all the Grants waiting for approval, funding and eventual conversion into milestones.
 	/// Key 1: GrantId
 	/// Value: Grant<T>
 	#[pallet::storage]
 	pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128, T::GrantId, Grant<T>, OptionQuery>;
 
-	/// Used to hold all the votes by the approvers on a given grant.
-	/// Key 1: GrantId
-	/// Key 2: AccountId
-	/// Value: VoteType
-	#[pallet::storage]
-	pub type GrantVotes<T: Config> = StorageDoubleMap<_, Blake2_128, T::GrantId, Blake2_128, AccountIdOf<T>, VoteType, OptionQuery>;
 
-	/// Used to hold to votes count of a grant, an optimisation over iterating keys.
-	/// Key 1: GrantId
-	/// Value: u32 (Amount of distinct votes on a given grant)
+	/// Stores all the grants a user has submitted.
+	/// Key 1: AccountId
+	/// Key 2: GrantId
+	/// Value: ()
 	#[pallet::storage]
-	pub type GrantVoteCount<T: Config> = StorageMap<_, Blake2_128, T::GrantId, u32, ValueQuery>;
-
-	/// The grants the expire on a given block.
-	/// Used to clean up storage and remove unwanted proposals.
-    /// Key 1: BlockNumber
-    /// Value: BoundedVec<GrantIds>
-	#[pallet::storage]
-	pub type GrantVotingExpiration<T: Config> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedVec<T::GrantId, MaxGrantsExpiringPerBlock>, ValueQuery>;
+	pub type GrantsSubmittedBy<T: Config> = StorageDoubleMap<_, Blake2_128, AccountIdOf<T>, Blake2_128, T::GrantId, (), ValueQuery>;
+	
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		GrantSubmitted{submitter: AccountIdOf<T>, grant_id: T::GrantId},
-		GrantVotedUpon{voter: AccountIdOf<T>, grant_id: T::GrantId, way: VoteType},
+		GrantEdited{grant_id: T::GrantId},
 	}
 
 	#[pallet::error]
@@ -86,29 +84,20 @@ pub mod pallet {
 		MustSumTo100,
 		/// The GrantId specified cannot be found.
 		GrantNotFound,
-		/// Only appointed approvers and vote on a grant submission.
-		OnlyApproversCanVote,
-		/// Maximum grants per block reached try again next block.
-		MaxGrantsPerBlockReached,
+		/// The grant already exists.
+		GrantAlreadyExists,
 		/// Overflow Error in pallet-grants.
 		Overflow,
+		/// Only the submitter can edit this grant.
+		OnlySubmitterCanEdit, 
 	}
 
 	
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-			let mut weight = Weight::default();
-			let expiring_grants = GrantVotingExpiration::<T>::get(n);
-            weight += T::DbWeight::get().reads(2);
 			
-			// Remove all the grants from storage that have reached expiry 
-			let _ = expiring_grants.iter().map(|grant_id| {
-            	weight += T::DbWeight::get().reads_writes(1, 1);
-				PendingGrants::<T>::remove(grant_id);
-			}).collect::<Vec<_>>();
-
-			weight + T::DbWeight::get().reads(1)
+			Weight::default()
 		}
 	}
 
@@ -125,16 +114,15 @@ pub mod pallet {
 			assigned_approvers: BoundedApprovers<T>,
         ) -> DispatchResultWithPostInfo {
             let submitter = ensure_signed(origin)?;
-			// TODO: take deposit to prevent spam? how else can we prevent spam
 			let total_percentage = proposed_milestones.iter().fold(0u32, |acc, x| acc.saturating_add(x.percent.into()));
 			ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
 			
 			// TODO: Ensure that the approvers are in a select group??
-			//ensure!()
-
+			// TODO: take deposit to prevent spam? how else can we prevent spam
 			// TODO: GENERATE grant_id. properly. or get as param
 			let grant_id: T::GrantId = Default::default();
-			
+			ensure!(!PendingGrants::<T>::contains_key(grant_id), Error::<T>::GrantAlreadyExists);
+
 			let grant = Grant {
 				milestones: proposed_milestones,
 				submitter: submitter.clone(),
@@ -143,95 +131,68 @@ pub mod pallet {
 				created_on: frame_system::Pallet::<T>::block_number(),
 			};
 
-			let exp_block: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number() + <T as Config>::GrantVotingPeriod::get();
-			let _ = GrantVotingExpiration::<T>::try_mutate(exp_block, |grant_ids| {
-				let _ = grant_ids.try_push(grant_id).map_err(|_| Error::<T>::MaxGrantsPerBlockReached)?;
-				Ok::<(), DispatchError>(())
-			})?;
+
 			PendingGrants::<T>::insert(&grant_id, grant);
+			GrantsSubmittedBy::<T>::insert(&submitter, &grant_id, ());
 
             Self::deposit_event(Event::<T>::GrantSubmitted{submitter, grant_id});
             Ok(().into())
         }
 
-		/// For the people approving, they must submit the vote register their intention on the grant proposal. 
-		/// This can be called multiple times to allow for editing of the vote.
+		/// Edit a grant that has been submitted. 
+		/// Fields passed in with None will be ignored and not updated.
 		#[pallet::call_index(1)]
         #[pallet::weight(100_000)]
-        pub fn vote_on_grant(
+        pub fn edit_grant(
             origin: OriginFor<T>,
-			vote: VoteType,
 			grant_id: T::GrantId,
+			edited_milestones: Option<BoundedPMilestones<T>>,
+			edited_approvers: Option<BoundedApprovers<T>>,
+			edited_ipfs: Option<[u8; 32]>,
         ) -> DispatchResultWithPostInfo {
-            let voter = ensure_signed(origin)?;
-			let grant: Grant<T> = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)? ;
-			let mut is_new_vote = true;
+			let who = ensure_signed(origin)?;
+			let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
-			ensure!(grant.approvers.iter().any(|approver|approver == &voter), Error::<T>::OnlyApproversCanVote);
-			
-			GrantVotes::<T>::mutate(&grant_id, &voter, |v|{
-				if v.is_some() {is_new_vote = false};
-				*v = Some(vote.clone()); 
-			});
-
-			if is_new_vote {
-				let count_of_votes = GrantVoteCount::<T>::take(&grant_id).saturating_add(1);
-				GrantVoteCount::<T>::insert(&grant_id, count_of_votes);
-				// This shouldnt be too expensive as there is a limit of how many approvers there are (MaxApprovers)
-				if count_of_votes as usize == grant.approvers.len() {
-					let exp_block = grant.created_on + <T as Config>::GrantVotingPeriod::get();
-					GrantVotingExpiration::<T>::try_mutate(exp_block, |grant_ids| {
-						*grant_ids = grant_ids
-						.iter()
-						.cloned()
-						.filter(|&id| id != grant_id)
-						.collect::<Vec<_>>()
-						.try_into()
-						.map_err(|_| Error::<T>::Overflow)?;
-						
-						Ok::<(), DispatchError>(())
-					})?;
-				}
+			ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
+			if let Some(milestones) = edited_milestones {
+				grant.milestones = milestones;
+			}
+			if let Some(approvers) = edited_approvers {
+				grant.approvers = approvers;
+			}
+			if let Some(ipfs) = edited_ipfs {
+				grant.ipfs_hash = ipfs;
 			}
 
-            Self::deposit_event(Event::<T>::GrantVotedUpon{voter, grant_id, way: vote});
-            Ok(().into())
-        }
-
-		/// Accept a grant to stop it from auto expiring.
-		/// Call this if you want to keep a grant but one or many approvers is not responding.
-		#[pallet::call_index(2)]
-        #[pallet::weight(100_000)]
-        pub fn keep_grant_from_expiring(
-            origin: OriginFor<T>,
-        ) -> DispatchResultWithPostInfo {
+			PendingGrants::<T>::insert(&grant_id, grant);
+            Self::deposit_event(Event::<T>::GrantEdited{grant_id});
 
 			Ok(().into())
         }
 
 		/// Remove the grant from storage.
-		#[pallet::call_index(3)]
+		#[pallet::call_index(2)]
         #[pallet::weight(100_000)]
         pub fn cancel_grant(
             origin: OriginFor<T>,
         ) -> DispatchResultWithPostInfo {
-			
+
+
 			Ok(().into())
         }
 
-		#[pallet::call_index(4)]
+		/// Once you are completely happy with the grant details and are ready to submit to treasury
+		/// You call this and itll allow you to generate a project account id.
+		#[pallet::call_index(3)]
         #[pallet::weight(100_000)]
         pub fn convert_to_milestones(
             origin: OriginFor<T>,
         ) -> DispatchResultWithPostInfo {
-			// Some method (that will eventually do the same thing as the brief evolver)
-			// and allow for the submission of these milestones.
 			Ok(().into())
         }
+
 		// TODO: runtime api to get the deposit address of the grant sovereign account.
 	}
-
-
 
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
@@ -243,13 +204,6 @@ pub mod pallet {
 		created_on: BlockNumberFor<T>,
 	}
 	
-	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
-	pub enum VoteType {
-		Approve,
-		ChangesRequested,
-		Cancel,
-	}
-
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
 	pub struct ProposedMilestoneWithInfo {
 		percent: u8,
