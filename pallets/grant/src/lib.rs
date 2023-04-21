@@ -101,6 +101,7 @@ pub mod pallet {
 		AlreadyConverted,
 		/// The conversion to proposals failed.
 		GrantConversionFailedGeneric,
+		
 	}
 
 	

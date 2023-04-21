@@ -1171,11 +1171,13 @@ dependencies = [
  "bitflags",
  "common-traits",
  "frame-support",
+ "frame-system",
  "parity-scale-codec 3.4.0",
  "scale-info 2.5.0",
  "serde",
  "sp-runtime",
  "sp-std",
+ "xcm",
 ]
 
 [[package]]
