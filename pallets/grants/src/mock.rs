@@ -1,13 +1,13 @@
-use crate as pallet_grant;
+use crate as pallet_grants;
+use common_types::CurrencyId;
 use frame_support::traits::{ConstU16, ConstU64, Nothing};
+use frame_support::{pallet_prelude::*, parameter_types, PalletId};
+use frame_system::EnsureRoot;
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+    testing::Header,
+    traits::{BlakeTwo256, IdentityLookup},
 };
-use common_types::CurrencyId;
-use frame_support::{parameter_types, PalletId, pallet_prelude::*};
-use frame_system::EnsureRoot;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -18,19 +18,19 @@ type AccountId = u64;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system,
-		Grant: pallet_grant,
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system,
+        Grant: pallet_grants,
         Tokens: orml_tokens,
-		TimeStamp: pallet_timestamp,
-		Proposals: pallet_proposals,
-		Identity: pallet_identity,
-		Balances: pallet_balances,
-	}
+        TimeStamp: pallet_timestamp,
+        Proposals: pallet_proposals,
+        Identity: pallet_identity,
+        Balances: pallet_balances,
+    }
 );
 
 parameter_types! {
@@ -50,32 +50,31 @@ impl pallet_balances::Config for Test {
 }
 
 impl frame_system::Config for Test {
-	type BaseCallFilter = frame_support::traits::Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = BlockNumber;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = ConstU64<250>;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ConstU16<42>;
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
+    type BaseCallFilter = frame_support::traits::Everything;
+    type BlockWeights = ();
+    type BlockLength = ();
+    type DbWeight = ();
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
+    type Index = u64;
+    type BlockNumber = BlockNumber;
+    type Hash = H256;
+    type Hashing = BlakeTwo256;
+    type AccountId = AccountId;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Header = Header;
+    type RuntimeEvent = RuntimeEvent;
+    type BlockHashCount = ConstU64<250>;
+    type Version = ();
+    type PalletInfo = PalletInfo;
+    type AccountData = pallet_balances::AccountData<Balance>;
+    type OnNewAccount = ();
+    type OnKilledAccount = ();
+    type SystemWeightInfo = ();
+    type SS58Prefix = ConstU16<42>;
+    type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
-
 
 orml_traits::parameter_type_with_key! {
     pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
@@ -104,17 +103,17 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub MaxMilestonesPerGrant: u32 = 50;
-	pub MaxApprovers: u32 = 100;
+    pub MaxMilestonesPerGrant: u32 = 50;
+    pub MaxApprovers: u32 = 100;
 }
 
-impl pallet_grant::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
+impl pallet_grants::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Tokens;
-	type MaxMilestonesPerGrant = MaxMilestonesPerGrant;
-	type MaxApprovers = MaxApprovers;
-	type IntoProposal = pallet_proposals::Pallet<Test>;
-	type CancellingAuthority = EnsureRoot<AccountId>;
+    type MaxMilestonesPerGrant = MaxMilestonesPerGrant;
+    type MaxApprovers = MaxApprovers;
+    type IntoProposal = pallet_proposals::Pallet<Test>;
+    type CancellingAuthority = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -177,8 +176,10 @@ impl pallet_identity::Config for Test {
     type WeightInfo = ();
 }
 
-
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+    frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap()
+        .into()
 }

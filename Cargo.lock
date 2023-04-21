@@ -6346,7 +6346,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-grant"
+name = "pallet-grants"
 version = "0.1.0"
 dependencies = [
  "common-traits",

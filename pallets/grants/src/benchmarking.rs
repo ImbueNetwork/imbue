@@ -1,4 +1,4 @@
-//! Benchmarking setup for pallet-grant
+//! Benchmarking setup for pallet-grants
 
 use super::*;
 
@@ -6,4 +6,3 @@ use super::*;
 use crate::Pallet as Grant;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_system::RawOrigin;
-

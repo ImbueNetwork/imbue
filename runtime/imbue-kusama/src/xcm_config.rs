@@ -241,7 +241,7 @@ pub type XcmRouter = (
 
 parameter_types! {
     // A `MultiLocation` that can be reached via `XcmRouter`. Used only in benchmarks.
-	// If `None`, the benchmarks that depend on a reachable destination will be skipped.
+    // If `None`, the benchmarks that depend on a reachable destination will be skipped.
 }
 
 impl pallet_xcm::Config for Runtime {

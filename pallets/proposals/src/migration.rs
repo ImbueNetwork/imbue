@@ -1,9 +1,6 @@
-
-
-use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
 use crate::*;
+use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
 pub use pallet::*;
-use common_types::milestone_origin::RefundType;
 
 mod v0 {
     use super::*;
@@ -156,6 +153,7 @@ pub mod v2 {
         pub approved_for_funding: bool,
         pub funding_threshold_met: bool,
         pub cancelled: bool,
+        pub funding_type: FundingType,
     }
 
     #[storage_alias]
@@ -203,83 +201,13 @@ pub mod v2 {
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
                 work_started_at: Default::default(),
+                funding_type: FundingType::Proposal,
             };
             Some(migrated_project)
         });
         weight
     }
 }
-
-
-// pub mod v3 {
-//     use super::*;
-
-//     #[derive(Encode, Clone, Decode)]
-//     pub struct ProjectV3<AccountId, Balance, BlockNumber, Timestamp> {
-//         pub work_started_at: Option<BlockNumber>,
-//         pub agreement_hash: H256,
-//         pub milestones: BTreeMap<MilestoneKey, Milestone>,
-//         pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
-//         pub currency_id: common_types::CurrencyId,
-//         pub required_funds: Balance,
-//         pub withdrawn_funds: Balance,
-//         pub raised_funds: Balance,
-//         pub initiator: AccountId,
-//         pub created_on: BlockNumber,
-//         pub approved_for_funding: bool,
-//         pub funding_threshold_met: bool,
-//         pub cancelled: bool,
-//         pub refund_type: common_types::RefundType,
-//     }
-
-//     pub type ProjectV3Of<T> =
-//         ProjectV3<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
-
-//     // pub fn migrate<T: Config>() -> Weight {
-//     //     let mut weight = T::DbWeight::get().reads_writes(1, 1);
-//     //     let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-//     //     Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
-//     //         let _ = project
-//     //             .milestones
-//     //             .into_iter()
-//     //             .map(|(_, milestone)| {
-//     //                 let migrated_milestone = Milestone {
-//     //                     project_key: milestone.project_key,
-//     //                     milestone_key: milestone.milestone_key,
-//     //                     percentage_to_unlock: milestone.percentage_to_unlock,
-//     //                     is_approved: milestone.is_approved,
-//     //                 };
-//     //                 migrated_milestones.insert(milestone.milestone_key, migrated_milestone)
-//     //             })
-//     //             .collect::<Vec<_>>();
-
-//     //         weight += T::DbWeight::get().reads_writes(1, 1);
-//     //         let migrated_project: Project<
-//     //             T::AccountId,
-//     //             BalanceOf<T>,
-//     //             T::BlockNumber,
-//     //             TimestampOf<T>,
-//     //         > = Project {
-//     //             milestones: migrated_milestones.clone(),
-//     //             contributions: project.contributions,
-//     //             required_funds: project.required_funds,
-//     //             currency_id: project.currency_id,
-//     //             withdrawn_funds: project.withdrawn_funds,
-//     //             initiator: project.initiator,
-//     //             created_on: project.create_block_number,
-//     //             agreement_hash: Default::default(),
-//     //             approved_for_funding: project.approved_for_funding,
-//     //             funding_threshold_met: project.funding_threshold_met,
-//     //             cancelled: project.cancelled,
-//     //             raised_funds: project.raised_funds,
-//     //         };
-//     //         Some(migrated_project)
-//     //     });
-//     //     weight
-//     // }
-// }
-
-
 
 #[cfg(test)]
 mod test {
@@ -431,6 +359,7 @@ mod test {
             );
 
             assert_eq!(H256::default(), migrated_project.agreement_hash);
+            assert_eq!(FundingType::Proposal, migrated_project.funding_type);
         })
     }
 }
