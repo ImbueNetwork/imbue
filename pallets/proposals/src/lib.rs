@@ -105,8 +105,6 @@ pub mod pallet {
         type MilestoneVotingWindow: Get<Self::BlockNumber>;
     }
 
-        
-
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
@@ -182,8 +180,6 @@ pub mod pallet {
         )>,
         ValueQuery,
     >;
-
-
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -320,8 +316,6 @@ pub mod pallet {
             weight
         }
 
-
-
         //TODO: use the refund_origin to correclty refund the funders
         //TODO: use the refund_origin to correclty refund the funders
         //TODO: use the refund_origin to correclty refund the funders
@@ -417,7 +411,7 @@ pub mod pallet {
                 currency_id,
                 FundingType::Proposal,
             )?;
-            
+
             Self::deposit_event(Event::ProjectCreated(
                 who,
                 agreement_hash,
@@ -759,7 +753,7 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
 }
 
 /// The milestones provided by the user to define the milestones of a project.
-/// TODO: add ipfs hash like in the grant pallet and 
+/// TODO: add ipfs hash like in the grant pallet and
 /// TODO: move these to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
@@ -768,7 +762,7 @@ pub struct ProposedMilestone {
 
 /// The contribution users made to a project project.
 /// TODO: move these to a common repo (common_types will do)
-/// TODO: add ipfs hash like in the grant pallet and 
+/// TODO: add ipfs hash like in the grant pallet and
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Milestone {
     pub project_key: ProjectKey,
@@ -810,7 +804,6 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     pub approved_for_funding: bool,
     pub funding_threshold_met: bool,
     pub cancelled: bool,
-    // Used to define
     pub funding_type: FundingType,
 }
 

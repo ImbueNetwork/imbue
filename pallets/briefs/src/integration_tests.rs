@@ -3,8 +3,8 @@ use crate::tests::get_milestones;
 use crate::*;
 
 use common_types::CurrencyId;
-use orml_traits::MultiCurrency;
 use frame_support::{assert_ok, bounded_vec};
+use orml_traits::MultiCurrency;
 use pallet_proposals::{Projects, RoundType};
 use sp_core::H256;
 use std::convert::TryInto;
@@ -145,5 +145,3 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
         assert_eq!(brief_p.cancelled, standard_p.cancelled);
     });
 }
-
-

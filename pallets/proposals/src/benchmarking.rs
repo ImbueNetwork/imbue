@@ -4,13 +4,10 @@ use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_benchmarking::vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::{
-    assert_ok,
-    traits::{Get},
-};
+use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
-use sp_std::str;
 use sp_core::H256;
+use sp_std::str;
 
 const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
@@ -400,7 +397,7 @@ fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     ]
     .try_into()
     .unwrap();
-    
+
     let agg_hash = H256::from([20; 32]);
     let required_funds: BalanceOf<T> = contribution.into();
     let currency_id = CurrencyId::Native;
@@ -434,7 +431,11 @@ fn create_funded_user<T: Config>(
 ) -> T::AccountId {
     let user = account(string, n, SEED);
     let balance: BalanceOf<T> = balance_factor.into();
-    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(CurrencyId::Native, &user, balance);
+    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
+        CurrencyId::Native,
+        &user,
+        balance,
+    );
     user
 }
 

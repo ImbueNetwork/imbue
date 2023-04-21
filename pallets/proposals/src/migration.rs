@@ -1,9 +1,6 @@
-
-
-use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
 use crate::*;
+use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
 pub use pallet::*;
-
 
 mod v0 {
     use super::*;
@@ -156,6 +153,7 @@ pub mod v2 {
         pub approved_for_funding: bool,
         pub funding_threshold_met: bool,
         pub cancelled: bool,
+        pub funding_type: FundingType,
     }
 
     #[storage_alias]
@@ -203,6 +201,7 @@ pub mod v2 {
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
                 work_started_at: Default::default(),
+                funding_type: FundingType::Proposal,
             };
             Some(migrated_project)
         });
@@ -360,6 +359,7 @@ mod test {
             );
 
             assert_eq!(H256::default(), migrated_project.agreement_hash);
+            assert_eq!(FundingType::Proposal, migrated_project.funding_type);
         })
     }
 }

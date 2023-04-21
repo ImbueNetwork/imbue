@@ -1,8 +1,8 @@
 use crate::*;
+use common_types::milestone_origin::FundingType;
 use pallet_identity::Judgement;
 use sp_runtime::traits::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, vec};
-use common_types::milestone_origin::{FundingType};
 pub const MAX_PERCENTAGE: u32 = 100u32;
 
 impl<T: Config> Pallet<T> {

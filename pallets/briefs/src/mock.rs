@@ -289,7 +289,6 @@ impl pallet_proposals::Config for Test {
     type RefundsPerBlock = RefundsPerBlock;
     type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = TwoWeekBlockUnit;
-
 }
 
 parameter_types! {

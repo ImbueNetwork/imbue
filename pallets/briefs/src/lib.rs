@@ -17,7 +17,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
 
-    use common_types::{CurrencyId, milestone_origin::FundingType};
+    use common_types::{milestone_origin::FundingType, CurrencyId};
     use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
