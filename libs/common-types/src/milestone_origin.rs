@@ -1,8 +1,8 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
-use frame_system::Config;
+use xcm::latest::{Junction, Junctions::*, MultiLocation, NetworkId};
+
 
 /// A wrapper around
 pub trait TreasuryOriginConverter<AccountId: Into<[u8; 32]>> {

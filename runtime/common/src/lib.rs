@@ -207,7 +207,6 @@ pub mod asset_registry {
         dispatch::{RawOrigin},
         sp_std::marker::PhantomData,
         traits::{EnsureOrigin, EnsureOriginWithArg},
-        error::BadOrigin,
     };
     use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
     use scale_info::TypeInfo;

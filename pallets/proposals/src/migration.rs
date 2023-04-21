@@ -3,7 +3,7 @@
 use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
 use crate::*;
 pub use pallet::*;
-use common_types::milestone_origin::FundingType;
+
 
 mod v0 {
     use super::*;

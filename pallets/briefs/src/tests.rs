@@ -284,7 +284,7 @@ fn reserved_funds_are_transferred_to_project_kitty() {
             brief_id
         ));
 
-        let created_project = Projects::<Test>::get(1).unwrap();
+        let _created_project = Projects::<Test>::get(1).unwrap();
         let project_id: AccountId = Proposals::project_account_id(1);
         let project_balance = Tokens::free_balance(CurrencyId::Native, &project_id);
         assert_eq!(project_balance, contribution_value);

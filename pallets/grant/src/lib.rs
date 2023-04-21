@@ -15,13 +15,12 @@ pub mod pallet {
 	use frame_support::{
 		pallet_prelude::*,
 		BoundedVec,
-		BoundedBTreeMap,
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};
-	use orml_traits::arithmetic::Bounded;
+	
 	use common_types::{CurrencyId, TreasuryOrigin, milestone_origin::FundingType};
-	use sp_runtime::traits::AtLeast32BitUnsigned;
+	
 	use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
 	use sp_core::H256;
 	use sp_std::collections::btree_map::BTreeMap;
@@ -107,7 +106,7 @@ pub mod pallet {
 	
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			Weight::default()
 		}
 	}

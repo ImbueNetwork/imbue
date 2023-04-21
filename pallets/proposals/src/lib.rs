@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use common_types::{CurrencyId, FundingType, TreasuryOrigin};
+use common_types::{CurrencyId, FundingType};
 use frame_support::{
     pallet_prelude::*,
     storage::bounded_btree_map::BoundedBTreeMap,

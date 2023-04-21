@@ -3,7 +3,7 @@ use crate::{
     Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
     ProposedMilestone,
 };
-use common_types::{CurrencyId, FundingType, TreasuryOrigin};
+use common_types::{CurrencyId, FundingType};
 use frame_support::dispatch::EncodeLike;
 use frame_support::inherent::Vec;
 use frame_support::sp_runtime::Saturating;

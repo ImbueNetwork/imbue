@@ -1,5 +1,5 @@
-use crate::{mock::*, Error, Event};
-use frame_support::{assert_noop, assert_ok};
+use crate::{mock::*};
+
 
 #[test]
 fn ensure_milestone_percent_equal_100() {
