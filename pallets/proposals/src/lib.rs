@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use common_types::{CurrencyId, RefundType, TreasuryOrigin};
+use common_types::{CurrencyId, FundingType, TreasuryOrigin};
 use frame_support::{
     pallet_prelude::*,
     storage::bounded_btree_map::BoundedBTreeMap,
@@ -415,7 +415,7 @@ pub mod pallet {
                 proposed_milestones,
                 required_funds,
                 currency_id,
-                RefundType::Contributors,                
+                FundingType::Proposal,
             )?;
             
             Self::deposit_event(Event::ProjectCreated(
@@ -811,7 +811,7 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     pub funding_threshold_met: bool,
     pub cancelled: bool,
     // Used to define
-    pub refund_type: RefundType,
+    pub funding_type: FundingType,
 }
 
 /// The contribution users made to a proposal project.

@@ -42,8 +42,9 @@ pub enum TreasuryOriginError {
 }
 
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
-pub enum RefundType {
-    Contributors,
+pub enum FundingType {
+    Proposal,
+    Brief,
     Treasury(TreasuryOrigin),
 }
 

@@ -20,7 +20,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};
 	use orml_traits::arithmetic::Bounded;
-	use common_types::{CurrencyId, TreasuryOrigin, milestone_origin::RefundType};
+	use common_types::{CurrencyId, TreasuryOrigin, milestone_origin::FundingType};
 	use sp_runtime::traits::AtLeast32BitUnsigned;
 	use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
 	use sp_core::H256;
@@ -262,7 +262,7 @@ pub mod pallet {
 				grant_id,
 				grant.submitter,
 				standard_proposed_ms,
-				RefundType::Treasury(grant.treasury_origin),
+				FundingType::Treasury(grant.treasury_origin),
 			).map_err(|_|Error::<T>::GrantConversionFailedGeneric)?;
 				
 			Ok(().into())

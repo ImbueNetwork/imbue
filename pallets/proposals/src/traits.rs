@@ -3,7 +3,7 @@ use crate::{
     Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
     ProposedMilestone,
 };
-use common_types::{CurrencyId, RefundType, TreasuryOrigin};
+use common_types::{CurrencyId, FundingType, TreasuryOrigin};
 use frame_support::dispatch::EncodeLike;
 use frame_support::inherent::Vec;
 use frame_support::sp_runtime::Saturating;
@@ -22,7 +22,7 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
         brief_hash: H256,
         benificiary: AccountId,
         milestones: Vec<ProposedMilestone>,
-        refund_type: RefundType,
+        funding_type: FundingType,
     ) -> Result<(), ()>;
 }
 
@@ -48,7 +48,7 @@ where
         brief_hash: H256,
         benificiary: AccountIdOf<T>,
         proposed_milestones: Vec<ProposedMilestone>,
-        refund_type: RefundType,
+        funding_type: FundingType,
     ) -> Result<(), ()> {
         let project_key = crate::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
         crate::ProjectCount::<T>::put(project_key);
@@ -86,7 +86,7 @@ where
                 funding_threshold_met: true,
                 cancelled: false,
                 agreement_hash: brief_hash,
-                refund_type,
+                funding_type,
             };
 
         Projects::<T>::insert(project_key, project);

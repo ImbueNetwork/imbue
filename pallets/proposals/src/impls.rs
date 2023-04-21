@@ -2,7 +2,7 @@ use crate::*;
 use pallet_identity::Judgement;
 use sp_runtime::traits::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, vec};
-use common_types::milestone_origin::{RefundType};
+use common_types::milestone_origin::{FundingType};
 pub const MAX_PERCENTAGE: u32 = 100u32;
 
 impl<T: Config> Pallet<T> {
@@ -32,7 +32,7 @@ impl<T: Config> Pallet<T> {
         proposed_milestones: BoundedProposedMilestones,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
-        refund_type: RefundType,
+        funding_type: FundingType,
     ) -> Result<ProjectKey, DispatchError> {
         // Check if identity is required
         if <T as Config>::IsIdentityRequired::get() {
@@ -72,7 +72,7 @@ impl<T: Config> Pallet<T> {
             approved_for_funding: false,
             funding_threshold_met: false,
             cancelled: false,
-            refund_type,
+            funding_type,
         };
 
         // Add project to list
