@@ -39,9 +39,9 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        /// Maximum amount of milestones per grant.
+        /// Maximum amount of milestones per grants.
         type MaxMilestonesPerGrant: Get<u32>;
-        /// The maximum approvers for a given grant.
+        /// The maximum approvers for a given grants.
         type MaxApprovers: Get<u32>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
@@ -52,7 +52,7 @@ pub mod pallet {
             BlockNumberFor<Self>,
             <Self as pallet_timestamp::Config>::Moment,
         >;
-        /// The authority allowed to cancel a pending grant.
+        /// The authority allowed to cancel a pending grants.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
@@ -91,15 +91,15 @@ pub mod pallet {
         MustSumTo100,
         /// The GrantId specified cannot be found.
         GrantNotFound,
-        /// The grant already exists.
+        /// The grants already exists.
         GrantAlreadyExists,
         /// Overflow Error in pallet-grants.
         Overflow,
-        /// Only the submitter can edit this grant.
+        /// Only the submitter can edit this grants.
         OnlySubmitterCanEdit,
-        /// Cannot use a cancelled grant.
+        /// Cannot use a cancelled grants.
         GrantCancelled,
-        /// This grant has already been converted.
+        /// This grants has already been converted.
         AlreadyConverted,
         /// The conversion to proposals failed.
         GrantConversionFailedGeneric,
@@ -114,7 +114,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// A grant starts here with nothing agreed upon and
+        /// A grants starts here with nothing agreed upon and
         /// probably awaiting much back and forth.
         #[pallet::call_index(0)]
         #[pallet::weight(100_000)]
@@ -165,7 +165,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Edit a grant that has been submitted.
+        /// Edit a grants that has been submitted.
         /// Fields passed in with None will be ignored and not updated.
         #[pallet::call_index(1)]
         #[pallet::weight(100_000)]
@@ -206,7 +206,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Set the grant as cancelled
+        /// Set the grants as cancelled
         #[pallet::call_index(2)]
         #[pallet::weight(100_000)]
         pub fn cancel_grant(
@@ -229,7 +229,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Once you are completely happy with the grant details and are ready to submit to treasury
+        /// Once you are completely happy with the grants details and are ready to submit to treasury
         /// You call this and itll allow you to generate a project account id.
         #[pallet::call_index(3)]
         #[pallet::weight(100_000)]
@@ -285,7 +285,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        // TODO: runtime api to get the deposit address of the grant sovereign account.
+        // TODO: runtime api to get the deposit address of the grants sovereign account.
     }
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]

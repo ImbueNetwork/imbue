@@ -753,7 +753,7 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
 }
 
 /// The milestones provided by the user to define the milestones of a project.
-/// TODO: add ipfs hash like in the grant pallet and
+/// TODO: add ipfs hash like in the grants pallet and
 /// TODO: move these to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
@@ -762,7 +762,7 @@ pub struct ProposedMilestone {
 
 /// The contribution users made to a project project.
 /// TODO: move these to a common repo (common_types will do)
-/// TODO: add ipfs hash like in the grant pallet and
+/// TODO: add ipfs hash like in the grants pallet and
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Milestone {
     pub project_key: ProjectKey,

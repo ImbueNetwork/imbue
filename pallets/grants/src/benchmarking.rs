@@ -1,4 +1,4 @@
-//! Benchmarking setup for pallet-grant
+//! Benchmarking setup for pallet-grants
 
 use super::*;
 

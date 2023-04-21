@@ -1,4 +1,4 @@
-use crate as pallet_grant;
+use crate as pallet_grants;
 use common_types::CurrencyId;
 use frame_support::traits::{ConstU16, ConstU64, Nothing};
 use frame_support::{pallet_prelude::*, parameter_types, PalletId};
@@ -24,7 +24,7 @@ frame_support::construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system,
-        Grant: pallet_grant,
+        Grant: pallet_grants,
         Tokens: orml_tokens,
         TimeStamp: pallet_timestamp,
         Proposals: pallet_proposals,
@@ -107,7 +107,7 @@ parameter_types! {
     pub MaxApprovers: u32 = 100;
 }
 
-impl pallet_grant::Config for Test {
+impl pallet_grants::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Tokens;
     type MaxMilestonesPerGrant = MaxMilestonesPerGrant;

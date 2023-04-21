@@ -1,5 +1,5 @@
 [package]
-name = "pallet-grant"
+name = "pallet-grants"
 version = "0.1.0"
 description = "The pallet that sets up a milestone based project in a grant like style."
 authors = ["Imbue Network"]
