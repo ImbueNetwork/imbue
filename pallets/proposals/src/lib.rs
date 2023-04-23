@@ -17,6 +17,7 @@ use sp_runtime::traits::AccountIdConversion;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
 pub mod traits;
+use traits::RefundHandler;
 
 #[cfg(test)]
 mod mock;
@@ -103,6 +104,8 @@ pub mod pallet {
         type IsIdentityRequired: Get<bool>;
 
         type MilestoneVotingWindow: Get<Self::BlockNumber>;
+
+        type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>>;
     }
 
     #[pallet::pallet]

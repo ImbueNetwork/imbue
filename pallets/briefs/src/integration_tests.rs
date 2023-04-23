@@ -95,12 +95,7 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             RuntimeOrigin::root(),
             Some(1),
             project_key + 1,
-            Some(
-                (0u32..milestones.len() as u32)
-                    .collect::<Vec<u32>>()
-                    .try_into()
-                    .expect("qed"),
-            ),
+            None,
         )
         .unwrap();
 

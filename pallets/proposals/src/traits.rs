@@ -10,6 +10,7 @@ use frame_support::sp_runtime::Saturating;
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_std::collections::btree_map::BTreeMap;
+use frame_support::pallet_prelude::DispatchError;
 
 pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
     /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.
@@ -24,6 +25,11 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
         milestones: Vec<ProposedMilestone>,
         funding_type: FundingType,
     ) -> Result<(), ()>;
+}
+
+pub trait RefundHandler<AccountId, Balance> {
+    fn execute_refund() -> Result<(), DispatchError>;
+    fn handle_refunds(limit: u32) -> Result<(), DispatchError>;
 }
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
@@ -101,4 +107,17 @@ where
 
         Ok(())
     }
+}
+
+pub struct MockRefundHandler<T> {
+    phantom: sp_std::marker::PhantomData<T>
+}
+
+impl <T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>> for MockRefundHandler<T> {
+    fn execute_refund() -> Result<(), DispatchError> {
+        todo!()
+    }
+    fn handle_refunds(limit: u32) -> Result<(), DispatchError> {
+        todo!()
+    }   
 }
