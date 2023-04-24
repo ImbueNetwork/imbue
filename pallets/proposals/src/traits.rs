@@ -3,11 +3,15 @@ use crate::{
     Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
     ProposedMilestone,
 };
-use common_types::{CurrencyId, FundingType};
+use common_types::{CurrencyId, FundingType::*, FundingType,TreasuryOriginConverter};
 use frame_support::dispatch::EncodeLike;
 use frame_support::inherent::Vec;
 use frame_support::sp_runtime::Saturating;
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, XcmTransfer};
+use orml_xtokens::Pallet as XTokens;
+use orml_xtokens::Error;
+use xcm::latest::{MultiLocation, WeightLimit};
+
 use sp_core::H256;
 use sp_std::collections::btree_map::BTreeMap;
 use frame_support::pallet_prelude::DispatchError;
@@ -27,12 +31,19 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
     ) -> Result<(), ()>;
 }
 
-pub trait RefundHandler<AccountId, Balance> {
-    fn execute_refund() -> Result<(), DispatchError>;
-    fn handle_refunds(limit: u32) -> Result<(), DispatchError>;
+pub trait RefundHandler<AccountId, Balance, CurrencyId> {
+    /// Send a message to some destination chain asking to do some reserve asset transfer.
+    /// The multilocation is defined by the FundingType.
+    /// see FundingType and TreasuryOrigin.
+    fn send_refund_message(who: AccountId, amount: Balance, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError>;
 }
 
+
+
+// Some implementations used in Imbue of the traits above. 
+
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
+type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>>;
 
 impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>
     for crate::Pallet<T>
@@ -50,7 +61,7 @@ where
 {
     fn convert_to_proposal(
         currency_id: CurrencyId,
-        contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>>,
+        contributions: ContributionsFor<T>,
         brief_hash: H256,
         benificiary: AccountIdOf<T>,
         proposed_milestones: Vec<ProposedMilestone>,
@@ -109,15 +120,29 @@ where
     }
 }
 
-pub struct MockRefundHandler<T> {
-    phantom: sp_std::marker::PhantomData<T>
+pub struct MockRefundHandler<T, U> {
+    phantom_t: sp_std::marker::PhantomData<T>,
+    phantom_u: sp_std::marker::PhantomData<U>,
 }
 
-impl <T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>> for MockRefundHandler<T> {
-    fn execute_refund() -> Result<(), DispatchError> {
-        todo!()
+impl <T, U> RefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for MockRefundHandler<T, U> 
+where 
+    [u8; 32]: From<<T as frame_system::Config>::AccountId>,
+    T: orml_xtokens::Config,
+    U: XcmTransfer<T::AccountId, T::Balance, CurrencyId>,
+{
+    fn send_refund_message(who: T::AccountId, amount: T::Balance, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError> {
+        let location: MultiLocation = match funding_type {
+            Proposal | Brief => {
+                Ok(Default::default())
+            },
+            Treasury(treasury_origin) => {
+                treasury_origin.get_multi_location(who.clone())
+            },
+        }.map_err(|_|Error::<T>::InvalidDest)?;
+
+        // TODO: dest weight limit.
+        let _ = U::transfer(who, currency, amount, location, WeightLimit::Unlimited)?;
+        Ok(())
     }
-    fn handle_refunds(limit: u32) -> Result<(), DispatchError> {
-        todo!()
-    }   
 }

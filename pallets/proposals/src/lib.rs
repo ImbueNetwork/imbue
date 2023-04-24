@@ -105,7 +105,7 @@ pub mod pallet {
 
         type MilestoneVotingWindow: Get<Self::BlockNumber>;
 
-        type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>>;
+        type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
     }
 
     #[pallet::pallet]
@@ -319,66 +319,6 @@ pub mod pallet {
             weight
         }
 
-        //TODO: use the refund_origin to correclty refund the funders
-        //TODO: use the refund_origin to correclty refund the funders
-        //TODO: use the refund_origin to correclty refund the funders
-
-        fn on_initialize(_b: T::BlockNumber) -> Weight {
-            let mut weight = Weight::default();
-
-            let mut refunds = RefundQueue::<T>::get();
-            // Overestimate.
-            weight += T::DbWeight::get().reads(2);
-
-            // A counter is used to know how many elements to split off.
-            let mut c = 0u32;
-            for i in 0..T::RefundsPerBlock::get() {
-                if let Some(refund) = refunds.get(i as usize) {
-                    Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);
-                    weight
-                        .saturating_add(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
-                    c += 1;
-                } else {
-                    break;
-                }
-            }
-
-            Self::split_off_refunds(&mut refunds, c);
-            weight.saturating_add(<T as pallet::Config>::WeightInfo::split_off_refunds());
-
-            weight
-        }
-
-        fn on_idle(_b: T::BlockNumber, remaining_weight: Weight) -> Weight {
-            let mut refunds = RefundQueue::<T>::get();
-            // Overestimate.
-            remaining_weight.saturating_sub(T::DbWeight::get().reads(2));
-
-            // A little extra than required for safety.
-            let weight_required_to_finish_hook =
-                <T as pallet::Config>::WeightInfo::refund_item_in_queue()
-                    + <T as pallet::Config>::WeightInfo::split_off_refunds();
-
-            // A counter is used to know how many elements to split off.
-            let mut c = 0u32;
-
-            // While the weight has enough weight to finish off the
-            while remaining_weight.ref_time() > weight_required_to_finish_hook.ref_time() {
-                if let Some(refund) = refunds.get(c as usize) {
-                    let _ = Self::refund_item_in_queue(&refund.1, &refund.0, refund.2, refund.3);
-                    remaining_weight
-                        .saturating_sub(<T as pallet::Config>::WeightInfo::refund_item_in_queue());
-                    c += 1;
-                } else {
-                    break;
-                }
-            }
-
-            let _ = Self::split_off_refunds(&mut refunds, c);
-            remaining_weight.saturating_sub(<T as pallet::Config>::WeightInfo::split_off_refunds());
-
-            remaining_weight
-        }
     }
 
     #[pallet::call]
@@ -696,6 +636,10 @@ pub mod pallet {
 
         /// Ad Hoc Step (ADMIN)
         /// This will add the refunds to a queue to eventually be processed, Hooks will show refunds themselves.
+        //TODO: use the refund_origin to correclty refund the funders
+        //TODO: use the refund_origin to correclty refund the funders
+        //TODO: use the refund_origin to correclty refund the funders
+
         #[pallet::call_index(19)]
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {

@@ -730,22 +730,21 @@ impl<T: Config> Pallet<T> {
         );
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-        // Ensure that the caller is a contributor and that the vote has been raised.
         let _ = Self::ensure_contributor_of(&project, &who)?;
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
-        // The nay vote must >= minimum threshold required for the vote to pass.
         let total_contribute = project.raised_funds;
 
         // 100 * Threshold =  (total_contribute * majority_required)/100
         let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into();
 
         if vote.nay * 100u8.into() >= threshold_votes {
-            // Vote of no confidence has passed alas refund.
             round.is_canceled = true;
-            // Set Round to is cancelled, remove the vote from NoConfidenceVotes, and do the refund.
             NoConfidenceVotes::<T>::remove(project_key);
             Rounds::<T>::insert(round_key, Some(round));
+
+            // Execute refunds based on project ProjectOrigin
+
             let _ = Self::add_refunds_to_queue(project_key)?;
 
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
