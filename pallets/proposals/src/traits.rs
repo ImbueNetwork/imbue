@@ -120,12 +120,24 @@ where
     }
 }
 
-pub struct MockRefundHandler<T, U> {
+pub struct MockRefundHandler<T> {
+    phantom_t: sp_std::marker::PhantomData<T>,
+
+}
+
+impl <T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId> for MockRefundHandler<T> {
+    fn send_refund_message(who: AccountIdOf<T>, amount: BalanceOf<T>, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError> {
+        // Maybe just allow for host chain xcm calls to mock functionality and panic when trying something else.
+        todo!()
+    }
+}
+
+pub struct XcmRefundHandler<T, U> {
     phantom_t: sp_std::marker::PhantomData<T>,
     phantom_u: sp_std::marker::PhantomData<U>,
 }
 
-impl <T, U> RefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for MockRefundHandler<T, U> 
+impl <T, U> RefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for XcmRefundHandler<T, U> 
 where 
     [u8; 32]: From<<T as frame_system::Config>::AccountId>,
     T: orml_xtokens::Config,
@@ -141,7 +153,7 @@ where
             },
         }.map_err(|_|Error::<T>::InvalidDest)?;
 
-        // TODO: dest weight limit.
+        // TODO: dest weight limit. or specify a fee with another extrinsic,
         let _ = U::transfer(who, currency, amount, location, WeightLimit::Unlimited)?;
         Ok(())
     }

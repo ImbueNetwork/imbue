@@ -207,7 +207,9 @@ impl pallet_proposals::Config for Test {
     type RefundsPerBlock = RefundsPerBlock;
     type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    // TODO: all the mocks as they are dependant on orml-xtokens for testing
+    // We could do a mockrefundhandlerbasic without the bells and whistels to help also. which is what i will do.
+    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test, >;
 }
 
 parameter_types! {

@@ -542,7 +542,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Appends a list of refunds to the queue to be used by the hooks.
-    pub fn add_refunds_to_queue(project_key: ProjectKey) -> DispatchResultWithPostInfo {
+    pub fn add_refunds_to_queue_depricated(project_key: ProjectKey) -> DispatchResultWithPostInfo {
         let mut project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
@@ -743,9 +743,11 @@ impl<T: Config> Pallet<T> {
             NoConfidenceVotes::<T>::remove(project_key);
             Rounds::<T>::insert(round_key, Some(round));
 
-            // Execute refunds based on project ProjectOrigin
 
-            let _ = Self::add_refunds_to_queue(project_key)?;
+            // Execute refunds based on project ProjectOrigin
+            // TODO: 
+            
+            //<T as Config>::RefundHandler::send_refund_message()
 
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {

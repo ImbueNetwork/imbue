@@ -645,7 +645,7 @@ pub mod pallet {
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
             //ensure only admin can perform refund
             T::AuthorityOrigin::ensure_origin(origin)?;
-            Self::add_refunds_to_queue(project_key)
+            Self::add_refunds_to_queue_depricated(project_key)
         }
     }
 }
