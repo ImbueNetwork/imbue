@@ -3,7 +3,7 @@
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    service::{new_partial, ImbueKusamaRuntimeExecutor},
+    service::{new_partial},
 };
 use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
@@ -19,6 +19,7 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 use std::net::SocketAddr;
+use crate::service::ParachainNativeExecutor;
 
 const DEFAULT_PARA_ID: u32 = 2121;
 
@@ -148,21 +149,14 @@ impl SubstrateCli for RelayChainCli {
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
-		match runner.config().chain_spec.identify() {
-			ChainIdentity::ImbueKusama => {
 		runner.async_run(|$config| {
-					let $components = new_partial::<imbue_kusama_runtime::RuntimeApi, _>(
-						&$config,
-						crate::service::kusama_parachain_build_import_queue,
-					)?;
-					let task_manager = $components.task_manager;
-					{ $( $code )* }.map(|v| (v, task_manager))
-				})
-			},
-
-		}
+			let $components = new_partial(&$config)?;
+			let task_manager = $components.task_manager;
+			{ $( $code )* }.map(|v| (v, task_manager))
+		})
 	}}
 }
+
 
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
@@ -239,7 +233,7 @@ pub fn run() -> Result<()> {
                 BenchmarkCmd::Pallet(cmd) => {
                     if cfg!(feature = "runtime-benchmarks") {
                         runner
-                            .sync_run(|config| cmd.run::<Block, ImbueKusamaRuntimeExecutor>(config))
+                            .sync_run(|config| cmd.run::<Block, ParachainNativeExecutor>(config))
                     } else {
                         Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
@@ -247,10 +241,7 @@ pub fn run() -> Result<()> {
                     }
                 }
                 BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
-                    let partials = new_partial::<imbue_kusama_runtime::RuntimeApi, _>(
-                        &config,
-                        crate::service::kusama_parachain_build_import_queue,
-                    )?;
+                    let partials = new_partial(&config)?;
                     cmd.run(partials.client)
                 }),
                 //TODO FIXME
@@ -325,7 +316,7 @@ pub fn run() -> Result<()> {
 
                 match config.chain_spec.identify() {
                     ChainIdentity::ImbueKusama => {
-                        crate::service::start_kusama_parachain_node(config, polkadot_config,collator_options, id, hwbench)
+                        crate::service::start_parachain_node(config, polkadot_config,collator_options, id, hwbench)
                             .await
                             .map(|r| r.0)
                             .map_err(Into::into)
