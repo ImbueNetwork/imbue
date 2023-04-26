@@ -588,6 +588,7 @@ impl<T: Config> Pallet<T> {
     /// Using the parameters provided (which should be from the refund queue),
     /// Process a refund.
     /// Used in hooks so cannot panic.
+    /// DEPRICATED
     pub fn refund_item_in_queue(
         from: &T::AccountId,
         to: &T::AccountId,
@@ -608,6 +609,7 @@ impl<T: Config> Pallet<T> {
     /// Split off an amount of refunds off the vector and place into refund storage.
     /// Returns a boolean if a split off has succeeded.
     /// Used in hooks so cannot panic.
+    /// DEPRICATED
     pub fn split_off_refunds(refunds: &mut Refunds<T>, c: u32) -> bool {
         // split_off panics when at > len:
         // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
@@ -728,7 +730,7 @@ impl<T: Config> Pallet<T> {
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
         );
-        let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         let _ = Self::ensure_contributor_of(&project, &who)?;
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
@@ -740,15 +742,24 @@ impl<T: Config> Pallet<T> {
 
         if vote.nay * 100u8.into() >= threshold_votes {
             round.is_canceled = true;
+
             NoConfidenceVotes::<T>::remove(project_key);
             Rounds::<T>::insert(round_key, Some(round));
-
-
-            // Execute refunds based on project ProjectOrigin
-            // TODO: 
-            
-            //<T as Config>::RefundHandler::send_refund_message()
-
+            // TODO: Need a sane bound on contributors in a project.
+            // TODO: the same thing but with milestones.
+            for (acc_id, value) in project.contributions.iter_mut() {
+                // TODO: maybe a batch call would be good here
+                let res = <T as Config>::RefundHandler::send_refund_message(acc_id.clone(), value.value, project.currency_id, project.funding_type);
+                if res.is_ok() {
+                    //TODO: 
+                    //*value = Default::default();
+                    // remove from the contributors??
+                    // in case of fail.
+                } else {
+                    // TODO:
+                    // dont remove and throw error
+                }
+            }
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into());

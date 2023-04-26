@@ -15,12 +15,11 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-
     use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
 
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
     use sp_core::H256;
-    use sp_std::collections::btree_map::BTreeMap;
+    use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =

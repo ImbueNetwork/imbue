@@ -760,7 +760,24 @@ impl pallet_proposals::Config for Runtime {
     type WeightInfo = ();
     type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = MilestoneVotingWindow;
+    type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
 }
+
+parameter_types! {
+    pub MaxApprovers: u32 = 50;
+    // TODO This has to be the same in the proposals and the briefs!
+    pub MaxMilestonesPerGrant: u32 = 50;
+}
+
+impl pallet_grants::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxMilestonesPerGrant =  MaxMilestonesPerGrant;
+    type MaxApprovers = MaxApprovers;
+    type RMultiCurrency = Currencies;
+    type IntoProposal = pallet_proposals::Pallet<Runtime>;
+    type CancellingAuthority = AdminOrigin;
+}
+
 
 parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
@@ -835,6 +852,7 @@ construct_runtime! {
         // Imbue Pallets
         ImbueProposals: pallet_proposals::{Pallet, Call, Storage, Event<T>} = 100,
         ImbueBriefs: pallet_briefs::{Pallet, Call, Storage, Event<T>} = 101,
+        ImbueGrants: pallet_grants::{Pallet, Call, Storage, Event<T>} = 102,
     }
 }
 

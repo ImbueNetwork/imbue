@@ -3840,6 +3840,7 @@ dependencies = [
  "pallet-collator-selection",
  "pallet-collective",
  "pallet-democracy",
+ "pallet-grants",
  "pallet-identity",
  "pallet-membership",
  "pallet-multisig",

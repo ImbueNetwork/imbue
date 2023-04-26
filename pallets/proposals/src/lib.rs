@@ -96,8 +96,7 @@ pub mod pallet {
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
 
-        /// Defines the amount of refunds that occur in the on initialise method.
-        /// Does not include the remaining refunds that may occur in the on_idle hook.
+        // DEPRICATED DO NOT USE AND REMOVE
         type RefundsPerBlock: Get<u8>;
 
         // Defines wether an identity is required when creating a proposal.
@@ -639,7 +638,7 @@ pub mod pallet {
         //TODO: use the refund_origin to correclty refund the funders
         //TODO: use the refund_origin to correclty refund the funders
         //TODO: use the refund_origin to correclty refund the funders
-
+        ///DEPRICATED
         #[pallet::call_index(19)]
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
