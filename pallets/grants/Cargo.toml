@@ -41,6 +41,7 @@ pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-proposals = {path= "../proposals"}
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+common-types = { path = "../../libs/common-types"}
 
 [features]
 default = ["std"]

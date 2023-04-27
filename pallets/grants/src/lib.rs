@@ -25,12 +25,12 @@ pub mod pallet {
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-    type BoundedPMilestones<T> =
+    pub(crate) type BoundedPMilestones<T> =
         BoundedVec<ProposedMilestoneWithInfo, <T as Config>::MaxMilestonesPerGrant>;
-    type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
+    pub (crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
     type BoundedGrantsSubmitted = BoundedVec<GrantId, ConstU32<500>>;
     type GrantId = H256;
-
+    
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
@@ -68,6 +68,10 @@ pub mod pallet {
     #[pallet::storage]
     pub type GrantsSubmittedBy<T: Config> =
         StorageDoubleMap<_, Blake2_128, AccountIdOf<T>, Blake2_128, GrantId, (), ValueQuery>;
+
+    #[pallet::storage]
+    pub type GrantCount<T: Config> =
+        StorageValue<_, u32, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -125,17 +129,14 @@ pub mod pallet {
             currency_id: CurrencyId,
             amount_requested: BalanceOf<T>,
             treasury_origin: TreasuryOrigin,
-        ) -> DispatchResultWithPostInfo {
+            grant_id: GrantId
+        ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
             let total_percentage = proposed_milestones
                 .iter()
                 .fold(0u32, |acc, x| acc.saturating_add(x.percent.into()));
             ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
 
-            // TODO: Ensure that the approvers are in a select group??
-            // TODO: take deposit to prevent spam? how else can we prevent spam
-            // TODO: GENERATE grant_id. properly. or get as param
-            let grant_id: GrantId = Default::default();
             ensure!(
                 !PendingGrants::<T>::contains_key(grant_id),
                 Error::<T>::GrantAlreadyExists
@@ -156,6 +157,9 @@ pub mod pallet {
 
             PendingGrants::<T>::insert(&grant_id, grant);
             GrantsSubmittedBy::<T>::insert(&submitter, &grant_id, ());
+            GrantCount::<T>::mutate(|count| {
+                *count = count.saturating_add(1);
+            });
 
             Self::deposit_event(Event::<T>::GrantSubmitted {
                 submitter,
@@ -213,14 +217,14 @@ pub mod pallet {
             grant_id: GrantId,
             as_authority: bool,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
             let mut grant = PendingGrants::<T>::get(&grant_id).ok_or(Error::<T>::GrantNotFound)?;
+
             if as_authority {
                 <T as Config>::CancellingAuthority::ensure_origin(origin)?;
             } else {
+                let who = ensure_signed(origin.clone())?;
                 ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
-            }
-
+            } 
             grant.is_cancelled = true;
             PendingGrants::<T>::insert(&grant_id, grant);
             Self::deposit_event(Event::<T>::GrantCancelled { grant_id });
@@ -290,21 +294,23 @@ pub mod pallet {
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct Grant<T: Config> {
-        milestones: BoundedPMilestones<T>,
-        submitter: AccountIdOf<T>,
-        approvers: BoundedApprovers<T>,
-        ipfs_hash: [u8; 32],
-        created_on: BlockNumberFor<T>,
-        is_cancelled: bool,
-        is_converted: bool,
-        currency_id: CurrencyId,
-        amount_requested: BalanceOf<T>,
-        treasury_origin: TreasuryOrigin,
+        pub milestones: BoundedPMilestones<T>,
+        pub submitter: AccountIdOf<T>,
+        pub approvers: BoundedApprovers<T>,
+        pub ipfs_hash: [u8; 32],
+        pub created_on: BlockNumberFor<T>,
+        pub is_cancelled: bool,
+        pub is_converted: bool,
+        pub currency_id: CurrencyId,
+        pub amount_requested: BalanceOf<T>,
+        pub treasury_origin: TreasuryOrigin,
     }
+
+
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     pub struct ProposedMilestoneWithInfo {
-        percent: u8,
-        ipfs_hash: [u8; 32],
+        pub(crate) percent: u8,
+        pub(crate) ipfs_hash: [u8; 32],
     }
 }
