@@ -28,8 +28,7 @@ pub mod pallet {
     pub(crate) type BoundedPMilestones<T> =
         BoundedVec<ProposedMilestoneWithInfo, <T as Config>::MaxMilestonesPerGrant>;
     pub (crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
-    type BoundedGrantsSubmitted = BoundedVec<GrantId, ConstU32<500>>;
-    type GrantId = H256;
+    pub (crate) type GrantId = H256;
     
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -241,7 +240,7 @@ pub mod pallet {
             grant_id: GrantId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
+            let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
@@ -279,11 +278,14 @@ pub mod pallet {
                 grant.currency_id,
                 contributions,
                 grant_id,
-                grant.submitter,
+                grant.submitter.clone(),
                 standard_proposed_ms,
                 FundingType::Treasury(grant.treasury_origin),
             )
             .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
+
+            grant.is_converted = true;
+            PendingGrants::<T>::insert(grant_id, grant);
 
             Ok(().into())
         }

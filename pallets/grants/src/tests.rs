@@ -1,6 +1,6 @@
 use crate::mock::*;
-use frame_support::{assert_ok, assert_noop, pallet_prelude::*};
-use crate::pallet::{ProposedMilestoneWithInfo, BoundedPMilestones, Config, BoundedApprovers, Error, PendingGrants};
+use frame_support::{assert_ok, assert_noop};
+use crate::pallet::{ProposedMilestoneWithInfo, BoundedPMilestones, Config, BoundedApprovers, Error, PendingGrants, GrantId};
 use common_types::{TreasuryOrigin, CurrencyId};
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
@@ -8,7 +8,6 @@ use sp_runtime::DispatchError::BadOrigin;
 #[test]
 fn ensure_milestone_percent_equal_100() {
     new_test_ext().execute_with(|| {
-        
         let milestones: BoundedPMilestones<Test> = vec![ ProposedMilestoneWithInfo  {
             percent: 50u8,
             ipfs_hash: Default::default(),
@@ -83,6 +82,7 @@ fn edit_with_none_does_not_change_properties() {
 #[test]
 fn assert_properties_are_changed_on_edit() {
     new_test_ext().execute_with(|| {
+
         assert!(false);
     });
 }
@@ -108,14 +108,7 @@ fn success_grant_creation() {
 fn success_cancel_grant_as_authority() {
     new_test_ext().execute_with(|| {
         let grant_id = Default::default();
-        let _ = Grant::submit_initial_grant(RuntimeOrigin::signed(*ALICE), 
-                Default::default(), 
-                get_milestones(5), get_approvers(5), 
-                CurrencyId::Native, 
-                10_000u32.into(), 
-                TreasuryOrigin::Kusama, 
-                grant_id,
-            );
+        create_native_default_grant(grant_id, *ALICE);
         assert_noop!(Grant::cancel_grant(RuntimeOrigin::signed(*BOB), grant_id, true), BadOrigin);
         assert_ok!(Grant::cancel_grant(RuntimeOrigin::root(), grant_id, true));
     });
@@ -125,14 +118,7 @@ fn success_cancel_grant_as_authority() {
 fn success_cancel_grant_as_submitter() {
     new_test_ext().execute_with(|| {
         let grant_id = Default::default();
-        let _ = Grant::submit_initial_grant(RuntimeOrigin::signed(*ALICE), 
-                Default::default(), 
-                get_milestones(5), get_approvers(5), 
-                CurrencyId::Native, 
-                10_000u32.into(), 
-                TreasuryOrigin::Kusama, 
-                grant_id,
-            );
+        create_native_default_grant(grant_id, *ALICE);
         assert_ok!(Grant::cancel_grant(RuntimeOrigin::signed(*ALICE), grant_id, false));
     });
 }
@@ -141,14 +127,7 @@ fn success_cancel_grant_as_submitter() {
 fn cancel_grant_not_submitter() {
     new_test_ext().execute_with(|| {
         let grant_id = Default::default();
-        let _ = Grant::submit_initial_grant(RuntimeOrigin::signed(*ALICE), 
-                Default::default(), 
-                get_milestones(5), get_approvers(5), 
-                CurrencyId::Native, 
-                10_000u32.into(), 
-                TreasuryOrigin::Kusama, 
-                grant_id,
-            );
+        create_native_default_grant(grant_id, *ALICE);
         assert_noop!(Grant::cancel_grant(RuntimeOrigin::signed(*BOB), grant_id, false), Error::<Test>::OnlySubmitterCanEdit);
     });
 }
@@ -156,21 +135,30 @@ fn cancel_grant_not_submitter() {
 #[test]
 fn convert_to_proposal_cancelled() {
     new_test_ext().execute_with(|| {
-        assert!(false);
+        let grant_id = Default::default();
+        create_native_default_grant(grant_id, *ALICE);
+        let _ = Grant::cancel_grant(RuntimeOrigin::root(), grant_id, true);
+
+        assert_noop!(Grant::convert_to_milestones(RuntimeOrigin::signed(*ALICE), grant_id), Error::<Test>::GrantCancelled);
     });
 }
 
 #[test]
 fn convert_to_proposal_not_submitter() {
     new_test_ext().execute_with(|| {
-        assert!(false);
+        let grant_id = Default::default();
+        create_native_default_grant(grant_id, *ALICE);
+        assert_noop!(Grant::convert_to_milestones(RuntimeOrigin::signed(*BOB), grant_id), Error::<Test>::OnlySubmitterCanEdit);
     });
 }
 
 #[test]
 fn convert_to_proposal_already_converted() {
     new_test_ext().execute_with(|| {
-        assert!(false);
+        let grant_id = Default::default();
+        create_native_default_grant(grant_id, *ALICE);
+        assert_ok!(Grant::convert_to_milestones(RuntimeOrigin::signed(*ALICE), grant_id));
+        assert_noop!(Grant::convert_to_milestones(RuntimeOrigin::signed(*ALICE), grant_id), Error::<Test>::AlreadyConverted);
     });
 }
 
@@ -203,4 +191,17 @@ fn get_approvers(mut n: u32) -> BoundedApprovers<Test> {
     (0..n).map(|i| {
         sp_core::sr25519::Public::from_raw([i as u8; 32])
     }).collect::<Vec<sp_core::sr25519::Public>>().try_into().expect("qed")
+}
+
+fn create_native_default_grant(grant_id: GrantId, submitter: AccountId) {
+    assert_ok!(
+    Grant::submit_initial_grant(
+        RuntimeOrigin::signed(submitter), 
+        Default::default(), 
+        get_milestones(10), get_approvers(10), 
+        CurrencyId::Native, 
+        10_000u32.into(), 
+        TreasuryOrigin::Kusama, 
+        grant_id,
+    ));
 }

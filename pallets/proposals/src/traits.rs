@@ -7,11 +7,10 @@ use common_types::{CurrencyId, FundingType::*, FundingType,TreasuryOriginConvert
 use frame_support::dispatch::EncodeLike;
 use frame_support::inherent::Vec;
 use frame_support::sp_runtime::Saturating;
-use orml_traits::{MultiCurrency, XcmTransfer};
+use orml_traits::{MultiCurrency, XcmTransfer, MultiReservableCurrency};
 use orml_xtokens::Pallet as XTokens;
 use orml_xtokens::Error;
 use xcm::latest::{MultiLocation, WeightLimit};
-
 use sp_core::H256;
 use sp_std::collections::btree_map::BTreeMap;
 use frame_support::pallet_prelude::DispatchError;
@@ -28,7 +27,7 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
         benificiary: AccountId,
         milestones: Vec<ProposedMilestone>,
         funding_type: FundingType,
-    ) -> Result<(), ()>;
+    ) -> Result<(), DispatchError>;
 }
 
 pub trait RefundHandler<AccountId, Balance, CurrencyId> {
@@ -59,6 +58,7 @@ where
         >,
     >,
 {
+    // TODO: nice error handling
     fn convert_to_proposal(
         currency_id: CurrencyId,
         contributions: ContributionsFor<T>,
@@ -66,15 +66,28 @@ where
         benificiary: AccountIdOf<T>,
         proposed_milestones: Vec<ProposedMilestone>,
         funding_type: FundingType,
-    ) -> Result<(), ()> {
-        let project_key = crate::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
+    ) -> Result<(), DispatchError> {
+        let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
         crate::ProjectCount::<T>::put(project_key);
+
 
         let sum_of_contributions = contributions
             .values()
             .fold(Default::default(), |acc: BalanceOf<T>, x| {
                 acc.saturating_add(x.value)
             });
+        
+        match funding_type {
+            FundingType::Proposal | FundingType::Brief => {
+                for (acc, cont) in contributions.iter() {
+                    let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
+                    <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<AccountIdOf<T>>>::unreserve(currency_id, &acc, cont.value);
+                    <T as crate::Config>::MultiCurrency::transfer(currency_id, &acc, &project_account_id, cont.value)?;
+                }
+            },
+            FundingType::Treasury(_) => {}
+        }
+        
 
         let mut milestone_key: u32 = 0;
         let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
@@ -126,7 +139,7 @@ pub struct MockRefundHandler<T> {
 }
 
 impl <T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId> for MockRefundHandler<T> {
-    fn send_refund_message(who: AccountIdOf<T>, amount: BalanceOf<T>, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError> {
+    fn send_refund_message(_who: AccountIdOf<T>, _amount: BalanceOf<T>, _currency: CurrencyId, _funding_type: FundingType) -> Result<(), DispatchError> {
         // Maybe just allow for host chain xcm calls to mock functionality and panic when trying something else.
         todo!()
     }

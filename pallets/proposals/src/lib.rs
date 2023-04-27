@@ -259,7 +259,7 @@ pub mod pallet {
         MilestonesTotalPercentageMustEqual100,
         /// Currently no active round to participate in.
         NoActiveRound,
-        /// There was an overflow.
+        /// There was an overflow in pallet_proposals.
         Overflow,
         /// A project must be approved before the submission of milestones.
         OnlyApprovedProjectsCanSubmitMilestones,
