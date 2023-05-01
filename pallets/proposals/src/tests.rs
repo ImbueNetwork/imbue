@@ -679,7 +679,7 @@ fn test_submit_milestone() {
         let value = 100u64;
         Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
@@ -732,7 +732,7 @@ fn test_submit_milestone_without_approval() {
             value
         ));
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
@@ -771,7 +771,7 @@ fn test_voting_on_a_milestone() {
         let value = 100u64;
         Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
@@ -905,7 +905,7 @@ fn test_finalize_a_milestone_without_voting() {
         let value = 100u64;
         Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
         let _ = milestone_index.try_push(1);
 
@@ -1019,7 +1019,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
             charlie_contribution
         ));
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
         let _ = milestone_index.try_push(1);
 
@@ -1124,7 +1124,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         Proposals::contribute(RuntimeOrigin::signed(*CHARLIE), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(milestone1_key);
         let _ = milestone_index.try_push(milestone2_key);
 
@@ -1319,7 +1319,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         )
         .unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
         let _ = milestone_index.try_push(1);
 
@@ -1397,7 +1397,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         )
         .unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
@@ -1504,7 +1504,7 @@ fn submit_multiple_milestones() {
         let value = 100u64;
         Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(milestone_index_1);
         let _ = milestone_index.try_push(milestone_index_2);
 
@@ -1619,7 +1619,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             Tokens::free_balance(CurrencyId::Native, &*CHARLIE)
         );
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);

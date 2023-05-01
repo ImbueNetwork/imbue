@@ -303,7 +303,7 @@ pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
         .expect("qed")
 }
 
-pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones {
+pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
     let max = <Test as Config>::MaxBriefOwners::get();
     if n > max {
         n = max;

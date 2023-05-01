@@ -29,7 +29,7 @@ impl<T: Config> Pallet<T> {
     pub fn new_project(
         who: T::AccountId,
         agreement_hash: H256,
-        proposed_milestones: BoundedProposedMilestones,
+        proposed_milestones: BoundedProposedMilestones<T>,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
         funding_type: FundingType,
@@ -85,7 +85,7 @@ impl<T: Config> Pallet<T> {
     pub fn try_update_existing_project(
         who: T::AccountId,
         project_key: ProjectKey,
-        proposed_milestones: BoundedProposedMilestones,
+        proposed_milestones: BoundedProposedMilestones<T>,
         required_funds: BalanceOf<T>,
         currency_id: CurrencyId,
         agreement_hash: H256,
@@ -266,7 +266,7 @@ impl<T: Config> Pallet<T> {
     pub fn do_approve(
         project_key: ProjectKey,
         round_key: RoundKey,
-        milestone_keys: Option<BoundedMilestoneKeys>,
+        milestone_keys: Option<BoundedMilestoneKeys<T>>,
     ) -> DispatchResultWithPostInfo {
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(

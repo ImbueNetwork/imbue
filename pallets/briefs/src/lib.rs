@@ -22,7 +22,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_proposals::traits::IntoProposal;
-    use pallet_proposals::{BoundedProposedMilestones, Contribution};
+    use pallet_proposals::{Contribution, ProposedMilestone};
     use sp_core::{Hasher, H256};
     use sp_std::convert::{From, TryInto};
 
@@ -35,6 +35,7 @@ pub mod pallet {
         Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
         <T as Config>::MaxBriefOwners,
     >;
+    type BoundedProposedMilestones<T> = BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerBrief>;
 
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
@@ -65,6 +66,8 @@ pub mod pallet {
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
         type MaxBriefOwners: Get<u32>;
+
+        type MaxMilestonesPerBrief: Get<u32>;
     }
 
     #[pallet::storage]
@@ -165,7 +168,7 @@ pub mod pallet {
             initial_contribution: BalanceOf<T>,
             brief_id: BriefHash,
             currency_id: CurrencyId,
-            milestones: BoundedProposedMilestones,
+            milestones: BoundedProposedMilestones<T>
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -314,7 +317,7 @@ pub mod pallet {
         currency_id: CurrencyId,
         created_at: BlockNumberFor<T>,
         applicant: AccountIdOf<T>,
-        milestones: BoundedProposedMilestones,
+        milestones: BoundedProposedMilestones<T>
     }
 
     impl<T: Config> Pallet<T> {
@@ -339,7 +342,7 @@ pub mod pallet {
             currency_id: CurrencyId,
             created_at: BlockNumberFor<T>,
             applicant: AccountIdOf<T>,
-            milestones: BoundedProposedMilestones,
+            milestones: BoundedProposedMilestones<T>
         ) -> Self {
             Self {
                 created_at,

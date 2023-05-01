@@ -212,6 +212,7 @@ where
         match treasury_origin {
             TreasuryOrigin::Kusama => {
                 // TODO: make this dynamic so its always correct.
+                // Also how can we assure that they are using the same crypto scheme for accounts?
 		        Ok(PalletId(*b"py/trsry").into_account_truncating())
             },
             _ => {todo!()}
