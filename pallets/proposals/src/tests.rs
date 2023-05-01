@@ -1553,71 +1553,6 @@ fn submit_multiple_milestones() {
     });
 }
 
-#[test]
-fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
-    build_test_externality().execute_with(|| {
-        //create_project extrinsic
-        assert_ok!(create_project());
-
-        let alice_initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key: u32 = 0;
-        let contribution_amount = 2000u64;
-
-        //schedule_round extrinsic
-        Proposals::schedule_round(
-            RuntimeOrigin::root(),
-            System::block_number() + 1,
-            System::block_number() + 10,
-            //Project key starts with 0 for the first project submitted to the chain
-            project_keys,
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        let _additional_amount = 10_000;
-
-        run_to_block(4);
-        //contribute extrinsic
-        Proposals::contribute(
-            RuntimeOrigin::signed(*ALICE),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-
-        //ensuring ALICE's balance has reduced after contribution
-        assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &ALICE),
-            alice_initial_balance - contribution_amount
-        );
-
-        Proposals::refund(RuntimeOrigin::root(), project_key).unwrap();
-
-        let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one RuntimeEventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_projectfundsrefunded_event,
-            mock::RuntimeEvent::from(proposals::Event::ProjectFundsAddedToRefundQueue(
-                project_key,
-                contribution_amount
-            ))
-        );
-
-        // wait some blocks
-        run_to_block(System::block_number() + 1);
-
-        //ensuring the refunded amount was transferred back successfully
-        assert_eq!(
-            alice_initial_balance,
-            Tokens::free_balance(CurrencyId::Native, &*ALICE)
-        );
-    });
-}
 
 #[test]
 fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
@@ -1773,7 +1708,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             ))
         );
 
-        Proposals::refund(RuntimeOrigin::root(), project_key).unwrap();
+        Proposals::refund_depricated(RuntimeOrigin::root(), project_key).unwrap();
 
         let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
             .pop()
@@ -2205,108 +2140,6 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
     });
 }
 
-// Very slow test, due to the creation of multiple account keys.
-#[test]
-fn test_refunds_go_back_to_contributors() {
-    build_test_externality().execute_with(|| {
-        let mut accounts: Vec<<Test as frame_system::Config>::AccountId> = vec![];
-        let num_of_refunds: u32 = 100;
-        assert_ok!(create_project());
-
-        let _ = Proposals::schedule_round(
-            RuntimeOrigin::root(),
-            System::block_number(),
-            System::block_number() + 100,
-            bounded_vec![0u32],
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        run_to_block(System::block_number() + 2u64);
-        let input: Vec<String> = (0..num_of_refunds).map(|i| i.to_string()).collect();
-        for i in 0..num_of_refunds {
-            let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
-            accounts.push(acc.clone());
-            let _ = Tokens::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
-            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64)
-                .unwrap();
-        }
-
-        assert_ok!(Proposals::refund(RuntimeOrigin::root(), 0));
-
-        // The maximum amount of block it should take for all refunds to occur.
-        run_to_block(num_of_refunds as u64 / RefundsPerBlock::get() as u64);
-
-        for i in 0..num_of_refunds {
-            assert_eq!(
-                Tokens::free_balance(CurrencyId::Native, &accounts[i as usize]),
-                20_000u64
-            );
-        }
-
-        assert!(
-            Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64
-        )
-    });
-}
-
-#[test]
-fn test_refunds_state_is_handled_correctly() {
-    build_test_externality().execute_with(|| {
-        let mut accounts: Vec<<Test as frame_system::Config>::AccountId> = vec![];
-        // Only works if
-        let num_of_refunds: u32 = 20;
-
-        assert_ok!(create_project());
-
-        let _ = Proposals::schedule_round(
-            RuntimeOrigin::root(),
-            System::block_number(),
-            System::block_number() + 100,
-            bounded_vec![0u32],
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        run_to_block(System::block_number() + 2u64);
-        let input: Vec<String> = (0..num_of_refunds).map(|i| i.to_string()).collect();
-        for i in 0..num_of_refunds {
-            let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
-            accounts.push(acc.clone());
-            let _ = Tokens::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
-            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64)
-                .unwrap();
-        }
-
-        assert_ok!(Proposals::refund(RuntimeOrigin::root(), 0));
-        let mut refunds_completed = 0usize;
-        // The maximum amount of block it should take for all refunds to occur.
-        for _ in 0..(num_of_refunds / RefundsPerBlock::get() as u32) {
-            run_to_block_with_no_idle_space(System::block_number() + 1u64);
-
-            // Get the total number of refunds completed.
-            let _refunds_after_block = accounts
-                .iter()
-                .map(|acc| Tokens::free_balance(CurrencyId::Native, acc))
-                .filter(|balance| balance == &20_000u64)
-                .collect::<Vec<u64>>()
-                .len();
-
-            // Assert that only 2 have been completed
-            // assert_eq!(refunds_after_block - refunds_completed, 2usize);
-            refunds_completed += 2;
-
-            let _test = RefundQueue::<Test>::get().len();
-            // And that they have been removed from the refund list.
-            assert_eq!(
-                RefundQueue::<Test>::get().len(),
-                num_of_refunds as usize - refunds_completed
-            );
-        }
-
-        assert!(Tokens::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64)
-    });
-}
 
 // create project, schedule a round, approve and submit a milestone.
 // assert that the vote will pass when it is on the threshold.

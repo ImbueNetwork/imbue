@@ -589,7 +589,7 @@ impl<T: Config> Pallet<T> {
     /// Process a refund.
     /// Used in hooks so cannot panic.
     /// DEPRICATED
-    pub fn refund_item_in_queue(
+    pub fn refund_item_in_queue_depricated(
         from: &T::AccountId,
         to: &T::AccountId,
         amount: BalanceOf<T>,
@@ -610,7 +610,7 @@ impl<T: Config> Pallet<T> {
     /// Returns a boolean if a split off has succeeded.
     /// Used in hooks so cannot panic.
     /// DEPRICATED
-    pub fn split_off_refunds(refunds: &mut Refunds<T>, c: u32) -> bool {
+    pub fn split_off_refunds_depricated(refunds: &mut Refunds<T>, c: u32) -> bool {
         // split_off panics when at > len:
         // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
         // If the length is zero do nothing
@@ -757,7 +757,7 @@ impl<T: Config> Pallet<T> {
             }
 
             let project_account_id = Self::project_account_id(project_key);
-            
+
             match project.funding_type {
                 FundingType::Brief | FundingType::Proposal => {
                     // Handle refunds on native chain, there is no need to deal with xcm here.

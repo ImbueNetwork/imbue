@@ -179,14 +179,19 @@ pub mod pallet {
             edited_ipfs: Option<[u8; 32]>,
             edited_currency_id: Option<CurrencyId>,
             edited_amount_requested: Option<BalanceOf<T>>,
+            edited_treasury_origin: Option<TreasuryOrigin>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
-
+            
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
             ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
 
             if let Some(milestones) = edited_milestones {
+                let total_percentage = milestones
+                    .iter()
+                    .fold(0u32, |acc, x| acc.saturating_add(x.percent.into()));
+                ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
             if let Some(approvers) = edited_approvers {
@@ -200,6 +205,9 @@ pub mod pallet {
             }
             if let Some(balance) = edited_amount_requested {
                 grant.amount_requested = balance;
+            }
+            if let Some(t_origin) = edited_treasury_origin {
+                grant.treasury_origin = t_origin;
             }
 
             PendingGrants::<T>::insert(&grant_id, grant);
