@@ -6,10 +6,14 @@ use crate::{
 use common_types::{
     CurrencyId, FundingType, FundingType::*, TreasuryOrigin, TreasuryOriginConverter,
 };
-use frame_support::dispatch::EncodeLike;
-use frame_support::inherent::Vec;
-use frame_support::pallet_prelude::DispatchError;
-use frame_support::sp_runtime::Saturating;
+use frame_support::{
+    dispatch::EncodeLike, 
+    inherent::Vec, 
+    pallet_prelude::DispatchError, 
+    sp_runtime::Saturating,
+    PalletId,
+};
+use sp_runtime::traits::AccountIdConversion;
 use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
 use orml_xtokens::Pallet as XTokens;
@@ -43,7 +47,7 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
         funding_type: FundingType,
     ) -> Result<(), DispatchError>;
     fn get_treasury_account_id(
-        treasury_account: TreasuryOrigin,
+        treasury_origin: TreasuryOrigin,
     ) -> Result<AccountId, DispatchError>;
 }
 
@@ -146,10 +150,12 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 pub struct MockRefundHandler<T> {
     phantom_t: sp_std::marker::PhantomData<T>,
 }
 
+#[cfg(feature = "std")]
 impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
     for MockRefundHandler<T>
 {
@@ -201,8 +207,14 @@ where
         }
     }
     fn get_treasury_account_id(
-        treasury_account: TreasuryOrigin,
+        treasury_origin: TreasuryOrigin,
     ) -> Result<AccountIdOf<T>, DispatchError> {
-        todo!()
+        match treasury_origin {
+            TreasuryOrigin::Kusama => {
+                // TODO: make this dynamic so its always correct.
+		        Ok(PalletId(*b"py/trsry").into_account_truncating())
+            },
+            _ => {todo!()}
+        }
     }
 }

@@ -1721,9 +1721,6 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             ))
         );
 
-        // Wait a block so refunds occur in hook.
-        run_to_block(System::block_number() + 1);
-
         let approved_milestone_value = 100000;
         //ensuring the refunded amount was transferred back successfully
         assert_eq!(

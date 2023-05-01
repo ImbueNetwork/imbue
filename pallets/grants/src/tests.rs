@@ -399,13 +399,6 @@ fn convert_to_proposal_already_converted() {
     });
 }
 
-#[test]
-fn e2e() {
-    new_test_ext().execute_with(|| {
-        assert!(false);
-    });
-}
-
 fn get_milestones(mut n: u32) -> BoundedPMilestones<Test> {
     let max = <Test as Config>::MaxMilestonesPerGrant::get();
     if n > max {
