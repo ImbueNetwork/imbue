@@ -23,7 +23,13 @@ impl<AccountId: Into<[u8; 32]>> TreasuryOriginConverter<AccountId> for TreasuryO
                     network: Some(NetworkId::Kusama),
                 }),
             )),
-            TreasuryOrigin::Imbue => Ok(Default::default()),
+            TreasuryOrigin::Imbue => Ok(MultiLocation::new(
+                0,
+                X1(Junction::AccountId32 {
+                    id: recipiant.into(),
+                    network: None,
+                }),
+            )),
             _ => Err(TreasuryOriginError::NetworkUnsupported),
         }
     }

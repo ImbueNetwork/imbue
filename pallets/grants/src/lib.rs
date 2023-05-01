@@ -12,10 +12,10 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
 
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
     use sp_core::H256;
@@ -25,11 +25,10 @@ pub mod pallet {
     pub(crate) type BalanceOf<T> =
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-    type BoundedPMilestones<T> =
+    pub(crate) type BoundedPMilestones<T> =
         BoundedVec<ProposedMilestoneWithInfo, <T as Config>::MaxMilestonesPerGrant>;
-    type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
-    type BoundedGrantsSubmitted = BoundedVec<GrantId, ConstU32<500>>;
-    type GrantId = H256;
+    pub(crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
+    pub(crate) type GrantId = H256;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -38,9 +37,9 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        /// Maximum amount of milestones per grants.
+        /// Maximum amount of milestones per grant.
         type MaxMilestonesPerGrant: Get<u32>;
-        /// The maximum approvers for a given grants.
+        /// The maximum approvers for a given grant.
         type MaxApprovers: Get<u32>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
@@ -51,7 +50,7 @@ pub mod pallet {
             BlockNumberFor<Self>,
             <Self as pallet_timestamp::Config>::Moment,
         >;
-        /// The authority allowed to cancel a pending grants.
+        /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
@@ -68,6 +67,9 @@ pub mod pallet {
     #[pallet::storage]
     pub type GrantsSubmittedBy<T: Config> =
         StorageDoubleMap<_, Blake2_128, AccountIdOf<T>, Blake2_128, GrantId, (), ValueQuery>;
+
+    #[pallet::storage]
+    pub type GrantCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -90,15 +92,15 @@ pub mod pallet {
         MustSumTo100,
         /// The GrantId specified cannot be found.
         GrantNotFound,
-        /// The grants already exists.
+        /// The grant already exists.
         GrantAlreadyExists,
         /// Overflow Error in pallet-grants.
         Overflow,
-        /// Only the submitter can edit this grants.
+        /// Only the submitter can edit this grant.
         OnlySubmitterCanEdit,
-        /// Cannot use a cancelled grants.
+        /// Cannot use a cancelled grant.
         GrantCancelled,
-        /// This grants has already been converted.
+        /// This grant has already been converted.
         AlreadyConverted,
         /// The conversion to proposals failed.
         GrantConversionFailedGeneric,
@@ -113,7 +115,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// A grants starts here with nothing agreed upon and
+        /// A grant starts here with nothing agreed upon and
         /// probably awaiting much back and forth.
         #[pallet::call_index(0)]
         #[pallet::weight(100_000)]
@@ -125,17 +127,14 @@ pub mod pallet {
             currency_id: CurrencyId,
             amount_requested: BalanceOf<T>,
             treasury_origin: TreasuryOrigin,
-        ) -> DispatchResultWithPostInfo {
+            grant_id: GrantId,
+        ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
             let total_percentage = proposed_milestones
                 .iter()
                 .fold(0u32, |acc, x| acc.saturating_add(x.percent.into()));
             ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
 
-            // TODO: Ensure that the approvers are in a select group??
-            // TODO: take deposit to prevent spam? how else can we prevent spam
-            // TODO: GENERATE grant_id. properly. or get as param
-            let grant_id: GrantId = Default::default();
             ensure!(
                 !PendingGrants::<T>::contains_key(grant_id),
                 Error::<T>::GrantAlreadyExists
@@ -156,6 +155,9 @@ pub mod pallet {
 
             PendingGrants::<T>::insert(&grant_id, grant);
             GrantsSubmittedBy::<T>::insert(&submitter, &grant_id, ());
+            GrantCount::<T>::mutate(|count| {
+                *count = count.saturating_add(1);
+            });
 
             Self::deposit_event(Event::<T>::GrantSubmitted {
                 submitter,
@@ -164,7 +166,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Edit a grants that has been submitted.
+        /// Edit a grant that has been submitted.
         /// Fields passed in with None will be ignored and not updated.
         #[pallet::call_index(1)]
         #[pallet::weight(100_000)]
@@ -176,6 +178,7 @@ pub mod pallet {
             edited_ipfs: Option<[u8; 32]>,
             edited_currency_id: Option<CurrencyId>,
             edited_amount_requested: Option<BalanceOf<T>>,
+            edited_treasury_origin: Option<TreasuryOrigin>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
@@ -184,6 +187,10 @@ pub mod pallet {
             ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
 
             if let Some(milestones) = edited_milestones {
+                let total_percentage = milestones
+                    .iter()
+                    .fold(0u32, |acc, x| acc.saturating_add(x.percent.into()));
+                ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
             if let Some(approvers) = edited_approvers {
@@ -198,6 +205,9 @@ pub mod pallet {
             if let Some(balance) = edited_amount_requested {
                 grant.amount_requested = balance;
             }
+            if let Some(t_origin) = edited_treasury_origin {
+                grant.treasury_origin = t_origin;
+            }
 
             PendingGrants::<T>::insert(&grant_id, grant);
             Self::deposit_event(Event::<T>::GrantEdited { grant_id });
@@ -205,7 +215,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Set the grants as cancelled
+        /// Set the grant as cancelled
         #[pallet::call_index(2)]
         #[pallet::weight(100_000)]
         pub fn cancel_grant(
@@ -213,14 +223,14 @@ pub mod pallet {
             grant_id: GrantId,
             as_authority: bool,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
             let mut grant = PendingGrants::<T>::get(&grant_id).ok_or(Error::<T>::GrantNotFound)?;
+
             if as_authority {
                 <T as Config>::CancellingAuthority::ensure_origin(origin)?;
             } else {
+                let who = ensure_signed(origin.clone())?;
                 ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
             }
-
             grant.is_cancelled = true;
             PendingGrants::<T>::insert(&grant_id, grant);
             Self::deposit_event(Event::<T>::GrantCancelled { grant_id });
@@ -228,8 +238,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Once you are completely happy with the grants details and are ready to submit to treasury
-        /// You call this and itll allow you to generate a project account id.
+        /// Once you are completely happy with the grant details and are ready to submit to treasury
+        /// You call this and it'll allow you to generate a project account id.
         #[pallet::call_index(3)]
         #[pallet::weight(100_000)]
         pub fn convert_to_milestones(
@@ -237,7 +247,7 @@ pub mod pallet {
             grant_id: GrantId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
+            let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
@@ -261,8 +271,8 @@ pub mod pallet {
                 })
                 .collect::<Vec<_>>();
 
-            // TODO: fix this
-            // For now we have to do a conversion into a simpler proposed milestone as pallet_proposals does not support ipfs data for them.
+            // FIXME:
+            // For now we have to do a conversion into a simpler proposed milestone as `pallet_proposals` does not support ipfs data for them.
             let standard_proposed_ms = grant
                 .milestones
                 .iter()
@@ -275,11 +285,14 @@ pub mod pallet {
                 grant.currency_id,
                 contributions,
                 grant_id,
-                grant.submitter,
+                grant.submitter.clone(),
                 standard_proposed_ms,
                 FundingType::Treasury(grant.treasury_origin),
             )
             .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
+
+            grant.is_converted = true;
+            PendingGrants::<T>::insert(grant_id, grant);
 
             Ok(().into())
         }
@@ -290,21 +303,21 @@ pub mod pallet {
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct Grant<T: Config> {
-        milestones: BoundedPMilestones<T>,
-        submitter: AccountIdOf<T>,
-        approvers: BoundedApprovers<T>,
-        ipfs_hash: [u8; 32],
-        created_on: BlockNumberFor<T>,
-        is_cancelled: bool,
-        is_converted: bool,
-        currency_id: CurrencyId,
-        amount_requested: BalanceOf<T>,
-        treasury_origin: TreasuryOrigin,
+        pub milestones: BoundedPMilestones<T>,
+        pub submitter: AccountIdOf<T>,
+        pub approvers: BoundedApprovers<T>,
+        pub ipfs_hash: [u8; 32],
+        pub created_on: BlockNumberFor<T>,
+        pub is_cancelled: bool,
+        pub is_converted: bool,
+        pub currency_id: CurrencyId,
+        pub amount_requested: BalanceOf<T>,
+        pub treasury_origin: TreasuryOrigin,
     }
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     pub struct ProposedMilestoneWithInfo {
-        percent: u8,
-        ipfs_hash: [u8; 32],
+        pub(crate) percent: u8,
+        pub(crate) ipfs_hash: [u8; 32],
     }
 }

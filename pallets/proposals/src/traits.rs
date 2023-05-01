@@ -3,18 +3,23 @@ use crate::{
     Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
     ProposedMilestone,
 };
-use common_types::{CurrencyId, FundingType::*, FundingType,TreasuryOriginConverter};
-use frame_support::dispatch::EncodeLike;
-use frame_support::inherent::Vec;
-use frame_support::sp_runtime::Saturating;
-use orml_traits::{MultiCurrency, XcmTransfer};
-use orml_xtokens::Pallet as XTokens;
+use common_types::{
+    CurrencyId, FundingType, FundingType::*, TreasuryOrigin, TreasuryOriginConverter,
+};
+use frame_support::{
+    dispatch::EncodeLike, 
+    inherent::Vec, 
+    pallet_prelude::DispatchError, 
+    sp_runtime::Saturating,
+    PalletId,
+};
+use sp_runtime::traits::AccountIdConversion;
+use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
-use xcm::latest::{MultiLocation, WeightLimit};
-
+use orml_xtokens::Pallet as XTokens;
 use sp_core::H256;
 use sp_std::collections::btree_map::BTreeMap;
-use frame_support::pallet_prelude::DispatchError;
+use xcm::latest::{MultiLocation, WeightLimit};
 
 pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
     /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.
@@ -28,19 +33,25 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
         benificiary: AccountId,
         milestones: Vec<ProposedMilestone>,
         funding_type: FundingType,
-    ) -> Result<(), ()>;
+    ) -> Result<(), DispatchError>;
 }
 
 pub trait RefundHandler<AccountId, Balance, CurrencyId> {
     /// Send a message to some destination chain asking to do some reserve asset transfer.
     /// The multilocation is defined by the FundingType.
     /// see FundingType and TreasuryOrigin.
-    fn send_refund_message(who: AccountId, amount: Balance, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError>;
+    fn send_refund_message_to_treasury(
+        from: AccountId,
+        amount: Balance,
+        currency: CurrencyId,
+        funding_type: FundingType,
+    ) -> Result<(), DispatchError>;
+    fn get_treasury_account_id(
+        treasury_origin: TreasuryOrigin,
+    ) -> Result<AccountId, DispatchError>;
 }
 
-
-
-// Some implementations used in Imbue of the traits above. 
+// Some implementations used in Imbue of the traits above.
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>>;
@@ -59,6 +70,7 @@ where
         >,
     >,
 {
+    // TODO: nice error handling
     fn convert_to_proposal(
         currency_id: CurrencyId,
         contributions: ContributionsFor<T>,
@@ -66,8 +78,8 @@ where
         benificiary: AccountIdOf<T>,
         proposed_milestones: Vec<ProposedMilestone>,
         funding_type: FundingType,
-    ) -> Result<(), ()> {
-        let project_key = crate::ProjectCount::<T>::get().checked_add(1).ok_or(())?;
+    ) -> Result<(), DispatchError> {
+        let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
         crate::ProjectCount::<T>::put(project_key);
 
         let sum_of_contributions = contributions
@@ -75,6 +87,24 @@ where
             .fold(Default::default(), |acc: BalanceOf<T>, x| {
                 acc.saturating_add(x.value)
             });
+
+        match funding_type {
+            FundingType::Proposal | FundingType::Brief => {
+                for (acc, cont) in contributions.iter() {
+                    let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
+                    <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
+                        AccountIdOf<T>,
+                    >>::unreserve(currency_id, &acc, cont.value);
+                    <T as crate::Config>::MultiCurrency::transfer(
+                        currency_id,
+                        &acc,
+                        &project_account_id,
+                        cont.value,
+                    )?;
+                }
+            }
+            FundingType::Treasury(_) => {}
+        }
 
         let mut milestone_key: u32 = 0;
         let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
@@ -120,14 +150,27 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 pub struct MockRefundHandler<T> {
     phantom_t: sp_std::marker::PhantomData<T>,
-
 }
 
-impl <T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId> for MockRefundHandler<T> {
-    fn send_refund_message(who: AccountIdOf<T>, amount: BalanceOf<T>, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError> {
+#[cfg(feature = "std")]
+impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
+    for MockRefundHandler<T>
+{
+    fn send_refund_message_to_treasury(
+        _from: AccountIdOf<T>,
+        _amount: BalanceOf<T>,
+        _currency: CurrencyId,
+        _funding_type: FundingType,
+    ) -> Result<(), DispatchError> {
         // Maybe just allow for host chain xcm calls to mock functionality and panic when trying something else.
+        todo!()
+    }
+    fn get_treasury_account_id(
+        treasury_account: TreasuryOrigin,
+    ) -> Result<AccountIdOf<T>, DispatchError> {
         todo!()
     }
 }
@@ -137,24 +180,42 @@ pub struct XcmRefundHandler<T, U> {
     phantom_u: sp_std::marker::PhantomData<U>,
 }
 
-impl <T, U> RefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for XcmRefundHandler<T, U> 
-where 
+impl<T, U> RefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for XcmRefundHandler<T, U>
+where
     [u8; 32]: From<<T as frame_system::Config>::AccountId>,
     T: orml_xtokens::Config,
     U: XcmTransfer<T::AccountId, T::Balance, CurrencyId>,
 {
-    fn send_refund_message(who: T::AccountId, amount: T::Balance, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError> {
-        let location: MultiLocation = match funding_type {
-            Proposal | Brief => {
-                Ok(Default::default())
+    /// Only used for xcm. Therefore not for briefs and proposals as they use funds which are on imbue.
+    fn send_refund_message_to_treasury(
+        from: T::AccountId,
+        amount: T::Balance,
+        currency: CurrencyId,
+        funding_type: FundingType,
+    ) -> Result<(), DispatchError> {
+        match funding_type {
+            FundingType::Treasury(treasury_origin) => {
+                let benificiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
+                let location: MultiLocation = treasury_origin
+                    .get_multi_location(benificiary)
+                    .map_err(|_| Error::<T>::InvalidDest)?;
+                // TODO: dest weight limit. or specify a fee with another extrinsic,
+                let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
+                Ok(())
+            }
+            _ => return Err(Error::<T>::InvalidDest.into()),
+        }
+    }
+    fn get_treasury_account_id(
+        treasury_origin: TreasuryOrigin,
+    ) -> Result<AccountIdOf<T>, DispatchError> {
+        match treasury_origin {
+            TreasuryOrigin::Kusama => {
+                // TODO: make this dynamic so its always correct.
+                // Also how can we assure that they are using the same crypto scheme for accounts?
+		        Ok(PalletId(*b"py/trsry").into_account_truncating())
             },
-            Treasury(treasury_origin) => {
-                treasury_origin.get_multi_location(who.clone())
-            },
-        }.map_err(|_|Error::<T>::InvalidDest)?;
-
-        // TODO: dest weight limit. or specify a fee with another extrinsic,
-        let _ = U::transfer(who, currency, amount, location, WeightLimit::Unlimited)?;
-        Ok(())
+            _ => {todo!()}
+        }
     }
 }

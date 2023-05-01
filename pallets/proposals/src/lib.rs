@@ -38,8 +38,6 @@ pub use impls::*;
 
 // The Constants associated with the bounded parameters
 type MaxProjectKeysPerRound = ConstU32<1000>;
-type MaxMilestoneKeys = ConstU32<100>;
-type MaxProposedMilestones = ConstU32<100>;
 type MaxWhitelistPerProject = ConstU32<10000>;
 
 pub type RoundKey = u32;
@@ -60,8 +58,8 @@ pub type Refunds<T> = Vec<(
 type BoundedWhitelistSpots<T> =
     BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, MaxWhitelistPerProject>;
 type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
-type BoundedMilestoneKeys = BoundedVec<ProjectKey, MaxMilestoneKeys>;
-pub type BoundedProposedMilestones = BoundedVec<ProposedMilestone, MaxProposedMilestones>;
+type BoundedMilestoneKeys<T> = BoundedVec<ProjectKey, <T as Config>::MaxMilestonesPerProject>;
+pub type BoundedProposedMilestones<T> = BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
 pub type AgreementHash = H256;
 
 #[frame_support::pallet]
@@ -105,6 +103,8 @@ pub mod pallet {
         type MilestoneVotingWindow: Get<Self::BlockNumber>;
 
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+
+        type MaxMilestonesPerProject: Get<u32>;
     }
 
     #[pallet::pallet]
@@ -259,7 +259,7 @@ pub mod pallet {
         MilestonesTotalPercentageMustEqual100,
         /// Currently no active round to participate in.
         NoActiveRound,
-        /// There was an overflow.
+        /// There was an overflow in pallet_proposals.
         Overflow,
         /// A project must be approved before the submission of milestones.
         OnlyApprovedProjectsCanSubmitMilestones,
@@ -317,7 +317,6 @@ pub mod pallet {
             }
             weight
         }
-
     }
 
     #[pallet::call]
@@ -329,7 +328,7 @@ pub mod pallet {
         pub fn create_project(
             origin: OriginFor<T>,
             agreement_hash: H256,
-            proposed_milestones: BoundedProposedMilestones,
+            proposed_milestones: BoundedProposedMilestones<T>,
             required_funds: BalanceOf<T>,
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
@@ -370,7 +369,7 @@ pub mod pallet {
         pub fn update_project(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            proposed_milestones: BoundedProposedMilestones,
+            proposed_milestones: BoundedProposedMilestones<T>,
             required_funds: BalanceOf<T>,
             currency_id: CurrencyId,
             agreement_hash: H256,
@@ -518,7 +517,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             round_key: Option<RoundKey>,
             project_key: ProjectKey,
-            milestone_keys: Option<BoundedMilestoneKeys>,
+            milestone_keys: Option<BoundedMilestoneKeys<T>>,
         ) -> DispatchResultWithPostInfo {
             T::AuthorityOrigin::ensure_origin(origin)?;
             let approval_round_key = round_key.unwrap_or(RoundCount::<T>::get());
@@ -641,7 +640,10 @@ pub mod pallet {
         ///DEPRICATED
         #[pallet::call_index(19)]
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
-        pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResultWithPostInfo {
+        pub fn refund_depricated(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResultWithPostInfo {
             //ensure only admin can perform refund
             T::AuthorityOrigin::ensure_origin(origin)?;
             Self::add_refunds_to_queue_depricated(project_key)

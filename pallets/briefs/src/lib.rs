@@ -22,7 +22,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_proposals::traits::IntoProposal;
-    use pallet_proposals::{BoundedProposedMilestones, Contribution};
+    use pallet_proposals::{Contribution, ProposedMilestone};
     use sp_core::{Hasher, H256};
     use sp_std::convert::{From, TryInto};
 
@@ -35,6 +35,7 @@ pub mod pallet {
         Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
         <T as Config>::MaxBriefOwners,
     >;
+    type BoundedProposedMilestones<T> = BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerBrief>;
 
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
@@ -65,6 +66,8 @@ pub mod pallet {
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
         type MaxBriefOwners: Get<u32>;
+
+        type MaxMilestonesPerBrief: Get<u32>;
     }
 
     #[pallet::storage]
@@ -81,7 +84,7 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
     /// The contributions to a brief, in a single currency.
-    /// Its in a BTree to reduce storage call when we have to inevitably iterate the keys.
+    /// It's in a BTree to reduce storage call when we have to inevitably iterate the keys.
     /// Key 1: BriefHash
     /// Key 2: AccountIdOf<T>
     /// Value: Balance
@@ -115,7 +118,7 @@ pub mod pallet {
         BriefNotFound,
         /// The BriefId generation failed.
         BriefHashingFailed,
-        /// the bounty required for this brief has not been met.
+        /// The bounty required for this brief has not been met.
         BountyTotalNotMet,
         /// There are too many briefs open for this block, try again later.
         BriefLimitReached,
@@ -123,13 +126,13 @@ pub mod pallet {
         BriefCurrencyNotSet,
         /// Too many brief owners.
         TooManyBriefOwners,
-        /// Not authorized to do this,
+        /// Not authorized to do this.
         NotAuthorised,
-        /// The brief conversion failed
+        /// The brief conversion failed.
         BriefConversionFailedGeneric,
         /// The brief has not yet been approved to commence by the freelancer.
         FreelancerApprovalRequired,
-        /// Milestones totals do not add up to 100%.
+        /// Milestones total do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
     }
 
@@ -145,8 +148,7 @@ pub mod pallet {
             <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
 
             // Or if they are not voted by governance, be voted in by another approved freelancer?
-            // todo.
-
+            // TODO:
             FreelanceFellowship::<T>::insert(&account_id, ());
             Self::deposit_event(Event::<T>::AccountApproved(account_id));
 
@@ -165,7 +167,7 @@ pub mod pallet {
             initial_contribution: BalanceOf<T>,
             brief_id: BriefHash,
             currency_id: CurrencyId,
-            milestones: BoundedProposedMilestones,
+            milestones: BoundedProposedMilestones<T>
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -190,7 +192,7 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::TooManyBriefOwners)?;
             }
 
-            // todo freelancer fellowship handler
+            // TODO: freelancer fellowship handler
             // ensure!(
             //     FreelanceFellowship::<T>::contains_key(&applicant),
             //     Error::<T>::OnlyApprovedAccountPermitted
@@ -200,7 +202,7 @@ pub mod pallet {
 
             if initial_contribution > 0u32.into() {
                 let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
-                    // this should never fail as the the bound is ensure when a brief is created.
+                    // This should never fail as the the bound is ensured when a brief is created.
                     let _ = contributions
                         .try_insert(
                             who.clone(),
@@ -234,7 +236,7 @@ pub mod pallet {
         /// Add a bounty to a brief.
         /// A bounty must be fully contributed to before a piece of work is started.
         ///
-        /// Todo: runtime api to return how much bounty exactly is left on a brief.
+        /// TODO: runtime api to return how much bounty exactly is left on a brief.
         #[pallet::call_index(3)]
         #[pallet::weight(10_000)]
         pub fn contribute_to_brief(
@@ -244,7 +246,7 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
-            // todo Minimum contribution.
+            // TODO: Minimum contribution.
 
             ensure!(
                 brief_record.brief_owners.contains(&who),
@@ -254,11 +256,11 @@ pub mod pallet {
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
             let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
-                if let Some(val) = contributions.get_mut(&who) {
-                    val.value = val.value.saturating_add(amount);
-                    val.timestamp = pallet_timestamp::Pallet::<T>::get();
+                if let Some(contribution) = contributions.get_mut(&who) {
+                    contribution.value = contribution.value.saturating_add(amount);
+                    contribution.timestamp = pallet_timestamp::Pallet::<T>::get();
                 } else {
-                    // this should never fail as the the bound is ensure when a brief is created.
+                    // This should never fail as the the bound is ensured when a brief is created.
                     contributions
                         .try_insert(who.clone(), {
                             Contribution {
@@ -314,7 +316,7 @@ pub mod pallet {
         currency_id: CurrencyId,
         created_at: BlockNumberFor<T>,
         applicant: AccountIdOf<T>,
-        milestones: BoundedProposedMilestones,
+        milestones: BoundedProposedMilestones<T>
     }
 
     impl<T: Config> Pallet<T> {
@@ -339,7 +341,7 @@ pub mod pallet {
             currency_id: CurrencyId,
             created_at: BlockNumberFor<T>,
             applicant: AccountIdOf<T>,
-            milestones: BoundedProposedMilestones,
+            milestones: BoundedProposedMilestones<T>
         ) -> Self {
             Self {
                 created_at,

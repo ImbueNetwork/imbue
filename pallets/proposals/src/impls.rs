@@ -29,7 +29,7 @@ impl<T: Config> Pallet<T> {
     pub fn new_project(
         who: T::AccountId,
         agreement_hash: H256,
-        proposed_milestones: BoundedProposedMilestones,
+        proposed_milestones: BoundedProposedMilestones<T>,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
         funding_type: FundingType,
@@ -85,7 +85,7 @@ impl<T: Config> Pallet<T> {
     pub fn try_update_existing_project(
         who: T::AccountId,
         project_key: ProjectKey,
-        proposed_milestones: BoundedProposedMilestones,
+        proposed_milestones: BoundedProposedMilestones<T>,
         required_funds: BalanceOf<T>,
         currency_id: CurrencyId,
         agreement_hash: H256,
@@ -266,7 +266,7 @@ impl<T: Config> Pallet<T> {
     pub fn do_approve(
         project_key: ProjectKey,
         round_key: RoundKey,
-        milestone_keys: Option<BoundedMilestoneKeys>,
+        milestone_keys: Option<BoundedMilestoneKeys<T>>,
     ) -> DispatchResultWithPostInfo {
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
@@ -589,7 +589,7 @@ impl<T: Config> Pallet<T> {
     /// Process a refund.
     /// Used in hooks so cannot panic.
     /// DEPRICATED
-    pub fn refund_item_in_queue(
+    pub fn refund_item_in_queue_depricated(
         from: &T::AccountId,
         to: &T::AccountId,
         amount: BalanceOf<T>,
@@ -610,7 +610,7 @@ impl<T: Config> Pallet<T> {
     /// Returns a boolean if a split off has succeeded.
     /// Used in hooks so cannot panic.
     /// DEPRICATED
-    pub fn split_off_refunds(refunds: &mut Refunds<T>, c: u32) -> bool {
+    pub fn split_off_refunds_depricated(refunds: &mut Refunds<T>, c: u32) -> bool {
         // split_off panics when at > len:
         // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
         // If the length is zero do nothing
@@ -730,7 +730,8 @@ impl<T: Config> Pallet<T> {
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
         );
-        let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project =
+            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         let _ = Self::ensure_contributor_of(&project, &who)?;
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
@@ -747,19 +748,49 @@ impl<T: Config> Pallet<T> {
             Rounds::<T>::insert(round_key, Some(round));
             // TODO: Need a sane bound on contributors in a project.
             // TODO: the same thing but with milestones.
-            for (acc_id, value) in project.contributions.iter_mut() {
-                // TODO: maybe a batch call would be good here
-                let res = <T as Config>::RefundHandler::send_refund_message(acc_id.clone(), value.value, project.currency_id, project.funding_type);
-                if res.is_ok() {
-                    //TODO: 
-                    //*value = Default::default();
-                    // remove from the contributors??
-                    // in case of fail.
-                } else {
-                    // TODO:
-                    // dont remove and throw error
+
+            let mut locked_milestone_percentage: u32 = 0;
+            for (_milestone_key, milestone) in project.milestones.clone() {
+                if !milestone.is_approved {
+                    locked_milestone_percentage += milestone.percentage_to_unlock;
                 }
             }
+
+            let project_account_id = Self::project_account_id(project_key);
+
+            match project.funding_type {
+                FundingType::Brief | FundingType::Proposal => {
+                    // Handle refunds on native chain, there is no need to deal with xcm here.
+                    // Todo: Batch call using pallet-utility?
+                    for (acc_id, contribution) in project.contributions.iter() {
+                        let refund_amount: BalanceOf<T> = ((contribution).value
+                            * locked_milestone_percentage.into())
+                            / MAX_PERCENTAGE.into();
+                        <T as Config>::MultiCurrency::transfer(
+                            project.currency_id,
+                            &project_account_id,
+                            &acc_id,
+                            refund_amount,
+                        )?;
+                    }
+                }
+                FundingType::Treasury(_) => {
+                    let mut refund_amount: BalanceOf<T> = Default::default();
+                    // Sum the contributions and send a single xcm.
+                    for (acc_id, contribution) in project.contributions.iter() {
+                        refund_amount += ((contribution).value
+                            * locked_milestone_percentage.into())
+                            / MAX_PERCENTAGE.into();
+                    }
+                    <T as Config>::RefundHandler::send_refund_message_to_treasury(
+                        project_account_id,
+                        refund_amount,
+                        project.currency_id,
+                        project.funding_type,
+                    )?;
+                }
+            }
+
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into());
@@ -774,7 +805,7 @@ impl<T: Config> Pallet<T> {
     ) -> Result<BalanceOf<T>, Error<T>> {
         let contribution = project.contributions.get(&account_id);
         match contribution {
-            Some(value) => Ok((*value).value),
+            Some(c) => Ok((*c).value),
             _ => Err(Error::<T>::OnlyContributorsCanVote),
         }
     }

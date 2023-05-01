@@ -28,7 +28,7 @@ fn approve_freelancer_as_root() {
 #[test]
 fn create_brief_not_approved_applicant() {
     build_test_externality().execute_with(|| {
-        // todo!()
+        // TODO:
         // Only accounts in the fellowship can apply for work
     });
 }
@@ -284,7 +284,6 @@ fn reserved_funds_are_transferred_to_project_kitty() {
             brief_id
         ));
 
-        let _created_project = Projects::<Test>::get(1).unwrap();
         let project_id: AccountId = Proposals::project_account_id(1);
         let project_balance = Tokens::free_balance(CurrencyId::Native, &project_id);
         assert_eq!(project_balance, contribution_value);
@@ -303,7 +302,7 @@ pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
         .expect("qed")
 }
 
-pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones {
+pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
     let max = <Test as Config>::MaxBriefOwners::get();
     if n > max {
         n = max;

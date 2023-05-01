@@ -91,13 +91,7 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
             contribution_value,
         );
 
-        let _ = Proposals::approve(
-            RuntimeOrigin::root(),
-            Some(1),
-            project_key + 1,
-            None,
-        )
-        .unwrap();
+        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key + 1, None).unwrap();
 
         let brief_p = Projects::<Test>::get(project_key).unwrap();
         let standard_p = Projects::<Test>::get(project_key + 1).unwrap();
