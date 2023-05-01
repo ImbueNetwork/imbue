@@ -1,5 +1,5 @@
 use crate::*;
-use common_types::milestone_origin::FundingType;
+use common_types::milestone_origin::{FundingType};
 use pallet_identity::Judgement;
 use sp_runtime::traits::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, vec};
@@ -747,19 +747,37 @@ impl<T: Config> Pallet<T> {
             Rounds::<T>::insert(round_key, Some(round));
             // TODO: Need a sane bound on contributors in a project.
             // TODO: the same thing but with milestones.
-            for (acc_id, value) in project.contributions.iter_mut() {
-                // TODO: maybe a batch call would be good here
-                let res = <T as Config>::RefundHandler::send_refund_message(acc_id.clone(), value.value, project.currency_id, project.funding_type);
-                if res.is_ok() {
-                    //TODO: 
-                    //*value = Default::default();
-                    // remove from the contributors??
-                    // in case of fail.
-                } else {
-                    // TODO:
-                    // dont remove and throw error
+
+
+            let mut locked_milestone_percentage: u32 = 0;
+            for (_milestone_key, milestone) in project.milestones.clone() {
+                if !milestone.is_approved {
+                    locked_milestone_percentage += milestone.percentage_to_unlock;
                 }
             }
+
+            let project_account_id = Self::project_account_id(project_key);
+            
+            match project.funding_type {
+                FundingType::Brief | FundingType::Proposal => {
+                    // Handle refunds on native chain, there is no need to deal with xcm here.
+                    // Todo: Batch call using pallet-utility?
+                    for (acc_id, contribution) in project.contributions.iter() {
+                        let refund_amount: BalanceOf<T> =
+                        ((contribution).value * locked_milestone_percentage.into()) / MAX_PERCENTAGE.into();
+                        <T as Config>::MultiCurrency::transfer(project.currency_id, &project_account_id, &acc_id, refund_amount)?;
+                    }
+                }, 
+                FundingType::Treasury(_) => {
+                    let mut refund_amount: BalanceOf<T> = Default::default();
+                    // Sum the contributions and send a single xcm.
+                    for (acc_id, contribution) in project.contributions.iter() {
+                        refund_amount += ((contribution).value * locked_milestone_percentage.into()) / MAX_PERCENTAGE.into();
+                    }
+                    <T as Config>::RefundHandler::send_refund_message_to_treasury(project_account_id, refund_amount, project.currency_id, project.funding_type)?;
+                }
+            }
+
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into());
@@ -774,7 +792,7 @@ impl<T: Config> Pallet<T> {
     ) -> Result<BalanceOf<T>, Error<T>> {
         let contribution = project.contributions.get(&account_id);
         match contribution {
-            Some(value) => Ok((*value).value),
+            Some(c) => Ok((*c).value),
             _ => Err(Error::<T>::OnlyContributorsCanVote),
         }
     }

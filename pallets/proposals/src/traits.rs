@@ -3,7 +3,7 @@ use crate::{
     Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
     ProposedMilestone,
 };
-use common_types::{CurrencyId, FundingType::*, FundingType,TreasuryOriginConverter};
+use common_types::{CurrencyId, FundingType::*, FundingType,TreasuryOriginConverter, TreasuryOrigin};
 use frame_support::dispatch::EncodeLike;
 use frame_support::inherent::Vec;
 use frame_support::sp_runtime::Saturating;
@@ -34,10 +34,9 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
     /// Send a message to some destination chain asking to do some reserve asset transfer.
     /// The multilocation is defined by the FundingType.
     /// see FundingType and TreasuryOrigin.
-    fn send_refund_message(who: AccountId, amount: Balance, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError>;
+    fn send_refund_message_to_treasury(from: AccountId, amount: Balance, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError>;
+    fn get_treasury_account_id(treasury_account: TreasuryOrigin) -> Result<AccountId, DispatchError>;
 }
-
-
 
 // Some implementations used in Imbue of the traits above. 
 
@@ -135,12 +134,14 @@ where
 
 pub struct MockRefundHandler<T> {
     phantom_t: sp_std::marker::PhantomData<T>,
-
 }
 
 impl <T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId> for MockRefundHandler<T> {
-    fn send_refund_message(_who: AccountIdOf<T>, _amount: BalanceOf<T>, _currency: CurrencyId, _funding_type: FundingType) -> Result<(), DispatchError> {
+    fn send_refund_message_to_treasury(_from: AccountIdOf<T>, _amount: BalanceOf<T>, _currency: CurrencyId, _funding_type: FundingType) -> Result<(), DispatchError> {
         // Maybe just allow for host chain xcm calls to mock functionality and panic when trying something else.
+        todo!()
+    }
+    fn get_treasury_account_id(treasury_account: TreasuryOrigin) -> Result<AccountIdOf<T>, DispatchError> {
         todo!()
     }
 }
@@ -156,18 +157,20 @@ where
     T: orml_xtokens::Config,
     U: XcmTransfer<T::AccountId, T::Balance, CurrencyId>,
 {
-    fn send_refund_message(who: T::AccountId, amount: T::Balance, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError> {
-        let location: MultiLocation = match funding_type {
-            Proposal | Brief => {
-                Ok(Default::default())
+    /// Only used for xcm. Therefore not for briefs and proposals as they use funds which are on imbue.
+    fn send_refund_message_to_treasury(from: T::AccountId, amount: T::Balance, currency: CurrencyId, funding_type: FundingType) -> Result<(), DispatchError> {
+        match funding_type {
+            FundingType::Treasury(treasury_origin) => {
+                let benificiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
+                let location: MultiLocation =  treasury_origin.get_multi_location(benificiary).map_err(|_|Error::<T>::InvalidDest)?;
+                // TODO: dest weight limit. or specify a fee with another extrinsic,
+                let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
+                Ok(())
             },
-            Treasury(treasury_origin) => {
-                treasury_origin.get_multi_location(who.clone())
-            },
-        }.map_err(|_|Error::<T>::InvalidDest)?;
-
-        // TODO: dest weight limit. or specify a fee with another extrinsic,
-        let _ = U::transfer(who, currency, amount, location, WeightLimit::Unlimited)?;
-        Ok(())
+            _ => return Err(Error::<T>::InvalidDest.into())
+        }
+    }
+    fn get_treasury_account_id(treasury_account: TreasuryOrigin) -> Result<AccountIdOf<T>, DispatchError> {
+        todo!()
     }
 }
