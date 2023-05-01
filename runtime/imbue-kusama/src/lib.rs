@@ -771,13 +771,12 @@ parameter_types! {
 
 impl pallet_grants::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type MaxMilestonesPerGrant =  MaxMilestonesPerGrant;
+    type MaxMilestonesPerGrant = MaxMilestonesPerGrant;
     type MaxApprovers = MaxApprovers;
     type RMultiCurrency = Currencies;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type CancellingAuthority = AdminOrigin;
 }
-
 
 parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;

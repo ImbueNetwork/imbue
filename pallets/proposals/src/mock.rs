@@ -209,7 +209,7 @@ impl pallet_proposals::Config for Test {
     type MilestoneVotingWindow = MilestoneVotingWindow;
     // TODO: all the mocks as they are dependant on orml-xtokens for testing
     // We could do a mockrefundhandlerbasic without the bells and whistels to help also. which is what i will do.
-    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test, >;
+    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
 }
 
 parameter_types! {

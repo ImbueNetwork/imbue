@@ -12,10 +12,10 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
 
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
     use sp_core::H256;
@@ -27,9 +27,9 @@ pub mod pallet {
 
     pub(crate) type BoundedPMilestones<T> =
         BoundedVec<ProposedMilestoneWithInfo, <T as Config>::MaxMilestonesPerGrant>;
-    pub (crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
-    pub (crate) type GrantId = H256;
-    
+    pub(crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
+    pub(crate) type GrantId = H256;
+
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
@@ -69,8 +69,7 @@ pub mod pallet {
         StorageDoubleMap<_, Blake2_128, AccountIdOf<T>, Blake2_128, GrantId, (), ValueQuery>;
 
     #[pallet::storage]
-    pub type GrantCount<T: Config> =
-        StorageValue<_, u32, ValueQuery>;
+    pub type GrantCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -128,7 +127,7 @@ pub mod pallet {
             currency_id: CurrencyId,
             amount_requested: BalanceOf<T>,
             treasury_origin: TreasuryOrigin,
-            grant_id: GrantId
+            grant_id: GrantId,
         ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
             let total_percentage = proposed_milestones
@@ -183,7 +182,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
-            
+
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
             ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
 
@@ -231,7 +230,7 @@ pub mod pallet {
             } else {
                 let who = ensure_signed(origin.clone())?;
                 ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
-            } 
+            }
             grant.is_cancelled = true;
             PendingGrants::<T>::insert(&grant_id, grant);
             Self::deposit_event(Event::<T>::GrantCancelled { grant_id });
@@ -315,8 +314,6 @@ pub mod pallet {
         pub amount_requested: BalanceOf<T>,
         pub treasury_origin: TreasuryOrigin,
     }
-
-
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     pub struct ProposedMilestoneWithInfo {

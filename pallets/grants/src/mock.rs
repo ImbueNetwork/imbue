@@ -1,17 +1,17 @@
 use crate as pallet_grants;
 use common_types::CurrencyId;
+use frame_support::once_cell::sync::Lazy;
 use frame_support::traits::{ConstU16, ConstU64, Nothing};
 use frame_support::{pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureRoot;
-use sp_core::{H256};
+use orml_traits::MultiCurrency;
+use sp_core::sr25519::{Public, Signature};
+use sp_core::H256;
+use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_core::sr25519::{Signature, Public};
-use frame_support::once_cell::sync::Lazy;
-use orml_traits::MultiCurrency;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

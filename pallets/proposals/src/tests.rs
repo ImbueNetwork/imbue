@@ -1553,7 +1553,6 @@ fn submit_multiple_milestones() {
     });
 }
 
-
 #[test]
 fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     let additional_amount = 10000000u64;
@@ -2139,7 +2138,6 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         );
     });
 }
-
 
 // create project, schedule a round, approve and submit a milestone.
 // assert that the vote will pass when it is on the threshold.

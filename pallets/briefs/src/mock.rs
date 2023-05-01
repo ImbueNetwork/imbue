@@ -204,7 +204,6 @@ parameter_types! {
     pub IsIdentityRequired: bool = false;
 }
 
-
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
