@@ -37,9 +37,9 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        /// Maximum amount of milestones per grants.
+        /// Maximum amount of milestones per grant.
         type MaxMilestonesPerGrant: Get<u32>;
-        /// The maximum approvers for a given grants.
+        /// The maximum approvers for a given grant.
         type MaxApprovers: Get<u32>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
@@ -50,7 +50,7 @@ pub mod pallet {
             BlockNumberFor<Self>,
             <Self as pallet_timestamp::Config>::Moment,
         >;
-        /// The authority allowed to cancel a pending grants.
+        /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
@@ -92,15 +92,15 @@ pub mod pallet {
         MustSumTo100,
         /// The GrantId specified cannot be found.
         GrantNotFound,
-        /// The grants already exists.
+        /// The grant already exists.
         GrantAlreadyExists,
         /// Overflow Error in pallet-grants.
         Overflow,
-        /// Only the submitter can edit this grants.
+        /// Only the submitter can edit this grant.
         OnlySubmitterCanEdit,
-        /// Cannot use a cancelled grants.
+        /// Cannot use a cancelled grant.
         GrantCancelled,
-        /// This grants has already been converted.
+        /// This grant has already been converted.
         AlreadyConverted,
         /// The conversion to proposals failed.
         GrantConversionFailedGeneric,
@@ -115,7 +115,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// A grants starts here with nothing agreed upon and
+        /// A grant starts here with nothing agreed upon and
         /// probably awaiting much back and forth.
         #[pallet::call_index(0)]
         #[pallet::weight(100_000)]
@@ -166,7 +166,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Edit a grants that has been submitted.
+        /// Edit a grant that has been submitted.
         /// Fields passed in with None will be ignored and not updated.
         #[pallet::call_index(1)]
         #[pallet::weight(100_000)]
@@ -215,7 +215,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Set the grants as cancelled
+        /// Set the grant as cancelled
         #[pallet::call_index(2)]
         #[pallet::weight(100_000)]
         pub fn cancel_grant(
@@ -238,8 +238,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Once you are completely happy with the grants details and are ready to submit to treasury
-        /// You call this and itll allow you to generate a project account id.
+        /// Once you are completely happy with the grant details and are ready to submit to treasury
+        /// You call this and it'll allow you to generate a project account id.
         #[pallet::call_index(3)]
         #[pallet::weight(100_000)]
         pub fn convert_to_milestones(
@@ -271,8 +271,8 @@ pub mod pallet {
                 })
                 .collect::<Vec<_>>();
 
-            // TODO: fix this
-            // For now we have to do a conversion into a simpler proposed milestone as pallet_proposals does not support ipfs data for them.
+            // FIXME:
+            // For now we have to do a conversion into a simpler proposed milestone as `pallet_proposals` does not support ipfs data for them.
             let standard_proposed_ms = grant
                 .milestones
                 .iter()
