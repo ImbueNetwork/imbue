@@ -730,7 +730,7 @@ impl<T: Config> Pallet<T> {
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
         );
-        let mut project =
+        let project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         let _ = Self::ensure_contributor_of(&project, &who)?;
@@ -777,7 +777,7 @@ impl<T: Config> Pallet<T> {
                 FundingType::Treasury(_) => {
                     let mut refund_amount: BalanceOf<T> = Default::default();
                     // Sum the contributions and send a single xcm.
-                    for (acc_id, contribution) in project.contributions.iter() {
+                    for (_acc_id, contribution) in project.contributions.iter() {
                         refund_amount += ((contribution).value
                             * locked_milestone_percentage.into())
                             / MAX_PERCENTAGE.into();

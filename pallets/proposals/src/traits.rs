@@ -4,21 +4,18 @@ use crate::{
     ProposedMilestone,
 };
 use common_types::{
-    CurrencyId, FundingType, FundingType::*, TreasuryOrigin, TreasuryOriginConverter,
+    CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter,
 };
 use frame_support::{
-    dispatch::EncodeLike, 
-    inherent::Vec, 
-    pallet_prelude::DispatchError, 
-    sp_runtime::Saturating,
+    dispatch::EncodeLike, inherent::Vec, pallet_prelude::DispatchError, sp_runtime::Saturating,
     PalletId,
     transactional
 };
-use sp_runtime::traits::AccountIdConversion;
 use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
-use orml_xtokens::Pallet as XTokens;
+
 use sp_core::H256;
+use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
 
@@ -48,9 +45,8 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
         currency: CurrencyId,
         funding_type: FundingType,
     ) -> Result<(), DispatchError>;
-    fn get_treasury_account_id(
-        treasury_origin: TreasuryOrigin,
-    ) -> Result<AccountId, DispatchError>;
+    fn get_treasury_account_id(treasury_origin: TreasuryOrigin)
+        -> Result<AccountId, DispatchError>;
 }
 
 // Some implementations used in Imbue of the traits above.
@@ -171,7 +167,7 @@ impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
         todo!()
     }
     fn get_treasury_account_id(
-        treasury_account: TreasuryOrigin,
+        _treasury_account: TreasuryOrigin,
     ) -> Result<AccountIdOf<T>, DispatchError> {
         todo!()
     }
@@ -216,9 +212,11 @@ where
             TreasuryOrigin::Kusama => {
                 // TODO: make this dynamic so its always correct.
                 // Also how can we assure that they are using the same crypto scheme for accounts?
-		        Ok(PalletId(*b"py/trsry").into_account_truncating())
-            },
-            _ => {todo!()}
+                Ok(PalletId(*b"py/trsry").into_account_truncating())
+            }
+            _ => {
+                todo!()
+            }
         }
     }
 }
