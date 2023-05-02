@@ -1707,18 +1707,26 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             ))
         );
 
-        Proposals::refund_depricated(RuntimeOrigin::root(), project_key).unwrap();
+         // Call a vote of no confidence and assert it will pass.
+        assert_ok!(Proposals::raise_vote_of_no_confidence(
+            RuntimeOrigin::signed(*BOB),
+            project_key
+        ));
 
-        let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one RuntimeEventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_projectfundsrefunded_event,
-            mock::RuntimeEvent::from(proposals::Event::ProjectFundsAddedToRefundQueue(
-                project_key,
-                800000u64
-            ))
+        // Charlie has raised a vote of no confidence, now Bob is gonna disagree!
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*CHARLIE),
+            None,
+            project_key,
+            false
+        ));
+
+        assert_ok!(
+            Proposals::finalise_no_confidence_round(
+                RuntimeOrigin::signed(*CHARLIE),
+                None,
+                project_key
+            )
         );
 
         let approved_milestone_value = 100000;
