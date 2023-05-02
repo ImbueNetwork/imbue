@@ -194,6 +194,7 @@ pub mod pallet {
             ProjectKey,
             BalanceOf<T>,
             common_types::CurrencyId,
+            T::AccountId,
         ),
         // Project has been updated
         ProjectUpdated(T::AccountId, ProjectKey, BalanceOf<T>),
@@ -344,7 +345,7 @@ pub mod pallet {
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
-            let project_key = Self::new_project(
+            let _ = Self::new_project(
                 // TODO: Optimise
                 who.clone(),
                 agreement_hash,
@@ -353,15 +354,6 @@ pub mod pallet {
                 currency_id,
                 FundingType::Proposal,
             )?;
-
-            Self::deposit_event(Event::ProjectCreated(
-                who,
-                agreement_hash,
-                project_key,
-                required_funds,
-                currency_id,
-            ));
-
             Ok(().into())
         }
 

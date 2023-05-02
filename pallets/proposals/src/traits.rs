@@ -135,6 +135,7 @@ where
             };
 
         Projects::<T>::insert(project_key, project);
+        let project_account = Self::project_account_id(project_key);
         ProjectCount::<T>::mutate(|c| *c += 1);
         Self::deposit_event(Event::ProjectCreated(
             benificiary,
@@ -142,6 +143,7 @@ where
             project_key,
             sum_of_contributions,
             currency_id,
+            project_account
         ));
 
         Ok(())
@@ -194,9 +196,9 @@ where
     ) -> Result<(), DispatchError> {
         match funding_type {
             FundingType::Treasury(treasury_origin) => {
-                let benificiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
+                let beneficiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
                 let location: MultiLocation = treasury_origin
-                    .get_multi_location(benificiary)
+                    .get_multi_location(beneficiary)
                     .map_err(|_| Error::<T>::InvalidDest)?;
                 // TODO: dest weight limit. or specify a fee with another extrinsic,
                 let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;

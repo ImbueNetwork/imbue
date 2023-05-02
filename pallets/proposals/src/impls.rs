@@ -78,6 +78,16 @@ impl<T: Config> Pallet<T> {
         // Add project to list
         <Projects<T>>::insert(project_key, project);
         ProjectCount::<T>::put(next_project_key);
+        let project_account = Self::project_account_id(project_key);
+        Self::deposit_event(Event::ProjectCreated(
+            who,
+            agreement_hash,
+            project_key,
+            required_funds,
+            currency_id,
+            project_account
+        ));
+
 
         Ok(project_key)
     }

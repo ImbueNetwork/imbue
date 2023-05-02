@@ -20,7 +20,7 @@ impl<AccountId: Into<[u8; 32]>> TreasuryOriginConverter<AccountId> for TreasuryO
                 1,
                 X1(Junction::AccountId32 {
                     id: recipiant.into(),
-                    network: Some(NetworkId::Kusama),
+                    network: None,
                 }),
             )),
             TreasuryOrigin::Imbue => Ok(MultiLocation::new(
