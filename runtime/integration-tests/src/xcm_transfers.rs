@@ -23,10 +23,10 @@ use crate::setup::{
     sibling_account, ALICE, BOB, CHARLIE, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
 };
 use common_runtime::Balance;
-use common_types::{CurrencyId, TreasuryOrigin, FundingType};
+use common_types::{CurrencyId, FundingType, TreasuryOrigin};
 use imbue_kusama_runtime::{
     AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, OrmlTokens,
-    RuntimeOrigin, XTokens, Runtime as R,
+    Runtime as R, RuntimeOrigin, XTokens,
 };
 use orml_traits::MultiCurrency;
 use pallet_proposals::traits::RefundHandler;
@@ -34,9 +34,11 @@ use pallet_proposals::traits::RefundHandler;
 #[test]
 fn test_xcm_refund_handler_to_kusama() {
     TestNet::reset();
-    
+
     let treasury_origin = TreasuryOrigin::Kusama;
-    let kusama_treasury_address = <R as pallet_proposals::Config>::RefundHandler::get_treasury_account_id(treasury_origin).unwrap();
+    let kusama_treasury_address =
+        <R as pallet_proposals::Config>::RefundHandler::get_treasury_account_id(treasury_origin)
+            .unwrap();
 
     let bob_initial_balance = ksm_amount(1000);
     let transfer_amount = ksm_amount(500);
@@ -57,14 +59,24 @@ fn test_xcm_refund_handler_to_kusama() {
         ));
     });
 
-    Development::execute_with(|| { 
+    Development::execute_with(|| {
         // Just gonna use bobs account as the project account id
-        assert_ok!(<R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(BOB.into(), transfer_amount, CurrencyId::KSM, FundingType::Treasury(TreasuryOrigin::Kusama)));
+        assert_ok!(
+            <R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(
+                BOB.into(),
+                transfer_amount,
+                CurrencyId::KSM,
+                FundingType::Treasury(TreasuryOrigin::Kusama)
+            )
+        );
     });
-    
+
     KusamaNet::execute_with(|| {
         let expected_balance = 499_999_904_479_336;
-        assert_eq!(kusama_runtime::Balances::free_balance(kusama_treasury_address), expected_balance);
+        assert_eq!(
+            kusama_runtime::Balances::free_balance(kusama_treasury_address),
+            expected_balance
+        );
     });
 }
 
@@ -116,11 +128,7 @@ fn transfer_ksm_to_relay_chain() {
         ));
     });
     Development::execute_with(|| {
-        let _ = OrmlTokens::deposit(
-            CurrencyId::KSM,
-            &CHARLIE.into(),
-            bob_initial_balance
-        );
+        let _ = OrmlTokens::deposit(CurrencyId::KSM, &CHARLIE.into(), bob_initial_balance);
 
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(CHARLIE.into()),
