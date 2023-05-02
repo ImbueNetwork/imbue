@@ -35,7 +35,8 @@ pub mod pallet {
         Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
         <T as Config>::MaxBriefOwners,
     >;
-    type BoundedProposedMilestones<T> = BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerBrief>;
+    type BoundedProposedMilestones<T> =
+        BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerBrief>;
 
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
@@ -167,7 +168,7 @@ pub mod pallet {
             initial_contribution: BalanceOf<T>,
             brief_id: BriefHash,
             currency_id: CurrencyId,
-            milestones: BoundedProposedMilestones<T>
+            milestones: BoundedProposedMilestones<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -316,7 +317,7 @@ pub mod pallet {
         currency_id: CurrencyId,
         created_at: BlockNumberFor<T>,
         applicant: AccountIdOf<T>,
-        milestones: BoundedProposedMilestones<T>
+        milestones: BoundedProposedMilestones<T>,
     }
 
     impl<T: Config> Pallet<T> {
@@ -341,7 +342,7 @@ pub mod pallet {
             currency_id: CurrencyId,
             created_at: BlockNumberFor<T>,
             applicant: AccountIdOf<T>,
-            milestones: BoundedProposedMilestones<T>
+            milestones: BoundedProposedMilestones<T>,
         ) -> Self {
             Self {
                 created_at,
