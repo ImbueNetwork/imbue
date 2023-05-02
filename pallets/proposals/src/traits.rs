@@ -4,7 +4,7 @@ use crate::{
     ProposedMilestone,
 };
 use common_types::{
-    CurrencyId, FundingType, FundingType::*, TreasuryOrigin, TreasuryOriginConverter,
+    CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter,
 };
 use frame_support::{
     dispatch::EncodeLike, inherent::Vec, pallet_prelude::DispatchError, sp_runtime::Saturating,
@@ -12,7 +12,7 @@ use frame_support::{
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
-use orml_xtokens::Pallet as XTokens;
+
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
@@ -165,7 +165,7 @@ impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
         todo!()
     }
     fn get_treasury_account_id(
-        treasury_account: TreasuryOrigin,
+        _treasury_account: TreasuryOrigin,
     ) -> Result<AccountIdOf<T>, DispatchError> {
         todo!()
     }
