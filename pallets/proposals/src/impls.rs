@@ -85,9 +85,8 @@ impl<T: Config> Pallet<T> {
             project_key,
             required_funds,
             currency_id,
-            project_account
+            project_account,
         ));
-
 
         Ok(project_key)
     }
@@ -740,8 +739,7 @@ impl<T: Config> Pallet<T> {
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
         );
-        let project =
-            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         let _ = Self::ensure_contributor_of(&project, &who)?;
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
