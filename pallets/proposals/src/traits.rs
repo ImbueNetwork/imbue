@@ -15,8 +15,8 @@ use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
-use xcm::v2::{Junction, NetworkId};
-use xcm::v2::prelude::X1;
+
+
 
 pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
     /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.

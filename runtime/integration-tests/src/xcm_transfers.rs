@@ -26,7 +26,7 @@ use common_runtime::Balance;
 use common_types::{CurrencyId, TreasuryOrigin, FundingType};
 use imbue_kusama_runtime::{
     AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, OrmlTokens,
-    RuntimeOrigin, XTokens, ImbueProposals, Runtime as R,
+    RuntimeOrigin, XTokens, Runtime as R,
 };
 use orml_traits::MultiCurrency;
 use pallet_proposals::traits::RefundHandler;

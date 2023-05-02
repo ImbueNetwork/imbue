@@ -365,7 +365,7 @@ fn convert_to_proposal_cancelled() {
         let _ = Grant::cancel_grant(RuntimeOrigin::root(), grant_id, true);
 
         assert_noop!(
-            Grant::convert_to_milestones(RuntimeOrigin::signed(*ALICE), grant_id),
+            Grant::convert_to_project(RuntimeOrigin::signed(*ALICE), grant_id),
             Error::<Test>::GrantCancelled
         );
     });
@@ -377,7 +377,7 @@ fn convert_to_proposal_not_submitter() {
         let grant_id = Default::default();
         create_native_default_grant(grant_id, *ALICE);
         assert_noop!(
-            Grant::convert_to_milestones(RuntimeOrigin::signed(*BOB), grant_id),
+            Grant::convert_to_project(RuntimeOrigin::signed(*BOB), grant_id),
             Error::<Test>::OnlySubmitterCanEdit
         );
     });
@@ -388,12 +388,12 @@ fn convert_to_proposal_already_converted() {
     new_test_ext().execute_with(|| {
         let grant_id = Default::default();
         create_native_default_grant(grant_id, *ALICE);
-        assert_ok!(Grant::convert_to_milestones(
+        assert_ok!(Grant::convert_to_project(
             RuntimeOrigin::signed(*ALICE),
             grant_id
         ));
         assert_noop!(
-            Grant::convert_to_milestones(RuntimeOrigin::signed(*ALICE), grant_id),
+            Grant::convert_to_project(RuntimeOrigin::signed(*ALICE), grant_id),
             Error::<Test>::AlreadyConverted
         );
     });
