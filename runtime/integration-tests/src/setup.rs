@@ -5,6 +5,7 @@ pub use imbue_kusama_runtime::{AccountId, CurrencyId, Runtime, RuntimeOrigin, Sy
 /// Accounts
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
+pub const CHARLIE: [u8; 32] = [6u8; 32];
 
 /// Parachain Ids
 pub const PARA_ID_DEVELOPMENT: u32 = 2121;
