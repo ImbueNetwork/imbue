@@ -615,6 +615,7 @@ pub mod pallet {
 
         /// Finalise a "vote of no condidence" round.
         /// Votes must pass a threshold as defined in the config trait for the vote to succeed.
+        #[transactional]
         #[pallet::call_index(14)]
         #[pallet::weight(<T as Config>::WeightInfo::finalise_no_confidence_round())]
         pub fn finalise_no_confidence_round(

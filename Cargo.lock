@@ -9538,6 +9538,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-proposals",
  "pallet-xcm",
  "parachain-info",
  "polkadot-parachain",

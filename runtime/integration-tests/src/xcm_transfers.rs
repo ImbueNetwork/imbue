@@ -23,12 +23,41 @@ use crate::setup::{
     sibling_account, ALICE, BOB, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
 };
 use common_runtime::Balance;
-use common_types::CurrencyId;
+use common_types::{CurrencyId, TreasuryOrigin, FundingType};
 use imbue_kusama_runtime::{
     AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, OrmlTokens,
-    RuntimeOrigin, XTokens,
+    RuntimeOrigin, XTokens, ImbueProposals, Runtime as R,
 };
 use orml_traits::MultiCurrency;
+use pallet_proposals::traits::RefundHandler;
+
+#[test]
+fn test_xcm_refund_handler_to_kusama() {
+    TestNet::reset();
+    
+    let treasury_origin = TreasuryOrigin::Kusama;
+    let kusama_treasury_address = <R as pallet_proposals::Config>::RefundHandler::get_treasury_account_id(treasury_origin).unwrap();
+
+    let bob_initial_balance = ksm_amount(1000);
+    let transfer_amount = ksm_amount(500);
+
+    Development::execute_with(|| { 
+        let _ = OrmlTokens::deposit(
+            CurrencyId::KSM,
+            &BOB.into(),
+            bob_initial_balance
+        );
+        assert_eq!(OrmlTokens::free_balance(CurrencyId::KSM, &BOB.into()), bob_initial_balance);
+        // Just gonna use bobs account as the project account id
+        assert_ok!(<R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(BOB.into(), transfer_amount, CurrencyId::KSM, FundingType::Treasury(TreasuryOrigin::Kusama)));
+        assert_eq!(OrmlTokens::free_balance(CurrencyId::KSM, &BOB.into()), bob_initial_balance - transfer_amount);
+    });
+    
+    KusamaNet::execute_with(|| {
+        assert_eq!(kusama_runtime::Balances::free_balance(kusama_treasury_address), transfer_amount);
+    });
+}
+
 
 #[test]
 fn transfer_native_to_sibling() {

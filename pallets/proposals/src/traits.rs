@@ -12,6 +12,7 @@ use frame_support::{
     pallet_prelude::DispatchError, 
     sp_runtime::Saturating,
     PalletId,
+    transactional
 };
 use sp_runtime::traits::AccountIdConversion;
 use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
@@ -40,6 +41,7 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
     /// Send a message to some destination chain asking to do some reserve asset transfer.
     /// The multilocation is defined by the FundingType.
     /// see FundingType and TreasuryOrigin.
+    /// TODO: currency should be passed into the 
     fn send_refund_message_to_treasury(
         from: AccountId,
         amount: Balance,
@@ -186,7 +188,8 @@ where
     T: orml_xtokens::Config,
     U: XcmTransfer<T::AccountId, T::Balance, CurrencyId>,
 {
-    /// Only used for xcm. Therefore not for briefs and proposals as they use funds which are on imbue.
+        /// Only used for xcm. Therefore not for briefs and proposals as they use funds which are on imbue.
+    #[transactional]
     fn send_refund_message_to_treasury(
         from: T::AccountId,
         amount: T::Balance,
