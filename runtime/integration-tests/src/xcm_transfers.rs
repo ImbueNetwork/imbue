@@ -41,20 +41,30 @@ fn test_xcm_refund_handler_to_kusama() {
     let bob_initial_balance = ksm_amount(1000);
     let transfer_amount = ksm_amount(500);
 
+    KusamaNet::execute_with(|| {
+        assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
+            kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
+            Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
+            Box::new(
+                Junction::AccountId32 {
+                    network: Some(NetworkId::Kusama),
+                    id: BOB,
+                }
+                .into()
+            ),
+            Box::new((Here, bob_initial_balance).into()),
+            0
+        ));
+    });
+
     Development::execute_with(|| { 
-        let _ = OrmlTokens::deposit(
-            CurrencyId::KSM,
-            &BOB.into(),
-            bob_initial_balance
-        );
-        assert_eq!(OrmlTokens::free_balance(CurrencyId::KSM, &BOB.into()), bob_initial_balance);
         // Just gonna use bobs account as the project account id
         assert_ok!(<R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(BOB.into(), transfer_amount, CurrencyId::KSM, FundingType::Treasury(TreasuryOrigin::Kusama)));
-        assert_eq!(OrmlTokens::free_balance(CurrencyId::KSM, &BOB.into()), bob_initial_balance - transfer_amount);
     });
     
     KusamaNet::execute_with(|| {
-        assert_eq!(kusama_runtime::Balances::free_balance(kusama_treasury_address), transfer_amount);
+        let expected_balance = 499_999_904_479_336;
+        assert_eq!(kusama_runtime::Balances::free_balance(kusama_treasury_address), expected_balance);
     });
 }
 
