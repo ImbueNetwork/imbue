@@ -140,7 +140,6 @@ pub mod v2 {
 
     #[derive(Encode, Clone, Decode)]
     pub struct ProjectV2<AccountId, Balance, BlockNumber, Timestamp> {
-        pub work_started_at: Option<BlockNumber>,
         pub agreement_hash: H256,
         pub milestones: BTreeMap<MilestoneKey, Milestone>,
         pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
@@ -200,7 +199,6 @@ pub mod v2 {
                 funding_threshold_met: project.funding_threshold_met,
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
-                work_started_at: Default::default(),
                 funding_type: FundingType::Proposal,
             };
             Some(migrated_project)
