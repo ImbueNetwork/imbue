@@ -6,7 +6,6 @@ use common_types::CurrencyId;
 use frame_support::{assert_ok, bounded_vec};
 use orml_traits::MultiCurrency;
 use pallet_proposals::{Projects, RoundType};
-use sp_core::H256;
 use std::convert::TryInto;
 
 // all the integration tests for a brief to proposal conversion
@@ -43,10 +42,10 @@ fn create_proposal_from_brief() {
 #[test]
 fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
     build_test_externality().execute_with(|| {
-        let brief_id = H256::from([12; 32]);
+        let brief_id = gen_hash(12);
         let milestones = get_milestones(10);
         let project_key = 1;
-        let contribution_value: Balance = 10000;
+        let contribution_value: Balance = 10_000;
         // This is the minimum path to a proposal from the briefs pallet.
         let _ = BriefsMod::create_brief(
             RuntimeOrigin::signed(*BOB),
