@@ -28,7 +28,7 @@ fn approve_freelancer_as_root() {
 #[test]
 fn create_brief_not_approved_applicant() {
     build_test_externality().execute_with(|| {
-        // todo!()
+        // TODO:
         // Only accounts in the fellowship can apply for work
     });
 }
@@ -262,6 +262,34 @@ fn initial_contribution_and_extra_contribution_aggregates() {
     });
 }
 
+#[test]
+fn reserved_funds_are_transferred_to_project_kitty() {
+    build_test_externality().execute_with(|| {
+        let brief_id = gen_hash(100);
+        let contribution_value: Balance = 10000;
+
+        let _ = BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            tests::get_brief_owners(1),
+            *ALICE,
+            contribution_value,
+            contribution_value,
+            brief_id.clone(),
+            CurrencyId::Native,
+            get_milestones(10),
+        );
+
+        assert_ok!(BriefsMod::commence_work(
+            RuntimeOrigin::signed(*ALICE),
+            brief_id
+        ));
+
+        let project_id: AccountId = Proposals::project_account_id(1);
+        let project_balance = Tokens::free_balance(CurrencyId::Native, &project_id);
+        assert_eq!(project_balance, contribution_value);
+    });
+}
+
 pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
     let max = <Test as Config>::MaxBriefOwners::get();
     if n > max {
@@ -274,7 +302,7 @@ pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
         .expect("qed")
 }
 
-pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones {
+pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
     let max = <Test as Config>::MaxBriefOwners::get();
     if n > max {
         n = max;

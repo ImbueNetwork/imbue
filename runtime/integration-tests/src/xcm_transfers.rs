@@ -20,15 +20,141 @@ use common_runtime::{common_xcm::general_key, parachains};
 use crate::kusama_test_net::{Development, Karura, KusamaNet, Sibling, TestNet};
 use crate::setup::{
     ausd_amount, development_account, kar_amount, karura_account, ksm_amount, native_amount,
-    sibling_account, ALICE, BOB, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
+    sibling_account, ALICE, BOB, CHARLIE, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
 };
 use common_runtime::Balance;
-use common_types::CurrencyId;
+use common_types::{CurrencyId, FundingType, TreasuryOrigin};
 use imbue_kusama_runtime::{
     AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, OrmlTokens,
-    RuntimeOrigin, XTokens,
+    Runtime as R, RuntimeOrigin, XTokens,
 };
 use orml_traits::MultiCurrency;
+use pallet_proposals::traits::RefundHandler;
+
+#[test]
+fn test_xcm_refund_handler_to_kusama() {
+    TestNet::reset();
+
+    let treasury_origin = TreasuryOrigin::Kusama;
+    let kusama_treasury_address =
+        <R as pallet_proposals::Config>::RefundHandler::get_treasury_account_id(treasury_origin)
+            .unwrap();
+
+    let bob_initial_balance = ksm_amount(1000);
+    let transfer_amount = ksm_amount(500);
+
+    KusamaNet::execute_with(|| {
+        assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
+            kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
+            Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
+            Box::new(
+                Junction::AccountId32 {
+                    network: Some(NetworkId::Kusama),
+                    id: BOB,
+                }
+                .into()
+            ),
+            Box::new((Here, bob_initial_balance).into()),
+            0
+        ));
+    });
+
+    Development::execute_with(|| {
+        // Just gonna use bobs account as the project account id
+        assert_ok!(
+            <R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(
+                BOB.into(),
+                transfer_amount,
+                CurrencyId::KSM,
+                FundingType::Treasury(TreasuryOrigin::Kusama)
+            )
+        );
+    });
+
+    KusamaNet::execute_with(|| {
+        let expected_balance = 499_999_904_479_336;
+        assert_eq!(
+            kusama_runtime::Balances::free_balance(kusama_treasury_address),
+            expected_balance
+        );
+    });
+}
+
+#[test]
+fn transfer_from_relay_chain() {
+    let transfer_amount: Balance = ksm_amount(1);
+
+    KusamaNet::execute_with(|| {
+        assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
+            kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
+            Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
+            Box::new(
+                Junction::AccountId32 {
+                    network: Some(NetworkId::Kusama),
+                    id: BOB,
+                }
+                .into()
+            ),
+            Box::new((Here, transfer_amount).into()),
+            0
+        ));
+    });
+
+    Development::execute_with(|| {
+        assert_eq!(
+            OrmlTokens::free_balance(CurrencyId::KSM, &BOB.into()),
+            transfer_amount - ksm_fee()
+        );
+    });
+}
+
+#[test]
+fn transfer_ksm_to_relay_chain() {
+    let bob_initial_balance = ksm_amount(1000);
+    let transfer_amount = ksm_amount(500);
+    KusamaNet::execute_with(|| {
+        assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
+            kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
+            Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
+            Box::new(
+                Junction::AccountId32 {
+                    network: Some(NetworkId::Kusama),
+                    id: CHARLIE,
+                }
+                .into()
+            ),
+            Box::new((Here, bob_initial_balance).into()),
+            0
+        ));
+    });
+    Development::execute_with(|| {
+        let _ = OrmlTokens::deposit(CurrencyId::KSM, &CHARLIE.into(), bob_initial_balance);
+
+        assert_ok!(XTokens::transfer(
+            RuntimeOrigin::signed(CHARLIE.into()),
+            CurrencyId::KSM,
+            transfer_amount,
+            Box::new(
+                MultiLocation::new(
+                    1,
+                    X1(Junction::AccountId32 {
+                        id: CHARLIE,
+                        network: Some(NetworkId::Kusama),
+                    })
+                )
+                .into()
+            ),
+            xcm_emulator::Limited(4_000_000_000.into())
+        ));
+    });
+
+    KusamaNet::execute_with(|| {
+        assert_eq!(
+            kusama_runtime::Balances::free_balance(&CHARLIE.into()),
+            499_999_904_479_336
+        );
+    });
+}
 
 #[test]
 fn transfer_native_to_sibling() {
@@ -245,63 +371,6 @@ fn transfer_kar_to_development() {
         assert_eq!(
             OrmlTokens::free_balance(CurrencyId::KAR, &BOB.into()),
             bob_initial_balance + transfer_amount - kar_fee()
-        );
-    });
-}
-
-#[test]
-fn transfer_from_relay_chain() {
-    let transfer_amount: Balance = ksm_amount(1);
-
-    KusamaNet::execute_with(|| {
-        assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
-            kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
-            Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
-            Box::new(
-                Junction::AccountId32 {
-                    network: Some(NetworkId::Kusama),
-                    id: BOB,
-                }
-                .into()
-            ),
-            Box::new((Here, transfer_amount).into()),
-            0
-        ));
-    });
-
-    Development::execute_with(|| {
-        assert_eq!(
-            OrmlTokens::free_balance(CurrencyId::KSM, &BOB.into()),
-            transfer_amount - ksm_fee()
-        );
-    });
-}
-
-#[test]
-fn transfer_ksm_to_relay_chain() {
-    Development::execute_with(|| {
-        assert_ok!(XTokens::transfer(
-            RuntimeOrigin::signed(ALICE.into()),
-            CurrencyId::KSM,
-            ksm_amount(1),
-            Box::new(
-                MultiLocation::new(
-                    1,
-                    X1(Junction::AccountId32 {
-                        id: BOB,
-                        network: Some(NetworkId::Kusama),
-                    })
-                )
-                .into()
-            ),
-            xcm_emulator::Limited(4_000_000_000.into())
-        ));
-    });
-
-    KusamaNet::execute_with(|| {
-        assert_eq!(
-            kusama_runtime::Balances::free_balance(&BOB.into()),
-            999904479336
         );
     });
 }

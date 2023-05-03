@@ -7,7 +7,7 @@ use frame_support::{
 };
 
 use frame_system::EnsureRoot;
-use sp_core::{sr25519::Signature, Pair, Public, H256};
+use sp_core::{sr25519::Signature, H256};
 
 use common_types::CurrencyId;
 
@@ -190,6 +190,7 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
+    pub MaxMilestonesPerProject: u32 = 50;
 }
 
 impl pallet_proposals::Config for Test {
@@ -207,6 +208,10 @@ impl pallet_proposals::Config for Test {
     type RefundsPerBlock = RefundsPerBlock;
     type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = MilestoneVotingWindow;
+    // TODO: all the mocks as they are dependant on orml-xtokens for testing
+    // We could do a mockrefundhandlerbasic without the bells and whistels to help also. which is what i will do.
+    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type MaxMilestonesPerProject = MaxMilestonesPerProject;
 }
 
 parameter_types! {
@@ -240,20 +245,6 @@ parameter_types! {
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
-pub type AccountPublic = <Signature as Verify>::Signer;
-
-fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
-
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()

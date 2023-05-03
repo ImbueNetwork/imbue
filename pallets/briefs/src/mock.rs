@@ -190,8 +190,9 @@ impl pallet_briefs::Config for Test {
     type RMultiCurrency = Tokens;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type BriefEvolver = pallet_proposals::Pallet<Test>;
+    type IntoProposal = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
+    type MaxMilestonesPerBrief = MaxMilestonesPerProject;
 }
 
 parameter_types! {
@@ -202,77 +203,8 @@ parameter_types! {
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
+    pub MaxMilestonesPerProject: u32 = 50;
 }
-
-// Requires binding howerver they may be a more succinct way of doing this.
-//impl<T: proposals::Config> BriefEvolver<AccountId, Balance, BlockNumber, Moment> for MockEvolver<T>
-//where
-//    Project<AccountId, Balance, BlockNumber, Moment>: EncodeLike<
-//        Project<
-//            <T as frame_system::Config>::AccountId,
-//            <<T as proposals::Config>::MultiCurrency as MultiCurrency<
-//                <T as frame_system::Config>::AccountId,
-//            >>::Balance,
-//            <T as frame_system::Config>::BlockNumber,
-//            <T as pallet_timestamp::Config>::Moment,
-//        >,
-//    >,
-//{
-//    fn convert_to_proposal(
-//        currency_id: CurrencyId,
-//        contributions: BTreeMap<AccountId, Contribution<Balance, Moment>>,
-//        brief_hash: BriefHash,
-//        applicant: AccountId,
-//        milestones: BTreeMap<MilestoneKey, ProposedMilestone>,
-//    ) -> Result<(), ()> {
-//        let project_key = proposals::ProjectCount::<Test>::get()
-//            .checked_add(1)
-//            .ok_or(())?;
-//        proposals::ProjectCount::<Test>::put(project_key);
-//
-//        let sum_of_contributions = contributions
-//            .values()
-//            .fold(Default::default(), |acc: Balance, x| {
-//                acc.saturating_add(x.value)
-//            });
-//        let mut project_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-//
-//        let _ = milestones
-//            .into_iter()
-//            .map(|i: (MilestoneKey, ProposedMilestone)| {
-//                project_milestones.insert(
-//                    i.0,
-//                    Milestone {
-//                        project_key,
-//                        milestone_key: i.0,
-//                        percentage_to_unlock: i.1.percentage_to_unlock,
-//                        is_approved: false,
-//                    },
-//                )
-//            })
-//            .collect::<Vec<_>>();
-//
-//        let project: Project<AccountId, Balance, BlockNumber, Moment> = Project {
-//            milestones: project_milestones,
-//            contributions: contributions,
-//            currency_id,
-//            required_funds: sum_of_contributions,
-//            withdrawn_funds: 0u32.into(),
-//            raised_funds: sum_of_contributions,
-//            initiator: applicant,
-//            create_block_number: System::block_number(),
-//            approved_for_funding: true,
-//            funding_threshold_met: true,
-//            cancelled: false,
-//            agreement_hash: brief_hash,
-//            // Maybe we dont need this new field because we have create_block_number
-//        };
-//
-//        Projects::<T>::insert(project_key, project);
-//
-//        Ok(())
-//    }
-//}
 
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
@@ -289,7 +221,8 @@ impl pallet_proposals::Config for Test {
     type RefundsPerBlock = RefundsPerBlock;
     type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = TwoWeekBlockUnit;
-
+    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type MaxMilestonesPerProject = MaxMilestonesPerProject;
 }
 
 parameter_types! {

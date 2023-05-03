@@ -100,8 +100,10 @@ hex-literal = { version = "0.3.4", optional = true }
 common-runtime = { path = "../common", default-features = false }
 pallet-proposals = { path = '../../pallets/proposals', default-features = false }
 pallet-briefs = {path = '../../pallets/briefs', default-features = false }
+pallet-grants = {path = '../../pallets/grants', default-features = false }
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
+
 
 [dev-dependencies]
 hex-literal = "0.3.1"
@@ -170,8 +172,8 @@ std = [
 	'cumulus-primitives-utility/std',
 	'common-traits/std',
 	'common-types/std',
-	'pallet-briefs/std'
-
+	'pallet-briefs/std',
+	'pallet-grants/std',
 ]
 
 runtime-benchmarks = [
@@ -181,13 +183,15 @@ runtime-benchmarks = [
 	"hex-literal",
 	'frame-system-benchmarking/runtime-benchmarks',
 	'pallet-proposals/runtime-benchmarks',
+	'pallet-briefs/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-collective/runtime-benchmarks',
 	'pallet-identity/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
 	'pallet-xcm/runtime-benchmarks',
 	'xcm-builder/runtime-benchmarks',
-	"common-runtime/runtime-benchmarks"
+	"common-runtime/runtime-benchmarks",
+	'pallet-grants/runtime-benchmarks',
 ]
 
 # A feature that should be enabled when the runtime should be build for on-chain

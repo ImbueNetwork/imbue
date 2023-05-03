@@ -1,4 +1,5 @@
 use crate::*;
+use common_types::milestone_origin::FundingType;
 use pallet_identity::Judgement;
 use sp_runtime::traits::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, vec};
@@ -25,19 +26,13 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_sub_account_truncating(key)
     }
 
-    pub fn get_project(
-        project_key: u32,
-    ) -> Result<Project<AccountIdOf<T>, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>, Error<T>>
-    {
-        Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)
-    }
-
     pub fn new_project(
         who: T::AccountId,
         agreement_hash: H256,
-        proposed_milestones: BoundedProposedMilestones,
+        proposed_milestones: BoundedProposedMilestones<T>,
         required_funds: BalanceOf<T>,
         currency_id: common_types::CurrencyId,
+        funding_type: FundingType,
     ) -> Result<ProjectKey, DispatchError> {
         // Check if identity is required
         if <T as Config>::IsIdentityRequired::get() {
@@ -77,11 +72,21 @@ impl<T: Config> Pallet<T> {
             approved_for_funding: false,
             funding_threshold_met: false,
             cancelled: false,
+            funding_type,
         };
 
         // Add project to list
         <Projects<T>>::insert(project_key, project);
         ProjectCount::<T>::put(next_project_key);
+        let project_account = Self::project_account_id(project_key);
+        Self::deposit_event(Event::ProjectCreated(
+            who,
+            agreement_hash,
+            project_key,
+            required_funds,
+            currency_id,
+            project_account,
+        ));
 
         Ok(project_key)
     }
@@ -89,7 +94,7 @@ impl<T: Config> Pallet<T> {
     pub fn try_update_existing_project(
         who: T::AccountId,
         project_key: ProjectKey,
-        proposed_milestones: BoundedProposedMilestones,
+        proposed_milestones: BoundedProposedMilestones<T>,
         required_funds: BalanceOf<T>,
         currency_id: CurrencyId,
         agreement_hash: H256,
@@ -270,7 +275,7 @@ impl<T: Config> Pallet<T> {
     pub fn do_approve(
         project_key: ProjectKey,
         round_key: RoundKey,
-        milestone_keys: Option<BoundedMilestoneKeys>,
+        milestone_keys: Option<BoundedMilestoneKeys<T>>,
     ) -> DispatchResultWithPostInfo {
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
@@ -546,7 +551,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Appends a list of refunds to the queue to be used by the hooks.
-    pub fn add_refunds_to_queue(project_key: ProjectKey) -> DispatchResultWithPostInfo {
+    pub fn add_refunds_to_queue_depricated(project_key: ProjectKey) -> DispatchResultWithPostInfo {
         let mut project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
@@ -592,7 +597,8 @@ impl<T: Config> Pallet<T> {
     /// Using the parameters provided (which should be from the refund queue),
     /// Process a refund.
     /// Used in hooks so cannot panic.
-    pub fn refund_item_in_queue(
+    /// DEPRICATED
+    pub fn refund_item_in_queue_depricated(
         from: &T::AccountId,
         to: &T::AccountId,
         amount: BalanceOf<T>,
@@ -612,7 +618,8 @@ impl<T: Config> Pallet<T> {
     /// Split off an amount of refunds off the vector and place into refund storage.
     /// Returns a boolean if a split off has succeeded.
     /// Used in hooks so cannot panic.
-    pub fn split_off_refunds(refunds: &mut Refunds<T>, c: u32) -> bool {
+    /// DEPRICATED
+    pub fn split_off_refunds_depricated(refunds: &mut Refunds<T>, c: u32) -> bool {
         // split_off panics when at > len:
         // https://paritytech.github.io/substrate/master/sp_std/vec/struct.Vec.html#method.split_off
         // If the length is zero do nothing
@@ -734,23 +741,63 @@ impl<T: Config> Pallet<T> {
         );
         let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-        // Ensure that the caller is a contributor and that the vote has been raised.
         let _ = Self::ensure_contributor_of(&project, &who)?;
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
-        // The nay vote must >= minimum threshold required for the vote to pass.
         let total_contribute = project.raised_funds;
 
         // 100 * Threshold =  (total_contribute * majority_required)/100
         let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into();
 
         if vote.nay * 100u8.into() >= threshold_votes {
-            // Vote of no confidence has passed alas refund.
             round.is_canceled = true;
-            // Set Round to is cancelled, remove the vote from NoConfidenceVotes, and do the refund.
+
             NoConfidenceVotes::<T>::remove(project_key);
             Rounds::<T>::insert(round_key, Some(round));
-            let _ = Self::add_refunds_to_queue(project_key)?;
+            // TODO: Need a sane bound on contributors in a project.
+            // TODO: the same thing but with milestones.
+
+            let mut locked_milestone_percentage: u32 = 0;
+            for (_milestone_key, milestone) in project.milestones.clone() {
+                if !milestone.is_approved {
+                    locked_milestone_percentage += milestone.percentage_to_unlock;
+                }
+            }
+
+            let project_account_id = Self::project_account_id(project_key);
+
+            match project.funding_type {
+                FundingType::Brief | FundingType::Proposal => {
+                    // Handle refunds on native chain, there is no need to deal with xcm here.
+                    // Todo: Batch call using pallet-utility?
+                    for (acc_id, contribution) in project.contributions.iter() {
+                        let refund_amount: BalanceOf<T> = ((contribution).value
+                            * locked_milestone_percentage.into())
+                            / MAX_PERCENTAGE.into();
+                        <T as Config>::MultiCurrency::transfer(
+                            project.currency_id,
+                            &project_account_id,
+                            &acc_id,
+                            refund_amount,
+                        )?;
+                    }
+                }
+                FundingType::Treasury(_) => {
+                    let mut refund_amount: BalanceOf<T> = Default::default();
+                    // Sum the contributions and send a single xcm.
+                    for (_acc_id, contribution) in project.contributions.iter() {
+                        refund_amount += ((contribution).value
+                            * locked_milestone_percentage.into())
+                            / MAX_PERCENTAGE.into();
+                    }
+                    <T as Config>::RefundHandler::send_refund_message_to_treasury(
+                        project_account_id,
+                        refund_amount,
+                        project.currency_id,
+                        project.funding_type,
+                    )?;
+                }
+            }
 
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {
@@ -766,7 +813,7 @@ impl<T: Config> Pallet<T> {
     ) -> Result<BalanceOf<T>, Error<T>> {
         let contribution = project.contributions.get(&account_id);
         match contribution {
-            Some(value) => Ok((*value).value),
+            Some(c) => Ok((*c).value),
             _ => Err(Error::<T>::OnlyContributorsCanVote),
         }
     }

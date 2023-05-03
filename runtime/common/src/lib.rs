@@ -204,10 +204,9 @@ pub mod asset_registry {
     use codec::{Decode, Encode};
     use common_types::{CurrencyId, CustomMetadata};
     use frame_support::{
-        dispatch::{RawOrigin},
+        dispatch::RawOrigin,
         sp_std::marker::PhantomData,
         traits::{EnsureOrigin, EnsureOriginWithArg},
-        error::BadOrigin,
     };
     use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
     use scale_info::TypeInfo;
@@ -244,10 +243,10 @@ pub mod asset_registry {
     >(PhantomData<(Origin, DefaultEnsureOrigin)>);
 
     impl<
-        Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
-        DefaultEnsureOrigin: EnsureOrigin<Origin>,
-    > EnsureOriginWithArg<Origin, Option<CurrencyId>> for AuthorityOrigin<Origin, DefaultEnsureOrigin>
-
+            Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>,
+            DefaultEnsureOrigin: EnsureOrigin<Origin>,
+        > EnsureOriginWithArg<Origin, Option<CurrencyId>>
+        for AuthorityOrigin<Origin, DefaultEnsureOrigin>
     {
         type Success = ();
 
@@ -265,7 +264,6 @@ pub mod asset_registry {
         fn try_successful_origin(_asset_id: &Option<CurrencyId>) -> Result<Origin, ()> {
             unimplemented!()
         }
-
     }
 }
 pub mod common_xcm {

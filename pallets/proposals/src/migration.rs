@@ -1,6 +1,5 @@
-use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
-
 use crate::*;
+use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
 pub use pallet::*;
 
 mod v0 {
@@ -141,7 +140,6 @@ pub mod v2 {
 
     #[derive(Encode, Clone, Decode)]
     pub struct ProjectV2<AccountId, Balance, BlockNumber, Timestamp> {
-        pub work_started_at: Option<BlockNumber>,
         pub agreement_hash: H256,
         pub milestones: BTreeMap<MilestoneKey, Milestone>,
         pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
@@ -150,14 +148,12 @@ pub mod v2 {
         pub withdrawn_funds: Balance,
         pub raised_funds: Balance,
         pub initiator: AccountId,
-        pub create_block_number: BlockNumber,
+        pub created_on: BlockNumber,
         pub approved_for_funding: bool,
         pub funding_threshold_met: bool,
         pub cancelled: bool,
+        pub funding_type: FundingType,
     }
-
-    pub type ProjectV2Of<T> =
-        ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
 
     pub fn migrate<T: Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
@@ -196,6 +192,7 @@ pub mod v2 {
                 funding_threshold_met: project.funding_threshold_met,
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
+                funding_type: FundingType::Proposal,
             };
             Some(migrated_project)
         });
@@ -353,6 +350,7 @@ mod test {
             );
 
             assert_eq!(H256::default(), migrated_project.agreement_hash);
+            assert_eq!(FundingType::Proposal, migrated_project.funding_type);
         })
     }
 }
