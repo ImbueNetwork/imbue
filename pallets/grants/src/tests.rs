@@ -4,7 +4,7 @@ use crate::pallet::{
     ProposedMilestoneWithInfo,
 };
 use common_types::{CurrencyId, TreasuryOrigin};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
 
@@ -399,7 +399,7 @@ fn convert_to_proposal_already_converted() {
     });
 }
 
-fn get_milestones(mut n: u32) -> BoundedPMilestones<Test> {
+pub(crate) fn get_milestones(mut n: u32) -> BoundedPMilestones<Test> {
     let max = <Test as Config>::MaxMilestonesPerGrant::get();
     if n > max {
         n = max;
@@ -415,7 +415,7 @@ fn get_milestones(mut n: u32) -> BoundedPMilestones<Test> {
         .expect("qed")
 }
 
-fn get_approvers(mut n: u32) -> BoundedApprovers<Test> {
+pub(crate) fn get_approvers(mut n: u32) -> BoundedApprovers<Test> {
     let max = <Test as Config>::MaxApprovers::get();
     if n > max {
         n = max;
@@ -425,6 +425,14 @@ fn get_approvers(mut n: u32) -> BoundedApprovers<Test> {
         .collect::<Vec<sp_core::sr25519::Public>>()
         .try_into()
         .expect("qed")
+}
+
+pub(crate) fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Proposals::on_initialize(System::block_number());
+    }
 }
 
 fn create_native_default_grant(grant_id: GrantId, submitter: AccountId) {
