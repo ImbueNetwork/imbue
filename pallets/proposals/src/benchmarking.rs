@@ -317,62 +317,6 @@ benchmarks! {
     verify {
         assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(2, 0).into());
     }
-
-    // refund {
-    //     let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
-    //     let contribution_amount = 10_000u32;
-    //     let milestone_keys: BoundedMilestoneKeys<T> = vec![0].try_into().unwrap();
-    //     create_project_common::<T>(contribution_amount.into());
-    //     Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
-    //     run_to_block::<T>(5u32.into());
-    //     for i in 0..T::MaximumContributorsPerProject::get() {
-    //         let acc = create_funded_user::<T>("contributor", i, 100_000);
-    //         Proposals::<T>::contribute(RawOrigin::Signed(acc.clone()).into(), Some(1), 0, contribution_amount.into())?;
-    //         if i == T::MaximumContributorsPerProject::get() - 1 {
-    //             Proposals::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(acc.clone()).into() , 0)?;
-    //         }
-    //     }
-
-    //     // (Origin, ProjectKey)
-    // }:_(RawOrigin::Root, 0)
-    //  verify {
-    //     assert_last_event::<T>(Event::<T>::ProjectFundsAddedToRefundQueue(0, (contribution_amount * T::MaximumContributorsPerProject::get()).into()).into());
-    // }
-
-    // refund_item_in_queue {
-    //     run_to_block::<T>(5u32.into());
-    //     let mut accounts: Vec<T::AccountId> = vec![];
-    //     for i in 0..2 {
-    //         let acc = create_funded_user::<T>("contributor", i, 10_000);
-    //         accounts.push(acc);
-    //     }
-
-    // }: {
-    //     //(From, To, Amount, CurrencyID)
-    //     Proposals::<T>::refund_item_in_queue(&accounts[0], &accounts[1], 10_000u32.into(), CurrencyId::Native)
-    // }
-    //  verify {
-    //     assert!(<T::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::total_balance(CurrencyId::Native ,&accounts[1]) - <T::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::total_balance(CurrencyId::Native, &accounts[0]) == 20_000u32.into());
-    // }
-
-    // split_off_refunds {
-    //     let a in 0..100u32;
-    //     run_to_block::<T>(5u32.into());
-    //     let mut accounts: Vec<T::AccountId> = vec![];
-    //     let mut refunds: Refunds<T> = vec![];
-    //     for i in 0..100usize {
-    //         let acc = create_funded_user::<T>("contributor", i as u32, 100_000);
-
-    //         accounts.push(acc);
-    //         if i > 0 {
-    //             refunds.push((accounts[0].clone(), accounts[i].clone(), 10_000u32.into(), CurrencyId::Native));
-    //         }
-    //     }
-
-    // }: {
-    //     //(Refunds, SplitOffIndex)
-    //     Proposals::<T>::split_off_refunds(&mut refunds, a.into())
-    // }
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)

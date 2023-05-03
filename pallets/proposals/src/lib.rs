@@ -625,23 +625,6 @@ pub mod pallet {
                 T::PercentRequiredForVoteToPass::get(),
             )
         }
-
-        /// Ad Hoc Step (ADMIN)
-        /// This will add the refunds to a queue to eventually be processed, Hooks will show refunds themselves.
-        //TODO: use the refund_origin to correclty refund the funders
-        //TODO: use the refund_origin to correclty refund the funders
-        //TODO: use the refund_origin to correclty refund the funders
-        ///DEPRICATED
-        #[pallet::call_index(19)]
-        #[pallet::weight(<T as Config>::WeightInfo::refund())]
-        pub fn refund_depricated(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-        ) -> DispatchResultWithPostInfo {
-            //ensure only admin can perform refund
-            T::AuthorityOrigin::ensure_origin(origin)?;
-            Self::add_refunds_to_queue_depricated(project_key)
-        }
     }
 }
 
