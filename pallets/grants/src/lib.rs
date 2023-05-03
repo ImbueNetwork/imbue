@@ -250,7 +250,7 @@ pub mod pallet {
             grant_id: GrantId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
+            let grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);

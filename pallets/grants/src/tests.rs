@@ -384,7 +384,7 @@ pub(crate) fn get_milestones(mut n: u32) -> BoundedPMilestones<Test> {
     }
     let percent = 100 / n;
     (0..n)
-        .map(|i| ProposedMilestone {
+        .map(|| ProposedMilestone {
             percentage_to_unlock: percent.try_into().expect("qed"),
         })
         .collect::<Vec<ProposedMilestone>>()
