@@ -1,8 +1,8 @@
 use crate::mock::*;
 use crate::pallet::{
     BoundedApprovers, BoundedPMilestones, Config, Error, GrantId, PendingGrants,
-    ProposedMilestoneWithInfo,
 };
+use pallet_proposals::ProposedMilestone;
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use sp_core::H256;
@@ -11,9 +11,8 @@ use sp_runtime::DispatchError::BadOrigin;
 #[test]
 fn ensure_milestone_percent_equal_100() {
     new_test_ext().execute_with(|| {
-        let milestones: BoundedPMilestones<Test> = vec![ProposedMilestoneWithInfo {
-            percent: 50u8,
-            ipfs_hash: Default::default(),
+        let milestones: BoundedPMilestones<Test> = vec![ProposedMilestone {
+            percentage_to_unlock: 50,
         }]
         .try_into()
         .expect("qed");
@@ -21,7 +20,6 @@ fn ensure_milestone_percent_equal_100() {
         assert_noop!(
             Grant::submit_initial_grant(
                 RuntimeOrigin::signed(*ALICE),
-                Default::default(),
                 milestones,
                 get_approvers(5),
                 CurrencyId::Native,
@@ -45,7 +43,6 @@ fn create_grant_already_exists() {
 
         let _ = Grant::submit_initial_grant(
             RuntimeOrigin::signed(*ALICE),
-            Default::default(),
             milestones,
             approvers,
             CurrencyId::Native,
@@ -56,7 +53,6 @@ fn create_grant_already_exists() {
         assert_noop!(
             Grant::submit_initial_grant(
                 RuntimeOrigin::signed(*ALICE),
-                Default::default(),
                 milestones2,
                 approvers2,
                 CurrencyId::Native,
@@ -76,7 +72,6 @@ fn edit_grant_only_submitter_can_edit() {
         let approvers = get_approvers(10);
         let _ = Grant::submit_initial_grant(
             RuntimeOrigin::signed(*ALICE),
-            Default::default(),
             milestones,
             approvers,
             CurrencyId::Native,
@@ -88,7 +83,6 @@ fn edit_grant_only_submitter_can_edit() {
             Grant::edit_grant(
                 RuntimeOrigin::signed(*BOB),
                 Default::default(),
-                None,
                 None,
                 None,
                 None,
@@ -111,7 +105,6 @@ fn edit_grant_not_found() {
                 None,
                 None,
                 None,
-                None,
                 None
             ),
             Error::<Test>::GrantNotFound
@@ -127,7 +120,6 @@ fn edit_grant_grant_cancelled() {
         let grant_id: H256 = Default::default();
         let _ = Grant::submit_initial_grant(
             RuntimeOrigin::signed(*ALICE),
-            Default::default(),
             milestones,
             approvers,
             CurrencyId::Native,
@@ -143,7 +135,6 @@ fn edit_grant_grant_cancelled() {
             Grant::edit_grant(
                 RuntimeOrigin::signed(*ALICE),
                 Default::default(),
-                None,
                 None,
                 None,
                 None,
@@ -164,7 +155,6 @@ fn edit_with_none_does_not_change_properties() {
 
         let _ = Grant::submit_initial_grant(
             RuntimeOrigin::signed(*ALICE),
-            Default::default(),
             milestones,
             approvers,
             CurrencyId::Native,
@@ -176,7 +166,6 @@ fn edit_with_none_does_not_change_properties() {
         assert_ok!(Grant::edit_grant(
             RuntimeOrigin::signed(*ALICE),
             grant_id,
-            None,
             None,
             None,
             None,
@@ -197,7 +186,6 @@ fn assert_properties_are_changed_on_edit() {
 
         let _ = Grant::submit_initial_grant(
             RuntimeOrigin::signed(*ALICE),
-            Default::default(),
             milestones,
             approvers,
             CurrencyId::Native,
@@ -207,9 +195,8 @@ fn assert_properties_are_changed_on_edit() {
         );
         let grant_before = PendingGrants::<Test>::get(grant_id).expect("qed");
 
-        let edited_milestones: BoundedPMilestones<Test> = vec![ProposedMilestoneWithInfo {
-            ipfs_hash: [12u8; 32],
-            percent: 100,
+        let edited_milestones: BoundedPMilestones<Test> = vec![ProposedMilestone {
+            percentage_to_unlock: 100,
         }]
         .try_into()
         .expect("qed");
@@ -219,7 +206,6 @@ fn assert_properties_are_changed_on_edit() {
                 .try_into()
                 .expect("qed");
 
-        let edited_ipfs = [100u8; 32];
         let edited_currency_id = CurrencyId::KSM;
         let edited_amount_requested = 999;
         let edited_treasury_origin = TreasuryOrigin::Imbue;
@@ -229,7 +215,6 @@ fn assert_properties_are_changed_on_edit() {
             grant_id,
             Some(edited_milestones.clone()),
             Some(edited_approvers.clone()),
-            Some(edited_ipfs.clone()),
             Some(edited_currency_id),
             Some(edited_amount_requested),
             Some(edited_treasury_origin)
@@ -244,9 +229,6 @@ fn assert_properties_are_changed_on_edit() {
 
         assert_ne!(grant_before.approvers, grant_after.approvers);
         assert_eq!(grant_after.approvers, edited_approvers);
-
-        assert_ne!(grant_before.ipfs_hash, grant_after.ipfs_hash);
-        assert_eq!(grant_after.ipfs_hash, edited_ipfs);
 
         assert_ne!(grant_before.currency_id, grant_after.currency_id);
         assert_eq!(grant_after.currency_id, edited_currency_id);
@@ -273,7 +255,6 @@ fn assert_edit_fails_if_milestones_sum_less_than_100() {
 
         let _ = Grant::submit_initial_grant(
             RuntimeOrigin::signed(*ALICE),
-            Default::default(),
             milestones,
             approvers,
             CurrencyId::Native,
@@ -281,9 +262,8 @@ fn assert_edit_fails_if_milestones_sum_less_than_100() {
             TreasuryOrigin::Kusama,
             grant_id,
         );
-        let edited_milestones: BoundedPMilestones<Test> = vec![ProposedMilestoneWithInfo {
-            ipfs_hash: [12u8; 32],
-            percent: 99,
+        let edited_milestones: BoundedPMilestones<Test> = vec![ProposedMilestone {
+            percentage_to_unlock: 99,
         }]
         .try_into()
         .expect("qed");
@@ -293,7 +273,6 @@ fn assert_edit_fails_if_milestones_sum_less_than_100() {
                 RuntimeOrigin::signed(*ALICE),
                 grant_id,
                 Some(edited_milestones),
-                None,
                 None,
                 None,
                 None,
@@ -308,7 +287,6 @@ fn success_grant_creation() {
     new_test_ext().execute_with(|| {
         assert_ok!(Grant::submit_initial_grant(
             RuntimeOrigin::signed(*ALICE),
-            Default::default(),
             get_milestones(5),
             get_approvers(5),
             CurrencyId::Native,
@@ -406,11 +384,10 @@ pub(crate) fn get_milestones(mut n: u32) -> BoundedPMilestones<Test> {
     }
     let percent = 100 / n;
     (0..n)
-        .map(|i| ProposedMilestoneWithInfo {
-            percent: percent.try_into().expect("qed"),
-            ipfs_hash: [i as u8; 32],
+        .map(|i| ProposedMilestone {
+            percentage_to_unlock: percent.try_into().expect("qed"),
         })
-        .collect::<Vec<ProposedMilestoneWithInfo>>()
+        .collect::<Vec<ProposedMilestone>>()
         .try_into()
         .expect("qed")
 }
@@ -438,7 +415,6 @@ pub(crate) fn run_to_block(n: u64) {
 fn create_native_default_grant(grant_id: GrantId, submitter: AccountId) {
     assert_ok!(Grant::submit_initial_grant(
         RuntimeOrigin::signed(submitter),
-        Default::default(),
         get_milestones(10),
         get_approvers(10),
         CurrencyId::Native,

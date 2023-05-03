@@ -15,7 +15,6 @@ fn create_proposal_from_grant() {
 
         assert_ok!(Grant::submit_initial_grant(
             RuntimeOrigin::signed(*ALICE),
-            Default::default(),
             get_milestones(10),
             get_approvers(10),
             CurrencyId::Native,
@@ -47,7 +46,6 @@ fn assert_state_from_grant_conversion_is_same_as_proposal() {
         // create a proposal from pallet-grants
         assert_ok!(Grant::submit_initial_grant(
             RuntimeOrigin::signed(*ALICE),
-            Default::default(),
             milestones.clone(),
             approvers,
             CurrencyId::Native,
@@ -64,14 +62,7 @@ fn assert_state_from_grant_conversion_is_same_as_proposal() {
         assert_ok!(Proposals::create_project(
             RuntimeOrigin::signed(*ALICE),
             grant_id,
-            milestones
-                .into_iter()
-                .map(|m| ProposedMilestone {
-                    percentage_to_unlock: m.percent as u32
-                })
-                .collect::<Vec<ProposedMilestone>>()
-                .try_into()
-                .unwrap(),
+            milestones.to_vec().try_into().expect("The bounds should be the same"),
             contribution_value,
             CurrencyId::Native,
         ));

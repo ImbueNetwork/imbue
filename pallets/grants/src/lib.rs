@@ -28,7 +28,7 @@ pub mod pallet {
         <<T as Config>::RMultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
     pub(crate) type BoundedPMilestones<T> =
-        BoundedVec<ProposedMilestoneWithInfo, <T as Config>::MaxMilestonesPerGrant>;
+        BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerGrant>;
     pub(crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
     pub(crate) type GrantId = H256;
 
@@ -123,7 +123,7 @@ pub mod pallet {
         #[pallet::weight(100_000)]
         pub fn submit_initial_grant(
             origin: OriginFor<T>,
-            ipfs_hash: [u8; 32],
+            //ipfs_hash: [u8; 32],
             proposed_milestones: BoundedPMilestones<T>,
             assigned_approvers: BoundedApprovers<T>,
             currency_id: CurrencyId,
@@ -132,9 +132,10 @@ pub mod pallet {
             grant_id: GrantId,
         ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
+
             let total_percentage = proposed_milestones
                 .iter()
-                .fold(0u32, |acc, x| acc.saturating_add(x.percent.into()));
+                .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock.into()));
             ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
 
             ensure!(
@@ -146,7 +147,7 @@ pub mod pallet {
                 milestones: proposed_milestones,
                 submitter: submitter.clone(),
                 approvers: assigned_approvers,
-                ipfs_hash,
+                // ipfs_hash,
                 created_on: frame_system::Pallet::<T>::block_number(),
                 is_cancelled: false,
                 is_converted: false,
@@ -177,7 +178,7 @@ pub mod pallet {
             grant_id: GrantId,
             edited_milestones: Option<BoundedPMilestones<T>>,
             edited_approvers: Option<BoundedApprovers<T>>,
-            edited_ipfs: Option<[u8; 32]>,
+            // edited_ipfs: Option <[u8; 32]>,
             edited_currency_id: Option<CurrencyId>,
             edited_amount_requested: Option<BalanceOf<T>>,
             edited_treasury_origin: Option<TreasuryOrigin>,
@@ -191,16 +192,16 @@ pub mod pallet {
             if let Some(milestones) = edited_milestones {
                 let total_percentage = milestones
                     .iter()
-                    .fold(0u32, |acc, x| acc.saturating_add(x.percent.into()));
+                    .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock.into()));
                 ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
             if let Some(approvers) = edited_approvers {
                 grant.approvers = approvers;
             }
-            if let Some(ipfs) = edited_ipfs {
-                grant.ipfs_hash = ipfs;
-            }
+            // if let Some(ipfs) = edited_ipfs {
+            //     grant.ipfs_hash = ipfs;
+            // }
             if let Some(currency_id) = edited_currency_id {
                 grant.currency_id = currency_id;
             }
@@ -273,28 +274,21 @@ pub mod pallet {
                 })
                 .collect::<Vec<_>>();
 
-            // FIXME:
-            // For now we have to do a conversion into a simpler proposed milestone as `pallet_proposals` does not support ipfs data for them.
-            let standard_proposed_ms = grant
-                .milestones
-                .iter()
-                .map(|ms| ProposedMilestone {
-                    percentage_to_unlock: ms.percent as u32,
-                })
-                .collect::<Vec<ProposedMilestone>>();
-
             let _ = <T as Config>::IntoProposal::convert_to_proposal(
                 grant.currency_id,
                 contributions,
                 grant_id,
                 grant.submitter.clone(),
-                standard_proposed_ms,
+                grant.milestones.try_into().map_err(|_|Error::<T>::Overflow)?,
                 FundingType::Treasury(grant.treasury_origin),
             )
             .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
 
-            grant.is_converted = true;
-            PendingGrants::<T>::insert(grant_id, grant);
+            PendingGrants::<T>::mutate(grant_id, |grant| {
+                if let Some(g) = grant {
+                    g.is_converted = true;
+                }
+            });
 
             Ok(().into())
         }
@@ -308,7 +302,7 @@ pub mod pallet {
         pub milestones: BoundedPMilestones<T>,
         pub submitter: AccountIdOf<T>,
         pub approvers: BoundedApprovers<T>,
-        pub ipfs_hash: [u8; 32],
+        //pub ipfs_hash: [u8; 32],
         pub created_on: BlockNumberFor<T>,
         pub is_cancelled: bool,
         pub is_converted: bool,
@@ -317,9 +311,4 @@ pub mod pallet {
         pub treasury_origin: TreasuryOrigin,
     }
 
-    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
-    pub struct ProposedMilestoneWithInfo {
-        pub(crate) percent: u8,
-        pub(crate) ipfs_hash: [u8; 32],
-    }
 }
