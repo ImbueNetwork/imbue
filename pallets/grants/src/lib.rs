@@ -242,7 +242,7 @@ pub mod pallet {
         /// You call this and it'll allow you to generate a project account id.
         #[pallet::call_index(3)]
         #[pallet::weight(100_000)]
-        pub fn convert_to_milestones(
+        pub fn convert_to_project(
             origin: OriginFor<T>,
             grant_id: GrantId,
         ) -> DispatchResultWithPostInfo {

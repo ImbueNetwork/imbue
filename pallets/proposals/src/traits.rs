@@ -3,13 +3,10 @@ use crate::{
     Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
     ProposedMilestone,
 };
-use common_types::{
-    CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter,
-};
+use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
 use frame_support::{
     dispatch::EncodeLike, inherent::Vec, pallet_prelude::DispatchError, sp_runtime::Saturating,
-    PalletId,
-    transactional
+    transactional, PalletId,
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
@@ -38,7 +35,7 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
     /// Send a message to some destination chain asking to do some reserve asset transfer.
     /// The multilocation is defined by the FundingType.
     /// see FundingType and TreasuryOrigin.
-    /// TODO: currency should be passed into the 
+    /// TODO: currency should be passed into the
     fn send_refund_message_to_treasury(
         from: AccountId,
         amount: Balance,
@@ -135,6 +132,7 @@ where
             };
 
         Projects::<T>::insert(project_key, project);
+        let project_account = Self::project_account_id(project_key);
         ProjectCount::<T>::mutate(|c| *c += 1);
         Self::deposit_event(Event::ProjectCreated(
             benificiary,
@@ -142,6 +140,7 @@ where
             project_key,
             sum_of_contributions,
             currency_id,
+            project_account,
         ));
 
         Ok(())
@@ -184,7 +183,7 @@ where
     T: orml_xtokens::Config,
     U: XcmTransfer<T::AccountId, T::Balance, CurrencyId>,
 {
-        /// Only used for xcm. Therefore not for briefs and proposals as they use funds which are on imbue.
+    /// Only used for xcm. Therefore not for briefs and proposals as they use funds which are on imbue.
     #[transactional]
     fn send_refund_message_to_treasury(
         from: T::AccountId,
@@ -194,10 +193,19 @@ where
     ) -> Result<(), DispatchError> {
         match funding_type {
             FundingType::Treasury(treasury_origin) => {
-                let benificiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
+                let beneficiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
                 let location: MultiLocation = treasury_origin
-                    .get_multi_location(benificiary)
+                    .get_multi_location(beneficiary)
                     .map_err(|_| Error::<T>::InvalidDest)?;
+
+                // let test = xcm::v2::MultiLocation::new(
+                //     1,
+                //     X1(Junction::AccountId32 {
+                //         id: beneficiary.into(),
+                //         network: NetworkId::Any
+                //     })
+                // );
+
                 // TODO: dest weight limit. or specify a fee with another extrinsic,
                 let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
                 Ok(())

@@ -1,6 +1,6 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use xcm::latest::{Junction, Junctions::*, MultiLocation, NetworkId};
+use xcm::latest::{Junction, Junctions::*, MultiLocation};
 
 /// A wrapper around
 pub trait TreasuryOriginConverter<AccountId: Into<[u8; 32]>> {
@@ -20,7 +20,7 @@ impl<AccountId: Into<[u8; 32]>> TreasuryOriginConverter<AccountId> for TreasuryO
                 1,
                 X1(Junction::AccountId32 {
                     id: recipiant.into(),
-                    network: Some(NetworkId::Kusama),
+                    network: None,
                 }),
             )),
             TreasuryOrigin::Imbue => Ok(MultiLocation::new(

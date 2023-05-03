@@ -145,6 +145,35 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 
+pub struct BaseCallFilter;
+impl Contains<RuntimeCall> for BaseCallFilter {
+    fn contains(c: &RuntimeCall) -> bool {
+        match c {
+            RuntimeCall::PolkadotXcm(method) => match method {
+                // Block these calls when called by a signed extrinsic.
+                // Root will still be able to execute these.
+                pallet_xcm::Call::send { .. }
+                | pallet_xcm::Call::execute { .. }
+                | pallet_xcm::Call::teleport_assets { .. }
+                | pallet_xcm::Call::reserve_transfer_assets { .. }
+                | pallet_xcm::Call::limited_reserve_transfer_assets { .. }
+                | pallet_xcm::Call::limited_teleport_assets { .. } => {
+                    return false;
+                }
+                pallet_xcm::Call::__Ignore { .. } => {
+                    unimplemented!()
+                }
+                pallet_xcm::Call::force_xcm_version { .. }
+                | pallet_xcm::Call::force_default_xcm_version { .. }
+                | pallet_xcm::Call::force_subscribe_version_notify { .. }
+                | pallet_xcm::Call::force_unsubscribe_version_notify { .. } => {
+                    return true;
+                }
+            },
+            _ => true,
+        }
+    }
+}
 impl frame_system::Config for Runtime {
     type BaseCallFilter = Everything;
     type BlockWeights = RuntimeBlockWeights;

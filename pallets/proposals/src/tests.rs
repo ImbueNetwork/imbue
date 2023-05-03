@@ -8,7 +8,6 @@ use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, PostDispatchInfo},
 };
 
-
 use sp_core::H256;
 
 use sp_std::vec::Vec;
@@ -1707,7 +1706,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             ))
         );
 
-         // Call a vote of no confidence and assert it will pass.
+        // Call a vote of no confidence and assert it will pass.
         assert_ok!(Proposals::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key
@@ -1721,13 +1720,11 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             false
         ));
 
-        assert_ok!(
-            Proposals::finalise_no_confidence_round(
-                RuntimeOrigin::signed(*CHARLIE),
-                None,
-                project_key
-            )
-        );
+        assert_ok!(Proposals::finalise_no_confidence_round(
+            RuntimeOrigin::signed(*CHARLIE),
+            None,
+            project_key
+        ));
 
         let approved_milestone_value = 100000;
         //ensuring the refunded amount was transferred back successfully
@@ -2357,7 +2354,7 @@ fn run_to_block(n: u64) {
     }
 }
 
-fn run_to_block_with_no_idle_space(n: u64) {
+fn _run_to_block_with_no_idle_space(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
