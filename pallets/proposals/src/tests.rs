@@ -8,7 +8,6 @@ use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, PostDispatchInfo},
 };
 
-use sp_core::sr25519;
 use sp_core::H256;
 
 use sp_std::vec::Vec;
@@ -679,7 +678,7 @@ fn test_submit_milestone() {
         let value = 100u64;
         Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
@@ -732,7 +731,7 @@ fn test_submit_milestone_without_approval() {
             value
         ));
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
@@ -771,7 +770,7 @@ fn test_voting_on_a_milestone() {
         let value = 100u64;
         Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
@@ -905,7 +904,7 @@ fn test_finalize_a_milestone_without_voting() {
         let value = 100u64;
         Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
         let _ = milestone_index.try_push(1);
 
@@ -1019,7 +1018,7 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
             charlie_contribution
         ));
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
         let _ = milestone_index.try_push(1);
 
@@ -1124,7 +1123,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         Proposals::contribute(RuntimeOrigin::signed(*CHARLIE), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(milestone1_key);
         let _ = milestone_index.try_push(milestone2_key);
 
@@ -1319,7 +1318,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         )
         .unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
         let _ = milestone_index.try_push(1);
 
@@ -1397,7 +1396,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         )
         .unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
@@ -1504,7 +1503,7 @@ fn submit_multiple_milestones() {
         let value = 100u64;
         Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, value).unwrap();
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(milestone_index_1);
         let _ = milestone_index.try_push(milestone_index_2);
 
@@ -1549,72 +1548,6 @@ fn submit_multiple_milestones() {
                 voting_round2_key,
                 vec![project_key]
             ))
-        );
-    });
-}
-
-#[test]
-fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
-    build_test_externality().execute_with(|| {
-        //create_project extrinsic
-        assert_ok!(create_project());
-
-        let alice_initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key: u32 = 0;
-        let contribution_amount = 2000u64;
-
-        //schedule_round extrinsic
-        Proposals::schedule_round(
-            RuntimeOrigin::root(),
-            System::block_number() + 1,
-            System::block_number() + 10,
-            //Project key starts with 0 for the first project submitted to the chain
-            project_keys,
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        let _additional_amount = 10_000;
-
-        run_to_block(4);
-        //contribute extrinsic
-        Proposals::contribute(
-            RuntimeOrigin::signed(*ALICE),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-
-        //ensuring ALICE's balance has reduced after contribution
-        assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &ALICE),
-            alice_initial_balance - contribution_amount
-        );
-
-        Proposals::refund(RuntimeOrigin::root(), project_key).unwrap();
-
-        let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one RuntimeEventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_projectfundsrefunded_event,
-            mock::RuntimeEvent::from(proposals::Event::ProjectFundsAddedToRefundQueue(
-                project_key,
-                contribution_amount
-            ))
-        );
-
-        // wait some blocks
-        run_to_block(System::block_number() + 1);
-
-        //ensuring the refunded amount was transferred back successfully
-        assert_eq!(
-            alice_initial_balance,
-            Tokens::free_balance(CurrencyId::Native, &*ALICE)
         );
     });
 }
@@ -1685,7 +1618,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             Tokens::free_balance(CurrencyId::Native, &*CHARLIE)
         );
 
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
         let _ = milestone_index.try_push(0);
 
         run_to_block(3);
@@ -1773,22 +1706,25 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
             ))
         );
 
-        Proposals::refund(RuntimeOrigin::root(), project_key).unwrap();
+        // Call a vote of no confidence and assert it will pass.
+        assert_ok!(Proposals::raise_vote_of_no_confidence(
+            RuntimeOrigin::signed(*BOB),
+            project_key
+        ));
 
-        let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one RuntimeEventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_projectfundsrefunded_event,
-            mock::RuntimeEvent::from(proposals::Event::ProjectFundsAddedToRefundQueue(
-                project_key,
-                800000u64
-            ))
-        );
+        // Charlie has raised a vote of no confidence, now Bob is gonna disagree!
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*CHARLIE),
+            None,
+            project_key,
+            false
+        ));
 
-        // Wait a block so refunds occur in hook.
-        run_to_block(System::block_number() + 1);
+        assert_ok!(Proposals::finalise_no_confidence_round(
+            RuntimeOrigin::signed(*CHARLIE),
+            None,
+            project_key
+        ));
 
         let approved_milestone_value = 100000;
         //ensuring the refunded amount was transferred back successfully
@@ -2205,109 +2141,6 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
     });
 }
 
-// Very slow test, due to the creation of multiple account keys.
-#[test]
-fn test_refunds_go_back_to_contributors() {
-    build_test_externality().execute_with(|| {
-        let mut accounts: Vec<<Test as frame_system::Config>::AccountId> = vec![];
-        let num_of_refunds: u32 = 100;
-        assert_ok!(create_project());
-
-        let _ = Proposals::schedule_round(
-            RuntimeOrigin::root(),
-            System::block_number(),
-            System::block_number() + 100,
-            bounded_vec![0u32],
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        run_to_block(System::block_number() + 2u64);
-        let input: Vec<String> = (0..num_of_refunds).map(|i| i.to_string()).collect();
-        for i in 0..num_of_refunds {
-            let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
-            accounts.push(acc.clone());
-            let _ = Tokens::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
-            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64)
-                .unwrap();
-        }
-
-        assert_ok!(Proposals::refund(RuntimeOrigin::root(), 0));
-
-        // The maximum amount of block it should take for all refunds to occur.
-        run_to_block(num_of_refunds as u64 / RefundsPerBlock::get() as u64);
-
-        for i in 0..num_of_refunds {
-            assert_eq!(
-                Tokens::free_balance(CurrencyId::Native, &accounts[i as usize]),
-                20_000u64
-            );
-        }
-
-        assert!(
-            Currencies::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64
-        )
-    });
-}
-
-#[test]
-fn test_refunds_state_is_handled_correctly() {
-    build_test_externality().execute_with(|| {
-        let mut accounts: Vec<<Test as frame_system::Config>::AccountId> = vec![];
-        // Only works if
-        let num_of_refunds: u32 = 20;
-
-        assert_ok!(create_project());
-
-        let _ = Proposals::schedule_round(
-            RuntimeOrigin::root(),
-            System::block_number(),
-            System::block_number() + 100,
-            bounded_vec![0u32],
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        run_to_block(System::block_number() + 2u64);
-        let input: Vec<String> = (0..num_of_refunds).map(|i| i.to_string()).collect();
-        for i in 0..num_of_refunds {
-            let acc = get_account_id_from_seed::<sr25519::Public>(&input[i as usize].as_str());
-            accounts.push(acc.clone());
-            let _ = Tokens::deposit(CurrencyId::Native, &acc.clone(), 20_000u64);
-            let _ = Proposals::contribute(RuntimeOrigin::signed(acc), Some(1), 0u32, 10_000u64)
-                .unwrap();
-        }
-
-        assert_ok!(Proposals::refund(RuntimeOrigin::root(), 0));
-        let mut refunds_completed = 0usize;
-        // The maximum amount of block it should take for all refunds to occur.
-        for _ in 0..(num_of_refunds / RefundsPerBlock::get() as u32) {
-            run_to_block_with_no_idle_space(System::block_number() + 1u64);
-
-            // Get the total number of refunds completed.
-            let _refunds_after_block = accounts
-                .iter()
-                .map(|acc| Tokens::free_balance(CurrencyId::Native, acc))
-                .filter(|balance| balance == &20_000u64)
-                .collect::<Vec<u64>>()
-                .len();
-
-            // Assert that only 2 have been completed
-            // assert_eq!(refunds_after_block - refunds_completed, 2usize);
-            refunds_completed += 2;
-
-            let _test = RefundQueue::<Test>::get().len();
-            // And that they have been removed from the refund list.
-            assert_eq!(
-                RefundQueue::<Test>::get().len(),
-                num_of_refunds as usize - refunds_completed
-            );
-        }
-
-        assert!(Tokens::free_balance(CurrencyId::Native, &Proposals::project_account_id(0)) == 0u64)
-    });
-}
-
 // create project, schedule a round, approve and submit a milestone.
 // assert that the vote will pass when it is on the threshold.
 #[test]
@@ -2521,7 +2354,7 @@ fn run_to_block(n: u64) {
     }
 }
 
-fn run_to_block_with_no_idle_space(n: u64) {
+fn _run_to_block_with_no_idle_space(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());

@@ -8,6 +8,7 @@ members = [
     'node',
 	"pallets/proposals",
 	"pallets/briefs",
+    "pallets/grants",
 	"runtime/integration-tests",
 	"runtime/imbue-kusama",
 	"runtime/common",

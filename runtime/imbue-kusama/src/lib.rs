@@ -93,7 +93,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 1036,
+    spec_version: 1037,
     impl_version: 2,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -145,6 +145,35 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 
+pub struct BaseCallFilter;
+impl Contains<RuntimeCall> for BaseCallFilter {
+    fn contains(c: &RuntimeCall) -> bool {
+        match c {
+            RuntimeCall::PolkadotXcm(method) => match method {
+                // Block these calls when called by a signed extrinsic.
+                // Root will still be able to execute these.
+                pallet_xcm::Call::send { .. }
+                | pallet_xcm::Call::execute { .. }
+                | pallet_xcm::Call::teleport_assets { .. }
+                | pallet_xcm::Call::reserve_transfer_assets { .. }
+                | pallet_xcm::Call::limited_reserve_transfer_assets { .. }
+                | pallet_xcm::Call::limited_teleport_assets { .. } => {
+                    return false;
+                }
+                pallet_xcm::Call::__Ignore { .. } => {
+                    unimplemented!()
+                }
+                pallet_xcm::Call::force_xcm_version { .. }
+                | pallet_xcm::Call::force_default_xcm_version { .. }
+                | pallet_xcm::Call::force_subscribe_version_notify { .. }
+                | pallet_xcm::Call::force_unsubscribe_version_notify { .. } => {
+                    return true;
+                }
+            },
+            _ => true,
+        }
+    }
+}
 impl frame_system::Config for Runtime {
     type BaseCallFilter = Everything;
     type BlockWeights = RuntimeBlockWeights;
@@ -760,6 +789,23 @@ impl pallet_proposals::Config for Runtime {
     type WeightInfo = ();
     type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = MilestoneVotingWindow;
+    type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
+    type MaxMilestonesPerProject = MaxMilestonesPerProject;
+}
+
+parameter_types! {
+    pub MaxApprovers: u32 = 50;
+    // TODO This has to be the same in the proposals and the briefs!
+    pub MaxMilestonesPerProject: u32 = 50;
+}
+
+impl pallet_grants::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxMilestonesPerGrant = MaxMilestonesPerProject;
+    type MaxApprovers = MaxApprovers;
+    type RMultiCurrency = Currencies;
+    type IntoProposal = pallet_proposals::Pallet<Runtime>;
+    type CancellingAuthority = AdminOrigin;
 }
 
 parameter_types! {
@@ -775,8 +821,9 @@ impl pallet_briefs::Config for Runtime {
     type RMultiCurrency = Currencies;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type BriefEvolver = pallet_proposals::Pallet<Runtime>;
+    type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
+    type MaxMilestonesPerBrief = MaxMilestonesPerProject;
     // TODO: Weight info
 }
 
@@ -835,6 +882,7 @@ construct_runtime! {
         // Imbue Pallets
         ImbueProposals: pallet_proposals::{Pallet, Call, Storage, Event<T>} = 100,
         ImbueBriefs: pallet_briefs::{Pallet, Call, Storage, Event<T>} = 101,
+        ImbueGrants: pallet_grants::{Pallet, Call, Storage, Event<T>} = 102,
     }
 }
 

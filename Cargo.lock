@@ -1171,11 +1171,13 @@ dependencies = [
  "bitflags",
  "common-traits",
  "frame-support",
+ "frame-system",
  "parity-scale-codec 3.4.0",
  "scale-info 2.5.0",
  "serde",
  "sp-runtime",
  "sp-std",
+ "xcm",
 ]
 
 [[package]]
@@ -3843,6 +3845,7 @@ dependencies = [
  "pallet-collator-selection",
  "pallet-collective",
  "pallet-democracy",
+ "pallet-grants",
  "pallet-identity",
  "pallet-membership",
  "pallet-multisig",
@@ -6349,6 +6352,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-grants"
+version = "0.1.0"
+dependencies = [
+ "common-traits",
+ "common-types",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-identity",
+ "pallet-proposals",
+ "pallet-timestamp",
+ "parity-scale-codec 3.4.0",
+ "scale-info 2.5.0",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-identity"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39#1837f423b494254e1d27834b1c9da34b2c0c2375"
@@ -6590,6 +6616,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-xtokens",
  "pallet-balances",
  "pallet-identity",
  "pallet-timestamp",
@@ -9516,6 +9543,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-proposals",
  "pallet-xcm",
  "parachain-info",
  "polkadot-parachain",

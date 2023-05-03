@@ -4,13 +4,10 @@ use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_benchmarking::vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::{
-    assert_ok,
-    traits::{Get},
-};
+use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
-use sp_std::str;
 use sp_core::H256;
+use sp_std::str;
 
 const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
@@ -41,7 +38,7 @@ benchmarks! {
     create_project {
         let caller: T::AccountId = whitelisted_caller();
 
-        let milestones: BoundedProposedMilestones = vec![ProposedMilestone {
+        let milestones: BoundedProposedMilestones<T> = vec![ProposedMilestone {
             percentage_to_unlock: 1,
         }; 100].try_into().unwrap();
 
@@ -146,7 +143,7 @@ benchmarks! {
             let _caller = create_project_common::<T>(100_000u32.into());
             let _ = project_keys.try_push(i).unwrap();
         }
-        let milestone_keys: BoundedMilestoneKeys = (0.. <MaxProposedMilestones as Get<u32>>::get()).collect::<Vec<u32>>().try_into().unwrap();
+        let milestone_keys: BoundedMilestoneKeys = (0.. <MaxMilestonesPerProject as Get<u32>>::get()).collect::<Vec<u32>>().try_into().unwrap();
         let _ = Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), project_keys, RoundType::ContributionRound);
         run_to_block::<T>(5u32.into());
         let _ = Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1u32), a.into(), contribution.into());
@@ -227,7 +224,7 @@ benchmarks! {
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
 
         let contribution_amount = 10_000u32;
-        let milestone_keys: BoundedMilestoneKeys = (0..<MaxMilestoneKeys as Get<u32>>::get()).collect::<Vec<MilestoneKey>>().try_into().unwrap();
+        let milestone_keys: BoundedMilestoneKeys = (0..<MaxMilestonesPerProject as Get<u32>>::get()).collect::<Vec<MilestoneKey>>().try_into().unwrap();
 
         // Setup state.
         create_project_common::<T>(contribution_amount.into());
@@ -390,7 +387,7 @@ where
 }
 
 fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
-    let milestone_max_count = <MaxProposedMilestones as Get<u32>>::get() as usize;
+    let milestone_max_count = <MaxMilestonesPerProject as Get<u32>>::get() as usize;
     let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000);
     let milestones: BoundedProposedMilestones = vec![
         ProposedMilestone {
@@ -400,7 +397,7 @@ fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     ]
     .try_into()
     .unwrap();
-    
+
     let agg_hash = H256::from([20; 32]);
     let required_funds: BalanceOf<T> = contribution.into();
     let currency_id = CurrencyId::Native;
@@ -434,7 +431,11 @@ fn create_funded_user<T: Config>(
 ) -> T::AccountId {
     let user = account(string, n, SEED);
     let balance: BalanceOf<T> = balance_factor.into();
-    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(CurrencyId::Native, &user, balance);
+    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
+        CurrencyId::Native,
+        &user,
+        balance,
+    );
     user
 }
 
