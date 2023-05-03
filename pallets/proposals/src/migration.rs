@@ -155,17 +155,10 @@ pub mod v2 {
         pub funding_type: FundingType,
     }
 
-    #[storage_alias]
-    pub type Projects<T: Config> =
-        StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV2Of<T>, OptionQuery>;
-
-    pub type ProjectV2Of<T> =
-        ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
-
     pub fn migrate<T: Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
         let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-        v2::Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
+        Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
             let _ = project
                 .milestones
                 .into_iter()
@@ -181,12 +174,12 @@ pub mod v2 {
                 .collect::<Vec<_>>();
 
             weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: ProjectV2<
+            let migrated_project: Project<
                 T::AccountId,
                 BalanceOf<T>,
                 T::BlockNumber,
                 TimestampOf<T>,
-            > = ProjectV2 {
+            > = Project {
                 milestones: migrated_milestones.clone(),
                 contributions: project.contributions,
                 required_funds: project.required_funds,
