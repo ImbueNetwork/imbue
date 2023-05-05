@@ -4,9 +4,8 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::MultiCurrency;
-use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
+use pallet_proposals::Projects;
 use sp_runtime::DispatchError::BadOrigin;
-use std::convert::TryInto;
 
 #[test]
 fn approve_freelancer_not_root() {
@@ -288,34 +287,6 @@ fn reserved_funds_are_transferred_to_project_kitty() {
         let project_balance = Tokens::free_balance(CurrencyId::Native, &project_id);
         assert_eq!(project_balance, contribution_value);
     });
-}
-
-pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
-    let max = <Test as Config>::MaxBriefOwners::get();
-    if n > max {
-        n = max;
-    }
-    (0..n)
-        .map(|_| AccountId::from_raw([n as u8; 32]))
-        .collect::<Vec<AccountId>>()
-        .try_into()
-        .expect("qed")
-}
-
-pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
-    let max = <Test as Config>::MaxBriefOwners::get();
-    if n > max {
-        n = max;
-    }
-    let milestones = (0..n)
-        .map(|_| ProposedMilestone {
-            percentage_to_unlock: 100 / n,
-        })
-        .collect::<Vec<ProposedMilestone>>()
-        .try_into()
-        .expect("qed");
-
-    milestones
 }
 
 pub(crate) fn run_to_block(n: u64) {

@@ -137,8 +137,8 @@ std = [
 	'frame-system-rpc-runtime-api/std',
 	"orml-asset-registry/std",
 	"orml-tokens/std",
-    "orml-xcm/std",
-    "orml-xtokens/std",
+	"orml-xcm/std",
+	"orml-xtokens/std",
 	"orml-currencies/std",
 	"orml-unknown-tokens/std",
 	"pallet-assets/std",
@@ -172,6 +172,8 @@ std = [
 	'cumulus-primitives-utility/std',
 	'common-traits/std',
 	'common-types/std',
+
+	'pallet-proposals/std',
 	'pallet-briefs/std',
 	'pallet-grants/std',
 ]
@@ -182,8 +184,6 @@ runtime-benchmarks = [
 	'frame-support/runtime-benchmarks',
 	"hex-literal",
 	'frame-system-benchmarking/runtime-benchmarks',
-	'pallet-proposals/runtime-benchmarks',
-	'pallet-briefs/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-collective/runtime-benchmarks',
 	'pallet-identity/runtime-benchmarks',
@@ -191,12 +191,13 @@ runtime-benchmarks = [
 	'pallet-xcm/runtime-benchmarks',
 	'xcm-builder/runtime-benchmarks',
 	"common-runtime/runtime-benchmarks",
+
+	'pallet-proposals/runtime-benchmarks',
+	'pallet-briefs/runtime-benchmarks',
 	'pallet-grants/runtime-benchmarks',
 ]
 
 # A feature that should be enabled when the runtime should be build for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller like logging for example.
-on-chain-release-build = [
-	"sp-api/disable-logging",
-]
+on-chain-release-build = ["sp-api/disable-logging"]
