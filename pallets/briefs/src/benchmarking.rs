@@ -30,15 +30,13 @@ benchmarks! {
     }
 
     create_brief {
-        let caller: T::AccountId = create_account_id::<T>("initiator", 1);
-        let max_brief_owners: u32 = <T as Config>::MaxBriefOwners::get();
-        let brief_owners: BoundedBriefOwners<T> = get_brief_owners::<T>(10).try_into().unwrap();
+        let brief_owners = get_max_brief_owners::<T>();
+        let caller: T::AccountId = brief_owners[0].clone();
         let applicant = create_account_id::<T>("applicant", 1);
         let budget = 10_000u32.into();
-        let max_milestones: u32 = <T as Config>::MaxMilestonesPerBrief::get();
         let initial_contribution = 5_000u32.into();
         let brief_id = gen_hash(1);
-        let milestones = get_milestones::<T>(max_milestones);
+        let milestones = get_max_milestones::<T>();
         // (origin, brief_owners, applicant, budget, initial_contribution, brief_id, currency_id, milestones)
     }: _(RawOrigin::Signed(caller.clone()), brief_owners, applicant, budget, initial_contribution, brief_id.clone(), CurrencyId::Native, milestones)
     verify {
@@ -46,17 +44,17 @@ benchmarks! {
     }
 
     contribute_to_brief {
-        let caller: T::AccountId = create_account_id::<T>("initiator", 1);
-        let brief_owner = create_account_id::<T>("brief_owner", 1);
+        let brief_owners = get_max_brief_owners::<T>();
+        let caller: T::AccountId = brief_owners[0].clone();
         let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
         let budget = 10_000u32.into();
         let initial_contribution = 5_000u32.into();
         let contribution = 1_000u32.into();
         let brief_id = gen_hash(1);
-        let milestones = get_milestones::<T>(10);
+        let milestones = get_max_milestones::<T>();
         assert_ok!(Briefs::<T>::create_brief(
             RawOrigin::Signed(caller.clone()).into(),
-            vec![brief_owner.clone()].try_into().unwrap(),
+            brief_owners.clone(),
             applicant,
             budget,
             initial_contribution,
@@ -64,6 +62,7 @@ benchmarks! {
             CurrencyId::Native,
             milestones
         ));
+        let brief_owner: T::AccountId = brief_owners[0].clone();
         // (brief_owner, brief_id, contribution)
     }: _(RawOrigin::Signed(brief_owner.clone()), brief_id.clone(), contribution)
     verify {
@@ -71,16 +70,17 @@ benchmarks! {
     }
 
     commence_work {
-        let caller: T::AccountId = create_account_id::<T>("initiator", 1);
-        let brief_owner = create_account_id::<T>("brief_owner", 1);
+        let brief_owners = get_max_brief_owners::<T>();
+        let caller: T::AccountId = brief_owners[0].clone();
         let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
         let budget = 10_000u32.into();
         let initial_contribution = 5_000u32.into();
         let brief_id = gen_hash(1);
-        let milestones = get_milestones::<T>(10);
+        let max_milestones: u32 = <T as Config>::MaxMilestonesPerBrief::get();
+        let milestones = get_max_milestones::<T>();
         assert_ok!(Briefs::<T>::create_brief(
             RawOrigin::Signed(caller.clone()).into(),
-            vec![brief_owner.clone()].try_into().unwrap(),
+            brief_owners,
             applicant.clone(),
             budget,
             initial_contribution,
@@ -117,19 +117,24 @@ where
     assert_eq!(event, &system_event);
 }
 
-pub(crate) fn get_brief_owners<T: Config>(mut n: u32) -> BoundedBriefOwners<T> {
+fn get_brief_owners<T: Config>(mut n: u32) -> BoundedBriefOwners<T> {
     let max = <T as briefs::Config>::MaxBriefOwners::get();
     if n > max {
         n = max;
     }
     (0..n)
-        .map(|i| create_account_id::<T>("account", i))
+        .map(|i| create_account_id::<T>("brief_owner", i))
         .collect::<Vec<T::AccountId>>()
         .try_into()
         .expect("qed")
 }
 
-pub(crate) fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
+fn get_max_brief_owners<T: Config>() -> BoundedBriefOwners<T> {
+    let max_brief_owners: u32 = <T as Config>::MaxBriefOwners::get();
+    get_brief_owners::<T>(max_brief_owners)
+}
+
+fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
     let max = <T as briefs::Config>::MaxMilestonesPerBrief::get();
     if n > max {
         n = max;
@@ -143,6 +148,11 @@ pub(crate) fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones
         .expect("qed");
 
     milestones
+}
+
+fn get_max_milestones<T: Config>() -> BoundedProposedMilestones<T> {
+    let max_milestones: u32 = <T as Config>::MaxMilestonesPerBrief::get();
+    get_milestones::<T>(max_milestones)
 }
 
 impl_benchmark_test_suite!(
