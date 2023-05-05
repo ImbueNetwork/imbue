@@ -927,6 +927,7 @@ mod benches {
         [pallet_timestamp, Timestamp]
         [proposals, ImbueProposals]
         [briefs, ImbueBriefs]
+        [grants, ImbueGrants]
     );
 }
 

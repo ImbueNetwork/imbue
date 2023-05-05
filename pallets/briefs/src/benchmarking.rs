@@ -1,7 +1,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate as briefs;
 use crate::mock::gen_hash;
 use crate::Pallet as Briefs;
 use crate::{BoundedBriefOwners, BoundedProposedMilestones};
@@ -118,7 +117,7 @@ where
 }
 
 fn get_brief_owners<T: Config>(mut n: u32) -> BoundedBriefOwners<T> {
-    let max = <T as briefs::Config>::MaxBriefOwners::get();
+    let max = <T as Config>::MaxBriefOwners::get();
     if n > max {
         n = max;
     }
@@ -135,7 +134,7 @@ fn get_max_brief_owners<T: Config>() -> BoundedBriefOwners<T> {
 }
 
 fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
-    let max = <T as briefs::Config>::MaxMilestonesPerBrief::get();
+    let max = <T as Config>::MaxMilestonesPerBrief::get();
     if n > max {
         n = max;
     }
