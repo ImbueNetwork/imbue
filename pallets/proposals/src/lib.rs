@@ -101,11 +101,16 @@ pub mod pallet {
         // Defines wether an identity is required when creating a proposal.
         type IsIdentityRequired: Get<bool>;
 
+        /// TODO: not in use
         type MilestoneVotingWindow: Get<Self::BlockNumber>;
 
+        /// The type responisble for handling refunds.
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
 
         type MaxMilestonesPerProject: Get<u32>;
+
+        /// The storage deposit taken when a project is created and returned on deletion/completion.
+        type ProjectStorageDeposit: Get<BalanceOf<Self>>;
     }
 
     #[pallet::pallet]
@@ -305,6 +310,8 @@ pub mod pallet {
         ProjectAlreadyApproved,
         /// The milestone does not exist.
         MilestoneDoesNotExist,
+        /// You dont have enough IMBU for the project storage deposit.
+        ImbueRequiredForStorageDep,
     }
 
     #[pallet::hooks]
