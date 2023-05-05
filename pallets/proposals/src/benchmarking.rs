@@ -328,7 +328,6 @@ where
 }
 
 fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
-    let milestone_max_count = <<T as Config>::MaxMilestonesPerProject as Get<u32>>::get() as usize;
     let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000);
     let milestones = get_max_milestones::<T>();
 

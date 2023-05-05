@@ -9,6 +9,7 @@ mod integration_tests;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
@@ -133,9 +134,9 @@ pub mod pallet {
         ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
 
-            let total_percentage = proposed_milestones
-                .iter()
-                .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock.into()));
+            let total_percentage = proposed_milestones.iter().fold(0u32, |acc, x| {
+                acc.saturating_add(x.percentage_to_unlock.into())
+            });
             ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
 
             ensure!(
@@ -190,9 +191,9 @@ pub mod pallet {
             ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
 
             if let Some(milestones) = edited_milestones {
-                let total_percentage = milestones
-                    .iter()
-                    .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock.into()));
+                let total_percentage = milestones.iter().fold(0u32, |acc, x| {
+                    acc.saturating_add(x.percentage_to_unlock.into())
+                });
                 ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
@@ -226,7 +227,7 @@ pub mod pallet {
             grant_id: GrantId,
             as_authority: bool,
         ) -> DispatchResultWithPostInfo {
-            let mut grant = PendingGrants::<T>::get(&grant_id).ok_or(Error::<T>::GrantNotFound)?;
+            let grant = PendingGrants::<T>::get(&grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             if as_authority {
                 <T as Config>::CancellingAuthority::ensure_origin(origin)?;
@@ -282,7 +283,10 @@ pub mod pallet {
                 contributions,
                 grant_id,
                 grant.submitter.clone(),
-                grant.milestones.try_into().map_err(|_|Error::<T>::Overflow)?,
+                grant
+                    .milestones
+                    .try_into()
+                    .map_err(|_| Error::<T>::Overflow)?,
                 FundingType::Treasury(grant.treasury_origin),
             )
             .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
@@ -313,5 +317,4 @@ pub mod pallet {
         pub amount_requested: BalanceOf<T>,
         pub treasury_origin: TreasuryOrigin,
     }
-
 }
