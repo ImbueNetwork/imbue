@@ -179,12 +179,11 @@ pub mod pallet {
             );
 
             // Validation
-            let mut total_percentage = 0;
-            for milestone in milestones.iter() {
-                total_percentage += milestone.percentage_to_unlock;
-            }
+            let total_percentage = milestones.iter()
+            .fold(0u32, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
+            
             ensure!(
-                total_percentage == 100,
+                total_percentage == 100u32,
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 

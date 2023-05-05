@@ -234,8 +234,11 @@ pub mod pallet {
                 let who = ensure_signed(origin.clone())?;
                 ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
             }
-            grant.is_cancelled = true;
-            PendingGrants::<T>::insert(&grant_id, grant);
+            PendingGrants::<T>::mutate(grant_id, |grant| {
+                if let Some(g) = grant {
+                    g.is_cancelled = true;
+                }
+            });
             Self::deposit_event(Event::<T>::GrantCancelled { grant_id });
 
             Ok(().into())

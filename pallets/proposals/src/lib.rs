@@ -305,6 +305,8 @@ pub mod pallet {
         ProjectAlreadyApproved,
         /// The milestone does not exist.
         MilestoneDoesNotExist,
+        /// White list spot not found
+        WhiteListNotFound
     }
 
     #[pallet::hooks]
@@ -336,10 +338,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             // Validation
-            let mut total_percentage = 0;
-            for milestone in proposed_milestones.iter() {
-                total_percentage += milestone.percentage_to_unlock;
-            }
+            let total_percentage = proposed_milestones.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
             ensure!(
                 total_percentage == 100,
                 Error::<T>::MilestonesTotalPercentageMustEqual100
@@ -369,10 +368,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let mut total_percentage = 0;
-            for milestone in proposed_milestones.iter() {
-                total_percentage += milestone.percentage_to_unlock;
-            }
+            let total_percentage = proposed_milestones.iter()
+            .fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
+
             ensure!(
                 total_percentage == 100,
                 Error::<T>::MilestonesTotalPercentageMustEqual100
@@ -718,7 +716,9 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     pub agreement_hash: H256,
+    // TODO: BOund
     pub milestones: BTreeMap<MilestoneKey, Milestone>,
+    // TODO: BOund
     pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
     pub currency_id: common_types::CurrencyId,
     pub required_funds: Balance,
