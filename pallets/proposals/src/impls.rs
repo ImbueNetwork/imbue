@@ -224,7 +224,7 @@ impl<T: Config> Pallet<T> {
 
         // Find whitelist if exists
         if WhitelistSpots::<T>::contains_key(project_key) {
-            let whitelist_spots = Self::whitelist_spots(project_key).unwrap();
+            let whitelist_spots = Self::whitelist_spots(project_key).ok_or(Error::<T>::WhiteListNotFound)?;
             ensure!(
                 whitelist_spots.contains_key(&who.clone()),
                 Error::<T>::OnlyWhitelistedAccountsCanContribute
@@ -298,18 +298,14 @@ impl<T: Config> Pallet<T> {
             // Once the round ends, check for the funding threshold met. (set threshold for 75%)
         }
         project.funding_threshold_met = true;
-        // set is_approved
-        if milestone_keys.is_some() {
-            // USE IF LET
-            for milestone_key in milestone_keys.unwrap().into_iter() {
+        // Warning: This will allow the withdrawal of funds, approve is a governance action so should not be a problem.
+        // Consider removing this/
+        if let Some(ms_keys) = milestone_keys {
+            for milestone_key in ms_keys.into_iter() {
                 ensure!(
                     project.milestones.contains_key(&milestone_key),
                     Error::<T>::MilestoneDoesNotExist
                 );
-
-                // USE IF LET
-                let mut milestone = project.milestones.get_mut(&milestone_key).unwrap().clone();
-                milestone.is_approved = true;
 
                 let vote_lookup_key = (project_key, milestone_key);
 
@@ -329,7 +325,9 @@ impl<T: Config> Pallet<T> {
                     milestone_key,
                     now,
                 ));
-                project.milestones.insert(milestone_key, milestone.clone());
+                
+                let mut milestone = project.milestones.get_mut(&milestone_key).ok_or(Error::<T>::MilestoneDoesNotExist)?;
+                milestone.is_approved = true;
             }
         }
         <Rounds<T>>::insert(round_key, Some(round));
@@ -418,7 +416,7 @@ impl<T: Config> Pallet<T> {
 
         if approve_milestone {
             let updated_vote = Vote {
-                yay: user_milestone_vote.yay + contribution_amount,
+                yay: user_milestone_vote.yay.saturating_add(contribution_amount),
                 nay: user_milestone_vote.nay,
                 is_approved: user_milestone_vote.is_approved,
             };
@@ -426,7 +424,7 @@ impl<T: Config> Pallet<T> {
         } else {
             let updated_vote = Vote {
                 yay: user_milestone_vote.yay,
-                nay: user_milestone_vote.nay + contribution_amount,
+                nay: user_milestone_vote.nay.saturating_add(contribution_amount),
                 is_approved: user_milestone_vote.is_approved,
             };
             <MilestoneVotes<T>>::insert((project_key, milestone_key), updated_vote)
@@ -469,15 +467,13 @@ impl<T: Config> Pallet<T> {
 
         // let the 100 x threshold required = total_votes * majority required
         let threshold_votes: BalanceOf<T> =
-            project.raised_funds * T::PercentRequiredForVoteToPass::get().into();
+            project.raised_funds.saturating_mul(T::PercentRequiredForVoteToPass::get().into());
         let percent_multiple: BalanceOf<T> = 100u32.into();
         ensure!(
-            (percent_multiple * (vote.yay + vote.nay)) >= threshold_votes,
+            percent_multiple.saturating_mul(vote.yay + vote.nay) >= threshold_votes,
             Error::<T>::MilestoneVotingNotComplete
         );
         if vote.yay > vote.nay {
-            // todo:
-            // THIS FLAG FLIPS IN THE APPROVE EXTRINSIC, WHY IS IT HAPPENING HERE?
             milestone.is_approved = true;
             let updated_vote = Vote {
                 yay: vote.yay,
@@ -491,9 +487,10 @@ impl<T: Config> Pallet<T> {
                 milestone_key,
                 now,
             ));
-
             <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
         }
+        //TODO: Case for equal votes?
+
         project.milestones.insert(milestone_key, milestone.clone());
         <Projects<T>>::insert(project_key, project);
 
@@ -510,18 +507,14 @@ impl<T: Config> Pallet<T> {
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         //ensure that the project is approved_for_funding?
 
-        let total_contribution_amount: BalanceOf<T> = project.raised_funds;
-
-        let mut unlocked_funds: BalanceOf<T> = (0_u32).into();
-        // TODO: No need to clone
-        for (_milestone_key, milestone) in project.milestones.clone() {
-            // Todo: milestone is approved at the point of the approve extrinsic
-            if milestone.is_approved {
-                unlocked_funds += (total_contribution_amount
-                    * milestone.percentage_to_unlock.into())
-                    / MAX_PERCENTAGE.into();
+        let unlocked_funds: BalanceOf<T> = project.milestones.iter().fold(Default::default(), |acc, ms| {
+            if ms.1.is_approved {
+                let per_milestone = project.raised_funds.saturating_mul(ms.1.percentage_to_unlock.into()) / MAX_PERCENTAGE.into();
+                acc.saturating_add(per_milestone)
+            } else {
+                acc
             }
-        }
+        });
 
         let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
         ensure!(
@@ -538,7 +531,7 @@ impl<T: Config> Pallet<T> {
 
         Projects::<T>::try_mutate(project_key, |project| -> DispatchResult {
             if let Some(p) = project {
-                p.withdrawn_funds += available_funds;
+                p.withdrawn_funds = p.withdrawn_funds.saturating_add(available_funds);
             }
             Ok(())
         })?;
@@ -554,6 +547,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Appends a list of refunds to the queue to be used by the hooks.
+    // DEPRICATED, PLS REMOOVE.
     pub fn add_refunds_to_queue_depricated(project_key: ProjectKey) -> DispatchResultWithPostInfo {
         let mut project =
             Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
@@ -563,7 +557,7 @@ impl<T: Config> Pallet<T> {
         let mut locked_milestone_percentage: u32 = 0;
         for (_milestone_key, milestone) in project.milestones.clone() {
             if !milestone.is_approved {
-                locked_milestone_percentage += milestone.percentage_to_unlock;
+                locked_milestone_percentage = locked_milestone_percentage.saturating_add(milestone.percentage_to_unlock);
             }
         }
 
@@ -582,7 +576,8 @@ impl<T: Config> Pallet<T> {
                 refund_amount,
                 project.currency_id,
             ));
-            refunded_funds += refund_amount;
+            //
+            refunded_funds = refunded_funds.saturating_add(refund_amount);
         }
 
         // Updated new project status to cancelled
@@ -677,7 +672,7 @@ impl<T: Config> Pallet<T> {
         // Insert the new round and votes into storage and update the RoundCount and UserVotes.
         NoConfidenceVotes::<T>::insert(project_key, vote);
         Rounds::<T>::insert(round_key, Some(round));
-        RoundCount::<T>::mutate(|c| *c += 1u32);
+        RoundCount::<T>::mutate(|c| *c = c.saturating_add(1u32));
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
         Self::deposit_event(Event::NoConfidenceRoundCreated(round_key, project_key));
 
@@ -711,9 +706,9 @@ impl<T: Config> Pallet<T> {
 
         // Update the vote
         if is_yay {
-            vote.yay += contribution
+            vote.yay = vote.yay.saturating_add(contribution);
         } else {
-            vote.nay += contribution
+            vote.nay = vote.nay.saturating_add(contribution);
         }
 
         // Insert new vote.
@@ -750,9 +745,9 @@ impl<T: Config> Pallet<T> {
         let total_contribute = project.raised_funds;
 
         // 100 * Threshold =  (total_contribute * majority_required)/100
-        let threshold_votes: BalanceOf<T> = total_contribute * majority_required.into();
+        let threshold_votes: BalanceOf<T> = total_contribute.saturating_mul(majority_required.into());
 
-        if vote.nay * 100u8.into() >= threshold_votes {
+        if vote.nay.saturating_mul(100u8.into()) >= threshold_votes {
             round.is_canceled = true;
 
             NoConfidenceVotes::<T>::remove(project_key);
@@ -760,12 +755,13 @@ impl<T: Config> Pallet<T> {
             // TODO: Need a sane bound on contributors in a project.
             // TODO: the same thing but with milestones.
 
-            let mut locked_milestone_percentage: u32 = 0;
-            for (_milestone_key, milestone) in project.milestones.clone() {
-                if !milestone.is_approved {
-                    locked_milestone_percentage += milestone.percentage_to_unlock;
+            let locked_milestone_percentage = project.milestones.iter().fold(0, |acc, ms| {
+                if !ms.1.is_approved {
+                    acc.saturating_add(ms.1.percentage_to_unlock)
+                } else {
+                    acc
                 }
-            }
+            });
 
             let project_account_id = Self::project_account_id(project_key);
 
@@ -774,9 +770,7 @@ impl<T: Config> Pallet<T> {
                     // Handle refunds on native chain, there is no need to deal with xcm here.
                     // Todo: Batch call using pallet-utility?
                     for (acc_id, contribution) in project.contributions.iter() {
-                        let refund_amount: BalanceOf<T> = ((contribution).value
-                            * locked_milestone_percentage.into())
-                            / MAX_PERCENTAGE.into();
+                        let refund_amount: BalanceOf<T> = contribution.value.saturating_mul(locked_milestone_percentage.into()) / MAX_PERCENTAGE.into();
                         <T as Config>::MultiCurrency::transfer(
                             project.currency_id,
                             &project_account_id,
@@ -789,9 +783,8 @@ impl<T: Config> Pallet<T> {
                     let mut refund_amount: BalanceOf<T> = Default::default();
                     // Sum the contributions and send a single xcm.
                     for (_acc_id, contribution) in project.contributions.iter() {
-                        refund_amount += ((contribution).value
-                            * locked_milestone_percentage.into())
-                            / MAX_PERCENTAGE.into();
+                        let per_contributor = contribution.value.saturating_mul(locked_milestone_percentage.into()) / MAX_PERCENTAGE.into();
+                        refund_amount = refund_amount.saturating_add(per_contributor);
                     }
                     <T as Config>::RefundHandler::send_refund_message_to_treasury(
                         project_account_id,
