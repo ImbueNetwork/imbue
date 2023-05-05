@@ -11,6 +11,7 @@ pub(crate) mod tests;
 #[cfg(test)]
 mod integration_tests;
 
+#[cfg(test)]
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
@@ -35,7 +36,7 @@ pub mod pallet {
         Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
         <T as Config>::MaxBriefOwners,
     >;
-    type BoundedProposedMilestones<T> =
+    pub(crate) type BoundedProposedMilestones<T> =
         BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerBrief>;
 
     pub(crate) type BoundedBriefOwners<T> =
