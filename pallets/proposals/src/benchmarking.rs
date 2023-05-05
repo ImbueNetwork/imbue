@@ -6,6 +6,7 @@ use frame_benchmarking::vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
+use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_std::str;
 
@@ -21,9 +22,7 @@ benchmarks! {
     create_project {
         let caller: T::AccountId = whitelisted_caller();
 
-        let milestones: BoundedProposedMilestones<T> = vec![ProposedMilestone {
-            percentage_to_unlock: 10,
-        }; 10].try_into().unwrap();
+        let milestones = get_max_milestones::<T>();
 
         let required_funds: BalanceOf<T> = u32::MAX.into();
         let currency_id = CurrencyId::Native;
@@ -37,9 +36,7 @@ benchmarks! {
     }
 
     update_project {
-        let milestones: BoundedProposedMilestones<T> = vec![ProposedMilestone {
-            percentage_to_unlock: 10,
-        }; 10].try_into().unwrap();
+        let milestones = get_max_milestones::<T>();
 
         let caller = create_project_common::<T>(u32::MAX.into());
 
@@ -333,14 +330,7 @@ where
 fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     let milestone_max_count = <<T as Config>::MaxMilestonesPerProject as Get<u32>>::get() as usize;
     let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000);
-    let milestones: BoundedProposedMilestones<T> = vec![
-        ProposedMilestone {
-            percentage_to_unlock: 100 / milestone_max_count as u32,
-        };
-        milestone_max_count
-    ]
-    .try_into()
-    .unwrap();
+    let milestones = get_max_milestones::<T>();
 
     let agg_hash = H256::from([20; 32]);
     let required_funds: BalanceOf<T> = contribution.into();
@@ -375,12 +365,33 @@ fn create_funded_user<T: Config>(
 ) -> T::AccountId {
     let user = account(string, n, SEED);
     let balance: BalanceOf<T> = balance_factor.into();
-    let _ = <T::RMultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
+    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
         CurrencyId::Native,
         &user,
         balance,
     );
     user
+}
+
+fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
+    let max = <T as Config>::MaxMilestonesPerProject::get();
+    if n > max {
+        n = max;
+    }
+    let milestones = (0..n)
+        .map(|_| ProposedMilestone {
+            percentage_to_unlock: 100 / n,
+        })
+        .collect::<Vec<ProposedMilestone>>()
+        .try_into()
+        .expect("qed");
+
+    milestones
+}
+
+fn get_max_milestones<T: Config>() -> BoundedProposedMilestones<T> {
+    let max_milestones: u32 = <T as Config>::MaxMilestonesPerProject::get();
+    get_milestones::<T>(max_milestones)
 }
 
 impl_benchmark_test_suite!(
