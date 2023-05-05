@@ -4,8 +4,9 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::MultiCurrency;
-use pallet_proposals::Projects;
+use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
 use sp_runtime::DispatchError::BadOrigin;
+use std::convert::TryInto;
 
 #[test]
 fn approve_freelancer_not_root() {
@@ -296,4 +297,32 @@ pub(crate) fn run_to_block(n: u64) {
         Proposals::on_initialize(System::block_number());
         //BriefsMod::on_initialize(System::block_number());
     }
+}
+
+pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
+    let max = <Test as briefs::Config>::MaxBriefOwners::get();
+    if n > max {
+        n = max;
+    }
+    (0..n)
+        .map(|_| AccountId::from_raw([n as u8; 32]))
+        .collect::<Vec<AccountId>>()
+        .try_into()
+        .expect("qed")
+}
+
+pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
+    let max = <Test as briefs::Config>::MaxMilestonesPerBrief::get();
+    if n > max {
+        n = max;
+    }
+    let milestones = (0..n)
+        .map(|_| ProposedMilestone {
+            percentage_to_unlock: 100 / n,
+        })
+        .collect::<Vec<ProposedMilestone>>()
+        .try_into()
+        .expect("qed");
+
+    milestones
 }

@@ -1,5 +1,4 @@
 use crate as pallet_briefs;
-use crate::BoundedBriefOwners;
 use frame_support::{
     parameter_types,
     traits::{ConstU32, Nothing},
@@ -7,7 +6,6 @@ use frame_support::{
     PalletId,
 };
 use frame_system::EnsureRoot;
-use pallet_proposals::{BoundedProposedMilestones, ProposedMilestone};
 use sp_core::{sr25519::Signature, H256};
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
@@ -260,34 +258,6 @@ pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_r
 
 pub fn gen_hash(seed: u8) -> BriefHash {
     H256::from([seed; 32])
-}
-
-pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
-    let max = <Test as pallet_briefs::Config>::MaxBriefOwners::get();
-    if n > max {
-        n = max;
-    }
-    (0..n)
-        .map(|_| AccountId::from_raw([n as u8; 32]))
-        .collect::<Vec<AccountId>>()
-        .try_into()
-        .expect("qed")
-}
-
-pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
-    let max = <Test as pallet_briefs::Config>::MaxBriefOwners::get();
-    if n > max {
-        n = max;
-    }
-    let milestones = (0..n)
-        .map(|_| ProposedMilestone {
-            percentage_to_unlock: 100 / n,
-        })
-        .collect::<Vec<ProposedMilestone>>()
-        .try_into()
-        .expect("qed");
-
-    milestones
 }
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
