@@ -39,6 +39,8 @@ impl<T: Config> Pallet<T> {
             let _ = Self::ensure_identity_is_decent(&who)?;
         }
 
+        let _ = <T as Config>::MultiCurrency::reserve(CurrencyId::Native, &who, T::ProjectStorageDeposit::get()).map_err(|_|Error::<T>::ImbueRequiredForStorageDep)?;
+
         let project_key = ProjectCount::<T>::get();
         let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
 
@@ -506,6 +508,7 @@ impl<T: Config> Pallet<T> {
 
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
+        //ensure that the project is approved_for_funding?
 
         let total_contribution_amount: BalanceOf<T> = project.raised_funds;
 
