@@ -1,10 +1,8 @@
 use crate::mock::*;
-use crate::pallet::{
-    BoundedApprovers, BoundedPMilestones, Config, Error, GrantId, PendingGrants,
-};
-use pallet_proposals::ProposedMilestone;
+use crate::pallet::{BoundedApprovers, BoundedPMilestones, Config, Error, GrantId, PendingGrants};
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
+use pallet_proposals::ProposedMilestone;
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
 
@@ -384,7 +382,7 @@ pub(crate) fn get_milestones(mut n: u32) -> BoundedPMilestones<Test> {
     }
     let percent = 100 / n;
     (0..n)
-        .map(|| ProposedMilestone {
+        .map(|_m| ProposedMilestone {
             percentage_to_unlock: percent.try_into().expect("qed"),
         })
         .collect::<Vec<ProposedMilestone>>()
