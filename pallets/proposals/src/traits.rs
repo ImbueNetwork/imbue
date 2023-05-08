@@ -133,7 +133,7 @@ where
 
         Projects::<T>::insert(project_key, project);
         let project_account = Self::project_account_id(project_key);
-        ProjectCount::<T>::mutate(|c| *c  = c.saturating_add(1));
+        ProjectCount::<T>::mutate(|c| *c = c.saturating_add(1));
         Self::deposit_event(Event::ProjectCreated(
             benificiary,
             brief_hash,

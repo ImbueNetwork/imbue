@@ -10,7 +10,7 @@ use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, RawOrigin};
 use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;
-use sp_std::{str, convert::TryInto, vec::Vec};
+use sp_std::{convert::TryInto, str, vec::Vec};
 
 const SEED: u32 = 0;
 
