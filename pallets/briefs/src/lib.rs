@@ -2,6 +2,8 @@
 
 pub use pallet::*;
 
+mod weights;
+
 #[cfg(test)]
 mod mock;
 
@@ -70,6 +72,8 @@ pub mod pallet {
         type MaxBriefOwners: Get<u32>;
 
         type MaxMilestonesPerBrief: Get<u32>;
+
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     #[pallet::storage]
