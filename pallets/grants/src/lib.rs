@@ -11,7 +11,6 @@ mod integration_tests;
 #[cfg(test)]
 mod tests;
 
-#[cfg(test)]
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 

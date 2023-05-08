@@ -192,6 +192,7 @@ impl pallet_briefs::Config for Test {
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
+    type WeightInfo = ();
 }
 
 parameter_types! {
