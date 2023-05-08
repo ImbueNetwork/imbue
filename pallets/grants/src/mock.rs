@@ -118,6 +118,7 @@ impl pallet_grants::Config for Test {
     type MaxApprovers = MaxApprovers;
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type CancellingAuthority = EnsureRoot<AccountId>;
+    type WeightInfo = ();
 }
 
 parameter_types! {

@@ -13,7 +13,6 @@ pub(crate) mod tests;
 #[cfg(test)]
 mod integration_tests;
 
-#[cfg(test)]
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
