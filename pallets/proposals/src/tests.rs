@@ -2323,7 +2323,48 @@ fn deposit_taken_on_project_creation() {
 #[test]
 fn project_is_deleted_on_final_withdraw() {
     build_test_externality().execute_with(|| {
+        let alice_balance_initial = Tokens::free_balance(CurrencyId::Native, &ALICE);
         let _ = create_project();
+        let project_key = 0;
+        let contribution = 1_000_000u64;
+        let _ = Proposals::schedule_round(
+            RuntimeOrigin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![0u32],
+            RoundType::ContributionRound,
+        );
+        let _ = Proposals::contribute(
+            RuntimeOrigin::signed(*BOB),
+            Some(1),
+            project_key,
+            contribution,
+        );
+        run_to_block(System::block_number() + 100);
+        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), 0, None).unwrap();
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            0
+        ));
+        run_to_block(System::block_number() + 1);
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            0,
+            None,
+            true
+        ));
+        assert_ok!(Proposals::finalise_milestone_voting(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            0
+        ));
+        // Assert that the balance hasnt yet changed minus deposit fee.
+        assert_eq!(Tokens::free_balance(CurrencyId::Native, &ALICE) + <Test as Config>::ProjectStorageDeposit::get(), alice_balance_initial);
+        let _ = Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key); 
+        assert_eq!(alice_balance_initial + contribution, Tokens::free_balance(CurrencyId::Native, &ALICE));
+        assert!(Projects::<Test>::get(project_key).is_none());
     })
 }
 
