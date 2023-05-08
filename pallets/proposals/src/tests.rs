@@ -1204,7 +1204,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         );
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &*ALICE),
-            additional_amount + required_funds * (initial_percentage_to_withdraw as u64) / 100
+            (additional_amount + required_funds * (initial_percentage_to_withdraw as u64) / 100) - <Test as Config>::ProjectStorageDeposit::get()
         );
 
         // withdraw last milestone
@@ -1342,13 +1342,12 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
             proposed_milestones1.get(0).unwrap().percentage_to_unlock
                 + proposed_milestones1.get(1).unwrap().percentage_to_unlock;
 
+        let project = Projects::<Test>::get(project_key).expect("qed");
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &*ALICE),
-            initial_balance - contribution_value
-                + (contribution_value.saturating_mul(4) * (total_percentage_to_withdraw as u64)
-                    / 100)
+            initial_balance + (project.raised_funds * (total_percentage_to_withdraw as u64) / 100) - <Test as Config>::ProjectStorageDeposit::get()
         );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
@@ -1372,12 +1371,11 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 fn test_withdraw_upon_project_approval_and_finalised_voting() {
     let milestone1_key = 0;
     build_test_externality().execute_with(|| {
+        let initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(create_project());
 
-        let initial_balance = Tokens::free_balance(CurrencyId::Native, &*ALICE);
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
-
         Proposals::schedule_round(
             RuntimeOrigin::root(),
             System::block_number(),
@@ -1688,7 +1686,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         );
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &*ALICE),
-            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
+            (additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100) - <Test as Config>::ProjectStorageDeposit::get()
         );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
@@ -2312,8 +2310,56 @@ fn only_the_initiator_can_update_project() {
 }
 
 #[test]
-fn project_is_deleted_on_final_withdraw_and_deposit_returned() {
+fn deposit_taken_on_project_creation() {
     build_test_externality().execute_with(|| {
+        let alice_initial = Tokens::free_balance(CurrencyId::Native, &ALICE);
+        let _ = create_project();
+        let alice_after = Tokens::free_balance(CurrencyId::Native, &ALICE);
+
+        assert_eq!(alice_after + <Test as Config>::ProjectStorageDeposit::get(), alice_initial);
+    })
+}
+
+#[test]
+fn project_is_deleted_on_final_withdraw() {
+    build_test_externality().execute_with(|| {
+        let _ = create_project();
+    })
+}
+
+
+#[test]
+fn project_is_deleted_after_no_confidence_call() {
+    build_test_externality().execute_with(|| {
+
+        let _ = create_project();
+        let project_key: ProjectKey = 0;
+
+        let _ = Proposals::schedule_round(
+            RuntimeOrigin::root(),
+            System::block_number(),
+            System::block_number() + 100,
+            bounded_vec![0u32],
+            RoundType::ContributionRound,
+        );
+        let _ = Proposals::contribute(
+            RuntimeOrigin::signed(*BOB),
+            Some(1),
+            project_key,
+            1_000_000u64,
+        );
+        run_to_block(System::block_number() + 100);
+        let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), 0, None).unwrap();
+        let _ =
+        Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key)
+            .unwrap();
+
+        assert_ok!(Proposals::finalise_no_confidence_round(
+                RuntimeOrigin::signed(*BOB),
+                None,
+                project_key
+        ));
+        assert!(Projects::<Test>::get(project_key).is_none());
     })
 }
 

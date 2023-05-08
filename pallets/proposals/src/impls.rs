@@ -469,6 +469,7 @@ impl<T: Config> Pallet<T> {
         let threshold_votes: BalanceOf<T> =
             project.raised_funds.saturating_mul(T::PercentRequiredForVoteToPass::get().into());
         let percent_multiple: BalanceOf<T> = 100u32.into();
+        
         ensure!(
             percent_multiple.saturating_mul(vote.yay + vote.nay) >= threshold_votes,
             Error::<T>::MilestoneVotingNotComplete
@@ -534,11 +535,10 @@ impl<T: Config> Pallet<T> {
                 p.withdrawn_funds = p.withdrawn_funds.saturating_add(available_funds);
                 if p.withdrawn_funds == p.raised_funds {
                     let _ = Self::reinstate_storage_deposit(&p.initiator)?;
-                    None
-                } else {
-                    Some(p)
-                }
+                    *project = None;
+                } 
             }
+            Ok(())
         })?;
 
         Self::deposit_event(Event::ProjectFundsWithdrawn(
@@ -697,29 +697,22 @@ impl<T: Config> Pallet<T> {
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
         );
-        // Ensure that who is a contributor.
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contribution = Self::ensure_contributor_of(&project, &who)?;
 
-        // Ensure that the vote has been raised.
         let mut vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
-        // Ensure a round has been found + that they have not already voted.
         ensure!(
             UserVotes::<T>::get((&who, project_key, 0, round_key)).is_none(),
             Error::<T>::VoteAlreadyExists
         );
 
-        // Update the vote
         if is_yay {
             vote.yay = vote.yay.saturating_add(contribution);
         } else {
             vote.nay = vote.nay.saturating_add(contribution);
         }
 
-        // Insert new vote.
         NoConfidenceVotes::<T>::insert(project_key, vote);
-
-        // Insert person who has voted.
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
 
         Self::deposit_event(Event::NoConfidenceRoundVotedUpon(round_key, project_key));
@@ -749,7 +742,7 @@ impl<T: Config> Pallet<T> {
 
         let total_contribute = project.raised_funds;
 
-        // 100 * Threshold =  (total_contribute * majority_required)/100
+        // 100 * Threshold =  (total_contribute * majority_required)
         let threshold_votes: BalanceOf<T> = total_contribute.saturating_mul(majority_required.into());
 
         if vote.nay.saturating_mul(100u8.into()) >= threshold_votes {
@@ -799,10 +792,13 @@ impl<T: Config> Pallet<T> {
                     )?;
                 }
             }
+            // Remove the project and return the storage deposit
+            let _ = Self::reinstate_storage_deposit(&project.initiator)?;
+            Projects::<T>::remove(project_key);
 
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {
-            return Err(Error::<T>::VoteThresholdNotMet.into());
+            return Err(Error::<T>::VoteThresholdNotMet.into());     
         }
         Ok(().into())
     }
@@ -836,6 +832,7 @@ impl<T: Config> Pallet<T> {
 
     /// Call this to remove a project from storage and reinstate the deposit.
     fn reinstate_storage_deposit<'a>(who: &'a AccountIdOf<T>) -> DispatchResult {
-        <T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, <T as Config>::ProjectStorageDeposit::get())?;
+        let _ = <T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, <T as Config>::ProjectStorageDeposit::get());
+        Ok(().into())
     }
 }
