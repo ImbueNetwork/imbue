@@ -11,7 +11,7 @@ use frame_support::{
 use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
 
-use sp_core::H256;
+use sp_core::{H256, Get};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
@@ -79,7 +79,7 @@ where
 
         <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
                         AccountIdOf<T>,
-                    >>::reserve(currency_id, &acc, <T as Config>::ProjectStorageDeposit::get()).map_err(|_|Error::<T>::ImbueRequiredForStorageDep)?;
+                    >>::reserve(currency_id, &benificiary, T::ProjectStorageDeposit::get())?;
 
         let sum_of_contributions = contributions
             .values()
@@ -115,7 +115,7 @@ where
                 is_approved: false,
             };
             milestones.insert(milestone_key, milestone);
-            milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
+            milestone_key = milestone_key.saturating_add(1);
         }
 
         let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>> =
