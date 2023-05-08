@@ -507,7 +507,7 @@ impl<T: Config> Pallet<T> {
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         //ensure that the project is approved_for_funding?
 
-        let unlocked_funds: BalanceOf<T> = project.milestones.iter().fold(Default::default(), |acc, ms| {
+        let total_unlocked_funds: BalanceOf<T> = project.milestones.iter().fold(Default::default(), |acc, ms| {
             if ms.1.is_approved {
                 let per_milestone = project.raised_funds.saturating_mul(ms.1.percentage_to_unlock.into()) / MAX_PERCENTAGE.into();
                 acc.saturating_add(per_milestone)
@@ -516,7 +516,7 @@ impl<T: Config> Pallet<T> {
             }
         });
 
-        let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
+        let available_funds: BalanceOf<T> = total_unlocked_funds.saturating_sub(project.withdrawn_funds);
         ensure!(
             available_funds > (0_u32).into(),
             Error::<T>::NoAvailableFundsToWithdraw
@@ -529,11 +529,16 @@ impl<T: Config> Pallet<T> {
             available_funds,
         )?;
 
-        Projects::<T>::try_mutate(project_key, |project| -> DispatchResult {
+        Projects::<T>::mutate_exists(project_key, |project| -> DispatchResult {
             if let Some(p) = project {
                 p.withdrawn_funds = p.withdrawn_funds.saturating_add(available_funds);
+                if p.withdrawn_funds == p.raised_funds {
+                    let _ = Self::reinstate_storage_deposit(&p.initiator)?;
+                    None
+                } else {
+                    Some(p)
+                }
             }
-            Ok(())
         })?;
 
         Self::deposit_event(Event::ProjectFundsWithdrawn(
@@ -827,5 +832,10 @@ impl<T: Config> Pallet<T> {
         } else {
             Err(Error::<T>::InvalidAccount)
         }
+    }
+
+    /// Call this to remove a project from storage and reinstate the deposit.
+    fn reinstate_storage_deposit<'a>(who: &'a AccountIdOf<T>) -> DispatchResult {
+        <T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, <T as Config>::ProjectStorageDeposit::get())?;
     }
 }

@@ -2311,6 +2311,12 @@ fn only_the_initiator_can_update_project() {
     })
 }
 
+#[test]
+fn project_is_deleted_on_final_withdraw_and_deposit_returned() {
+    build_test_externality().execute_with(|| {
+    })
+}
+
 //common helper methods
 pub fn create_project() -> DispatchResultWithPostInfo {
     Proposals::create_project(
