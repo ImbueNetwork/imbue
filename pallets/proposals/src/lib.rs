@@ -306,7 +306,7 @@ pub mod pallet {
         /// The milestone does not exist.
         MilestoneDoesNotExist,
         /// White list spot not found
-        WhiteListNotFound
+        WhiteListNotFound,
     }
 
     #[pallet::hooks]
@@ -338,7 +338,11 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             // Validation
-            let total_percentage = proposed_milestones.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
+            let total_percentage = proposed_milestones
+                .iter()
+                .fold(0, |acc: u32, ms: &ProposedMilestone| {
+                    acc.saturating_add(ms.percentage_to_unlock)
+                });
             ensure!(
                 total_percentage == 100,
                 Error::<T>::MilestonesTotalPercentageMustEqual100
@@ -368,8 +372,11 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let total_percentage = proposed_milestones.iter()
-            .fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
+            let total_percentage = proposed_milestones
+                .iter()
+                .fold(0, |acc: u32, ms: &ProposedMilestone| {
+                    acc.saturating_add(ms.percentage_to_unlock)
+                });
 
             ensure!(
                 total_percentage == 100,

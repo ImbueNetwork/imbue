@@ -256,7 +256,6 @@ pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
 
-
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()

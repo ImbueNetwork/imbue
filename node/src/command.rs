@@ -1,9 +1,10 @@
 // Copyright 2019-2021 Imbue Network(UK) Ltd.
 
+use crate::service::ParachainNativeExecutor;
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    service::{new_partial},
+    service::new_partial,
 };
 use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
@@ -19,7 +20,6 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 use std::net::SocketAddr;
-use crate::service::ParachainNativeExecutor;
 
 const DEFAULT_PARA_ID: u32 = 2121;
 
@@ -157,7 +157,6 @@ macro_rules! construct_async_run {
 	}}
 }
 
-
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
     let cli = Cli::from_args();
@@ -232,8 +231,7 @@ pub fn run() -> Result<()> {
             match cmd {
                 BenchmarkCmd::Pallet(cmd) => {
                     if cfg!(feature = "runtime-benchmarks") {
-                        runner
-                            .sync_run(|config| cmd.run::<Block, ParachainNativeExecutor>(config))
+                        runner.sync_run(|config| cmd.run::<Block, ParachainNativeExecutor>(config))
                     } else {
                         Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
