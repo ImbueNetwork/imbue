@@ -1,7 +1,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::mock::gen_hash;
+use crate::test_utils::gen_hash;
 use crate::Pallet as Briefs;
 use crate::{BoundedBriefOwners, BoundedProposedMilestones};
 use common_types::CurrencyId;
