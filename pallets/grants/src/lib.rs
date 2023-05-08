@@ -1,5 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod weights;
+
 pub use pallet::*;
 #[cfg(test)]
 mod mock;
@@ -19,7 +21,6 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
     use sp_core::H256;
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
@@ -55,6 +56,8 @@ pub mod pallet {
         >;
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
+
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     /// Stores all the Grants waiting for approval, funding and eventual conversion into milestones.
