@@ -1,6 +1,8 @@
 use crate as briefs;
 use crate::mock::*;
 use crate::*;
+use crate::test_utils::gen_hash;
+
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::MultiCurrency;

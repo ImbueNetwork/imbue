@@ -1,5 +1,6 @@
 use crate::mock::*;
 use crate::*;
+use crate::test_utils::gen_hash;
 
 use crate::tests::{get_brief_owners, get_milestones};
 use common_types::CurrencyId;

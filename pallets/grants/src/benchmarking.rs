@@ -1,7 +1,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::mock::gen_grant_id;
+use crate::test_utils::gen_grant_id;
 use crate::Pallet as Grants;
 use crate::{BoundedApprovers, BoundedPMilestones};
 use common_types::{CurrencyId, TreasuryOrigin};

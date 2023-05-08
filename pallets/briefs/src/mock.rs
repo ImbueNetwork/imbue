@@ -9,7 +9,6 @@ use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
-use crate::pallet::BriefHash;
 
 use common_types::CurrencyId;
 
@@ -257,9 +256,6 @@ pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
 
-pub fn gen_hash(seed: u8) -> BriefHash {
-    H256::from([seed; 32])
-}
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
