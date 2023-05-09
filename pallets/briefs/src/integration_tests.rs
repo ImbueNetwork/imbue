@@ -1,7 +1,8 @@
 use crate::mock::*;
-use crate::tests::get_milestones;
+use crate::test_utils::gen_hash;
 use crate::*;
 
+use crate::tests::{get_brief_owners, get_milestones};
 use common_types::CurrencyId;
 use frame_support::{assert_ok, bounded_vec};
 use orml_traits::MultiCurrency;
@@ -17,7 +18,7 @@ fn create_proposal_from_brief() {
 
         let _ = BriefsMod::create_brief(
             RuntimeOrigin::signed(*BOB),
-            tests::get_brief_owners(1),
+            get_brief_owners(1),
             *ALICE,
             contribution_value,
             contribution_value,
@@ -49,7 +50,7 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
         // This is the minimum path to a proposal from the briefs pallet.
         let _ = BriefsMod::create_brief(
             RuntimeOrigin::signed(*BOB),
-            tests::get_brief_owners(1),
+            get_brief_owners(1),
             *ALICE,
             contribution_value,
             contribution_value,
