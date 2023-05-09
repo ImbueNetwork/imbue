@@ -20,7 +20,7 @@ benchmarks! {
     }
 
     create_project {
-        let caller: T::AccountId = whitelisted_caller();
+        let caller: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
 
         let milestones = get_max_milestones::<T>();
 
@@ -30,7 +30,7 @@ benchmarks! {
         let project_key = 0;
         let project_account = Pallet::<T>::project_account_id(project_key);
         // (Origin, ipfs_hash, ProposedMilestones, RequiredFunds, CurrencyId)
-    }: _(RawOrigin::Signed(whitelisted_caller()), agg_hash, milestones, required_funds, CurrencyId::Native)
+    }: _(RawOrigin::Signed(caller.clone()), agg_hash, milestones, required_funds, CurrencyId::Native)
     verify {
         assert_last_event::<T>(Event::<T>::ProjectCreated(caller, agg_hash, project_key, required_funds, CurrencyId::Native, project_account).into());
     }
