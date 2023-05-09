@@ -414,14 +414,14 @@ impl<T: Config> Pallet<T> {
 
         <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
 
-        let user_milestone_vote =
+        let existing_milestone_vote =
             Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::KeyNotFound)?;
         let mut updated_vote = Vote::default();
         if approve_milestone {
             updated_vote = Vote {
-                yay: user_milestone_vote.yay.saturating_add(contribution_amount),
-                nay: user_milestone_vote.nay,
-                is_approved: user_milestone_vote.is_approved,
+                yay: existing_milestone_vote.yay.saturating_add(contribution_amount),
+                nay: existing_milestone_vote.nay,
+                is_approved: existing_milestone_vote.is_approved,
             };
             Self::deposit_event(Event::VoteComplete(
                 who,
@@ -450,12 +450,13 @@ impl<T: Config> Pallet<T> {
                     milestone_key,
                     now,
                 ));
+                <Projects<T>>::insert(project_key, &project);
             }
         } else {
             updated_vote = Vote {
-                yay: user_milestone_vote.yay,
-                nay: user_milestone_vote.nay.saturating_add(contribution_amount),
-                is_approved: user_milestone_vote.is_approved,
+                yay: existing_milestone_vote.yay,
+                nay: existing_milestone_vote.nay.saturating_add(contribution_amount),
+                is_approved: existing_milestone_vote.is_approved,
             };
             Self::deposit_event(Event::VoteComplete(
                 who,
@@ -467,7 +468,6 @@ impl<T: Config> Pallet<T> {
         }
         <Rounds<T>>::insert(round_key, Some(round));
         <MilestoneVotes<T>>::insert((project_key, milestone_key), &updated_vote);
-        <Projects<T>>::insert(project_key, &project);
 
         Ok(().into())
     }
