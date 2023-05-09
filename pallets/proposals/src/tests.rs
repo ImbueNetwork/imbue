@@ -797,16 +797,107 @@ fn test_voting_on_a_milestone() {
             true
         ));
 
-        let latest_event = <frame_system::Pallet<Test>>::events()
+        let vote = MilestoneVotes::<Test>::get((0, 0)).ok_or("Milestone not found").unwrap();
+        assert_eq!(true,vote.is_approved);
+
+        let project = Projects::<Test>::get(0).ok_or("Project not found").unwrap();
+        let milestone = project.milestones.get(&project_key).ok_or("Milestone not found").unwrap();
+        assert_eq!(true,milestone.is_approved);
+
+        let mut events = <frame_system::Pallet<Test>>::events();
+        let first_latest_event = events
             .pop()
             .expect("Expected at least one RuntimeEventRecord to be found")
             .event;
+        let second_last_event = events
+            .pop()
+            .expect("Expected at least two events to be found")
+            .event;
         assert_eq!(
-            latest_event,
+            first_latest_event,
+            mock::RuntimeEvent::from(proposals::Event::MilestoneApproved(*ALICE, 0, 0,  5))
+        );
+        assert_eq!(
+            second_last_event,
             mock::RuntimeEvent::from(proposals::Event::VoteComplete(*BOB, 0, 0, true, 5))
         );
     });
 }
+
+
+#[test]
+fn test_voting_on_a_milestone_not_approved_as_milestone_not_met() {
+    let milestone1_key = 0;
+    build_test_externality().execute_with(|| {
+        assert_ok!(create_project());
+
+        let project_key = 0;
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
+
+        Proposals::schedule_round(
+            RuntimeOrigin::root(),
+            System::block_number(),
+            System::block_number() + 1,
+            project_keys,
+            RoundType::ContributionRound,
+        )
+            .unwrap();
+
+        Proposals::contribute(RuntimeOrigin::signed(*BOB), None, project_key, 40u64).unwrap();
+        Proposals::contribute(RuntimeOrigin::signed(*CHARLIE), None, project_key, 60u64).unwrap();
+
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
+        let _ = milestone_index.try_push(0);
+
+        run_to_block(3);
+
+        assert_ok!(Proposals::approve(
+            RuntimeOrigin::root(),
+            None,
+            project_key,
+            None
+        ));
+
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            0
+        ));
+
+        run_to_block(5);
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone1_key,
+            None,
+            true
+        ));
+
+        let vote = MilestoneVotes::<Test>::get((0, 0)).ok_or("Milestone not found").unwrap();
+        assert_eq!(false,vote.is_approved);
+
+        let project = Projects::<Test>::get(0).ok_or("Project not found").unwrap();
+        let milestone = project.milestones.get(&project_key).ok_or("Milestone not found").unwrap();
+        assert_eq!(false,milestone.is_approved);
+
+        let mut events = <frame_system::Pallet<Test>>::events();
+        //getting the first event and checking that the milestone is not approved
+        let first_latest_event = events
+            .pop()
+            .expect("Expected at least one RuntimeEventRecord to be found")
+            .event;
+
+        assert_ne!(
+            first_latest_event,
+            mock::RuntimeEvent::from(proposals::Event::MilestoneApproved(*ALICE, 0, 0,  5))
+        );
+        assert_eq!(
+            first_latest_event,
+            mock::RuntimeEvent::from(proposals::Event::VoteComplete(*BOB, 0, 0, true, 5))
+        );
+    });
+}
+
 
 #[test]
 //voting on cancelled round should throw error
@@ -1415,12 +1506,94 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         )
         .unwrap();
 
-        Proposals::finalise_milestone_voting(
+        // Proposals::finalise_milestone_voting(
+        //     RuntimeOrigin::signed(*ALICE),
+        //     project_key,
+        //     milestone1_key,
+        // )
+        // .unwrap();
+
+        assert_ok!(Proposals::withdraw(
             RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            initial_balance + required_funds
+        );
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one RuntimeEventRecord to be found")
+            .event;
+        assert_eq!(
+            latest_event,
+            mock::RuntimeEvent::from(proposals::Event::ProjectFundsWithdrawn(
+                *ALICE,
+                0,
+                100,
+                CurrencyId::Native
+            ))
+        );
+    });
+}
+
+#[test]
+fn test_withdraw_upon_project_auto_approval_and_based_on_threshold_met_during_voting() {
+    let milestone1_key = 0;
+    build_test_externality().execute_with(|| {
+        assert_ok!(create_project());
+
+        let initial_balance = Tokens::free_balance(CurrencyId::Native, &*ALICE);
+        let project_key = 0;
+        let project_keys: BoundedProjectKeys = bounded_vec![0];
+
+        Proposals::schedule_round(
+            RuntimeOrigin::root(),
+            System::block_number(),
+            System::block_number() + 1,
+            project_keys,
+            RoundType::ContributionRound,
+        )
+            .unwrap();
+
+        let required_funds = 100u64;
+        let funds_contributed_by_bob = 76u64;
+        let funds_contributed_by_charlie = 24u64;
+        Proposals::contribute(
+            RuntimeOrigin::signed(*BOB),
+            None,
+            project_key,
+            funds_contributed_by_bob,
+        )
+            .unwrap();
+
+        Proposals::contribute(
+            RuntimeOrigin::signed(*CHARLIE),
+            None,
+            project_key,
+            funds_contributed_by_charlie,
+        )
+            .unwrap();
+
+        let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
+        let _ = milestone_index.try_push(0);
+
+        run_to_block(3);
+
+        Proposals::approve(RuntimeOrigin::root(), None, project_key, None).unwrap();
+
+        Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+
+        run_to_block(5);
+        Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
             project_key,
             milestone1_key,
+            None,
+            true,
         )
-        .unwrap();
+            .unwrap();
 
         assert_ok!(Proposals::withdraw(
             RuntimeOrigin::signed(*ALICE),

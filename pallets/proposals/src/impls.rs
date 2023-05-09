@@ -385,7 +385,8 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
 
         // round list must be not none
-        let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
             round.round_type == RoundType::VotingRound,
@@ -413,33 +414,60 @@ impl<T: Config> Pallet<T> {
 
         <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
 
-        let user_milestone_vote =
+        let existing_milestone_vote =
             Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::KeyNotFound)?;
-
+        let mut updated_vote = Vote::default();
         if approve_milestone {
-            let updated_vote = Vote {
-                yay: user_milestone_vote.yay.saturating_add(contribution_amount),
-                nay: user_milestone_vote.nay,
-                is_approved: user_milestone_vote.is_approved,
+            updated_vote = Vote {
+                yay: existing_milestone_vote.yay.saturating_add(contribution_amount),
+                nay: existing_milestone_vote.nay,
+                is_approved: existing_milestone_vote.is_approved,
             };
-            <MilestoneVotes<T>>::insert((project_key, milestone_key), updated_vote)
-        } else {
-            let updated_vote = Vote {
-                yay: user_milestone_vote.yay,
-                nay: user_milestone_vote.nay.saturating_add(contribution_amount),
-                is_approved: user_milestone_vote.is_approved,
-            };
-            <MilestoneVotes<T>>::insert((project_key, milestone_key), updated_vote)
-        }
+            Self::deposit_event(Event::VoteComplete(
+                who,
+                project_key,
+                milestone_key,
+                approve_milestone,
+                now,
+            ));
+            //once the voting is complete check if the milestone is eligible for auto approval
+            //Getting the total threshold required for the milestone to be approved based on the raised funds
+            let funding_threshold: BalanceOf<T> = project.raised_funds.saturating_mul(T::PercentRequiredForVoteToPass::get().into())/100u32.into();
 
+            let mut milestone = project.milestones.get_mut(&milestone_key).ok_or(Error::<T>::KeyNotFound)?;
+            //if the yay votes are both greater than the nay votes and the funding threshold then the milestone is approved
+            if updated_vote.yay >= funding_threshold {
+                milestone.is_approved = true;
+                updated_vote = Vote {
+                    yay: updated_vote.yay,
+                    nay: updated_vote.nay,
+                    is_approved: true,
+                };
+                let now = <frame_system::Pallet<T>>::block_number();
+                Self::deposit_event(Event::MilestoneApproved(
+                    project.initiator.clone(),
+                    project_key,
+                    milestone_key,
+                    now,
+                ));
+                <Projects<T>>::insert(project_key, &project);
+            }
+        } else {
+            updated_vote = Vote {
+                yay: existing_milestone_vote.yay,
+                nay: existing_milestone_vote.nay.saturating_add(contribution_amount),
+                is_approved: existing_milestone_vote.is_approved,
+            };
+            Self::deposit_event(Event::VoteComplete(
+                who,
+                project_key,
+                milestone_key,
+                approve_milestone,
+                now,
+            ));
+        }
         <Rounds<T>>::insert(round_key, Some(round));
-        Self::deposit_event(Event::VoteComplete(
-            who,
-            project_key,
-            milestone_key,
-            approve_milestone,
-            now,
-        ));
+        <MilestoneVotes<T>>::insert((project_key, milestone_key), &updated_vote);
 
         Ok(().into())
     }
