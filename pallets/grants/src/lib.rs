@@ -140,9 +140,9 @@ pub mod pallet {
         ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
 
-            let total_percentage = proposed_milestones.iter().fold(0u32, |acc, x| {
-                acc.saturating_add(x.percentage_to_unlock.into())
-            });
+            let total_percentage = proposed_milestones
+                .iter()
+                .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
             ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
 
             ensure!(
@@ -163,8 +163,8 @@ pub mod pallet {
                 treasury_origin,
             };
 
-            PendingGrants::<T>::insert(&grant_id, grant);
-            GrantsSubmittedBy::<T>::insert(&submitter, &grant_id, ());
+            PendingGrants::<T>::insert(grant_id, grant);
+            GrantsSubmittedBy::<T>::insert(&submitter, grant_id, ());
             GrantCount::<T>::mutate(|count| {
                 *count = count.saturating_add(1);
             });
@@ -173,7 +173,7 @@ pub mod pallet {
                 submitter,
                 grant_id,
             });
-            Ok(().into())
+            Ok(())
         }
 
         /// Edit a grant that has been submitted.
@@ -194,12 +194,12 @@ pub mod pallet {
             let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
-            ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
+            ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
 
             if let Some(milestones) = edited_milestones {
-                let total_percentage = milestones.iter().fold(0u32, |acc, x| {
-                    acc.saturating_add(x.percentage_to_unlock.into())
-                });
+                let total_percentage = milestones
+                    .iter()
+                    .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
                 ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
@@ -219,7 +219,7 @@ pub mod pallet {
                 grant.treasury_origin = t_origin;
             }
 
-            PendingGrants::<T>::insert(&grant_id, grant);
+            PendingGrants::<T>::insert(grant_id, grant);
             Self::deposit_event(Event::<T>::GrantEdited { grant_id });
 
             Ok(().into())
@@ -233,7 +233,7 @@ pub mod pallet {
             grant_id: GrantId,
             as_authority: bool,
         ) -> DispatchResultWithPostInfo {
-            let grant = PendingGrants::<T>::get(&grant_id).ok_or(Error::<T>::GrantNotFound)?;
+            let grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             if as_authority {
                 <T as Config>::CancellingAuthority::ensure_origin(origin)?;
@@ -262,7 +262,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
-            ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
+            ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
             ensure!(!grant.is_converted, Error::<T>::AlreadyConverted);
 
@@ -284,7 +284,7 @@ pub mod pallet {
                 })
                 .collect::<Vec<_>>();
 
-            let _ = <T as Config>::IntoProposal::convert_to_proposal(
+            <T as Config>::IntoProposal::convert_to_proposal(
                 grant.currency_id,
                 contributions,
                 grant_id,

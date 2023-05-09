@@ -254,6 +254,7 @@ pub mod asset_registry {
             origin: Origin,
             asset_id: &Option<CurrencyId>,
         ) -> Result<Self::Success, Origin> {
+            // FIXME:
             match asset_id {
                 // Any other `asset_id` defaults to EnsureRoot
                 _ => DefaultEnsureOrigin::try_origin(origin).map(|_| ()),
@@ -271,7 +272,7 @@ pub mod common_xcm {
     use xcm::v3::Junction::GeneralKey;
     pub fn general_key(key: &[u8]) -> xcm::v3::Junction {
         let mut data = [0u8; 32];
-        data[..key.len()].copy_from_slice(&key[..]);
+        data[..key.len()].copy_from_slice(key);
         GeneralKey {
             length: key.len() as u8,
             data,

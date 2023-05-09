@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
     Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
 )]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Default)]
 pub enum CurrencyId {
+    #[default]
     Native,
     // Karura KSM
     KSM,
@@ -27,11 +29,7 @@ pub mod currency_decimals {
     pub const MGX: u32 = 18;
 }
 
-impl Default for CurrencyId {
-    fn default() -> Self {
-        CurrencyId::Native
-    }
-}
+
 
 // A way to generate different currencies from a number.
 // Can be used in tests/benchmarks to generate different currencies.
