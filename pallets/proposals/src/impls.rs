@@ -748,14 +748,9 @@ impl<T: Config> Pallet<T> {
 
         let total_contribute = project.raised_funds;
 
-<<<<<<< HEAD
         // 100 * Threshold =  (total_contribute * majority_required%)
         let threshold_votes: BalanceOf<T> =
             total_contribute.saturating_mul(majority_required.into());
-=======
-        // 100 * Threshold =  (total_contribute * majority_required)
-        let threshold_votes: BalanceOf<T> = total_contribute.saturating_mul(majority_required.into());
->>>>>>> 61dcc378864dc83ea382b5850ad34402b1a11ff2
 
         if vote.nay.saturating_mul(100u8.into()) >= threshold_votes {
             round.is_canceled = true;
