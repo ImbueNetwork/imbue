@@ -772,6 +772,7 @@ parameter_types! {
     pub const RefundsPerBlock: u8 = 20;
     pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
+    pub const ProjectStorageDeposit: Balance = 100;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -791,6 +792,7 @@ impl pallet_proposals::Config for Runtime {
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
+    type ProjectStorageDeposit = ProjectStorageDeposit;
 }
 
 parameter_types! {
