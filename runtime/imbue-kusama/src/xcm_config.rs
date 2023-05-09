@@ -116,6 +116,8 @@ parameter_types! {
     pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
     pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+    // A `MultiLocation` that can be reached via `XcmRouter`. Used only in benchmarks.
+    // If `None`, the benchmarks that depend on a reachable destination will be skipped.
     pub ReachableDest: Option<MultiLocation> = None;
 }
 
@@ -238,11 +240,6 @@ pub type XcmRouter = (
     // ..and XCMP to communicate with the sibling chains.
     XcmpQueue,
 );
-
-parameter_types! {
-    // A `MultiLocation` that can be reached via `XcmRouter`. Used only in benchmarks.
-    // If `None`, the benchmarks that depend on a reachable destination will be skipped.
-}
 
 impl pallet_xcm::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;

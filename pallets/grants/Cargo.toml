@@ -16,32 +16,35 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
 	"derive",
 ] }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.1", default-features = false, features = [
+	"derive",
+] }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false}
-pallet-proposals = {path= "../proposals", default-features = false}
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false}
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false}
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+pallet-proposals = { path = "../proposals", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 
 # Local
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39"}
-pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-pallet-proposals = {path= "../proposals"}
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-common-types = { path = "../../libs/common-types"}
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39" }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+pallet-proposals = { path = "../proposals" }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+common-types = { path = "../../libs/common-types" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39"}
 
 [features]
 default = ["std"]
@@ -56,13 +59,12 @@ std = [
 	"pallet-identity/std",
 	"pallet-balances/std",
 	"pallet-proposals/std",
+	"pallet-xcm/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
-	"orml-tokens/runtime-benchmarks",
-	"pallet-timestamp/runtime-benchmarks",
-	"pallet-identity/runtime-benchmarks",
-	"pallet-balances/runtime-benchmarks",
-	"pallet-proposals/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]
