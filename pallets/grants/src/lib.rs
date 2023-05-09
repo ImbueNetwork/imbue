@@ -1,6 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod weights;
+
 pub use pallet::*;
+
 #[cfg(test)]
 mod mock;
 
@@ -12,13 +15,15 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod test_utils;
+
 #[frame_support::pallet]
 pub mod pallet {
     use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
     use sp_core::H256;
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
@@ -54,6 +59,8 @@ pub mod pallet {
         >;
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
+
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     /// Stores all the Grants waiting for approval, funding and eventual conversion into milestones.
@@ -133,9 +140,9 @@ pub mod pallet {
         ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
 
-            let total_percentage = proposed_milestones
-                .iter()
-                .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock.into()));
+            let total_percentage = proposed_milestones.iter().fold(0u32, |acc, x| {
+                acc.saturating_add(x.percentage_to_unlock.into())
+            });
             ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
 
             ensure!(
@@ -190,9 +197,9 @@ pub mod pallet {
             ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
 
             if let Some(milestones) = edited_milestones {
-                let total_percentage = milestones
-                    .iter()
-                    .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock.into()));
+                let total_percentage = milestones.iter().fold(0u32, |acc, x| {
+                    acc.saturating_add(x.percentage_to_unlock.into())
+                });
                 ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
@@ -226,7 +233,7 @@ pub mod pallet {
             grant_id: GrantId,
             as_authority: bool,
         ) -> DispatchResultWithPostInfo {
-            let mut grant = PendingGrants::<T>::get(&grant_id).ok_or(Error::<T>::GrantNotFound)?;
+            let grant = PendingGrants::<T>::get(&grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             if as_authority {
                 <T as Config>::CancellingAuthority::ensure_origin(origin)?;
@@ -253,7 +260,7 @@ pub mod pallet {
             grant_id: GrantId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
+            let grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
@@ -282,7 +289,10 @@ pub mod pallet {
                 contributions,
                 grant_id,
                 grant.submitter.clone(),
-                grant.milestones.try_into().map_err(|_|Error::<T>::Overflow)?,
+                grant
+                    .milestones
+                    .try_into()
+                    .map_err(|_| Error::<T>::Overflow)?,
                 FundingType::Treasury(grant.treasury_origin),
             )
             .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
@@ -313,5 +323,4 @@ pub mod pallet {
         pub amount_requested: BalanceOf<T>,
         pub treasury_origin: TreasuryOrigin,
     }
-
 }

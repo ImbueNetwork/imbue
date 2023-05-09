@@ -2,6 +2,8 @@
 
 pub use pallet::*;
 
+mod weights;
+
 #[cfg(test)]
 mod mock;
 
@@ -13,6 +15,9 @@ mod integration_tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod test_utils;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -35,7 +40,7 @@ pub mod pallet {
         Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
         <T as Config>::MaxBriefOwners,
     >;
-    type BoundedProposedMilestones<T> =
+    pub(crate) type BoundedProposedMilestones<T> =
         BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerBrief>;
 
     pub(crate) type BoundedBriefOwners<T> =
@@ -69,6 +74,8 @@ pub mod pallet {
         type MaxBriefOwners: Get<u32>;
 
         type MaxMilestonesPerBrief: Get<u32>;
+
+        type WeightInfo: crate::weights::WeightInfo;
     }
 
     #[pallet::storage]
@@ -178,9 +185,12 @@ pub mod pallet {
             );
 
             // Validation
-            let total_percentage = milestones.iter()
-            .fold(0u32, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
-            
+            let total_percentage = milestones
+                .iter()
+                .fold(0u32, |acc: u32, ms: &ProposedMilestone| {
+                    acc.saturating_add(ms.percentage_to_unlock)
+                });
+
             ensure!(
                 total_percentage == 100u32,
                 Error::<T>::MilestonesTotalPercentageMustEqual100

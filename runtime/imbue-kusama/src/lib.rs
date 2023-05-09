@@ -797,7 +797,6 @@ impl pallet_proposals::Config for Runtime {
 
 parameter_types! {
     pub MaxApprovers: u32 = 50;
-    // TODO This has to be the same in the proposals and the briefs!
     pub MaxMilestonesPerProject: u32 = 50;
 }
 
@@ -808,6 +807,7 @@ impl pallet_grants::Config for Runtime {
     type RMultiCurrency = Currencies;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type CancellingAuthority = AdminOrigin;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -826,6 +826,7 @@ impl pallet_briefs::Config for Runtime {
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
+    type WeightInfo = ();
     // TODO: Weight info
 }
 
@@ -927,8 +928,9 @@ mod benches {
         [frame_system, SystemBench::<Runtime>]
         [pallet_balances, Balances]
         [pallet_timestamp, Timestamp]
-        [proposals, ImbueProposals]
-        //[briefs, ImbueBriefs]
+        [pallet_proposals, ImbueProposals]
+        [pallet_briefs, ImbueBriefs]
+        [pallet_grants, ImbueGrants]
     );
 }
 

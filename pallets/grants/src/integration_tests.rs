@@ -1,10 +1,11 @@
+use crate::test_utils::gen_grant_id;
 use crate::tests::{get_approvers, get_milestones};
 use crate::{mock::*, tests};
 
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
-use pallet_proposals::{Projects, ProposedMilestone, RoundType};
+use pallet_proposals::{Projects, RoundType};
 use sp_core::bounded_vec;
 
 #[test]
@@ -62,7 +63,10 @@ fn assert_state_from_grant_conversion_is_same_as_proposal() {
         assert_ok!(Proposals::create_project(
             RuntimeOrigin::signed(*ALICE),
             grant_id,
-            milestones.to_vec().try_into().expect("The bounds should be the same"),
+            milestones
+                .to_vec()
+                .try_into()
+                .expect("The bounds should be the same"),
             contribution_value,
             CurrencyId::Native,
         ));
