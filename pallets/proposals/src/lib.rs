@@ -345,7 +345,11 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             // Validation
-            let total_percentage = proposed_milestones.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
+            let total_percentage = proposed_milestones
+                .iter()
+                .fold(0, |acc: u32, ms: &ProposedMilestone| {
+                    acc.saturating_add(ms.percentage_to_unlock)
+                });
             ensure!(
                 total_percentage == 100,
                 Error::<T>::MilestonesTotalPercentageMustEqual100
@@ -375,8 +379,11 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let total_percentage = proposed_milestones.iter()
-            .fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
+            let total_percentage = proposed_milestones
+                .iter()
+                .fold(0, |acc: u32, ms: &ProposedMilestone| {
+                    acc.saturating_add(ms.percentage_to_unlock)
+                });
 
             ensure!(
                 total_percentage == 100,
@@ -629,23 +636,6 @@ pub mod pallet {
                 project_key,
                 T::PercentRequiredForVoteToPass::get(),
             )
-        }
-
-        /// Ad Hoc Step (ADMIN)
-        /// This will add the refunds to a queue to eventually be processed, Hooks will show refunds themselves.
-        //TODO: use the refund_origin to correclty refund the funders
-        //TODO: use the refund_origin to correclty refund the funders
-        //TODO: use the refund_origin to correclty refund the funders
-        ///DEPRICATED
-        #[pallet::call_index(19)]
-        #[pallet::weight(<T as Config>::WeightInfo::refund())]
-        pub fn refund_depricated(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-        ) -> DispatchResultWithPostInfo {
-            //ensure only admin can perform refund
-            T::AuthorityOrigin::ensure_origin(origin)?;
-            Self::add_refunds_to_queue_depricated(project_key)
         }
     }
 }
