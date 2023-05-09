@@ -190,7 +190,7 @@ benchmarks! {
         // (Voter, ProjectKey, MilestoneKey, Option<RoundKey>, is_approved)
     }: _(RawOrigin::Signed(alice.clone()), 0, 0, Some(2), true)
     verify {
-        assert_last_event::<T>(Event::<T>::VoteComplete(alice, 0, 0, true, 11u32.into()).into());
+         assert_last_event::<T>(Event::<T>::MilestoneApproved(bob, 0, 0, 11u32.into()).into());
     }
 
     finalise_milestone_voting {
