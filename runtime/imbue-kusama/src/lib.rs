@@ -769,11 +769,7 @@ parameter_types! {
     pub const RefundsPerBlock: u8 = 20;
     pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
-<<<<<<< HEAD
     pub const ProjectStorageDeposit: Balance = DOLLARS * 20;
-=======
-    pub const ProjectStorageDeposit: Balance = 100;
->>>>>>> 61dcc378864dc83ea382b5850ad34402b1a11ff2
 }
 
 impl pallet_proposals::Config for Runtime {
