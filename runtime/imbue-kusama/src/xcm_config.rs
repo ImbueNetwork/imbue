@@ -310,7 +310,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
                 interior: X1(GeneralKey { data, length }),
             } => match &data[..(length as usize)] {
                 parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
-                _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                _ => OrmlAssetRegistry::location_to_asset_id(location),
             },
             MultiLocation {
                 parents: 1,
@@ -320,25 +320,25 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
                     parachains::kusama::karura::AUSD_KEY => Some(CurrencyId::AUSD),
                     parachains::kusama::karura::KAR_KEY => Some(CurrencyId::KAR),
                     parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
-                    _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                    _ => OrmlAssetRegistry::location_to_asset_id(location),
                 },
                 parachains::kusama::mangata::ID => match &data[..(length as usize)] {
                     parachains::kusama::mangata::MGX_KEY => Some(CurrencyId::MGX),
                     parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
-                    _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                    _ => OrmlAssetRegistry::location_to_asset_id(location),
                 },
                 parachains::kusama::imbue::ID => match &data[..(length as usize)] {
                     parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
-                    _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                    _ => OrmlAssetRegistry::location_to_asset_id(location),
                 },
 
                 id if id == u32::from(ParachainInfo::get()) => match &data[..(length as usize)] {
                     parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
-                    _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                    _ => OrmlAssetRegistry::location_to_asset_id(location),
                 },
-                _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+                _ => OrmlAssetRegistry::location_to_asset_id(location),
             },
-            _ => OrmlAssetRegistry::location_to_asset_id(location.clone()),
+            _ => OrmlAssetRegistry::location_to_asset_id(location),
         }
     }
 }

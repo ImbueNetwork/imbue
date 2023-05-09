@@ -357,7 +357,7 @@ pub mod pallet {
 
             let _ = Self::new_project(
                 // TODO: Optimise
-                who.clone(),
+                who,
                 agreement_hash,
                 proposed_milestones,
                 required_funds,

@@ -16,7 +16,7 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn submit_initial_grant() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
@@ -25,7 +25,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn submit_initial_grant() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }

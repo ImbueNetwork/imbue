@@ -241,7 +241,7 @@ fn cancel_round() {
             RuntimeOrigin::root(),
             System::block_number() + 1,
             System::block_number() + 2,
-            project_keys.clone(),
+            project_keys,
             RoundType::ContributionRound,
         )
         .unwrap();
@@ -2107,10 +2107,9 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
 
         // approve and raise votees
         let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, None).unwrap();
-        let _ =
-            Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), project_key)
+        Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), project_key)
                 .unwrap();
-        let _ = Proposals::vote_on_no_confidence_round(
+        Proposals::vote_on_no_confidence_round(
             RuntimeOrigin::signed(*BOB),
             None,
             project_key,
@@ -2260,7 +2259,7 @@ fn update_an_existing_project() {
             ))
         );
 
-        let updated_project = Projects::<Test>::get(&project_key).unwrap();
+        let updated_project = Projects::<Test>::get(project_key).unwrap();
 
         assert_eq!(updated_project.required_funds, updated_required_funds);
         assert_eq!(updated_project.agreement_hash, updated_agreement_hash);
@@ -2391,7 +2390,6 @@ fn project_is_deleted_after_no_confidence_call() {
         );
         run_to_block(System::block_number() + 100);
         let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), 0, None).unwrap();
-        let _ =
         Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key)
             .unwrap();
 
