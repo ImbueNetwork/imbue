@@ -157,18 +157,14 @@ impl Contains<RuntimeCall> for BaseCallFilter {
                 | pallet_xcm::Call::teleport_assets { .. }
                 | pallet_xcm::Call::reserve_transfer_assets { .. }
                 | pallet_xcm::Call::limited_reserve_transfer_assets { .. }
-                | pallet_xcm::Call::limited_teleport_assets { .. } => {
-                    return false;
-                }
+                | pallet_xcm::Call::limited_teleport_assets { .. } => false,
                 pallet_xcm::Call::__Ignore { .. } => {
                     unimplemented!()
                 }
                 pallet_xcm::Call::force_xcm_version { .. }
                 | pallet_xcm::Call::force_default_xcm_version { .. }
                 | pallet_xcm::Call::force_subscribe_version_notify { .. }
-                | pallet_xcm::Call::force_unsubscribe_version_notify { .. } => {
-                    return true;
-                }
+                | pallet_xcm::Call::force_unsubscribe_version_notify { .. } => true,
             },
             _ => true,
         }
@@ -635,6 +631,7 @@ impl pallet_aura::Config for Runtime {
 
 parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+        // FIXME:
         // every currency has a zero existential deposit
         match currency_id {
             _ => 0,
@@ -812,7 +809,7 @@ impl pallet_grants::Config for Runtime {
 
 parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
-    pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
+    pub ApplicationSubmissionTime: BlockNumber = 1000u32;
     pub MaxBriefOwners: u32 = 100;
     pub MaxMilestones: u32 = 100;
 
@@ -1144,7 +1141,7 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
             .create_inherent_data()
             .expect("Could not create the timestamp inherent data");
 
-        inherent_data.check_extrinsics(&block)
+        inherent_data.check_extrinsics(block)
     }
 }
 

@@ -93,10 +93,10 @@ where
                     let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
                     <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
                         AccountIdOf<T>,
-                    >>::unreserve(currency_id, &acc, cont.value);
+                    >>::unreserve(currency_id, acc, cont.value);
                     <T as crate::Config>::MultiCurrency::transfer(
                         currency_id,
-                        &acc,
+                        acc,
                         &project_account_id,
                         cont.value,
                     )?;
@@ -205,7 +205,7 @@ where
                 let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
                 Ok(())
             }
-            _ => return Err(Error::<T>::InvalidDest.into()),
+            _ => Err(Error::<T>::InvalidDest.into()),
         }
     }
     fn get_treasury_account_id(
