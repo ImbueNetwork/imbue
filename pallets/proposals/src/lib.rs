@@ -111,6 +111,9 @@ pub mod pallet {
 
         /// The storage deposit taken when a project is created and returned on deletion/completion.
         type ProjectStorageDeposit: Get<BalanceOf<Self>>;
+        
+        // Imbue fee in percent 0-99
+        type ImbueFee: Get<u8>;
     }
 
     #[pallet::pallet]
