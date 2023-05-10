@@ -1311,7 +1311,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
 
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &ALICE),
-            additional_amount + deduct_imbue_fee(available)
+            additional_amount
+                .saturating_add(deduct_imbue_fee(available))
+                .saturating_sub(<Test as Config>::ProjectStorageDeposit::get())
         );
 
         assert_eq!(
@@ -1465,7 +1467,14 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &*ALICE),
-            initial_balance + (project.raised_funds * (total_percentage_to_withdraw as u64) / 100) - <Test as Config>::ProjectStorageDeposit::get()
+            initial_balance
+                .saturating_add(deduct_imbue_fee(
+                    project
+                        .raised_funds
+                        .saturating_mul(total_percentage_to_withdraw as u64)
+                        / 100
+                ))
+                .saturating_sub(<Test as Config>::ProjectStorageDeposit::get())
         );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
@@ -1499,7 +1508,9 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         let withdrawal_amount = project.raised_funds * (total_percentage_to_withdraw as u64) / 100;
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &ALICE),
-            initial_balance + deduct_imbue_fee(withdrawal_amount)
+            initial_balance
+                .saturating_add(deduct_imbue_fee(withdrawal_amount))
+                .saturating_sub(<Test as Config>::ProjectStorageDeposit::get())
         );
     })
 }
@@ -1510,8 +1521,6 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
     build_test_externality().execute_with(|| {
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(create_project());
-
-        let initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
         Proposals::schedule_round(
@@ -1551,12 +1560,12 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         )
         .unwrap();
 
-        // Proposals::finalise_milestone_voting(
-        //     RuntimeOrigin::signed(*ALICE),
-        //     project_key,
-        //     milestone1_key,
-        // )
-        // .unwrap();
+        Proposals::finalise_milestone_voting(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone1_key,
+        )
+        .unwrap();
 
         let pallet_account = <proposals::Pallet<Test>>::account_id();
         let account_balance = Tokens::free_balance(CurrencyId::Native, &pallet_account);
@@ -1589,16 +1598,15 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
                 CurrencyId::Native
             ))
         );
-    });
+    })
 }
 
 #[test]
 fn test_withdraw_upon_project_auto_approval_and_based_on_threshold_met_during_voting() {
     let milestone1_key = 0;
     build_test_externality().execute_with(|| {
-        assert_ok!(create_project());
-
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(create_project());
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
@@ -1847,11 +1855,11 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         //validating contributor current balance
         assert_eq!(
             initial_balance - contribution_value,
-            Tokens::free_balance(CurrencyId::Native, &*BOB)
+            Tokens::free_balance(CurrencyId::Native, &BOB)
         );
         assert_eq!(
             initial_balance - contribution_value,
-            Tokens::free_balance(CurrencyId::Native, &*CHARLIE)
+            Tokens::free_balance(CurrencyId::Native, &CHARLIE)
         );
 
         let mut milestone_index: BoundedMilestoneKeys<Test> = bounded_vec![];
@@ -1923,13 +1931,17 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         //checking that Alice now has 10.2m
         assert_ne!(
             Tokens::free_balance(CurrencyId::Native, &ALICE),
-            additional_amount + required_funds
+            additional_amount
+                .saturating_add(required_funds)
+                .saturating_sub(<Test as Config>::ProjectStorageDeposit::get())
         );
         let available = required_funds * (total_percentage_to_withdraw as u64) / 100;
         let withdrawn = deduct_imbue_fee(available);
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &ALICE),
-            additional_amount + withdrawn
+            additional_amount
+                .saturating_add(withdrawn)
+                .saturating_sub(<Test as Config>::ProjectStorageDeposit::get())
         );
 
         assert_eq!(
@@ -1976,11 +1988,11 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         //ensuring the refunded amount was transferred back successfully
         assert_eq!(
             initial_balance - approved_milestone_value,
-            Tokens::free_balance(CurrencyId::Native, &*BOB)
+            Tokens::free_balance(CurrencyId::Native, &BOB)
         );
         assert_eq!(
             initial_balance - approved_milestone_value,
-            Tokens::free_balance(CurrencyId::Native, &*CHARLIE)
+            Tokens::free_balance(CurrencyId::Native, &CHARLIE)
         );
     })
 }
@@ -2313,7 +2325,7 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
     // The contributors.
 
     build_test_externality().execute_with(|| {
-        let initial_balance = Tokens::free_balance(CurrencyId::Native, &*BOB);
+        let initial_balance = Tokens::free_balance(CurrencyId::Native, &BOB);
         let project_key = 0u32;
         // Create a project for both ALICE and BOB.
         assert_ok!(create_project());
@@ -2356,7 +2368,7 @@ fn test_finalise_vote_of_no_confidence_refunds_contributors() {
         // approve and raise votees
         let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), project_key, None).unwrap();
         Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), project_key)
-                .unwrap();
+            .unwrap();
         Proposals::vote_on_no_confidence_round(
             RuntimeOrigin::signed(*BOB),
             None,
@@ -2563,7 +2575,10 @@ fn deposit_taken_on_project_creation() {
         let _ = create_project();
         let alice_after = Tokens::free_balance(CurrencyId::Native, &ALICE);
 
-        assert_eq!(alice_after + <Test as Config>::ProjectStorageDeposit::get(), alice_initial);
+        assert_eq!(
+            alice_after.saturating_add(<Test as Config>::ProjectStorageDeposit::get()),
+            alice_initial
+        );
     })
 }
 
@@ -2608,18 +2623,28 @@ fn project_is_deleted_on_final_withdraw() {
             0
         ));
         // Assert that the balance hasnt yet changed minus deposit fee.
-        assert_eq!(Tokens::free_balance(CurrencyId::Native, &ALICE) + <Test as Config>::ProjectStorageDeposit::get(), alice_balance_initial);
-        let _ = Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key); 
-        assert_eq!(alice_balance_initial + contribution, Tokens::free_balance(CurrencyId::Native, &ALICE));
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &ALICE)
+                .saturating_add(<Test as Config>::ProjectStorageDeposit::get()),
+            alice_balance_initial
+        );
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+        let alice_balance_new =
+            alice_balance_initial.saturating_add(deduct_imbue_fee(contribution));
+        assert_eq!(
+            alice_balance_new,
+            Tokens::free_balance(CurrencyId::Native, &ALICE)
+        );
         assert!(Projects::<Test>::get(project_key).is_none());
     })
 }
 
-
 #[test]
 fn project_is_deleted_after_no_confidence_call() {
     build_test_externality().execute_with(|| {
-
         let _ = create_project();
         let project_key: ProjectKey = 0;
 
@@ -2638,13 +2663,12 @@ fn project_is_deleted_after_no_confidence_call() {
         );
         run_to_block(System::block_number() + 100);
         let _ = Proposals::approve(RuntimeOrigin::root(), Some(1), 0, None).unwrap();
-        Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key)
-            .unwrap();
+        Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key).unwrap();
 
         assert_ok!(Proposals::finalise_no_confidence_round(
-                RuntimeOrigin::signed(*BOB),
-                None,
-                project_key
+            RuntimeOrigin::signed(*BOB),
+            None,
+            project_key
         ));
         assert!(Projects::<Test>::get(project_key).is_none());
     })
