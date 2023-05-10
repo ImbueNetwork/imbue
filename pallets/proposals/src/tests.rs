@@ -1303,14 +1303,14 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
         assert_ne!(
-            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            Tokens::free_balance(CurrencyId::Native, &ALICE),
             additional_amount + required_funds
         );
 
         let available = required_funds.saturating_mul(initial_percentage_to_withdraw as u64) / 100;
 
         assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            Tokens::free_balance(CurrencyId::Native, &ALICE),
             additional_amount + deduct_imbue_fee(available)
         );
 
@@ -1377,7 +1377,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         );
 
         assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            Tokens::free_balance(CurrencyId::Native, &ALICE),
             additional_amount.saturating_add(deduct_imbue_fee(required_funds))
         );
     })
@@ -1482,10 +1482,10 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
 
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
-        let withdrawal_amount =
-            contribution_value.saturating_mul(2) * (total_percentage_to_withdraw as u64) / 100;
+        let project = Pallet::<Test>::projects(project_key).unwrap();
+        let withdrawal_amount = project.raised_funds * (total_percentage_to_withdraw as u64) / 100;
         assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            Tokens::free_balance(CurrencyId::Native, &ALICE),
             initial_balance + deduct_imbue_fee(withdrawal_amount)
         );
     })
@@ -1497,7 +1497,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
     build_test_externality().execute_with(|| {
         assert_ok!(create_project());
 
-        let initial_balance = Tokens::free_balance(CurrencyId::Native, &*ALICE);
+        let initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
@@ -1560,7 +1560,7 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
         );
 
         assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            Tokens::free_balance(CurrencyId::Native, &ALICE),
             initial_balance + withdrawn
         );
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -1585,7 +1585,7 @@ fn test_withdraw_upon_project_auto_approval_and_based_on_threshold_met_during_vo
     build_test_externality().execute_with(|| {
         assert_ok!(create_project());
 
-        let initial_balance = Tokens::free_balance(CurrencyId::Native, &*ALICE);
+        let initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
@@ -1651,7 +1651,7 @@ fn test_withdraw_upon_project_auto_approval_and_based_on_threshold_met_during_vo
         );
 
         assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            Tokens::free_balance(CurrencyId::Native, &ALICE),
             initial_balance + withdrawn
         );
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -1799,7 +1799,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     let proposed_milestones1 = proposed_milestones.clone();
 
     build_test_externality().execute_with(|| {
-        let initial_balance = Tokens::free_balance(CurrencyId::Native, &*ALICE);
+        let initial_balance = Tokens::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(create_project_multiple_milestones(proposed_milestones));
 
         let project_keys: BoundedProjectKeys = bounded_vec![0];
@@ -1909,13 +1909,13 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
         //checking that Alice now has 10.2m
         assert_ne!(
-            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            Tokens::free_balance(CurrencyId::Native, &ALICE),
             additional_amount + required_funds
         );
         let available = required_funds * (total_percentage_to_withdraw as u64) / 100;
         let withdrawn = deduct_imbue_fee(available);
         assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            Tokens::free_balance(CurrencyId::Native, &ALICE),
             additional_amount + withdrawn
         );
 

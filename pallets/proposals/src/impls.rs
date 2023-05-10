@@ -564,7 +564,7 @@ impl<T: Config> Pallet<T> {
                     }
                 });
 
-        let withdrawable: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
+        let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
 
         ensure!(
             withdrawable > (0_u32).into(),
