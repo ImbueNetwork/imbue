@@ -15,7 +15,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn ensure_initiator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>> {
-        let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         match project.initiator == who {
             true => Ok(()),
             false => Err(Error::<T>::UserIsNotInitiator),
@@ -36,8 +36,10 @@ impl<T: Config> Pallet<T> {
     ) -> Result<ProjectKey, DispatchError> {
         // Check if identity is required
         if <T as Config>::IsIdentityRequired::get() {
-            let _ = Self::ensure_identity_is_decent(&who)?;
+            Self::ensure_identity_is_decent(&who)?;
         }
+
+        <T as Config>::MultiCurrency::reserve(CurrencyId::Native, &who, T::ProjectStorageDeposit::get()).map_err(|_|Error::<T>::ImbueRequiredForStorageDep)?;
 
         let project_key = ProjectCount::<T>::get();
         let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
@@ -101,17 +103,17 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         // Check if identity is required
         if <T as Config>::IsIdentityRequired::get() {
-            let _ = Self::ensure_identity_is_decent(&who)?;
+            Self::ensure_identity_is_decent(&who)?;
         }
 
         //check to ensure valid and existing project
         let mut project =
-            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
 
         ensure!(
-            project.approved_for_funding == false,
+            !project.approved_for_funding,
             Error::<T>::ProjectAlreadyApproved
         );
 
@@ -127,7 +129,7 @@ impl<T: Config> Pallet<T> {
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             };
-            milestones.insert(milestone_key.clone(), milestone.clone());
+            milestones.insert(milestone_key, milestone.clone());
             milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
         }
 
@@ -212,7 +214,7 @@ impl<T: Config> Pallet<T> {
         );
 
         let mut project =
-            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         let new_amount = match project.contributions.get(&who) {
             Some(contribution) => contribution.value,
@@ -225,13 +227,13 @@ impl<T: Config> Pallet<T> {
             let whitelist_spots =
                 Self::whitelist_spots(project_key).ok_or(Error::<T>::WhiteListNotFound)?;
             ensure!(
-                whitelist_spots.contains_key(&who.clone()),
+                whitelist_spots.contains_key(&who),
                 Error::<T>::OnlyWhitelistedAccountsCanContribute
             );
 
             let default_max_cap: BalanceOf<T> = (0u32).into();
             let max_cap = *whitelist_spots
-                .get(&who.clone())
+                .get(&who)
                 .unwrap_or(&default_max_cap);
 
             ensure!(
@@ -259,7 +261,7 @@ impl<T: Config> Pallet<T> {
         let timestamp = <pallet_timestamp::Pallet<T>>::get();
 
         project.contributions.insert(
-            who.clone(),
+            who,
             Contribution {
                 value: new_amount,
                 timestamp,
@@ -286,7 +288,7 @@ impl<T: Config> Pallet<T> {
         ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
         let now = <frame_system::Pallet<T>>::block_number();
         let mut project =
-            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let total_contribution_amount: BalanceOf<T> = project.raised_funds;
 
         let funds_matched = total_contribution_amount >= project.required_funds;
@@ -308,7 +310,7 @@ impl<T: Config> Pallet<T> {
 
                 let vote_lookup_key = (project_key, milestone_key);
 
-                let _ = MilestoneVotes::<T>::try_mutate(vote_lookup_key, |maybe_vote| {
+                MilestoneVotes::<T>::try_mutate(vote_lookup_key, |maybe_vote| {
                     if let Some(vote) = maybe_vote {
                         vote.is_approved = true;
                     } else {
@@ -345,7 +347,7 @@ impl<T: Config> Pallet<T> {
         milestone_key: MilestoneKey,
     ) -> DispatchResultWithPostInfo {
         let now = <frame_system::Pallet<T>>::block_number();
-        let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         // Ensure that only the initiator has submitted and the project has been approved.
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
@@ -385,8 +387,7 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
 
         // round list must be not none
-        let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-
+        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
             round.round_type == RoundType::VotingRound,
@@ -478,7 +479,7 @@ impl<T: Config> Pallet<T> {
         milestone_key: MilestoneKey,
     ) -> DispatchResultWithPostInfo {
         let mut project =
-            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(
             project.initiator == who,
             Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone
@@ -500,6 +501,7 @@ impl<T: Config> Pallet<T> {
             .raised_funds
             .saturating_mul(T::PercentRequiredForVoteToPass::get().into());
         let percent_multiple: BalanceOf<T> = 100u32.into();
+        
         ensure!(
             percent_multiple.saturating_mul(vote.yay + vote.nay) >= threshold_votes,
             Error::<T>::MilestoneVotingNotComplete
@@ -522,7 +524,7 @@ impl<T: Config> Pallet<T> {
         }
         //TODO: Case for equal votes?
 
-        project.milestones.insert(milestone_key, milestone.clone());
+        project.milestones.insert(milestone_key, milestone);
         <Projects<T>>::insert(project_key, project);
 
         Ok(().into())
@@ -532,28 +534,22 @@ impl<T: Config> Pallet<T> {
         who: T::AccountId,
         project_key: ProjectKey,
     ) -> DispatchResultWithPostInfo {
-        let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
+        //ensure that the project is approved_for_funding?
 
-        let unlocked_funds: BalanceOf<T> =
-            project
-                .milestones
-                .iter()
-                .fold(Default::default(), |acc, ms| {
-                    if ms.1.is_approved {
-                        let per_milestone = project
-                            .raised_funds
-                            .saturating_mul(ms.1.percentage_to_unlock.into())
-                            / MAX_PERCENTAGE.into();
-                        acc.saturating_add(per_milestone)
-                    } else {
-                        acc
-                    }
-                });
+        let total_unlocked_funds: BalanceOf<T> = project.milestones.iter().fold(Default::default(), |acc, ms| {
+            if ms.1.is_approved {
+                let per_milestone = project.raised_funds.saturating_mul(ms.1.percentage_to_unlock.into()) / MAX_PERCENTAGE.into();
+                acc.saturating_add(per_milestone)
+            } else {
+                acc
+            }
+        });
 
-        let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
+        let available_funds: BalanceOf<T> = total_unlocked_funds.saturating_sub(project.withdrawn_funds);
         ensure!(
             available_funds > (0_u32).into(),
             Error::<T>::NoAvailableFundsToWithdraw
@@ -566,9 +562,13 @@ impl<T: Config> Pallet<T> {
             available_funds,
         )?;
 
-        Projects::<T>::try_mutate(project_key, |project| -> DispatchResult {
+        Projects::<T>::mutate_exists(project_key, |project| -> DispatchResult {
             if let Some(p) = project {
                 p.withdrawn_funds = p.withdrawn_funds.saturating_add(available_funds);
+                if p.withdrawn_funds == p.raised_funds {
+                    Self::reinstate_storage_deposit(&p.initiator)?;
+                    *project = None;
+                } 
             }
             Ok(())
         })?;
@@ -587,7 +587,7 @@ impl<T: Config> Pallet<T> {
     // DEPRICATED, PLS REMOOVE.
     pub fn add_refunds_to_queue_depricated(project_key: ProjectKey) -> DispatchResultWithPostInfo {
         let mut project =
-            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         //getting the locked milestone percentage - these are also milestones that have not been approved
         let mut refunded_funds: BalanceOf<T> = 0_u32.into();
@@ -645,9 +645,9 @@ impl<T: Config> Pallet<T> {
         if can_withraw.is_ok() {
             // this should pass now, but i will not return early
             let _ = T::MultiCurrency::transfer(currency_id, from, to, amount);
-            return true;
+            true
         } else {
-            return false;
+            false
         }
     }
 
@@ -666,11 +666,11 @@ impl<T: Config> Pallet<T> {
         if c as usize <= refunds.len() {
             // If its a legitimate operation, split off.
             RefundQueue::<T>::put(refunds.split_off(c as usize));
-            return true;
+            true
         } else {
             // panic case we will place in an empty vec as the counter is wrong.
             RefundQueue::<T>::kill();
-            return false;
+            false
         }
     }
 
@@ -714,7 +714,7 @@ impl<T: Config> Pallet<T> {
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
         Self::deposit_event(Event::NoConfidenceRoundCreated(round_key, project_key));
 
-        Ok(()).into()
+        Ok(())
     }
 
     /// Allows a contributer to agree or disagree with a vote of no confidence.
@@ -730,34 +730,27 @@ impl<T: Config> Pallet<T> {
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
         );
-        // Ensure that who is a contributor.
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contribution = Self::ensure_contributor_of(&project, &who)?;
 
-        // Ensure that the vote has been raised.
         let mut vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
-        // Ensure a round has been found + that they have not already voted.
         ensure!(
             UserVotes::<T>::get((&who, project_key, 0, round_key)).is_none(),
             Error::<T>::VoteAlreadyExists
         );
 
-        // Update the vote
         if is_yay {
             vote.yay = vote.yay.saturating_add(contribution);
         } else {
             vote.nay = vote.nay.saturating_add(contribution);
         }
 
-        // Insert new vote.
         NoConfidenceVotes::<T>::insert(project_key, vote);
-
-        // Insert person who has voted.
         UserVotes::<T>::insert((who, project_key, 0, round_key), true);
 
         Self::deposit_event(Event::NoConfidenceRoundVotedUpon(round_key, project_key));
 
-        Ok(()).into()
+        Ok(())
     }
 
     /// Called when a contributor wants to finalise a vote of no confidence.
@@ -775,14 +768,14 @@ impl<T: Config> Pallet<T> {
             round.project_keys.contains(&project_key),
             Error::<T>::ProjectNotInRound
         );
-        let project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         let _ = Self::ensure_contributor_of(&project, &who)?;
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
         let total_contribute = project.raised_funds;
 
-        // 100 * Threshold =  (total_contribute * majority_required)/100
+        // 100 * Threshold =  (total_contribute * majority_required%)
         let threshold_votes: BalanceOf<T> =
             total_contribute.saturating_mul(majority_required.into());
 
@@ -816,7 +809,7 @@ impl<T: Config> Pallet<T> {
                         <T as Config>::MultiCurrency::transfer(
                             project.currency_id,
                             &project_account_id,
-                            &acc_id,
+                            acc_id,
                             refund_amount,
                         )?;
                     }
@@ -839,10 +832,13 @@ impl<T: Config> Pallet<T> {
                     )?;
                 }
             }
+            // Remove the project and return the storage deposit
+            Self::reinstate_storage_deposit(&project.initiator)?;
+            Projects::<T>::remove(project_key);
 
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {
-            return Err(Error::<T>::VoteThresholdNotMet.into());
+            return Err(Error::<T>::VoteThresholdNotMet.into());     
         }
         Ok(().into())
     }
@@ -852,9 +848,9 @@ impl<T: Config> Pallet<T> {
         project: &'a Project<T::AccountId, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>,
         account_id: &'a T::AccountId,
     ) -> Result<BalanceOf<T>, Error<T>> {
-        let contribution = project.contributions.get(&account_id);
+        let contribution = project.contributions.get(account_id);
         match contribution {
-            Some(c) => Ok((*c).value),
+            Some(c) => Ok(c.value),
             _ => Err(Error::<T>::OnlyContributorsCanVote),
         }
     }
@@ -872,5 +868,11 @@ impl<T: Config> Pallet<T> {
         } else {
             Err(Error::<T>::InvalidAccount)
         }
+    }
+
+    /// Call this to remove a project from storage and reinstate the deposit.
+    fn reinstate_storage_deposit(who: &AccountIdOf<T>) -> DispatchResult {
+        let _ = <T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, <T as Config>::ProjectStorageDeposit::get());
+        Ok(())
     }
 }

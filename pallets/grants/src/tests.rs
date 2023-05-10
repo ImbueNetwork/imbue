@@ -217,7 +217,7 @@ fn assert_properties_are_changed_on_edit() {
             Some(edited_amount_requested),
             Some(edited_treasury_origin)
         ));
-        let grant_after = PendingGrants::<Test>::get(&grant_id).expect("qed");
+        let grant_after = PendingGrants::<Test>::get(grant_id).expect("qed");
 
         assert!(grant_before != grant_after);
 
