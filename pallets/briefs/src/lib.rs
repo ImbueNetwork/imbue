@@ -167,7 +167,7 @@ pub mod pallet {
         /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
         #[pallet::call_index(2)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::create_brief())]
         pub fn create_brief(
             origin: OriginFor<T>,
             mut brief_owners: BoundedBriefOwners<T>,
@@ -249,7 +249,7 @@ pub mod pallet {
         ///
         /// TODO: runtime api to return how much bounty exactly is left on a brief.
         #[pallet::call_index(3)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::contribute_to_brief())]
         pub fn contribute_to_brief(
             origin: OriginFor<T>,
             brief_id: BriefHash,
@@ -291,7 +291,7 @@ pub mod pallet {
 
         /// Once the freelancer is happy with both the milestones and the offering this can be called.
         #[pallet::call_index(4)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::commence_work())]
         pub fn commence_work(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
