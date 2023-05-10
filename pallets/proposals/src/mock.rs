@@ -191,6 +191,7 @@ parameter_types! {
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 50;
+    pub ProjectStorageDeposit: Balance = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -208,10 +209,9 @@ impl pallet_proposals::Config for Test {
     type RefundsPerBlock = RefundsPerBlock;
     type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    // TODO: all the mocks as they are dependant on orml-xtokens for testing
-    // We could do a mockrefundhandlerbasic without the bells and whistels to help also. which is what i will do.
     type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
+    type ProjectStorageDeposit = ProjectStorageDeposit;
 }
 
 parameter_types! {

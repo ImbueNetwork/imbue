@@ -212,7 +212,7 @@ pub mod pallet {
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             if initial_contribution > 0u32.into() {
-                let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
+                BriefContributions::<T>::try_mutate(brief_id, |contributions| {
                     // This should never fail as the the bound is ensured when a brief is created.
                     let _ = contributions
                         .try_insert(
@@ -256,7 +256,7 @@ pub mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let brief_record = Briefs::<T>::get(&brief_id).ok_or(Error::<T>::BriefNotFound)?;
+            let brief_record = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
             // TODO: Minimum contribution.
 
             ensure!(
@@ -266,7 +266,7 @@ pub mod pallet {
 
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
-            let _ = BriefContributions::<T>::try_mutate(&brief_id, |contributions| {
+            BriefContributions::<T>::try_mutate(brief_id, |contributions| {
                 if let Some(contribution) = contributions.get_mut(&who) {
                     contribution.value = contribution.value.saturating_add(amount);
                     contribution.timestamp = pallet_timestamp::Pallet::<T>::get();
@@ -296,14 +296,14 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
-            ensure!(&who == &brief.applicant, Error::<T>::NotAuthorised);
+            ensure!(who == brief.applicant, Error::<T>::NotAuthorised);
 
             let contributions = BriefContributions::<T>::get(brief_id);
 
             <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
                 contributions.into_inner(),
-                brief_id.clone(),
+                brief_id,
                 brief.applicant,
                 brief.milestones.into(),
                 FundingType::Brief,
