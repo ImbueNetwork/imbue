@@ -9,7 +9,6 @@ use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_std::str;
-
 const _CONTRIBUTION: u32 = 100;
 const SEED: u32 = 0;
 
@@ -242,7 +241,9 @@ benchmarks! {
         // (Initiator, ProjectKey)
     }: _(RawOrigin::Signed(bob.clone()) ,0)
     verify {
-        assert_last_event::<T>(Event::<T>::ProjectFundsWithdrawn(bob, 0, (10_000u32 * milestone_keys.len() as u32).into(), CurrencyId::Native).into());
+        let fund: u32 = 10_000u32 * milestone_keys.len() as u32;
+        let fee: u32 = fund * (<T as Config>::ImbueFee::get() as u32) / 100;
+        assert_last_event::<T>(Event::<T>::ProjectFundsWithdrawn(bob, 0, (fund - fee).into(), CurrencyId::Native).into());
     }
 
     raise_vote_of_no_confidence {
