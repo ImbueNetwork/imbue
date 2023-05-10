@@ -1239,7 +1239,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             .ok();
 
         run_to_block(5);
-        //Bob voting on the submitted milestone
+        //Bob voting on the submitted milestones
         Proposals::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
@@ -1257,7 +1257,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         )
         .ok();
 
-        //Charlie voting on the submitted milestone
+        //Charlie voting on the submitted milestones
         Proposals::vote_on_milestone(
             RuntimeOrigin::signed(*CHARLIE),
             project_key,
@@ -1278,14 +1278,17 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         assert_ok!(Proposals::finalise_milestone_voting(
             RuntimeOrigin::signed(*ALICE),
             project_key,
-            0
+            milestone1_key
         ));
 
         assert_ok!(Proposals::finalise_milestone_voting(
             RuntimeOrigin::signed(*ALICE),
             project_key,
-            1
+            milestone2_key
         ));
+
+        let pallet_account = <proposals::Pallet<Test>>::account_id();
+        let account_balance = Tokens::free_balance(CurrencyId::Native, &pallet_account);
 
         assert_ok!(<proposals::Pallet<Test>>::withdraw(
             RuntimeOrigin::signed(*ALICE),
@@ -1303,12 +1306,17 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             Tokens::free_balance(CurrencyId::Native, &*ALICE),
             additional_amount + required_funds
         );
-        let available = deduct_imbue_fee(
-            required_funds.saturating_mul(initial_percentage_to_withdraw as u64) / 100,
-        );
+
+        let available = required_funds.saturating_mul(initial_percentage_to_withdraw as u64) / 100;
+
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &*ALICE),
-            additional_amount + available
+            additional_amount + deduct_imbue_fee(available)
+        );
+
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &pallet_account),
+            account_balance.saturating_add(calc_imbue_fee(available))
         );
 
         // withdraw last milestone
@@ -1343,23 +1351,10 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             milestone3_key
         ));
 
-        let pallet_account = <proposals::Pallet<Test>>::account_id();
-        let account_balance = Tokens::free_balance(CurrencyId::Native, &pallet_account);
-
         assert_ok!(<proposals::Pallet<Test>>::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
-
-        assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &*ALICE),
-            additional_amount.saturating_add(deduct_imbue_fee(required_funds))
-        );
-
-        assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &pallet_account),
-            account_balance.saturating_add(calc_imbue_fee(required_funds))
-        );
 
         //can withdraw only the amount corresponding to the milestone percentage completion
         let latest_event = <frame_system::Pallet<Test>>::events()
@@ -1371,9 +1366,19 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             mock::RuntimeEvent::from(proposals::Event::ProjectFundsWithdrawn(
                 *ALICE,
                 0,
-                deduct_imbue_fee(500000u64),
+                deduct_imbue_fee(500_000u64),
                 CurrencyId::Native
             ))
+        );
+
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &pallet_account),
+            account_balance.saturating_add(calc_imbue_fee(required_funds))
+        );
+
+        assert_eq!(
+            Tokens::free_balance(CurrencyId::Native, &*ALICE),
+            additional_amount.saturating_add(deduct_imbue_fee(required_funds))
         );
     })
 }
