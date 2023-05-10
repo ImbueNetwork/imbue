@@ -191,6 +191,7 @@ parameter_types! {
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 50;
+    pub ImbueFee: u8 = 5;
 }
 
 impl pallet_proposals::Config for Test {
@@ -212,6 +213,7 @@ impl pallet_proposals::Config for Test {
     // We could do a mockrefundhandlerbasic without the bells and whistels to help also. which is what i will do.
     type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
+    type ImbueFee = ImbueFee;
 }
 
 parameter_types! {

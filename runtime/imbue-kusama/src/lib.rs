@@ -772,6 +772,7 @@ parameter_types! {
     pub const RefundsPerBlock: u8 = 20;
     pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
+    pub const ImbueFee: u8 = 5;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -791,6 +792,7 @@ impl pallet_proposals::Config for Runtime {
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
+    type ImbueFee = ImbueFee;
 }
 
 parameter_types! {
