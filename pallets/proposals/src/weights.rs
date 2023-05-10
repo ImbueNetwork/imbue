@@ -35,102 +35,102 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn create_project() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn update_project() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn add_project_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn remove_project_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn schedule_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn cancel_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn contribute() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn approve() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn submit_milestone() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn vote_on_milestone() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn finalise_milestone_voting() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn withdraw() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn raise_vote_of_no_confidence() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn vote_on_no_confidence_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn finalise_no_confidence_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn set_storage_variable() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn refund() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn fund() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn refund_item_in_queue() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn split_off_refunds() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
@@ -139,102 +139,102 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn create_project() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn update_project() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn add_project_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn remove_project_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn schedule_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn cancel_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn contribute() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn approve() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn submit_milestone() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn vote_on_milestone() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn finalise_milestone_voting() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn withdraw() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn raise_vote_of_no_confidence() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn vote_on_no_confidence_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn finalise_no_confidence_round() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn set_storage_variable() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn refund() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn fund() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn split_off_refunds() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn refund_item_in_queue() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_ref_time(49_000_000_u64)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }

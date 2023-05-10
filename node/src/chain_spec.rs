@@ -234,7 +234,7 @@ fn development_genesis(
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
         },
-        balances: imbue_kusama_runtime::BalancesConfig { balances: balances },
+        balances: imbue_kusama_runtime::BalancesConfig { balances },
         orml_asset_registry: Default::default(),
         sudo: imbue_kusama_runtime::SudoConfig {
             key: Some(root_key),
