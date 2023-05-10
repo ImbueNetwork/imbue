@@ -4,7 +4,7 @@ use pallet_identity::Judgement;
 use sp_runtime::traits::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, vec};
 pub const MAX_PERCENTAGE: u32 = 100u32;
-
+use scale_info::prelude::format;
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
     ///
@@ -23,7 +23,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn project_account_id(key: ProjectKey) -> ProjectAccountId<T> {
-        T::PalletId::get().into_sub_account_truncating(key)
+        T::PalletId::get().into_sub_account_truncating(format!("//{key}"))
     }
 
     pub fn new_project(
@@ -385,7 +385,8 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
 
         // round list must be not none
-        let mut project = Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project =
+            Projects::<T>::get(&project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
@@ -419,7 +420,9 @@ impl<T: Config> Pallet<T> {
         let mut updated_vote = Vote::default();
         if approve_milestone {
             updated_vote = Vote {
-                yay: existing_milestone_vote.yay.saturating_add(contribution_amount),
+                yay: existing_milestone_vote
+                    .yay
+                    .saturating_add(contribution_amount),
                 nay: existing_milestone_vote.nay,
                 is_approved: existing_milestone_vote.is_approved,
             };
@@ -432,9 +435,15 @@ impl<T: Config> Pallet<T> {
             ));
             //once the voting is complete check if the milestone is eligible for auto approval
             //Getting the total threshold required for the milestone to be approved based on the raised funds
-            let funding_threshold: BalanceOf<T> = project.raised_funds.saturating_mul(T::PercentRequiredForVoteToPass::get().into())/100u32.into();
+            let funding_threshold: BalanceOf<T> = project
+                .raised_funds
+                .saturating_mul(T::PercentRequiredForVoteToPass::get().into())
+                / 100u32.into();
 
-            let mut milestone = project.milestones.get_mut(&milestone_key).ok_or(Error::<T>::KeyNotFound)?;
+            let mut milestone = project
+                .milestones
+                .get_mut(&milestone_key)
+                .ok_or(Error::<T>::KeyNotFound)?;
             //if the yay votes are both greater than the nay votes and the funding threshold then the milestone is approved
             if updated_vote.yay >= funding_threshold {
                 milestone.is_approved = true;
@@ -455,7 +464,9 @@ impl<T: Config> Pallet<T> {
         } else {
             updated_vote = Vote {
                 yay: existing_milestone_vote.yay,
-                nay: existing_milestone_vote.nay.saturating_add(contribution_amount),
+                nay: existing_milestone_vote
+                    .nay
+                    .saturating_add(contribution_amount),
                 is_approved: existing_milestone_vote.is_approved,
             };
             Self::deposit_event(Event::VoteComplete(
@@ -553,22 +564,33 @@ impl<T: Config> Pallet<T> {
                     }
                 });
 
-        let available_funds: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
+        let withdrawable: BalanceOf<T> = unlocked_funds - project.withdrawn_funds;
+
         ensure!(
-            available_funds > (0_u32).into(),
+            withdrawable > (0_u32).into(),
             Error::<T>::NoAvailableFundsToWithdraw
         );
 
+        let fee = withdrawable.saturating_mul(<T as Config>::ImbueFee::get().into())
+            / MAX_PERCENTAGE.into();
+        let withdrawn = withdrawable.saturating_sub(fee);
+
+        let project_account = Self::project_account_id(project_key);
+        let pallet_account = Self::account_id();
+
+        // Take the fee
+        T::MultiCurrency::transfer(project.currency_id, &project_account, &pallet_account, fee)?;
+
         T::MultiCurrency::transfer(
             project.currency_id,
-            &Self::project_account_id(project_key),
+            &project_account,
             &project.initiator,
-            available_funds,
+            withdrawn,
         )?;
 
         Projects::<T>::try_mutate(project_key, |project| -> DispatchResult {
             if let Some(p) = project {
-                p.withdrawn_funds = p.withdrawn_funds.saturating_add(available_funds);
+                p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
             }
             Ok(())
         })?;
@@ -576,7 +598,7 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::ProjectFundsWithdrawn(
             who,
             project_key,
-            available_funds,
+            withdrawn,
             project.currency_id,
         ));
 

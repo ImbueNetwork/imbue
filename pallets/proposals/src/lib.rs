@@ -106,6 +106,8 @@ pub mod pallet {
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
 
         type MaxMilestonesPerProject: Get<u32>;
+        
+        type ImbueFee: Get<u8>;
     }
 
     #[pallet::pallet]
