@@ -4,7 +4,7 @@ use pallet_identity::Judgement;
 use sp_runtime::traits::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, vec};
 pub const MAX_PERCENTAGE: u32 = 100u32;
-
+use scale_info::prelude::format;
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
     ///
@@ -23,7 +23,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn project_account_id(key: ProjectKey) -> ProjectAccountId<T> {
-        T::PalletId::get().into_sub_account_truncating(key)
+        T::PalletId::get().into_sub_account_truncating(format!("//{key}"))
     }
 
     pub fn new_project(
@@ -39,7 +39,12 @@ impl<T: Config> Pallet<T> {
             Self::ensure_identity_is_decent(&who)?;
         }
 
-        <T as Config>::MultiCurrency::reserve(CurrencyId::Native, &who, T::ProjectStorageDeposit::get()).map_err(|_|Error::<T>::ImbueRequiredForStorageDep)?;
+        <T as Config>::MultiCurrency::reserve(
+            CurrencyId::Native,
+            &who,
+            T::ProjectStorageDeposit::get(),
+        )
+        .map_err(|_| Error::<T>::ImbueRequiredForStorageDep)?;
 
         let project_key = ProjectCount::<T>::get();
         let next_project_key = project_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
@@ -107,8 +112,7 @@ impl<T: Config> Pallet<T> {
         }
 
         //check to ensure valid and existing project
-        let mut project =
-            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
 
@@ -213,8 +217,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::ProjectNotInRound
         );
 
-        let mut project =
-            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         let new_amount = match project.contributions.get(&who) {
             Some(contribution) => contribution.value,
@@ -232,9 +235,7 @@ impl<T: Config> Pallet<T> {
             );
 
             let default_max_cap: BalanceOf<T> = (0u32).into();
-            let max_cap = *whitelist_spots
-                .get(&who)
-                .unwrap_or(&default_max_cap);
+            let max_cap = *whitelist_spots.get(&who).unwrap_or(&default_max_cap);
 
             ensure!(
                 max_cap == default_max_cap || max_cap >= new_amount,
@@ -287,8 +288,7 @@ impl<T: Config> Pallet<T> {
         );
         ensure!(!round.is_canceled, Error::<T>::RoundCanceled);
         let now = <frame_system::Pallet<T>>::block_number();
-        let mut project =
-            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let total_contribution_amount: BalanceOf<T> = project.raised_funds;
 
         let funds_matched = total_contribution_amount >= project.required_funds;
@@ -420,7 +420,9 @@ impl<T: Config> Pallet<T> {
         let mut updated_vote = Vote::default();
         if approve_milestone {
             updated_vote = Vote {
-                yay: existing_milestone_vote.yay.saturating_add(contribution_amount),
+                yay: existing_milestone_vote
+                    .yay
+                    .saturating_add(contribution_amount),
                 nay: existing_milestone_vote.nay,
                 is_approved: existing_milestone_vote.is_approved,
             };
@@ -433,9 +435,15 @@ impl<T: Config> Pallet<T> {
             ));
             //once the voting is complete check if the milestone is eligible for auto approval
             //Getting the total threshold required for the milestone to be approved based on the raised funds
-            let funding_threshold: BalanceOf<T> = project.raised_funds.saturating_mul(T::PercentRequiredForVoteToPass::get().into())/100u32.into();
+            let funding_threshold: BalanceOf<T> = project
+                .raised_funds
+                .saturating_mul(T::PercentRequiredForVoteToPass::get().into())
+                / 100u32.into();
 
-            let mut milestone = project.milestones.get_mut(&milestone_key).ok_or(Error::<T>::KeyNotFound)?;
+            let mut milestone = project
+                .milestones
+                .get_mut(&milestone_key)
+                .ok_or(Error::<T>::KeyNotFound)?;
             //if the yay votes are both greater than the nay votes and the funding threshold then the milestone is approved
             if updated_vote.yay >= funding_threshold {
                 milestone.is_approved = true;
@@ -456,7 +464,9 @@ impl<T: Config> Pallet<T> {
         } else {
             updated_vote = Vote {
                 yay: existing_milestone_vote.yay,
-                nay: existing_milestone_vote.nay.saturating_add(contribution_amount),
+                nay: existing_milestone_vote
+                    .nay
+                    .saturating_add(contribution_amount),
                 is_approved: existing_milestone_vote.is_approved,
             };
             Self::deposit_event(Event::VoteComplete(
@@ -478,8 +488,7 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         milestone_key: MilestoneKey,
     ) -> DispatchResultWithPostInfo {
-        let mut project =
-            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(
             project.initiator == who,
             Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone
@@ -501,7 +510,7 @@ impl<T: Config> Pallet<T> {
             .raised_funds
             .saturating_mul(T::PercentRequiredForVoteToPass::get().into());
         let percent_multiple: BalanceOf<T> = 100u32.into();
-        
+
         ensure!(
             percent_multiple.saturating_mul(vote.yay + vote.nay) >= threshold_votes,
             Error::<T>::MilestoneVotingNotComplete
@@ -540,35 +549,53 @@ impl<T: Config> Pallet<T> {
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         //ensure that the project is approved_for_funding?
 
-        let total_unlocked_funds: BalanceOf<T> = project.milestones.iter().fold(Default::default(), |acc, ms| {
-            if ms.1.is_approved {
-                let per_milestone = project.raised_funds.saturating_mul(ms.1.percentage_to_unlock.into()) / MAX_PERCENTAGE.into();
-                acc.saturating_add(per_milestone)
-            } else {
-                acc
-            }
-        });
+        let unlocked_funds: BalanceOf<T> =
+            project
+                .milestones
+                .iter()
+                .fold(Default::default(), |acc, ms| {
+                    if ms.1.is_approved {
+                        let per_milestone = project
+                            .raised_funds
+                            .saturating_mul(ms.1.percentage_to_unlock.into())
+                            / MAX_PERCENTAGE.into();
+                        acc.saturating_add(per_milestone)
+                    } else {
+                        acc
+                    }
+                });
 
-        let available_funds: BalanceOf<T> = total_unlocked_funds.saturating_sub(project.withdrawn_funds);
+        let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
+
         ensure!(
-            available_funds > (0_u32).into(),
+            withdrawable > (0_u32).into(),
             Error::<T>::NoAvailableFundsToWithdraw
         );
 
+        let fee = withdrawable.saturating_mul(<T as Config>::ImbueFee::get().into())
+            / MAX_PERCENTAGE.into();
+        let withdrawn = withdrawable.saturating_sub(fee);
+
+        let project_account = Self::project_account_id(project_key);
+        let pallet_account = Self::account_id();
+
+        // Take the fee
+        T::MultiCurrency::transfer(project.currency_id, &project_account, &pallet_account, fee)?;
+
         T::MultiCurrency::transfer(
             project.currency_id,
-            &Self::project_account_id(project_key),
+            &project_account,
             &project.initiator,
-            available_funds,
+            withdrawn,
         )?;
 
         Projects::<T>::mutate_exists(project_key, |project| -> DispatchResult {
             if let Some(p) = project {
-                p.withdrawn_funds = p.withdrawn_funds.saturating_add(available_funds);
+                p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
                 if p.withdrawn_funds == p.raised_funds {
                     Self::reinstate_storage_deposit(&p.initiator)?;
                     *project = None;
-                } 
+                }
             }
             Ok(())
         })?;
@@ -576,7 +603,7 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::ProjectFundsWithdrawn(
             who,
             project_key,
-            available_funds,
+            withdrawn,
             project.currency_id,
         ));
 
@@ -586,8 +613,7 @@ impl<T: Config> Pallet<T> {
     /// Appends a list of refunds to the queue to be used by the hooks.
     // DEPRICATED, PLS REMOOVE.
     pub fn add_refunds_to_queue_depricated(project_key: ProjectKey) -> DispatchResultWithPostInfo {
-        let mut project =
-            Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         //getting the locked milestone percentage - these are also milestones that have not been approved
         let mut refunded_funds: BalanceOf<T> = 0_u32.into();
@@ -838,7 +864,7 @@ impl<T: Config> Pallet<T> {
 
             Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
         } else {
-            return Err(Error::<T>::VoteThresholdNotMet.into());     
+            return Err(Error::<T>::VoteThresholdNotMet.into());
         }
         Ok(().into())
     }
@@ -872,7 +898,11 @@ impl<T: Config> Pallet<T> {
 
     /// Call this to remove a project from storage and reinstate the deposit.
     fn reinstate_storage_deposit(who: &AccountIdOf<T>) -> DispatchResult {
-        let _ = <T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, <T as Config>::ProjectStorageDeposit::get());
+        let _ = <T as Config>::MultiCurrency::unreserve(
+            CurrencyId::Native,
+            who,
+            <T as Config>::ProjectStorageDeposit::get(),
+        );
         Ok(())
     }
 }
