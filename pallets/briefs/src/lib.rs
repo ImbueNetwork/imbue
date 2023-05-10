@@ -2,7 +2,8 @@
 
 pub use pallet::*;
 
-mod weights;
+pub mod weights;
+pub use weights::*;
 
 #[cfg(test)]
 mod mock;
@@ -21,7 +22,7 @@ mod test_utils;
 
 #[frame_support::pallet]
 pub mod pallet {
-
+    use super::*;
     use common_types::{milestone_origin::FundingType, CurrencyId};
     use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
@@ -75,7 +76,7 @@ pub mod pallet {
 
         type MaxMilestonesPerBrief: Get<u32>;
 
-        type WeightInfo: crate::weights::WeightInfo;
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::storage]
