@@ -387,7 +387,7 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
 
         // round list must be not none
-        let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
             round.round_type == RoundType::VotingRound,
