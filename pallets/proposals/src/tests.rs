@@ -1540,9 +1540,9 @@ fn test_withdraw_upon_project_approval_and_finalised_voting() {
 fn test_withdraw_upon_project_auto_approval_and_based_on_threshold_met_during_voting() {
     let milestone1_key = 0;
     build_test_externality().execute_with(|| {
-        assert_ok!(create_project());
-
         let initial_balance = Tokens::free_balance(CurrencyId::Native, &*ALICE);
+
+        assert_ok!(create_project());
         let project_key = 0;
         let project_keys: BoundedProjectKeys = bounded_vec![0];
 
