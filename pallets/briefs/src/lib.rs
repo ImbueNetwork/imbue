@@ -2,7 +2,8 @@
 
 pub use pallet::*;
 
-mod weights;
+pub mod weights;
+pub use weights::*;
 
 #[cfg(test)]
 mod mock;
@@ -21,7 +22,7 @@ mod test_utils;
 
 #[frame_support::pallet]
 pub mod pallet {
-
+    use super::*;
     use common_types::{milestone_origin::FundingType, CurrencyId};
     use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
@@ -75,7 +76,7 @@ pub mod pallet {
 
         type MaxMilestonesPerBrief: Get<u32>;
 
-        type WeightInfo: crate::weights::WeightInfo;
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::storage]
@@ -166,7 +167,7 @@ pub mod pallet {
         /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
         #[pallet::call_index(2)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::create_brief())]
         pub fn create_brief(
             origin: OriginFor<T>,
             mut brief_owners: BoundedBriefOwners<T>,
@@ -248,7 +249,7 @@ pub mod pallet {
         ///
         /// TODO: runtime api to return how much bounty exactly is left on a brief.
         #[pallet::call_index(3)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::contribute_to_brief())]
         pub fn contribute_to_brief(
             origin: OriginFor<T>,
             brief_id: BriefHash,
@@ -290,7 +291,7 @@ pub mod pallet {
 
         /// Once the freelancer is happy with both the milestones and the offering this can be called.
         #[pallet::call_index(4)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::commence_work())]
         pub fn commence_work(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
