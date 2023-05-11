@@ -118,6 +118,9 @@ where
             milestone_key = milestone_key.saturating_add(1);
         }
 
+        let mut milestone_contributions: BTreeMap<MilestoneKey, ContributionsFor<T>> = BTreeMap::new();
+        milestone_contributions.insert(milestone_key, contributions.clone());
+
         let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>> =
             Project {
                 milestones,
@@ -133,6 +136,7 @@ where
                 cancelled: false,
                 agreement_hash: brief_hash,
                 funding_type,
+                milestone_contributions,
             };
 
         Projects::<T>::insert(project_key, project);

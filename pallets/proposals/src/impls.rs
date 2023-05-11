@@ -80,6 +80,7 @@ impl<T: Config> Pallet<T> {
             funding_threshold_met: false,
             cancelled: false,
             funding_type,
+            milestone_contributions: BTreeMap::new(),
         };
 
         // Add project to list

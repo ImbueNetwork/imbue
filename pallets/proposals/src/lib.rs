@@ -737,6 +737,7 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     pub milestones: BTreeMap<MilestoneKey, Milestone>,
     // TODO: BOund
     pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+    pub milestone_contributions: BTreeMap<MilestoneKey, BTreeMap<AccountId, Contribution<Balance, Timestamp>>>,
     pub currency_id: common_types::CurrencyId,
     pub required_funds: Balance,
     pub withdrawn_funds: Balance,
