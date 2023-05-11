@@ -71,7 +71,8 @@ pub mod pallet {
     #[pallet::storage]
 	pub type CrowdFunds<T> = StorageMap<_, Blake2_128, CrowdFundKey, CrowdFund<T>, OptionQuery>;
 
-    // TODO close rounds in hook.
+    /// Stores the crowdfund keys that are expiring on a given block.
+    /// Handled in the hooks,
     #[pallet::storage]
 	pub type RoundsExpiring<T> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedKeysPerRound<T>, ValueQuery>;
 
@@ -309,6 +310,23 @@ pub mod pallet {
         }
 
 	}
+
+#[pallet::hooks]
+impl  <T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+    fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+        let mut weight: Weight = Default::default(); 
+        let crowdfund_keys: BoundedKeysPerRound<T> = RoundsExpiring::<T>::take(n);
+        weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+
+        // SAFETY: BoundedKeysPerRound must be sane as to not have overweight blocks.
+        crowdfund_keys.iter().for_each(|key| {
+            CrowdFundsInRound::<T>::remove(key, RoundType::ContributionRound);
+            weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+        });
+        
+        weight
+    }
+}
 
 impl<T: Config> Pallet<T> {
 	pub fn new_crowdfund(
