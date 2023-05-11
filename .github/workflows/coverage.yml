@@ -1,0 +1,59 @@
+name: Tests Coverage
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**/README.md"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/README.md"
+
+env:
+  TARPAULIN_VERSION: 0.19.1
+  # LIBCLANG_PATH: "/usr/lib/llvm-11/lib" # default `llvm-config --prefix`
+  # SCCACHE_CACHE_SIZE: "100G"
+  CARGO_INCREMENTAL: 0
+jobs:
+  clean-up-actions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Previous Runs
+        # Only cancel non-master branch runs
+        if: ${{ github.ref != 'refs/heads/master' }}
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          access_token: ${{ github.token }}
+  test:
+    name: Coverage Report
+    runs-on: [self-hosted, linux]
+    needs: clean-up-actions
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2023-03-04
+          components: rustfmt
+          target: wasm32-unknown-unknown
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.13
+      - name: Run cargo-tarpaulin
+        run: |
+          wget https://github.com/xd009642/tarpaulin/releases/download/${{ env.TARPAULIN_VERSION }}/cargo-tarpaulin-${{ env.TARPAULIN_VERSION }}-travis.tar.gz
+          tar -zxvf cargo-tarpaulin-${{ env.TARPAULIN_VERSION }}-travis.tar.gz -C $HOME/.cargo/bin
+          cargo tarpaulin -v --no-fail-fast \
+            --exclude-files **/mock.rs **/weights.rs **/weights/*
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
