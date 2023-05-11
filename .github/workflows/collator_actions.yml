@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths-ignore:
-      - '**.md'
+      - "**.md"
   pull_request:
     branches:
       - main
     paths-ignore:
-      - '**.md'
+      - "**.md"
 
 jobs:
   build-imbue-collator:
@@ -38,15 +38,31 @@ jobs:
       - name: Update submodules
         run: git submodule update --recursive --remote
 
-      - name: Clean unused directories 
+      - name: Clean unused directories
         run: sudo rm -rf /usr/share/dotnet;sudo rm -rf /opt/ghc;sudo rm -rf "/usr/local/share/boost";sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
       - name: Install Protobuf
         run: sudo apt install protobuf-compiler
 
-      - name: Build imbue collator 
+      - name: Build imbue collator
         run: cargo +nightly build --release
 
       - name: Run tests with benchmarks
         run: cargo +nightly test --features runtime-benchmarks
 
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          version: "0.20.1"
+          args: "-- --test-threads 1"
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v3.1.0
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v3.1.0
+        with:
+          name: code-coverage-report
+          path: cobertura.xml
