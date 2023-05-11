@@ -9,7 +9,7 @@ name: coverage
 
 jobs:
   check:
-    name: fs-test-coverage
+    name: imbue-test-coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

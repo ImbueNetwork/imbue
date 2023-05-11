@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod weights;
 
 pub use pallet::*;
 
@@ -9,6 +8,7 @@ mod mock;
 
 #[cfg(test)]
 mod integration_tests;
+
 #[cfg(test)]
 mod tests;
 
@@ -18,8 +18,13 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
+pub mod weights;
+pub use weights::*;
+
+
 #[frame_support::pallet]
 pub mod pallet {
+    use super::*;
     use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
@@ -60,7 +65,7 @@ pub mod pallet {
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
 
-        type WeightInfo: crate::weights::WeightInfo;
+        type WeightInfo: WeightInfo;
     }
 
     /// Stores all the Grants waiting for approval, funding and eventual conversion into milestones.
@@ -127,7 +132,7 @@ pub mod pallet {
         /// A grant starts here with nothing agreed upon and
         /// probably awaiting much back and forth.
         #[pallet::call_index(0)]
-        #[pallet::weight(100_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::submit_initial_grant())]
         pub fn submit_initial_grant(
             origin: OriginFor<T>,
             //ipfs_hash: [u8; 32],
@@ -179,7 +184,7 @@ pub mod pallet {
         /// Edit a grant that has been submitted.
         /// Fields passed in with None will be ignored and not updated.
         #[pallet::call_index(1)]
-        #[pallet::weight(100_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::edit_grant())]
         pub fn edit_grant(
             origin: OriginFor<T>,
             grant_id: GrantId,
@@ -227,7 +232,7 @@ pub mod pallet {
 
         /// Set the grant as cancelled
         #[pallet::call_index(2)]
-        #[pallet::weight(100_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_grant())]
         pub fn cancel_grant(
             origin: OriginFor<T>,
             grant_id: GrantId,
@@ -254,7 +259,7 @@ pub mod pallet {
         /// Once you are completely happy with the grant details and are ready to submit to treasury
         /// You call this and it'll allow you to generate a project account id.
         #[pallet::call_index(3)]
-        #[pallet::weight(100_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::convert_to_project())]
         pub fn convert_to_project(
             origin: OriginFor<T>,
             grant_id: GrantId,
