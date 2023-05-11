@@ -20,15 +20,23 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-pallet-proposals = { path= "../proposals", default-features = false}
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false}
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39", default-features = false }
+
+common-types = { path = "../../libs/common-types", default-features = false }
+pallet-proposals = { path= "../proposals", default-features = false}
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-proposals = { path= "../proposals"}
+common-types = { path = "../../libs/common-types"}
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 
 
 [features]
@@ -41,6 +49,7 @@ std = [
 	"scale-info/std",
 	"pallet-proposals/std",
 	"sp-core/std",
+	"pallet-identity/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
