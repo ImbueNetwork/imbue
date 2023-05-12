@@ -30,7 +30,6 @@ frame_support::construct_runtime!(
         System: frame_system,
         Grant: pallet_grants,
         Tokens: orml_tokens,
-        TimeStamp: pallet_timestamp,
         Proposals: pallet_proposals,
         Identity: pallet_identity,
         Balances: pallet_balances,
@@ -121,15 +120,6 @@ impl pallet_grants::Config for Test {
     type WeightInfo = ();
 }
 
-parameter_types! {
-    pub const MinimumPeriod: u64 = 1;
-}
-impl pallet_timestamp::Config for Test {
-    type Moment = Moment;
-    type OnTimestampSet = ();
-    type MinimumPeriod = MinimumPeriod;
-    type WeightInfo = ();
-}
 
 parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
