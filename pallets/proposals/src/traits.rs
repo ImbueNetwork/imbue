@@ -12,6 +12,7 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
 
 use sp_core::{H256, Get};
+use sp_runtime::BoundedBTreeMap;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
@@ -133,6 +134,7 @@ where
                 cancelled: false,
                 agreement_hash: brief_hash,
                 funding_type,
+                milestones_contributions: BoundedBTreeMap::default(),
             };
 
         Projects::<T>::insert(project_key, project);

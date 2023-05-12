@@ -39,6 +39,8 @@ pub use impls::*;
 // The Constants associated with the bounded parameters
 type MaxProjectKeysPerRound = ConstU32<1000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
+type MaxMilestonesPerProject = ConstU32<100>;
+type MaxContributorsPerProject = ConstU32<1000>;
 
 pub type RoundKey = u32;
 pub type ProjectKey = u32;
@@ -737,6 +739,7 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
     pub milestones: BTreeMap<MilestoneKey, Milestone>,
     // TODO: BOund
     pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+    pub milestones_contributions: BoundedBTreeMap<MilestoneKey, BoundedBTreeMap<AccountId, Contribution<Balance, Timestamp>, MaxContributorsPerProject>, MaxMilestonesPerProject>,
     pub currency_id: common_types::CurrencyId,
     pub required_funds: Balance,
     pub withdrawn_funds: Balance,

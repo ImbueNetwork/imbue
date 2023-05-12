@@ -191,6 +191,7 @@ pub mod v2 {
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
                 funding_type: FundingType::Proposal,
+                milestones_contributions: BoundedBTreeMap::default(),
             };
             Some(migrated_project)
         });
