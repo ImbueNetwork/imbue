@@ -89,6 +89,12 @@ pub mod pallet {
     /// Value: Unit
     #[pallet::storage]
     #[pallet::getter(fn approved_accounts)]
+        /// <HB SBP Review:
+        /// 
+        /// You might just optimize this by adding a StorageValue with a BoundedVec. 
+        /// I understand that you are using a StorageMap to not face the difficulty of the maximum number of accounts.
+        /// 
+        /// >
     pub type FreelanceFellowship<T> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
@@ -149,6 +155,11 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Approve an account so that they can be accepted as an applicant.
         #[pallet::call_index(1)]
+        /// <HB SBP Review:
+        /// 
+        /// It seems you guys forgot to add the weight from the benchmarking result.
+        /// 
+        /// >
         #[pallet::weight(10_000)]
         pub fn add_to_fellowship(
             origin: OriginFor<T>,
@@ -185,6 +196,13 @@ pub mod pallet {
                 Error::<T>::BriefAlreadyExists
             );
 
+            /// <HB SBP Review:
+            /// 
+            /// Re: sp_arithmetic library
+            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough, 
+            /// but using the sp_arithmetic library is a safer practice.
+            /// 
+            /// >
             // Validation
             let total_percentage = milestones
                 .iter()
@@ -209,10 +227,25 @@ pub mod pallet {
             //     Error::<T>::OnlyApprovedAccountPermitted
             // );
 
+            /// <HB SBP Review:
+            /// 
+            /// Usually balances reverves are fixed and determined at the runtime level since it is supposed to be a storage sanity measure.
+            /// With the current design i could just reserve 0.000001 USD and that would be still chip to attack the network.
+            /// As you are working in a multi-currency environment, i would suggest creating a new pallet that might define reserve values per currency.
+            /// This new pallet would require root origin and it might be called from goverance chain. 
+            /// Or another option would be to only accept deposits in the native currency of the chain.
+            /// 
+            /// >
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
+            /// <HB SBP Review:
+            /// 
+            /// Please avoid this kind of hardcodes as 0u32.
+            /// You can use : Zero::zero()
+            /// use sp_runtime::traits::{Zero};
+            /// >
             if initial_contribution > 0u32.into() {
-                BriefContributions::<T>::try_mutate(brief_id, |contributions| {
+                 ::<T>::try_mutate(brief_id, |contributions| {
                     // This should never fail as the the bound is ensured when a brief is created.
                     let _ = contributions
                         .try_insert(
@@ -264,6 +297,10 @@ pub mod pallet {
                 Error::<T>::NotAuthorised
             );
 
+            /// <HB SBP Review:
+            /// 
+            /// Same as the previous comment, please about reserves amount.
+            /// >
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
             BriefContributions::<T>::try_mutate(brief_id, |contributions| {

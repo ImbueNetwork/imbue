@@ -5,6 +5,13 @@ use sp_runtime::traits::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, vec};
 pub const MAX_PERCENTAGE: u32 = 100u32;
 use scale_info::prelude::format;
+
+/// <HB SBP Review:
+///
+/// I would use checked_div for some divisions to be sure.
+///
+/// >
+
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
     ///
@@ -143,6 +150,11 @@ impl<T: Config> Pallet<T> {
         project.currency_id = currency_id;
         project.agreement_hash = agreement_hash;
 
+        /// <HB SBP Review:
+        ///
+        /// Maybe instead of using inset, this is a good candidate for try_mutate as well?
+        ///
+        /// >
         // Add project to list
         <Projects<T>>::insert(project_key, project);
 
@@ -196,6 +208,11 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         value: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
+        /// <HB SBP Review:
+        ///
+        /// I would avoid hardocoding types of this kind. Please use Zero::zero() instead.
+        ///
+        /// >
         // TODO add configurable value for min and max contribution per contributor
         ensure!(value > (0_u32).into(), Error::<T>::InvalidParam);
         let now = <frame_system::Pallet<T>>::block_number();
@@ -499,6 +516,11 @@ impl<T: Config> Pallet<T> {
             Error::<T>::MilestoneDoesNotExist
         );
 
+        /// <HB SBP Review:
+        ///
+        /// Please remove this unwrap and manage the error properly.
+        ///
+        /// >
         let mut milestone = project.milestones.get_mut(&milestone_key).unwrap().clone();
 
         // set is_approved
@@ -572,6 +594,11 @@ impl<T: Config> Pallet<T> {
             Error::<T>::NoAvailableFundsToWithdraw
         );
 
+        /// HB SBP Review:
+        ///
+        /// This is a good example about how sp_arithmetic can be used to manage percentages in a safe way.
+        ///
+        /// >
         let fee = withdrawable.saturating_mul(<T as Config>::ImbueFee::get().into())
             / MAX_PERCENTAGE.into();
         let withdrawn = withdrawable.saturating_sub(fee);
@@ -631,6 +658,11 @@ impl<T: Config> Pallet<T> {
         for (who, contribution) in project.contributions.iter() {
             let project_account_id = Self::project_account_id(project_key);
 
+            /// <HB SBP Review:
+            ///
+            /// Unsafe operation. Please use checked_mul or saturated_mul instead.
+            /// And for divisions i always try to use cheched_div just to be sure.
+            /// >
             let refund_amount: BalanceOf<T> =
                 ((contribution).value * locked_milestone_percentage.into()) / MAX_PERCENTAGE.into();
 
