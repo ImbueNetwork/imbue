@@ -36,6 +36,12 @@ pub mod migration;
 pub mod impls;
 pub use impls::*;
 
+/// <HB SBP Review:
+///
+///
+/// Why are these two constants not configurable as the others?
+///
+/// >
 // The Constants associated with the bounded parameters
 type MaxProjectKeysPerRound = ConstU32<1000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
@@ -50,6 +56,12 @@ type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
 type BoundedMilestoneKeys<T> = BoundedVec<ProjectKey, <T as Config>::MaxMilestonesPerProject>;
 pub type BoundedProposedMilestones<T> =
     BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
+
+/// <HB SBP Review:
+///
+/// I think the project is missing a primitives.rs file where all these kind of definitions should be placed.
+///
+/// >
 pub type AgreementHash = H256;
 type BoundedProjectKeysPerBlock<T> = BoundedVec<(ProjectKey, RoundType, MilestoneKey), <T as Config>::ExpiringProjectRoundsPerBlock>;
 type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>;
@@ -102,6 +114,11 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    /// <HB SBP Review:
+    ///
+    /// CRITICAL: This macro should be removed asap. This basically allows storing unbounded Vecs on storage items.
+    ///
+    /// >
     #[pallet::without_storage_info]
     pub struct Pallet<T>(PhantomData<T>);
 
@@ -145,6 +162,25 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+
+    /// TODO: Use a multilocation for the refunds
+    #[pallet::storage]
+    #[pallet::getter(fn refund_queue)]
+    pub type RefundQueue<T> = StorageValue<
+        _,
+        /// <HB SBP Review:
+        ///
+        /// Unbounded Vec on a storage item. This should be addressed before deploying.
+        ///
+        /// >
+        Vec<(
+            AccountIdOf<T>,
+            ProjectAccountId<T>,
+            BalanceOf<T>,
+            CurrencyId,
+        )>,
+        ValueQuery,
+    >;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -227,6 +263,11 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        /// <HB SBP Review:
+        /// 
+        /// I see this hook valid on testnet but if you will deploy this with weights v2 already, you can totally remove this.
+        /// 
+        /// >
         fn on_runtime_upgrade() -> Weight {
              let mut weight = T::DbWeight::get().reads_writes(1, 1);
              // Only supporting latest upgrade for now.
@@ -379,6 +420,11 @@ pub enum RoundType {
     VoteOfNoConfidence,
 }
 
+/// <HB SBP Review:
+/// 
+/// I suspect this comes from the weights v2 migration?
+/// 
+/// >
 #[derive(Encode, Decode, TypeInfo, PartialEq)]
 #[repr(u32)]
 pub enum Release {
@@ -393,6 +439,13 @@ impl Default for Release {
         Self::V3
     }
 }
+
+/// <HB SBP Review:
+///
+/// I would recommend to consider library sp_arithmetic for all what it is percentage related: https://docs.rs/sp-arithmetic/15.0.0/sp_arithmetic/per_things/index.html
+/// This would give more flexibility and safety at the time to maniputale percentages.
+///
+/// >
 
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
@@ -424,6 +477,11 @@ pub struct Vote<Balance> {
 impl<Balance: From<u32>> Default for Vote<Balance> {
     fn default() -> Self {
         Self {
+            /// <HB SBP Review:
+            /// 
+            /// I would avoid hardocoding types of this kind. Please use Zero::zero() instead.
+            /// 
+            /// >
             yay: (0_u32).into(),
             nay: (0_u32).into(),
             is_approved: false,

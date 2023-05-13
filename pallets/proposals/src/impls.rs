@@ -8,6 +8,12 @@ use crate::Error::*;
 
 pub const MAX_PERCENTAGE: u32 = 100u32;
 
+/// <HB SBP Review:
+///
+/// I would use checked_div for some divisions to be sure.
+///
+/// >
+
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
     ///
@@ -130,9 +136,20 @@ impl<T: Config> Pallet<T> {
         ensure!(
             project.initiator == who,
             Error::<T>::InvalidAccount
+            Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone
         );
-        // TODO: this is also messy with the mut reference, clean up
-        let mut milestone = project.milestones.get_mut(&milestone_key).ok_or(Error::<T>::MilestoneDoesNotExist)?;
+
+        ensure!(
+            project.milestones.contains_key(&milestone_key),
+            Error::<T>::MilestoneDoesNotExist
+        );
+
+        /// <HB SBP Review:
+        ///
+        /// Please remove this unwrap and manage the error properly.
+        ///
+        /// >
+        let mut milestone = project.milestones.get_mut(&milestone_key).unwrap().clone();
 
         // set is_approved
         let vote = Self::milestone_votes(project_key, milestone_key).ok_or(Error::<T>::KeyNotFound)?;
@@ -197,6 +214,11 @@ impl<T: Config> Pallet<T> {
         let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
         ensure!(withdrawable != Zero::zero(), Error::<T>::NoAvailableFundsToWithdraw);
 
+        /// HB SBP Review:
+        ///
+        /// This is a good example about how sp_arithmetic can be used to manage percentages in a safe way.
+        ///
+        /// >
         let fee = withdrawable.saturating_mul(<T as Config>::ImbueFee::get().into())
             / MAX_PERCENTAGE.into();
         let withdrawn = withdrawable.saturating_sub(fee);
