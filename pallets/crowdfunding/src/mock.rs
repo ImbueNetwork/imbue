@@ -12,8 +12,8 @@ use common_types::CurrencyId;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-type BlockNumber = u32;
-type Balance = u32;
+type BlockNumber = u64;
+type Balance = u64;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 // Configure a mock runtime to test the pallet.
@@ -71,12 +71,12 @@ impl pallet_crowdfunding::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Tokens;
 	type RoundExpiry = RoundExpiry;
-	type MaxKeysPerRound = MaxKeysPerRound;
 	type MaxContributionsPerCrowdFund = MaxContributionsPerCrowdFund;
+	type MaxKeysPerRound = MaxKeysPerRound;
 	type MaxMilestonesPerCrowdFund = MaxMilestonesPerCrowdFund;
 	type MaxWhitelistPerCrowdFund = MaxWhitelistPerCrowdFund;
 	type IsIdentityRequired = IsIdentityRequired;
-	type AuthorityOrigin = EnsureRoot<Self::RuntimeOrigin>;
+	type AuthorityOrigin = EnsureRoot<AccountId>;
 }
 
 orml_traits::parameter_type_with_key! {

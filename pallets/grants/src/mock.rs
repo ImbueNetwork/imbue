@@ -39,12 +39,13 @@ frame_support::construct_runtime!(
 
 parameter_types! {
     pub const ExistentialDeposit: u64 = 5;
+    pub BlockHashCount: BlockNumber = 250;
 }
 
 impl pallet_balances::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type AccountStore = System;
-    type Balance = u64;
+    type Balance = Balance;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
@@ -68,7 +69,7 @@ impl frame_system::Config for Test {
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type RuntimeEvent = RuntimeEvent;
-    type BlockHashCount = ConstU64<250>;
+    type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
