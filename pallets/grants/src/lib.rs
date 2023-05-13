@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
 pub use pallet::*;
 
 #[cfg(test)]
@@ -20,7 +19,6 @@ mod test_utils;
 
 pub mod weights;
 pub use weights::*;
-
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -78,6 +76,13 @@ pub mod pallet {
     /// Key 1: AccountId
     /// Key 2: GrantId
     /// Value: ()
+
+    /// <HB SBP Review:
+    ///
+    /// You might just optimize this by adding a StorageMap with a BoundedVec.
+    /// I understand that you are using a StorageDoubleMap to not face the difficulty of the maximum number of accounts.
+    ///
+    /// >
     #[pallet::storage]
     pub type GrantsSubmittedBy<T: Config> =
         StorageDoubleMap<_, Blake2_128, AccountIdOf<T>, Blake2_128, GrantId, (), ValueQuery>;
@@ -145,6 +150,13 @@ pub mod pallet {
         ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
 
+            /// <HB SBP Review:
+            ///
+            /// Re: sp_arithmetic library
+            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough,
+            /// but using the sp_arithmetic library is a safer practice.
+            ///
+            /// >
             let total_percentage = proposed_milestones
                 .iter()
                 .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));

@@ -36,6 +36,12 @@ pub mod migration;
 pub mod impls;
 pub use impls::*;
 
+/// <HB SBP Review:
+///
+///
+/// Why are these two constants not configurable as the others?
+///
+/// >
 // The Constants associated with the bounded parameters
 type MaxProjectKeysPerRound = ConstU32<1000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
@@ -61,6 +67,12 @@ type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
 type BoundedMilestoneKeys<T> = BoundedVec<ProjectKey, <T as Config>::MaxMilestonesPerProject>;
 pub type BoundedProposedMilestones<T> =
     BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
+
+/// <HB SBP Review:
+///
+/// I think the project is missing a primitives.rs file where all these kind of definitions should be placed.
+///
+/// >
 pub type AgreementHash = H256;
 
 #[frame_support::pallet]
@@ -111,13 +123,18 @@ pub mod pallet {
 
         /// The storage deposit taken when a project is created and returned on deletion/completion.
         type ProjectStorageDeposit: Get<BalanceOf<Self>>;
-        
+
         // Imbue fee in percent 0-99
         type ImbueFee: Get<u8>;
     }
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    /// <HB SBP Review:
+    ///
+    /// CRITICAL: This macro should be removed asap. This basically allows storing unbounded Vecs on storage items.
+    ///
+    /// >
     #[pallet::without_storage_info]
     pub struct Pallet<T>(PhantomData<T>);
 
@@ -183,6 +200,11 @@ pub mod pallet {
     #[pallet::getter(fn refund_queue)]
     pub type RefundQueue<T> = StorageValue<
         _,
+        /// <HB SBP Review:
+        ///
+        /// Unbounded Vec on a storage item. This should be addressed before deploying.
+        ///
+        /// >
         Vec<(
             AccountIdOf<T>,
             ProjectAccountId<T>,
@@ -321,6 +343,11 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        /// <HB SBP Review:
+        /// 
+        /// I see this hook valid on testnet but if you will deploy this with weights v2 already, you can totally remove this.
+        /// 
+        /// >
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             if StorageVersion::<T>::get() == Release::V0
@@ -347,6 +374,14 @@ pub mod pallet {
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
+
+            /// <HB SBP Review:
+            /// 
+            /// Re: sp_arithmetic library
+            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough, 
+            /// but using the sp_arithmetic library is a safer practice.
+            /// 
+            /// >
             // Validation
             let total_percentage = proposed_milestones
                 .iter()
@@ -358,6 +393,11 @@ pub mod pallet {
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
+            /// <HB SBP Review:
+            /// 
+            /// Remove the let_ ?
+            /// 
+            /// >
             let _ = Self::new_project(
                 // TODO: Optimise
                 who,
@@ -382,6 +422,13 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
+            /// <HB SBP Review:
+            /// 
+            /// Re: sp_arithmetic library
+            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough, 
+            /// but using the sp_arithmetic library is a safer practice.
+            /// 
+            /// >
             let total_percentage = proposed_milestones
                 .iter()
                 .fold(0, |acc: u32, ms: &ProposedMilestone| {
@@ -504,6 +551,11 @@ pub mod pallet {
         /// Contribute to a project
         #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
+        /// <HB SBP Review:
+        /// 
+        /// It is not needed anymore to use the transactional macro anymore since it is already added by default for every extrinsic.
+        /// 
+        /// >
         #[transactional]
         pub fn contribute(
             origin: OriginFor<T>,
@@ -650,6 +702,11 @@ pub enum RoundType {
     VoteOfNoConfidence,
 }
 
+/// <HB SBP Review:
+/// 
+/// I suspect this comes from the weights v2 migration?
+/// 
+/// >
 #[derive(Encode, Decode, TypeInfo, PartialEq)]
 #[repr(u32)]
 pub enum Release {
@@ -664,6 +721,11 @@ impl Default for Release {
     }
 }
 
+/// <HB SBP Review:
+///
+/// This Round struct is storing an unbounded Vec. Please bound all your vecs.
+///
+/// >
 /// The round struct contains all the data associated with a given round.
 /// A round may include multiple projects.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
@@ -691,6 +753,13 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
         }
     }
 }
+
+/// <HB SBP Review:
+///
+/// I would recommend to consider library sp_arithmetic for all what it is percentage related: https://docs.rs/sp-arithmetic/15.0.0/sp_arithmetic/per_things/index.html
+/// This would give more flexibility and safety at the time to maniputale percentages.
+///
+/// >
 
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
@@ -722,6 +791,11 @@ pub struct Vote<Balance> {
 impl<Balance: From<u32>> Default for Vote<Balance> {
     fn default() -> Self {
         Self {
+            /// <HB SBP Review:
+            /// 
+            /// I would avoid hardocoding types of this kind. Please use Zero::zero() instead.
+            /// 
+            /// >
             yay: (0_u32).into(),
             nay: (0_u32).into(),
             is_approved: false,
