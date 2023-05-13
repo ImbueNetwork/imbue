@@ -60,6 +60,7 @@ pub mod pallet {
         type MaxWhitelistPerCrowdFund: Get<u32>;
         type IsIdentityRequired: Get<bool>;
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        type MinimumRequiredFunds: Get<BalanceOf<Self>>;
         //type IntoProposals: IntoProposal;
 	}
 
@@ -148,6 +149,8 @@ pub mod pallet {
         ContributionMustBeLowerThanMaxCap,
         /// An identity is required for this.
         IdentityNeeded,
+        /// Below the minimum required funds.
+        BelowMinimumRequiredFunds,
 
 	}
 
@@ -163,7 +166,7 @@ pub mod pallet {
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            // Validation
+            ensure!(required_funds >= <T as Config>::MinimumRequiredFunds::get(), Error::<T>::BelowMinimumRequiredFunds);
             let total_percentage = proposed_milestones.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
             ensure!(
                 total_percentage == 100,
@@ -342,6 +345,8 @@ impl<T: Config> Pallet<T> {
         }
 
         let crowdfund_key = CrowdFundCount::<T>::get();
+
+        // Todo: Take storage deposit>
 
         // For now we keep them as proposed milestones until the project is able to submit.
         let crowdfund = CrowdFund {

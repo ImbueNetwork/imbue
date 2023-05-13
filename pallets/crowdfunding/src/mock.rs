@@ -2,13 +2,15 @@ use crate as pallet_crowdfunding;
 use frame_support::traits::{ConstU16, ConstU64, Nothing};
 use frame_support::parameter_types;
 use sp_core::H256;
-use sp_core::ed25519::Signature;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, Verify}
 };
 use frame_system::EnsureRoot;
 use common_types::CurrencyId;
+use sp_core::sr25519::{Public, Signature};
+use frame_support::once_cell::sync::Lazy;
+use orml_traits::MultiCurrency;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -65,6 +67,7 @@ parameter_types! {
 	pub MaxMilestonesPerCrowdFund: u32 = 100;
 	pub MaxWhitelistPerCrowdFund: u32 = 100;
 	pub IsIdentityRequired: bool = false;
+	pub MinimumRequiredFunds: Balance = 100;
 }
 
 impl pallet_crowdfunding::Config for Test {
@@ -77,6 +80,7 @@ impl pallet_crowdfunding::Config for Test {
 	type MaxWhitelistPerCrowdFund = MaxWhitelistPerCrowdFund;
 	type IsIdentityRequired = IsIdentityRequired;
 	type AuthorityOrigin = EnsureRoot<AccountId>;
+	type MinimumRequiredFunds = MinimumRequiredFunds;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -143,9 +147,22 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
+pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
+pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
+pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
 
+pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
+    let t = frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap();
 
-// Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| {
+        let initial_balance = 10_000_000u64;
+        System::set_block_number(1);
+        let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
+    });
+    ext
 }

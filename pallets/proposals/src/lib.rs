@@ -721,10 +721,11 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 
 /// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Project<AccountId, Balance, BlockNumber> {
+#[scale_info(skip_type_params(T))]
+pub struct Project<T: Config> 
     pub agreement_hash: H256,
     // TODO: BOund
-    pub milestones: BTreeMap<MilestoneKey, Milestone>,
+    pub milestones: BoundedBTreeMap<MilestoneKey, Milestone, <T as Config>::MaxMilestonesPerProject>,
     // TODO: BOund
     pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
     pub currency_id: common_types::CurrencyId,

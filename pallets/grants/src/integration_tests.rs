@@ -78,8 +78,6 @@ fn assert_state_from_grant_conversion_is_same_as_proposal() {
             RoundType::ContributionRound,
         ));
 
-        tests::run_to_block(System::block_number() + 1);
-
         assert_ok!(Proposals::contribute(
             RuntimeOrigin::signed(*BOB),
             Some(1),
