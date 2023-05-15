@@ -76,13 +76,6 @@ pub mod pallet {
     /// Key 1: AccountId
     /// Key 2: GrantId
     /// Value: ()
-
-    /// <HB SBP Review:
-    ///
-    /// You might just optimize this by adding a StorageMap with a BoundedVec.
-    /// I understand that you are using a StorageDoubleMap to not face the difficulty of the maximum number of accounts.
-    ///
-    /// >
     #[pallet::storage]
     pub type GrantsSubmittedBy<T: Config> =
         StorageDoubleMap<_, Blake2_128, AccountIdOf<T>, Blake2_128, GrantId, (), ValueQuery>;

@@ -89,12 +89,6 @@ pub mod pallet {
     /// Value: Unit
     #[pallet::storage]
     #[pallet::getter(fn approved_accounts)]
-        /// <HB SBP Review:
-        /// 
-        /// You might just optimize this by adding a StorageValue with a BoundedVec. 
-        /// I understand that you are using a StorageMap to not face the difficulty of the maximum number of accounts.
-        /// 
-        /// >
     pub type FreelanceFellowship<T> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
