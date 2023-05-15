@@ -7,6 +7,7 @@ use crate::pallet::BoundedProposedMilestones;
 use sp_core::H256;
 use common_types::CurrencyId;
 use test_utils::*;
+use sp_runtime::DispatchError::BadOrigin;
 
 pub(crate) mod test_utils {
 	use super::*;
@@ -27,22 +28,29 @@ pub(crate) mod test_utils {
 		H256::from([n; 32])
 	}
 
-	pub fn create_cf_default(who: AccountId, amount: Balance) -> (CrowdFundKey, Balance) {
+	pub fn create_cf_default(who: AccountId, amount: Balance) -> CrowdFundKey {
 		let key = CrowdFundCount::<Test>::get();
 		assert_ok!(CrowdFunding::create_crowdfund(RuntimeOrigin::signed(who), get_hash(2u8), get_milestones(10), amount, CurrencyId::Native));
-		(key, amount)
+		key
 	}
 
 	pub fn create_cf_default_and_contribute(creator: AccountId, contributors: Vec<AccountId>, amount: Balance) {
-		let (cf_key, amount) = create_cf_default(creator, amount);
+		let cf_key = create_cf_default(creator, amount);
 		assert_ok!(CrowdFunding::open_contributions(RuntimeOrigin::root(), cf_key));
 		let divided = amount / contributors.len() as u64;
 		contributors.iter().for_each(|acc| {
 			assert_ok!(CrowdFunding::contribute(RuntimeOrigin::signed(*acc), cf_key, divided));			
 		})
 	}
-}
 
+	pub fn run_to_block(n: BlockNumber) {
+		while System::block_number() < n {
+			System::set_block_number(System::block_number() + 1);
+			System::on_initialize(System::block_number());
+			CrowdFunding::on_initialize(System::block_number());
+		}
+	}
+}
 
 #[test]
 fn crowdfund_key_actually_increments_lol() {
@@ -140,26 +148,27 @@ fn update_crowdfund_actually_mutates() {
 #[test]
 fn open_contributions_already_in_round() {
 	new_test_ext().execute_with(|| {
-		let (key, _) = create_cf_default(*ALICE, 100_000u64);
+		let key = create_cf_default(*ALICE, 100_000u64);
 		assert_ok!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key));
 		assert_noop!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key), Error::<Test>::AlreadyInContributionRound);
 	});
 }
 
-
 #[test]
 fn open_contributions_not_authority() {
 	new_test_ext().execute_with(|| {
-		let (key, _) = create_cf_default(*ALICE, 100_000u64);
-		assert_noop!(CrowdFunding::open_contributions(RuntimeOrigin::signed(*ALICE), key), Error::<Test>::AlreadyInContributionRound);
+		let key = create_cf_default(*ALICE, 100_000u64);
+		assert_noop!(CrowdFunding::open_contributions(RuntimeOrigin::signed(*ALICE), key), Error::<Test>::BadOrigin);
 	});
 }
 
 #[test]
 fn open_contributions_approves_for_funding() {
 	new_test_ext().execute_with(|| {
-		assert!(false)
-
+		let key = create_cf_default(*ALICE, 100_000u64);
+		assert_ok!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key));
+		let cf = CrowdFunds::<Test>::get(key).expect("oops");
+		ensure!(cf.approved_for_funding);
 	});
 }
 
@@ -167,39 +176,32 @@ fn open_contributions_approves_for_funding() {
 #[test]
 fn open_contributions_crowdfund_doesnt_exist_fails() {
 	new_test_ext().execute_with(|| {
-		assert!(false)
-
-	});
-}
-
-#[test]
-fn open_contributions_check_state() {
-	new_test_ext().execute_with(|| {
-		assert!(false)
-
+		assert_noop!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key), Error::<Test>::CrowdFundDoesNotExist);
 	});
 }
 
 #[test]
 fn cannot_contribute_before_round_start() {
 	new_test_ext().execute_with(|| {
-		assert!(false)
-
+		let key = create_cf_default(*ALICE, 100_000u64);
+		assert_noop!(CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), key, 100_000), Error::<Test>::ContributionRoundNotStarted);
 	});
 }
 
 #[test]
 fn cannot_contribute_after_round_end() {
 	new_test_ext().execute_with(|| {
-		assert!(false)
-
+		let key = create_cf_default(*ALICE, 100_000u64);
+		assert_ok!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key));
+		let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::RoundExpiry::get();
+		run_to_block(expiry_block + 1);
+		assert_noop!(CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), key, 100_000), Error::<Test>::ContributionRoundNotStarted);
 	});
 }
 
 #[test]
 fn new_contribute_zero_contribution() {
 	new_test_ext().execute_with(|| {
-		assert!(false)
 
 	});
 }
