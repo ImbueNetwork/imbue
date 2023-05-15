@@ -103,7 +103,7 @@ pub mod pallet {
             common_types::CurrencyId,
         ),
         /// CrowdFund has been updated
-        CrowdFundUpdated(T::AccountId, CrowdFundKey, BalanceOf<T>),
+        CrowdFundUpdated(T::AccountId, CrowdFundKey),
         /// A funding round was created
         FundingRoundCreated(CrowdFundKey),
         /// A whitelist was removed.
@@ -151,7 +151,10 @@ pub mod pallet {
         IdentityNeeded,
         /// Below the minimum required funds.
         BelowMinimumRequiredFunds,
-
+        /// The crowdfund as already been converted to milestones.
+        CrowdFundAlreadyConverted,
+        /// The crowdfund has already been cancelled.
+        CrowdFundCancelled,
 	}
 
 	#[pallet::call]
@@ -172,7 +175,6 @@ pub mod pallet {
                 total_percentage == 100,
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
-
             let _ = Self::new_crowdfund(
                 who,
                 agreement_hash,
@@ -183,19 +185,20 @@ pub mod pallet {
             Ok(().into())
         }
 
-        // TODO: Use options
         #[pallet::call_index(1)]
         #[pallet::weight(10000)]
         pub fn update_crowdfund(
             origin: OriginFor<T>,
             crowdfund_key: CrowdFundKey,
-            proposed_milestones: BoundedProposedMilestones<T>,
-            required_funds: BalanceOf<T>,
-            currency_id: CurrencyId,
-            agreement_hash: H256,
+            proposed_milestones: Option<BoundedProposedMilestones<T>>,
+            required_funds: Option<BalanceOf<T>>,
+            currency_id: Option<CurrencyId>,
+            agreement_hash: Option<H256>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-
+            if <T as Config>::IsIdentityRequired::get() {
+                let _ = Self::ensure_identity_is_decent(&who)?;
+            }
             let total_percentage = proposed_milestones.iter()
             .fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
 
@@ -203,19 +206,32 @@ pub mod pallet {
                 total_percentage == 100,
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
+            let mut crowdfund =
+            CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
+            ensure!(crowdfund.initiator == who, Error::<T>::UserIsNotInitiator);
+            ensure!(
+                !crowdfund.approved_for_funding,
+                Error::<T>::CrowdFundAlreadyApproved
+            );
+            ensure!(
+                !crowdfund.is_converted,
+                Error::<T>::CrowdFundAlreadyConverted
+            );
+            ensure!(
+                !crowdfund.is_cancelled,
+                Error::<T>::CrowdFundCancelled
+            );
 
             Self::try_update_existing_crowdfund(
-                // TODO: Optimise
                 who.clone(),
-                crowdfund_key,
+                crowdfund,
                 proposed_milestones,
                 required_funds,
                 currency_id,
                 agreement_hash,
             )?;
 
-            Self::deposit_event(Event::CrowdFundUpdated(who, crowdfund_key, required_funds));
-
+            Self::deposit_event(Event::CrowdFundUpdated(who, crowdfund_key));
             Ok(().into())
         }
 
@@ -312,6 +328,11 @@ pub mod pallet {
             Ok(().into())
         }
 
+        // What happens if the threshold is not met and the the contribution round is over?
+        // TODO: New extrinsic to cancel a project and unreserve all assets.
+        // Also allow for a project to undergo another contribution round.
+        // Like in briefs
+
 	}
 
 #[pallet::hooks]
@@ -382,37 +403,26 @@ impl<T: Config> Pallet<T> {
 
     pub fn try_update_existing_crowdfund(
         who: T::AccountId,
-        crowdfund_key: CrowdFundKey,
-        proposed_milestones: BoundedProposedMilestones<T>,
-        required_funds: BalanceOf<T>,
-        currency_id: CurrencyId,
-        agreement_hash: H256,
+        crowdfund_key: CrowdFund,
+        proposed_milestones: Option<BoundedProposedMilestones<T>>,
+        required_funds: Option<BalanceOf<T>>,
+        currency_id: Option<CurrencyId>,
+        agreement_hash: Option<H256>,
     ) -> DispatchResultWithPostInfo {
-        // Check if identity is required
-        if <T as Config>::IsIdentityRequired::get() {
-            let _ = Self::ensure_identity_is_decent(&who)?;
+        if let Some(ms) = proposed_milestones {
+            crowdfund.milestones = proposed_milestones;
         }
-
-        //check to ensure valid and existing crowdfund
-        let mut crowdfund =
-            CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
-
-        ensure!(crowdfund.initiator == who, Error::<T>::UserIsNotInitiator);
-
-        ensure!(
-            crowdfund.approved_for_funding == false,
-            Error::<T>::CrowdFundAlreadyApproved
-        );
-
-        // Update crowdfund
-        crowdfund.milestones = proposed_milestones;
-        crowdfund.required_funds = required_funds;
-        crowdfund.currency_id = currency_id;
-        crowdfund.agreement_hash = agreement_hash;
-
-        // Add crowdfund to list
+        if let Some(rf) = required_funds {
+            crowdfund.required_funds = required_funds;
+        }
+        if let Some(c_id) = currency_id {
+            crowdfund.currency_id = currency_id;
+        }
+        if let Some(ah) = agreement_hash {
+            crowdfund.agreement_hash = agreement_hash;
+        }
+        
         <CrowdFunds<T>>::insert(crowdfund_key, crowdfund);
-
         Ok(().into())
     }
 
