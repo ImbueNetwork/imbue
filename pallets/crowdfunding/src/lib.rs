@@ -199,13 +199,7 @@ pub mod pallet {
             if <T as Config>::IsIdentityRequired::get() {
                 let _ = Self::ensure_identity_is_decent(&who)?;
             }
-            let total_percentage = proposed_milestones.iter()
-            .fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
-
-            ensure!(
-                total_percentage == 100,
-                Error::<T>::MilestonesTotalPercentageMustEqual100
-            );
+            
             let mut crowdfund =
             CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
             ensure!(crowdfund.initiator == who, Error::<T>::UserIsNotInitiator);
@@ -218,13 +212,14 @@ pub mod pallet {
                 Error::<T>::CrowdFundAlreadyConverted
             );
             ensure!(
-                !crowdfund.is_cancelled,
+                !crowdfund.cancelled,
                 Error::<T>::CrowdFundCancelled
             );
 
             Self::try_update_existing_crowdfund(
                 who.clone(),
                 crowdfund,
+                crowdfund_key,
                 proposed_milestones,
                 required_funds,
                 currency_id,
@@ -403,23 +398,29 @@ impl<T: Config> Pallet<T> {
 
     pub fn try_update_existing_crowdfund(
         who: T::AccountId,
-        crowdfund_key: CrowdFund,
+        mut crowdfund: CrowdFund<T>,
+        crowdfund_key: CrowdFundKey,
         proposed_milestones: Option<BoundedProposedMilestones<T>>,
         required_funds: Option<BalanceOf<T>>,
         currency_id: Option<CurrencyId>,
         agreement_hash: Option<H256>,
     ) -> DispatchResultWithPostInfo {
         if let Some(ms) = proposed_milestones {
-            crowdfund.milestones = proposed_milestones;
+            let total_percentage = ms.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
+            ensure!(
+                total_percentage == 100,
+                Error::<T>::MilestonesTotalPercentageMustEqual100
+            );
+            crowdfund.milestones = ms;
         }
         if let Some(rf) = required_funds {
-            crowdfund.required_funds = required_funds;
+            crowdfund.required_funds = rf;
         }
         if let Some(c_id) = currency_id {
-            crowdfund.currency_id = currency_id;
+            crowdfund.currency_id = c_id;
         }
         if let Some(ah) = agreement_hash {
-            crowdfund.agreement_hash = agreement_hash;
+            crowdfund.agreement_hash = ah;
         }
         
         <CrowdFunds<T>>::insert(crowdfund_key, crowdfund);
@@ -490,7 +491,6 @@ impl<T: Config> Pallet<T> {
 
         CrowdFunds::<T>::try_mutate(crowdfund_key, |crowdfund| {
             if let Some(cf) = crowdfund {
-                
                 let cont = Contribution {
                     created_on: frame_system::Pallet::<T>::block_number(),
                     value: new_value,
