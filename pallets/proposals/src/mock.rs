@@ -191,6 +191,7 @@ parameter_types! {
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 50;
+    pub MaxContributorsPerProject: u32 = 100;
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: u8 = 5;
 }
@@ -212,6 +213,7 @@ impl pallet_proposals::Config for Test {
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
+    type MaxContributorsPerProject = MaxContributorsPerProject;
     type ImbueFee = ImbueFee;
     type ProjectStorageDeposit = ProjectStorageDeposit;
 }

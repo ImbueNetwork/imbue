@@ -1,32 +1,29 @@
-use crate::{AccountIdOf, BalanceOf, TimestampOf};
-use crate::{
-    Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
-    ProposedMilestone,
-};
+use crate::{Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects, ProposedMilestone, AccountIdOf, BalanceOf, TimestampOf, pallet};
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
 use frame_support::{
     dispatch::EncodeLike, inherent::Vec, pallet_prelude::DispatchError, sp_runtime::Saturating,
     transactional, PalletId,
 };
+use frame_support::traits::Time;
+use frame_system::Config;
 use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
 
 use sp_core::{H256, Get};
 use sp_runtime::BoundedBTreeMap;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
 
-pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
+pub trait IntoProposal<T:Config + pallet::Config> {
     /// Convert a set of milestones into a project.
     /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
     /// (if using crate) This function should bypass the usual checks when creating a proposal and
     /// instantiate everything carefully.  
     fn convert_to_proposal(
         currency_id: CurrencyId,
-        contributions: BTreeMap<AccountId, Contribution<Balance, TimeStamp>>,
+        contributions: BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>,T::MaxContributorsPerProject>,
         brief_hash: H256,
-        benificiary: AccountId,
+        benificiary: AccountIdOf<T>,
         milestones: Vec<ProposedMilestone>,
         funding_type: FundingType,
     ) -> Result<(), DispatchError>;
@@ -49,20 +46,13 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
 
 // Some implementations used in Imbue of the traits above.
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
-type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>>;
+type ContributionsFor<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>, <T as pallet::Config>::MaxContributorsPerProject>;
 
-impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>
+impl<T: crate::Config> IntoProposal<T>
     for crate::Pallet<T>
 where
-    Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>: EncodeLike<
-        Project<
-            <T as frame_system::Config>::AccountId,
-            <<T as crate::Config>::MultiCurrency as MultiCurrency<
-                <T as frame_system::Config>::AccountId,
-            >>::Balance,
-            <T as frame_system::Config>::BlockNumber,
-            <T as pallet_timestamp::Config>::Moment,
-        >,
+    Project<T>: EncodeLike<
+        Project<T>,
     >,
 {
     /// The caller is used to take the storage deposit from.
@@ -107,7 +97,7 @@ where
         }
 
         let mut milestone_key: u32 = 0;
-        let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+        let mut milestones: BoundedBTreeMap<MilestoneKey, Milestone, T::MaxMilestonesPerProject> = BoundedBTreeMap::new();
         for milestone in proposed_milestones {
             let milestone = Milestone {
                 project_key,
@@ -115,14 +105,14 @@ where
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             };
-            milestones.insert(milestone_key, milestone);
+            milestones.try_insert(milestone_key, milestone).expect("TODO: panic message");
             milestone_key = milestone_key.saturating_add(1);
         }
 
-        let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>> =
+        let project: Project<T> =
             Project {
                 milestones,
-                contributions,
+                contributions: contributions,
                 currency_id,
                 required_funds: sum_of_contributions,
                 withdrawn_funds: 0u32.into(),
@@ -134,7 +124,6 @@ where
                 cancelled: false,
                 agreement_hash: brief_hash,
                 funding_type,
-                milestones_contributions: BoundedBTreeMap::default(),
             };
 
         Projects::<T>::insert(project_key, project);

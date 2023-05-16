@@ -31,6 +31,7 @@ pub mod pallet {
     use pallet_proposals::{Contribution, ProposedMilestone};
     use sp_core::{Hasher, H256};
     use sp_std::convert::{From, TryInto};
+    use crate::mock::MaxContributorsPerProject;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -75,6 +76,7 @@ pub mod pallet {
         type MaxBriefOwners: Get<u32>;
 
         type MaxMilestonesPerBrief: Get<u32>;
+        type MaxContributorsPerProject;
 
         type WeightInfo: WeightInfo;
     }

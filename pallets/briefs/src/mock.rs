@@ -191,6 +191,7 @@ impl pallet_briefs::Config for Test {
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
+    type MaxContributorsPerProject = MaxContributorsPerProject;
     type WeightInfo = ();
 }
 
@@ -203,6 +204,7 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MaxMilestonesPerProject: u32 = 50;
+    pub MaxContributorsPerProject: u32 = 100;
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: u8 = 5;
 }
@@ -219,6 +221,7 @@ impl pallet_proposals::Config for Test {
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
+    type MaxContributorsPerProject = MaxContributorsPerProject;
     type RefundsPerBlock = RefundsPerBlock;
     type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = TwoWeekBlockUnit;

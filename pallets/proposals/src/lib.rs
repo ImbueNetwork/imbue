@@ -111,6 +111,8 @@ pub mod pallet {
 
         type MaxMilestonesPerProject: Get<u32>;
 
+        type MaxContributorsPerProject: Get<u32>;
+
         /// The storage deposit taken when a project is created and returned on deletion/completion.
         type ProjectStorageDeposit: Get<BalanceOf<Self>>;
         
@@ -129,7 +131,7 @@ pub mod pallet {
         _,
         Identity,
         ProjectKey,
-        Project<T::AccountId, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>,
+        Project<T>,
         OptionQuery,
     >;
 
@@ -733,19 +735,19 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 
 /// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
+#[scale_info(skip_type_params(T))]
+pub struct Project<T:Config> {
     pub agreement_hash: H256,
     // TODO: BOund
-    pub milestones: BTreeMap<MilestoneKey, Milestone>,
+    pub milestones: BoundedBTreeMap<MilestoneKey, Milestone,T::MaxMilestonesPerProject>,
     // TODO: BOund
-    pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
-    pub milestones_contributions: BoundedBTreeMap<MilestoneKey, BoundedBTreeMap<AccountId, Contribution<Balance, Timestamp>, MaxContributorsPerProject>, MaxMilestonesPerProject>,
+    pub contributions: BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>, T::MaxContributorsPerProject>,
     pub currency_id: common_types::CurrencyId,
-    pub required_funds: Balance,
-    pub withdrawn_funds: Balance,
-    pub raised_funds: Balance,
-    pub initiator: AccountId,
-    pub created_on: BlockNumber,
+    pub required_funds: BalanceOf<T>,
+    pub withdrawn_funds: BalanceOf<T>,
+    pub raised_funds: BalanceOf<T>,
+    pub initiator: AccountIdOf<T>,
+    pub created_on: BlockNumberFor<T>,
     pub approved_for_funding: bool,
     pub funding_threshold_met: bool,
     pub cancelled: bool,

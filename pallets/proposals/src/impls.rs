@@ -51,7 +51,7 @@ impl<T: Config> Pallet<T> {
 
         let mut milestone_key: u32 = 0;
 
-        let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+        let mut milestones: BoundedBTreeMap<MilestoneKey, Milestone,T::MaxMilestonesPerProject> = BoundedBTreeMap::new();
 
         // Fill in the projects structure in advance
         for milestone in proposed_milestones {
@@ -61,7 +61,7 @@ impl<T: Config> Pallet<T> {
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             };
-            milestones.insert(milestone_key, milestone);
+            milestones.try_insert(milestone_key, milestone);
             milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
         }
 
@@ -69,7 +69,7 @@ impl<T: Config> Pallet<T> {
         let project = Project {
             agreement_hash,
             milestones,
-            contributions: BTreeMap::new(),
+            contributions: BoundedBTreeMap::new(),
             required_funds,
             currency_id,
             raised_funds: (0_u32).into(),
@@ -80,7 +80,6 @@ impl<T: Config> Pallet<T> {
             funding_threshold_met: false,
             cancelled: false,
             funding_type,
-            milestones_contributions: BoundedBTreeMap::new(),
         };
 
         // Add project to list
@@ -124,7 +123,7 @@ impl<T: Config> Pallet<T> {
 
         let mut milestone_key: u32 = 0;
 
-        let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+        let mut milestones: BoundedBTreeMap<MilestoneKey, Milestone,T::MaxMilestonesPerProject> = BoundedBTreeMap::new();
 
         // Fill in the projects structure in advance
         for milestone in proposed_milestones {
@@ -134,7 +133,7 @@ impl<T: Config> Pallet<T> {
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
             };
-            milestones.insert(milestone_key, milestone.clone());
+            milestones.try_insert(milestone_key, milestone);
             milestone_key = milestone_key.checked_add(1).ok_or(Error::<T>::Overflow)?;
         }
 
@@ -262,7 +261,7 @@ impl<T: Config> Pallet<T> {
 
         let timestamp = <pallet_timestamp::Pallet<T>>::get();
 
-        project.contributions.insert(
+        project.contributions.try_insert(
             who,
             Contribution {
                 value: new_amount,
@@ -272,7 +271,7 @@ impl<T: Config> Pallet<T> {
         project.raised_funds = project.raised_funds.saturating_add(value);
 
         // Update storage item to include the new contributions.
-        <Projects<T>>::insert(project_key, project.clone());
+        <Projects<T>>::insert(project_key, project);
 
         Ok(().into())
     }
@@ -534,7 +533,7 @@ impl<T: Config> Pallet<T> {
         }
         //TODO: Case for equal votes?
 
-        project.milestones.insert(milestone_key, milestone);
+        project.milestones.try_insert(milestone_key, milestone);
         <Projects<T>>::insert(project_key, project);
 
         Ok(().into())
@@ -872,7 +871,7 @@ impl<T: Config> Pallet<T> {
 
     // Called to ensure that an account is is a contributor to a project.
     fn ensure_contributor_of<'a>(
-        project: &'a Project<T::AccountId, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>,
+        project: &'a Project<T>,
         account_id: &'a T::AccountId,
     ) -> Result<BalanceOf<T>, Error<T>> {
         let contribution = project.contributions.get(account_id);

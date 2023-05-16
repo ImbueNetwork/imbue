@@ -51,26 +51,26 @@ pub mod v1 {
     use crate::migration::v0::MilestoneV0;
 
     #[derive(Encode, Clone, Decode)]
-    pub struct ProjectV1<AccountId, Balance, BlockNumber, Timestamp> {
+    pub struct ProjectV1<T:Config> {
         pub name: Vec<u8>,
         pub logo: Vec<u8>,
         pub description: Vec<u8>,
         pub website: Vec<u8>,
-        pub milestones: BTreeMap<MilestoneKey, MilestoneV0>,
-        pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+        pub milestones: BoundedBTreeMap<MilestoneKey, MilestoneV0,MaxMilestonesPerProject>,
+        pub contributions: BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>,T::MaxContributorsPerProject>,
         pub currency_id: common_types::CurrencyId,
-        pub required_funds: Balance,
-        pub withdrawn_funds: Balance,
-        pub raised_funds: Balance,
-        pub initiator: AccountId,
-        pub create_block_number: BlockNumber,
+        pub required_funds: BalanceOf<T>,
+        pub withdrawn_funds: BalanceOf<T>,
+        pub raised_funds: BalanceOf<T>,
+        pub initiator: AccountIdOf<T>,
+        pub create_block_number: BlockNumberFor<T>,
         pub approved_for_funding: bool,
         pub funding_threshold_met: bool,
         pub cancelled: bool,
     }
 
     pub type ProjectV1Of<T> =
-        ProjectV1<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
+        ProjectV1<T>;
 
     #[storage_alias]
     pub type Projects<T: Config> =
@@ -82,11 +82,11 @@ pub mod v1 {
         v1::Projects::<T>::translate(|_project_key, project: v0::ProjectV0Of<T>| {
             weight += T::DbWeight::get().reads_writes(1, 1);
 
-            let mut migrated_contributions: BTreeMap<
+            let mut migrated_contributions: BoundedBTreeMap<
                 AccountIdOf<T>,
-                Contribution<BalanceOf<T>, TimestampOf<T>>,
-            > = BTreeMap::new();
-            let mut migrated_milestones: BTreeMap<MilestoneKey, MilestoneV0> = BTreeMap::new();
+                Contribution<BalanceOf<T>, TimestampOf<T>>,T::MaxContributorsPerProject
+            > = BoundedBTreeMap::new();
+            let mut migrated_milestones: BoundedBTreeMap<MilestoneKey, MilestoneV0,MaxMilestonesPerProject> = BoundedBTreeMap::new();
             let mut raised_funds: BalanceOf<T> = (0u32).into();
             let _ = project
                 .contributions
@@ -96,7 +96,7 @@ pub mod v1 {
                         value: contribution.value,
                         timestamp: TimestampOf::<T>::default(),
                     };
-                    migrated_contributions.insert(contribution.account_id, migrated_contribution);
+                    migrated_contributions.try_insert(contribution.account_id, migrated_contribution);
                     raised_funds += contribution.value
                 })
                 .collect::<Vec<_>>();
@@ -104,15 +104,10 @@ pub mod v1 {
             let _ = project
                 .milestones
                 .into_iter()
-                .map(|milestone| migrated_milestones.insert(milestone.milestone_key, milestone))
+                .map(|milestone| migrated_milestones.try_insert(milestone.milestone_key, milestone))
                 .collect::<Vec<_>>();
 
-            let migrated_project: ProjectV1<
-                T::AccountId,
-                BalanceOf<T>,
-                T::BlockNumber,
-                TimestampOf<T>,
-            > = ProjectV1 {
+            let migrated_project: ProjectV1<T> = ProjectV1 {
                 name: project.name,
                 logo: project.logo,
                 description: project.description,
@@ -139,16 +134,16 @@ pub mod v2 {
     use super::*;
 
     #[derive(Encode, Clone, Decode)]
-    pub struct ProjectV2<AccountId, Balance, BlockNumber, Timestamp> {
+    pub struct ProjectV2<T:Config> {
         pub agreement_hash: H256,
-        pub milestones: BTreeMap<MilestoneKey, Milestone>,
-        pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+        pub milestones: BoundedBTreeMap<MilestoneKey, Milestone,MaxMilestonesPerProject>,
+        pub contributions: BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>,T::MaxContributorsPerProject>,
         pub currency_id: common_types::CurrencyId,
-        pub required_funds: Balance,
-        pub withdrawn_funds: Balance,
-        pub raised_funds: Balance,
-        pub initiator: AccountId,
-        pub created_on: BlockNumber,
+        pub required_funds: BalanceOf<T>,
+        pub withdrawn_funds: BalanceOf<T>,
+        pub raised_funds: BalanceOf<T>,
+        pub initiator: AccountIdOf<T>,
+        pub created_on: BlockNumberFor<T>,
         pub approved_for_funding: bool,
         pub funding_threshold_met: bool,
         pub cancelled: bool,
@@ -157,27 +152,22 @@ pub mod v2 {
 
     pub fn migrate<T: Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
-        let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+        let mut migrated_milestones: BoundedBTreeMap<MilestoneKey, Milestone, T::MaxMilestonesPerProject> = BoundedBTreeMap::new();
         Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
             let _ = project
-                .milestones.into_values().map(|milestone| {
+                .milestones.values().map(|milestone| {
                     let migrated_milestone = Milestone {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,
                         percentage_to_unlock: milestone.percentage_to_unlock,
                         is_approved: milestone.is_approved,
                     };
-                    migrated_milestones.insert(milestone.milestone_key, migrated_milestone)
+                    migrated_milestones.try_insert(milestone.milestone_key, migrated_milestone)
                 })
                 .collect::<Vec<_>>();
 
             weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: Project<
-                T::AccountId,
-                BalanceOf<T>,
-                T::BlockNumber,
-                TimestampOf<T>,
-            > = Project {
+            let migrated_project: Project<T> = Project {
                 milestones: migrated_milestones.clone(),
                 contributions: project.contributions,
                 required_funds: project.required_funds,
@@ -191,7 +181,6 @@ pub mod v2 {
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
                 funding_type: FundingType::Proposal,
-                milestones_contributions: BoundedBTreeMap::default(),
             };
             Some(migrated_project)
         });
@@ -299,12 +288,12 @@ mod test {
 
             let project_key = 1;
 
-            let mut contributions: BTreeMap<
+            let mut contributions: BoundedBTreeMap<
                 AccountIdOf<Test>,
-                Contribution<BalanceOf<Test>, TimestampOf<Test>>,
-            > = BTreeMap::new();
+                Contribution<BalanceOf<Test>, TimestampOf<Test>>, <Test as Config>::MaxContributorsPerProject,
+            > = BoundedBTreeMap::new();
 
-            contributions.insert(
+            contributions.try_insert(
                 *ALICE,
                 Contribution {
                     value: contribution_value,
@@ -312,7 +301,7 @@ mod test {
                 },
             );
 
-            contributions.insert(
+            contributions.try_insert(
                 *BOB,
                 Contribution {
                     value: contribution_value,
@@ -325,7 +314,7 @@ mod test {
                 logo: b"logo".to_vec(),
                 description: b"description".to_vec(),
                 website: b"https://imbue.network".to_vec(),
-                milestones: BTreeMap::new(),
+                milestones: BoundedBTreeMap::new(),
                 contributions,
                 currency_id: CurrencyId::KSM,
                 required_funds: (100_000_000u32).into(),
