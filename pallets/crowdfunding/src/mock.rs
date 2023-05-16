@@ -1,6 +1,6 @@
 use crate as pallet_crowdfunding;
 use frame_support::traits::{ConstU16, ConstU64, Nothing};
-use frame_support::parameter_types;
+use frame_support::{parameter_types, PalletId, pallet_prelude::*};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -17,7 +17,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub type BlockNumber = u64;
 pub type Balance = u64;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
+pub type Moment = u64;
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -30,6 +30,8 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens,
 		Identity: pallet_identity,
 		Balances: pallet_balances,
+        Proposals: pallet_proposals,
+        Timestamp: pallet_timestamp,
 	}
 );
 
@@ -66,8 +68,8 @@ parameter_types! {
 	pub MaxContributionsPerCrowdFund: u32 = 1000;
 	pub MaxMilestonesPerCrowdFund: u32 = 100;
 	pub MaxWhitelistPerCrowdFund: u32 = 100;
-	pub IsIdentityRequired: bool = false;
-	pub MinimumRequiredFunds: Balance = 100;
+	pub MinimumRequiredFunds: Balance = 2000;
+    pub MinimumContribution: Balance = 5;
 }
 
 impl pallet_crowdfunding::Config for Test {
@@ -80,8 +82,19 @@ impl pallet_crowdfunding::Config for Test {
 	type MaxWhitelistPerCrowdFund = MaxWhitelistPerCrowdFund;
 	type IsIdentityRequired = IsIdentityRequired;
 	type AuthorityOrigin = EnsureRoot<AccountId>;
-	type MinimumRequiredFunds = MinimumRequiredFunds;
+    type IntoProposals = pallet_proposals::Pallet<Test>;
 }
+
+parameter_types! {
+    pub const MinimumPeriod: u64 = 1;
+}
+impl pallet_timestamp::Config for Test {
+    type Moment = Moment;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+
 
 orml_traits::parameter_type_with_key! {
     pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
@@ -145,6 +158,35 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+}
+
+parameter_types! {
+    pub const TwoWeekBlockUnit: u32 = 100800u32;
+    pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
+    pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
+    pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub MaximumContributorsPerProject: u32 = 5000;
+    pub RefundsPerBlock: u8 = 2;
+    pub IsIdentityRequired: bool = false;
+    pub MaxMilestonesPerProject: u32 = 50;
+}
+
+impl pallet_proposals::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type PalletId = ProposalsPalletId;
+    type AuthorityOrigin = EnsureRoot<AccountId>;
+    type MultiCurrency = Tokens;
+    type WeightInfo = ();
+    type MaxProjectsPerRound = ConstU32<4>;
+    type MaxWithdrawalExpiration = TwoWeekBlockUnit;
+    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
+    type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
+    type MaximumContributorsPerProject = MaximumContributorsPerProject;
+    type RefundsPerBlock = RefundsPerBlock;
+    type IsIdentityRequired = IsIdentityRequired;
+    type MilestoneVotingWindow = TwoWeekBlockUnit;
+    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type MaxMilestonesPerProject = MaxMilestonesPerProject;
 }
 
 pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));

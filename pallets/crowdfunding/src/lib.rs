@@ -18,7 +18,7 @@ pub mod pallet {
         transactional
     };
 	use frame_system::pallet_prelude::*;
-	use pallet_proposals::{Milestone, ProposedMilestone, Vote};
+	use pallet_proposals::{Milestone, ProposedMilestone, Vote, Contribution};
 	use sp_core::H256;
 	use common_types::{CurrencyId, FundingType};
 	use orml_traits::{MultiReservableCurrency, MultiCurrency};
@@ -31,7 +31,7 @@ pub mod pallet {
 	pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     
     pub type BoundedKeysPerRound<T> = BoundedVec<CrowdFundKey, <T as Config>::MaxKeysPerRound>;
-    pub type BoundedContributions<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<T>, <T as Config>::MaxContributionsPerCrowdFund>;
+    pub type BoundedContributions<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>, <T as Config>::MaxContributionsPerCrowdFund>;
     pub type BoundedMilestoneKeys<T> = BoundedVec<MilestoneKey, <T as Config>::MaxMilestonesPerCrowdFund>;
     pub type BoundedMilestones<T> = BoundedBTreeMap<MilestoneKey, Milestone, <T as Config>::MaxMilestonesPerCrowdFund>;
     pub type BoundedWhitelistSpots<T> = BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, <T as Config>::MaxWhitelistPerCrowdFund>;
@@ -60,8 +60,11 @@ pub mod pallet {
         type MaxWhitelistPerCrowdFund: Get<u32>;
         type IsIdentityRequired: Get<bool>;
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-        type MinimumRequiredFunds: Get<BalanceOf<Self>>;
-        //type IntoProposals: IntoProposal;
+        type IntoProposals: IntoProposal<
+            AccountIdOf<Self>,
+            BalanceOf<Self>,
+            BlockNumberFor<Self>,
+        >;
 	}
 
     /// The count of crowdfunds, used as an id.
@@ -155,6 +158,8 @@ pub mod pallet {
         CrowdFundAlreadyConverted,
         /// The crowdfund has already been cancelled.
         CrowdFundCancelled,
+        /// The conversion to a Project has failed.
+        CrowdFundConversionFailedGeneric,
 	}
 
 	#[pallet::call]
@@ -169,7 +174,6 @@ pub mod pallet {
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(required_funds >= <T as Config>::MinimumRequiredFunds::get(), Error::<T>::BelowMinimumRequiredFunds);
             let total_percentage = proposed_milestones.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
             ensure!(
                 total_percentage == 100,
@@ -204,12 +208,12 @@ pub mod pallet {
             CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
             ensure!(crowdfund.initiator == who, Error::<T>::UserIsNotInitiator);
             ensure!(
-                !crowdfund.approved_for_funding,
-                Error::<T>::CrowdFundAlreadyApproved
-            );
-            ensure!(
                 !crowdfund.is_converted,
                 Error::<T>::CrowdFundAlreadyConverted
+            );
+            ensure!(
+                !crowdfund.approved_for_funding,
+                Error::<T>::CrowdFundAlreadyApproved    
             );
             ensure!(
                 !crowdfund.cancelled,
@@ -281,6 +285,7 @@ pub mod pallet {
             //length: BlockNumberFor<T>,
         ) -> DispatchResultWithPostInfo {
             <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
+            ensure!(CrowdFunds::<T>::contains_key(crowdfund_key), Error::<T>::CrowdFundDoesNotExist);
             ensure!(!CrowdFundsInRound::<T>::contains_key(crowdfund_key, RoundType::ContributionRound), Error::<T>::AlreadyInContributionRound);
             //todo: ensure it hasnt already had a contribution round?
             let _ = Self::start_contribution_round(crowdfund_key)?;
@@ -311,7 +316,7 @@ pub mod pallet {
 
         /// Step 4 (ADMIN)
         /// Approve crowdfund
-        /// If the crowdfund is approved, the crowdfund initiator can withdraw funds for approved milestones
+        /// If the crowdfund is approved, the crowdfund is converted into a type that is able to submit milestones.
         #[pallet::call_index(7)]
         #[pallet::weight(10000)]
         pub fn approve_crowdfund_for_milestone_submission(
@@ -451,13 +456,11 @@ impl<T: Config> Pallet<T> {
         crowdfund_key: CrowdFundKey,
         additional_amount: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
-        // TODO add configurable value for min and max contribution per contributor
-        ensure!(additional_amount > (0_u32).into(), Error::<T>::ContributionTooLow);
         // ensure is in round and if exists expiry is less than now
-        ensure!(CrowdFundsInRound::<T>::contains_key(crowdfund_key, RoundType::ContributionRound), Error::<T>::ContributionRoundNotStarted);
         let crowdfund =
             CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
 
+        ensure!(CrowdFundsInRound::<T>::contains_key(crowdfund_key, RoundType::ContributionRound), Error::<T>::ContributionRoundNotStarted);
         let new_value = match crowdfund.contributions.get(&who) {
             Some(contribution) => contribution.value,
             None => Default::default()
@@ -492,7 +495,7 @@ impl<T: Config> Pallet<T> {
         CrowdFunds::<T>::try_mutate(crowdfund_key, |crowdfund| {
             if let Some(cf) = crowdfund {
                 let cont = Contribution {
-                    created_on: frame_system::Pallet::<T>::block_number(),
+                    timestamp: frame_system::Pallet::<T>::block_number(),
                     value: new_value,
                 };
                 // Just write over the previous if exists.
@@ -515,11 +518,21 @@ impl<T: Config> Pallet<T> {
             CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
         let funds_matched = ensure!(crowdfund.raised_funds >= crowdfund.required_funds, Error::<T>::RequiredFundsNotReached);
 
-        
-        crowdfund.is_converted = true;
+        <T as Config>::IntoProposals::convert_to_proposal(
+            crowdfund.currency_id,
+            crowdfund.contributions.into_inner(),
+            crowdfund.agreement_hash,
+            crowdfund.initiator,
+            crowdfund.milestones.into_inner(),
+            FundingType::Proposal,
+        ).map_err(|_| Error::<T>::CrowdFundConversionFailedGeneric)?;
 
-        // call IntoProposal
-
+        CrowdFunds::<T>::mutate(crowdfund_key, |crowdfund| {
+            if let Some(cf) = crowdfund {
+                cf.is_converted = true
+            } 
+            Ok::<(), DispatchError>(())
+        })?;
         Self::deposit_event(Event::CrowdFundApproved(crowdfund_key));
         Ok(().into())
     }
@@ -562,13 +575,6 @@ impl<T: Config> Pallet<T> {
 		pub created_on: BlockNumberFor<T>,
 		pub is_converted: bool,
 	}
-
-    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
-	#[scale_info(skip_type_params(T))]
-    pub struct Contribution<T: Config> {
-        value: BalanceOf<T>,
-        created_on: BlockNumberFor<T>,
-    }
 
     // Called to ensure that an account is is a contributor to a crowdfund.
 
