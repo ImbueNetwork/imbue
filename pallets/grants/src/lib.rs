@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
 pub use pallet::*;
 
 #[cfg(test)]
@@ -20,7 +19,6 @@ mod test_utils;
 
 pub mod weights;
 pub use weights::*;
-
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -145,6 +143,13 @@ pub mod pallet {
         ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
 
+            /// <HB SBP Review:
+            ///
+            /// Re: sp_arithmetic library
+            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough,
+            /// but using the sp_arithmetic library is a safer practice.
+            ///
+            /// >
             let total_percentage = proposed_milestones
                 .iter()
                 .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
