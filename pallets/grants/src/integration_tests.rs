@@ -29,7 +29,7 @@ fn create_proposal_from_grant() {
         ));
         let created_project = Projects::<Test>::get(1).unwrap();
         assert_eq!(created_project.agreement_hash, grant_id);
-        assert_eq!(created_project.approved_for_funding, true);
+        assert!(created_project.approved_for_funding);
         assert_eq!(created_project.required_funds, contribution_value);
     });
 }
@@ -123,16 +123,16 @@ fn assert_state_from_grant_conversion_is_same_as_proposal() {
         assert_eq!(p_grant.initiator, p_normal.initiator);
         assert_eq!(p_grant.created_on, p_normal.created_on);
 
-        assert_eq!(p_grant.approved_for_funding, true);
+        assert!(p_grant.approved_for_funding);
         assert_eq!(p_grant.approved_for_funding, p_normal.approved_for_funding);
 
-        assert_eq!(p_grant.funding_threshold_met, true);
+        assert!(p_grant.funding_threshold_met);
         assert_eq!(
             p_grant.funding_threshold_met,
             p_normal.funding_threshold_met
         );
 
-        assert_eq!(p_grant.cancelled, false);
+        assert!(!p_grant.cancelled);
         assert_eq!(p_grant.cancelled, p_normal.cancelled);
     });
 }

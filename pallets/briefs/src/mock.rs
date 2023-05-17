@@ -203,6 +203,8 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MaxMilestonesPerProject: u32 = 50;
+    pub ProjectStorageDeposit: Balance = 100;
+    pub ImbueFee: u8 = 5;
 }
 
 impl pallet_proposals::Config for Test {
@@ -222,6 +224,8 @@ impl pallet_proposals::Config for Test {
     type MilestoneVotingWindow = TwoWeekBlockUnit;
     type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
+    type ProjectStorageDeposit = ProjectStorageDeposit;
+    type ImbueFee = ImbueFee;
 }
 
 parameter_types! {

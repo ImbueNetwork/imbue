@@ -128,7 +128,7 @@ pub mod v1 {
                 approved_for_funding: project.approved_for_funding,
                 funding_threshold_met: project.funding_threshold_met,
                 cancelled: project.cancelled,
-                raised_funds: raised_funds,
+                raised_funds,
             };
             Some(migrated_project)
         });
@@ -167,9 +167,7 @@ pub mod v2 {
         let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
         Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
             let _ = project
-                .milestones
-                .into_iter()
-                .map(|(_, milestone)| {
+                .milestones.into_values().map(|milestone| {
                     let migrated_milestone = Milestone {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,
@@ -270,7 +268,7 @@ mod test {
 
     #[test]
     fn migrate_v0_to_v1() {
-        let contribution_value = 10_000_00u64;
+        let contribution_value = 1_000_000_u64;
 
         build_test_externality().execute_with(|| {
             let project_key = 1;
@@ -321,7 +319,7 @@ mod test {
 
             v0::Projects::<Test>::insert(project_key, &old_project);
             let _ = v1::migrate::<Test>();
-            let migrated_project = v1::Projects::<Test>::get(&project_key).unwrap();
+            let migrated_project = v1::Projects::<Test>::get(project_key).unwrap();
 
             assert_eq!(old_project.name, migrated_project.name);
 
@@ -353,7 +351,7 @@ mod test {
 
     #[test]
     fn migrate_v1_to_v2() {
-        let contribution_value = 10_000_00u64;
+        let contribution_value = 1_000_000_u64;
 
         build_test_externality().execute_with(|| {
             // let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
@@ -401,7 +399,7 @@ mod test {
             };
             v1::Projects::<Test>::insert(project_key, &old_project);
             let _ = v2::migrate::<Test>();
-            let migrated_project = Projects::<Test>::get(&project_key).unwrap();
+            let migrated_project = Projects::<Test>::get(project_key).unwrap();
 
             assert_eq!(old_project.create_block_number, migrated_project.created_on);
 

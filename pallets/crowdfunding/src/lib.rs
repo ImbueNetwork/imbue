@@ -65,6 +65,7 @@ pub mod pallet {
             BalanceOf<Self>,
             BlockNumberFor<Self>,
         >;
+        type WeightInfo: crate::weights::WeightInfo;
 	}
 
     /// The count of crowdfunds, used as an id.

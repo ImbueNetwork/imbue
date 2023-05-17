@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod weights;
 
 pub use pallet::*;
 
@@ -9,6 +8,7 @@ mod mock;
 
 #[cfg(test)]
 mod integration_tests;
+
 #[cfg(test)]
 mod tests;
 
@@ -18,8 +18,13 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
+pub mod weights;
+pub use weights::*;
+
+
 #[frame_support::pallet]
 pub mod pallet {
+    use super::*;
     use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
@@ -59,7 +64,7 @@ pub mod pallet {
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
 
-        type WeightInfo: crate::weights::WeightInfo;
+        type WeightInfo: WeightInfo;
     }
 
     /// Stores all the Grants waiting for approval, funding and eventual conversion into milestones.
@@ -126,7 +131,7 @@ pub mod pallet {
         /// A grant starts here with nothing agreed upon and
         /// probably awaiting much back and forth.
         #[pallet::call_index(0)]
-        #[pallet::weight(100_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::submit_initial_grant())]
         pub fn submit_initial_grant(
             origin: OriginFor<T>,
             //ipfs_hash: [u8; 32],
@@ -139,9 +144,9 @@ pub mod pallet {
         ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
 
-            let total_percentage = proposed_milestones.iter().fold(0u32, |acc, x| {
-                acc.saturating_add(x.percentage_to_unlock.into())
-            });
+            let total_percentage = proposed_milestones
+                .iter()
+                .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
             ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
 
             ensure!(
@@ -162,8 +167,8 @@ pub mod pallet {
                 treasury_origin,
             };
 
-            PendingGrants::<T>::insert(&grant_id, grant);
-            GrantsSubmittedBy::<T>::insert(&submitter, &grant_id, ());
+            PendingGrants::<T>::insert(grant_id, grant);
+            GrantsSubmittedBy::<T>::insert(&submitter, grant_id, ());
             GrantCount::<T>::mutate(|count| {
                 *count = count.saturating_add(1);
             });
@@ -172,13 +177,13 @@ pub mod pallet {
                 submitter,
                 grant_id,
             });
-            Ok(().into())
+            Ok(())
         }
 
         /// Edit a grant that has been submitted.
         /// Fields passed in with None will be ignored and not updated.
         #[pallet::call_index(1)]
-        #[pallet::weight(100_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::edit_grant())]
         pub fn edit_grant(
             origin: OriginFor<T>,
             grant_id: GrantId,
@@ -193,12 +198,12 @@ pub mod pallet {
             let mut grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
-            ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
+            ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
 
             if let Some(milestones) = edited_milestones {
-                let total_percentage = milestones.iter().fold(0u32, |acc, x| {
-                    acc.saturating_add(x.percentage_to_unlock.into())
-                });
+                let total_percentage = milestones
+                    .iter()
+                    .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
                 ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
@@ -218,7 +223,7 @@ pub mod pallet {
                 grant.treasury_origin = t_origin;
             }
 
-            PendingGrants::<T>::insert(&grant_id, grant);
+            PendingGrants::<T>::insert(grant_id, grant);
             Self::deposit_event(Event::<T>::GrantEdited { grant_id });
 
             Ok(().into())
@@ -226,13 +231,13 @@ pub mod pallet {
 
         /// Set the grant as cancelled
         #[pallet::call_index(2)]
-        #[pallet::weight(100_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_grant())]
         pub fn cancel_grant(
             origin: OriginFor<T>,
             grant_id: GrantId,
             as_authority: bool,
         ) -> DispatchResultWithPostInfo {
-            let grant = PendingGrants::<T>::get(&grant_id).ok_or(Error::<T>::GrantNotFound)?;
+            let grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
             if as_authority {
                 <T as Config>::CancellingAuthority::ensure_origin(origin)?;
@@ -253,7 +258,7 @@ pub mod pallet {
         /// Once you are completely happy with the grant details and are ready to submit to treasury
         /// You call this and it'll allow you to generate a project account id.
         #[pallet::call_index(3)]
-        #[pallet::weight(100_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::convert_to_project())]
         pub fn convert_to_project(
             origin: OriginFor<T>,
             grant_id: GrantId,
@@ -261,7 +266,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let grant = PendingGrants::<T>::get(grant_id).ok_or(Error::<T>::GrantNotFound)?;
 
-            ensure!(&grant.submitter == &who, Error::<T>::OnlySubmitterCanEdit);
+            ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
             ensure!(!grant.is_converted, Error::<T>::AlreadyConverted);
 
@@ -283,7 +288,7 @@ pub mod pallet {
                 })
                 .collect::<Vec<_>>();
 
-            let _ = <T as Config>::IntoProposal::convert_to_proposal(
+            <T as Config>::IntoProposal::convert_to_proposal(
                 grant.currency_id,
                 contributions,
                 grant_id,

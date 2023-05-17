@@ -11,7 +11,7 @@ use frame_support::{
 use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
 
-use sp_core::H256;
+use sp_core::{H256, Get};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
@@ -35,7 +35,6 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
     /// Send a message to some destination chain asking to do some reserve asset transfer.
     /// The multilocation is defined by the FundingType.
     /// see FundingType and TreasuryOrigin.
-    /// TODO: currency should be passed into the
     fn send_refund_message_to_treasury(
         from: AccountId,
         amount: Balance,
@@ -46,8 +45,8 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
         -> Result<AccountId, DispatchError>;
 }
 
-// Some implementations used in Imbue of the traits above.
 
+// Some implementations used in Imbue of the traits above.
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>;
 
@@ -64,7 +63,8 @@ where
         >,
     >,
 {
-    // TODO: nice error handling
+    /// The caller is used to take the storage deposit from.
+    /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
     fn convert_to_proposal(
         currency_id: CurrencyId,
         contributions: ContributionsFor<T>,
@@ -75,6 +75,10 @@ where
     ) -> Result<(), DispatchError> {
         let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
         crate::ProjectCount::<T>::put(project_key);
+
+        <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
+                        AccountIdOf<T>,
+                    >>::reserve(currency_id, &benificiary, T::ProjectStorageDeposit::get())?;
 
         let sum_of_contributions = contributions
             .values()
@@ -88,10 +92,10 @@ where
                     let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
                     <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
                         AccountIdOf<T>,
-                    >>::unreserve(currency_id, &acc, cont.value);
+                    >>::unreserve(currency_id, acc, cont.value);
                     <T as crate::Config>::MultiCurrency::transfer(
                         currency_id,
-                        &acc,
+                        acc,
                         &project_account_id,
                         cont.value,
                     )?;
@@ -110,7 +114,7 @@ where
                 is_approved: false,
             };
             milestones.insert(milestone_key, milestone);
-            milestone_key = milestone_key.checked_add(1).unwrap_or(0);
+            milestone_key = milestone_key.saturating_add(1);
         }
 
         let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> =
@@ -161,13 +165,12 @@ impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
         _currency: CurrencyId,
         _funding_type: FundingType,
     ) -> Result<(), DispatchError> {
-        // Maybe just allow for host chain xcm calls to mock functionality and panic when trying something else.
-        todo!()
+        Ok(())
     }
     fn get_treasury_account_id(
         _treasury_account: TreasuryOrigin,
     ) -> Result<AccountIdOf<T>, DispatchError> {
-        todo!()
+        Ok(PalletId(*b"py/trsry").into_account_truncating())
     }
 }
 
@@ -197,19 +200,11 @@ where
                     .get_multi_location(beneficiary)
                     .map_err(|_| Error::<T>::InvalidDest)?;
 
-                // let test = xcm::v2::MultiLocation::new(
-                //     1,
-                //     X1(Junction::AccountId32 {
-                //         id: beneficiary.into(),
-                //         network: NetworkId::Any
-                //     })
-                // );
-
-                // TODO: dest weight limit. or specify a fee with another extrinsic,
+                // TODO: dest weight limit. or specify a fee.
                 let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
                 Ok(())
             }
-            _ => return Err(Error::<T>::InvalidDest.into()),
+            _ => Err(Error::<T>::InvalidDest.into()),
         }
     }
     fn get_treasury_account_id(
@@ -218,11 +213,11 @@ where
         match treasury_origin {
             TreasuryOrigin::Kusama => {
                 // TODO: make this dynamic so its always correct.
-                // Also how can we assure that they are using the same crypto scheme for accounts?
                 Ok(PalletId(*b"py/trsry").into_account_truncating())
             }
             _ => {
-                todo!()
+                // At the moment just supporting kusama but allow this instead of a panic
+                Ok(PalletId(*b"py/trsry").into_account_truncating())
             }
         }
     }
