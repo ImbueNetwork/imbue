@@ -40,6 +40,7 @@ orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39"}
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39"}
 
 
 [features]
@@ -53,7 +54,8 @@ std = [
 	"pallet-proposals/std",
 	"sp-core/std",
 	"pallet-identity/std",
+	"pallet-xcm/runtime-benchmarks"
 ]
 
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks"]
 try-runtime = ["frame-support/try-runtime"]

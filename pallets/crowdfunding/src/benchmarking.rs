@@ -4,45 +4,53 @@ use super::*;
 
 #[allow(unused)]
 use crate::Pallet as Template;
-use frame_benchmarking::v1::{benchmarks, whitelisted_caller};
-use frame_system::RawOrigin;
+use frame_benchmarking::v1::{benchmarks, whitelisted_caller, impl_benchmark_test_suite, account};
+use frame_system::{RawOrigin, EventRecord};
+use pallet_proposals::ProposedMilestone;
+use frame_support::assert_ok;
+use common_types::CurrencyId;
+use sp_core::{H256, Get};
+use sp_std::collections::btree_map::BTreeMap;
+use orml_traits::MultiCurrency;
+use crate::Pallet as CrowdFunding;
 
 benchmarks! {
+    where_clause {
+        where T::AccountId: AsRef<[u8]>,
+    }
+
     create_crowdfund {
         let caller: T::AccountId = whitelisted_caller();
-
         let milestones = get_max_milestones::<T>();
-
-        let required_funds: BalanceOf<T> = u32::MAX.into();
+        let required_funds = u32::MAX;
         let currency_id = CurrencyId::Native;
         let agg_hash = H256::from([10u8; 32]);
         let crowdfund_key = 0;
-        // (Origin, ipfs_hash, ProposedMilestones, RequiredFunds, CurrencyId)
-    }: _(RawOrigin::Signed(whitelisted_caller()), agg_hash, milestones, required_funds, CurrencyId::Native)
+        // (Origin, agg_hash, ProposedMilestones, RequiredFunds, CurrencyId)
+    }: _(RawOrigin::Signed(whitelisted_caller()), agg_hash, milestones, required_funds.into(), CurrencyId::Native)
     verify {
-        assert_last_event::<T>(Event::<T>::CrowdFundCreated(caller, agg_hash, crowdfund_key, required_funds, CurrencyId::Native).into());
+        assert_last_event::<T>(Event::<T>::CrowdFundCreated(caller, agg_hash, crowdfund_key, required_funds.into(), CurrencyId::Native).into());
     }
 
     update_crowdfund {
         let milestones = get_max_milestones::<T>();
-
-        let caller = create_crowdfund_common::<T>(u32::MAX.into());
-
-        let required_funds: BalanceOf<T> = u32::MAX.into();
+        let required_funds = u32::MAX;
+        let caller = create_crowdfund_common::<T>(required_funds.into());
         let currency_id = CurrencyId::Native;
         let agg_hash = H256::from([2; 32]);
 
         // origin, crowdfund_key, proposed_milestones, required_funds, currency_id, agreement_hash
-    }: _(RawOrigin::Signed(caller.clone()), 0,  milestones, required_funds, currency_id, agg_hash)
+    }: _(RawOrigin::Signed(caller.clone()), 0,  Some(milestones), Some(required_funds.into()), Some(currency_id), Some(agg_hash))
     verify {
         assert_last_event::<T>(Event::CrowdFundUpdated(caller, 0).into());
     }
 
     add_crowdfund_whitelist {
-        let caller = create_crowdfund_common::<T>(u32::MAX.into());
+        let required_funds = u32::MAX;
+        let caller = create_crowdfund_common::<T>(required_funds);
         let mut bbt : BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
 
-        for i in 0..<MaxWhitelistPerCrowdFund as Get<u32>>::get() {
+        for i in 0..<T as Config>::MaxWhitelistPerCrowdFund::get() {
             bbt.try_insert(whitelisted_caller(), 100u32.into()).unwrap();
         }
         // (Origin, CrowdFundKey, BoundedWhitelistSpots)
@@ -52,13 +60,14 @@ benchmarks! {
     }
 
     remove_crowdfund_whitelist {
-        let caller = create_crowdfund_common::<T>(u32::MAX.into());
+        let required_funds = u32::MAX;
+        let caller = create_crowdfund_common::<T>(required_funds);
         let mut bbt : BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
 
-        for i in 0..<MaxWhitelistPerCrowdFund as Get<u32>>::get() {
+        for i in 0..<T as Config>::MaxWhitelistPerCrowdFund::get() {
             bbt.try_insert(whitelisted_caller(), 100u32.into()).unwrap();
         }
-        let _ = Proposals::<T>::add_crowdfund_whitelist(RawOrigin::Signed(caller.clone()).into(), 0, bbt);
+        let _ = CrowdFunding::<T>::add_crowdfund_whitelist(RawOrigin::Signed(caller.clone()).into(), 0, bbt);
 
         // (Origin, CrowdFundKey)
     }: _(RawOrigin::Signed(caller), 0u32)
@@ -67,64 +76,48 @@ benchmarks! {
     }
 
     open_contributions {
-        create_crowdfund_common::<T>(u32::MAX.into())
-        // (Origin, CrowdFundKey)c
+        create_crowdfund_common::<T>(u32::MAX.into());
+        // (Origin, CrowdFundKey)
     }: _(RawOrigin::Root, 0)
     verify {
         assert_last_event::<T>(Event::<T>::FundingRoundCreated(0).into());
     }
 
     contribute {
-        // Setup state.
-        let a in 0 .. <MaxCrowdFundKeysPerRound as Get<u32>>::get() - 1;
+        let required_funds = u32::MAX;
+        create_crowdfund_common::<T>(required_funds);
         let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 100_000);
         let caller: T::AccountId = whitelisted_caller();
-        let mut crowdfund_keys: BoundedCrowdFundKeys = vec![].try_into().unwrap();
-        for i in 0..<MaxCrowdFundKeysPerRound as Get<u32>>::get() {
-            let _caller = create_crowdfund_common::<T>(u32::MAX.into());
-            let _ = crowdfund_keys.try_push(i).unwrap();
-        }
-        let _ = Proposals::<T>::schedule_round(RawOrigin::Root.into(), 3u32.into(), 10u32.into(), crowdfund_keys, RoundType::ContributionRound);
+        let _ = CrowdFunding::<T>::open_contributions(RawOrigin::Root.into(), 0);
 
-        // Progress the blocks to allow contribution.
-        run_to_block::<T>(5u32.into());
-
-        //(Origin, RoundKey, CrowdFundKey, Contribution)
-    }: _(RawOrigin::Signed(alice.clone()), Some(1u32), a.into(), 10_000u32.into())
+        //(Origin, CrowdFundKey, Contribution)
+    }: _(RawOrigin::Signed(alice.clone()), 0, 10_000u32.into())
     verify {
-        assert_last_event::<T>(Event::<T>::ContributeSucceeded(alice, a.into(), 10_000u32.into(), CurrencyId::Native, 5u32.into()).into());
+        assert_last_event::<T>(Event::<T>::ContributeSucceeded(alice, 0, 10_000u32.into()).into());
     }
 
     approve_crowdfund_for_milestone_submission {
-        // Setup state.
-        let a in 0 .. <MaxCrowdFundKeysPerRound as Get<u32>>::get() - 1;
-        //create a funded user for contribution
-        let contribution = 100_000u32;
-        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, contribution);
-        let mut crowdfund_keys: BoundedCrowdFundKeys = vec![].try_into().unwrap();
-        for i in 0..<MaxCrowdFundKeysPerRound as Get<u32>>::get() {
-            let _caller = create_crowdfund_common::<T>(100_000u32.into());
-            let _ = crowdfund_keys.try_push(i).unwrap();
-        }
-        let milestone_keys: BoundedMilestoneKeys<T> = (0.. <<T as Config>::MaxMilestonesPerCrowdFund as Get<u32>>::get()).collect::<Vec<u32>>().try_into().unwrap();
-        let _ = Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), crowdfund_keys, RoundType::ContributionRound);
-        run_to_block::<T>(5u32.into());
-        let _ = Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1u32), a.into(), contribution.into());
+        let required_funds: u32 = 100_000u32;
+        create_crowdfund_common::<T>(required_funds);
+        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, required_funds.into());
+        let _ = CrowdFunding::<T>::open_contributions(RawOrigin::Root.into(), 0);
+        let _ = CrowdFunding::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0u32, required_funds.into());
 
-        //(Origin, RoundKey, CrowdFundKey, MilestoneKeys)
-    }: _(RawOrigin::Root, Some(1), a.into(), Some(milestone_keys))
+        //(Origin, CrowdFundKey)
+    }: _(RawOrigin::Root, 0)
     verify {
-       assert_last_event::<T>(Event::<T>::CrowdFundApproved(1, a.into()).into());
+       assert_last_event::<T>(Event::<T>::CrowdFundApproved(0).into());
     }
-
-	impl_benchmark_test_suite!(Template, crate::mock::new_test_ext(), crate::mock::Test);
 }
+
+impl_benchmark_test_suite!(CrowdFunding, crate::mock::new_test_ext(), crate::mock::Test);
+
 fn create_funded_user<T: Config>(
     string: &'static str,
     n: u32,
     balance_factor: u32,
 ) -> T::AccountId {
-    let user = account(string, n, SEED);
+    let user = account(string, n, 99);
     let balance: BalanceOf<T> = balance_factor.into();
     let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
         CurrencyId::Native,
@@ -132,6 +125,23 @@ fn create_funded_user<T: Config>(
         balance,
     );
     user
+}
+
+fn create_crowdfund_common<T: Config>(required_funds: u32) -> T::AccountId {
+    let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000);
+    let milestones = get_max_milestones::<T>();
+
+    let agg_hash = H256::from([20; 32]);
+    let currency_id = CurrencyId::Native;
+
+    assert_ok!(CrowdFunding::<T>::create_crowdfund(
+        RawOrigin::Signed(bob.clone()).into(),
+        agg_hash,
+        milestones,
+        required_funds.into(),
+        currency_id
+    ));
+    bob
 }
 
 fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
@@ -153,4 +163,15 @@ fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
 fn get_max_milestones<T: Config>() -> BoundedProposedMilestones<T> {
     let max_milestones: u32 = <T as Config>::MaxMilestonesPerCrowdFund::get();
     get_milestones::<T>(max_milestones)
+}
+
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
+where
+    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
+{
+    let events = frame_system::Pallet::<T>::events();
+    let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
+    // compare to the last event record
+    let EventRecord { event, .. } = &events[events.len() - 1];
+    assert_eq!(event, &system_event);
 }
