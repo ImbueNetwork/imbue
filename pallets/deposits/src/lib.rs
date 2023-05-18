@@ -53,6 +53,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// A deposit has been taken.
 		DepositTaken(T::DepositId, BalanceOf<T>),
+		/// A deposit has been reinstated.
 		DepositReinstated(T::DepositId, BalanceOf<T>),
 	}
 
@@ -64,9 +65,6 @@ pub mod pallet {
 		DepositDoesntExist,
 	}
 
-	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-	}
 
 	impl <T: Config> DepositHandler<BalanceOf<T>, AccountIdOf<T>> for Pallet<T> {
 		type CurrencyId = T::CurrencyId;

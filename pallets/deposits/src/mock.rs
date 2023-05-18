@@ -8,6 +8,10 @@ use sp_runtime::{
 use crate::traits::DepositCalculator;
 use common_types::CurrencyId;
 use frame_support::{pallet_prelude::*, parameter_types};
+use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_core::sr25519::{Public, Signature};
+use frame_support::once_cell::sync::Lazy;
+use orml_traits::MultiCurrency;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -24,9 +28,9 @@ frame_support::construct_runtime!(
 	}
 );
 
-type AccountId = u64;
-type Balance = u64;
-type BlockNumber = u64;
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+pub type Balance = u64;
+pub type BlockNumber = u64;
 
 impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
@@ -114,8 +118,22 @@ impl DepositCalculator<Balance> for MockDepositCalculator {
 	}
 }
 
+pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
+pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
+pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
 
-// Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
+    let t = frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap();
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| {
+        let initial_balance = 10_000_000u64;
+        System::set_block_number(1);
+        let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
+    });
+    ext
 }
