@@ -13,6 +13,8 @@ pub trait DepositCalculator<Balance> {
     fn calculate_deposit(u: Self::StorageItem, currency: Self::CurrencyId) -> Balance;
 }
 
+// TODO: do i need to bind these associated types or is the bound in the config enough..
+/// The handler for taking and reinstating deposits.
 pub trait DepositHandler<Balance, AccountId> {
     type DepositId;
     type StorageItem;

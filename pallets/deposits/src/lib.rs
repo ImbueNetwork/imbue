@@ -36,9 +36,9 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = Self::CurrencyId>;
 		/// The ID used to differentitate storage types.
-		type DepositId: FullCodec + Copy + Eq + PartialEq + MaybeSerializeDeserialize + Bounded + Debug + MaxEncodedLen + TypeInfo;
+		type DepositId: FullCodec + Copy + Eq + PartialEq + Debug + MaxEncodedLen + TypeInfo;
 		/// The actual types that are being put in storage, abstracted as an enum;
-		type StorageItem: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
+		type StorageItem: FullCodec + Eq + PartialEq + Copy + Debug;
 		/// The type responsible for calculating the cost of a storage item based on its type.
 		type DepositCalculator: DepositCalculator<BalanceOf<Self>, CurrencyId = Self::CurrencyId, StorageItem = Self::StorageItem>;
 		type CurrencyId: Clone + Copy + PartialOrd + Ord + PartialEq + Eq + Debug + Encode + Decode + TypeInfo + MaxEncodedLen;
@@ -53,6 +53,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// A deposit has been taken.
 		DepositTaken(T::DepositId, BalanceOf<T>),
+		DepositReinstated(T::DepositId, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -89,7 +90,11 @@ pub mod pallet {
 		}
 
 		fn reinstate_deposit(deposit_id: T::DepositId) -> DispatchResult {
+			let deposit = CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
+			<T as Config>::MultiCurrency::unreserve(deposit.currency_id, &deposit.who, deposit.amount);
 
+			CurrentDeposits::<T>::remove(deposit_id);
+			Self::deposit_event(Event::<T>::DepositReinstated(deposit_id, deposit.amount));
 			Ok(().into())
 		}
 	}
