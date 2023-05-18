@@ -83,6 +83,7 @@ impl pallet_crowdfunding::Config for Test {
 	type IsIdentityRequired = IsIdentityRequired;
 	type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposals = pallet_proposals::Pallet<Test>;
+    type WeightInfo = ();
 }
 
 parameter_types! {

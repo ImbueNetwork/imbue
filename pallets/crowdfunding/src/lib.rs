@@ -166,7 +166,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-        #[pallet::weight(10000)]
+        #[pallet::weight(<T as Config>::WeightInfo::create_crowdfund())]
         pub fn create_crowdfund(
             origin: OriginFor<T>,
             agreement_hash: H256,
@@ -191,7 +191,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight(10000)]
+        #[pallet::weight(<T as Config>::WeightInfo::update_crowdfund())]
         pub fn update_crowdfund(
             origin: OriginFor<T>,
             crowdfund_key: CrowdFundKey,
@@ -239,7 +239,7 @@ pub mod pallet {
         /// Step 1.5 (INITIATOR)
         /// Add whitelist to a crowdfund
         #[pallet::call_index(2)]
-        #[pallet::weight(10000)]
+        #[pallet::weight(<T as Config>::WeightInfo::add_crowdfund_whitelist())]
         pub fn add_crowdfund_whitelist(
             origin: OriginFor<T>,
             crowdfund_key: CrowdFundKey,
@@ -263,7 +263,7 @@ pub mod pallet {
         /// Step 1.5 (INITIATOR)
         /// Remove a whitelist
         #[pallet::call_index(3)]
-        #[pallet::weight(10000)]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_crowdfund_whitelist())]
         pub fn remove_crowdfund_whitelist(
             origin: OriginFor<T>,
             crowdfund_key: CrowdFundKey,
@@ -278,7 +278,7 @@ pub mod pallet {
 		/// Step 2 (ADMIN)
         /// Open a round for contributions, this must be called before contributions are allowed.
         #[pallet::call_index(4)]
-        #[pallet::weight(10000)]
+        #[pallet::weight(<T as Config>::WeightInfo::open_contributions())]
         pub fn open_contributions(
             origin: OriginFor<T>,
             crowdfund_key: CrowdFundKey,
@@ -298,7 +298,7 @@ pub mod pallet {
         /// Step 3 (CONTRIBUTOR/FUNDER)
         /// Contribute to a crowdfund
         #[pallet::call_index(6)]
-        #[pallet::weight(10000)]
+        #[pallet::weight(<T as Config>::WeightInfo::contribute())]
         #[transactional]
         pub fn contribute(
             origin: OriginFor<T>,
@@ -319,7 +319,7 @@ pub mod pallet {
         /// Approve crowdfund
         /// If the crowdfund is approved, the crowdfund is converted into a type that is able to submit milestones.
         #[pallet::call_index(7)]
-        #[pallet::weight(10000)]
+        #[pallet::weight(<T as Config>::WeightInfo::approve_crowdfund_for_milestone_submission())]
         pub fn approve_crowdfund_for_milestone_submission(
             origin: OriginFor<T>,
             crowdfund_key: CrowdFundKey,
