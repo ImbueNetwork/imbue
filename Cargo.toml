@@ -9,6 +9,7 @@ members = [
 	"pallets/proposals",
 	"pallets/briefs",
     "pallets/grants",
+    "pallets/deposits",
 	"runtime/integration-tests",
 	"runtime/imbue-kusama",
 	"runtime/common",

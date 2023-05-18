@@ -49,7 +49,7 @@ pub enum TreasuryOriginError {
 pub enum FundingType {
     Proposal,
     Brief,
-    Treasury(TreasuryOrigin),
+    Grant(TreasuryOrigin),
 }
 
 #[derive(
