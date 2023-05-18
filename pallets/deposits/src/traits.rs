@@ -20,5 +20,6 @@ pub trait DepositHandler<Balance, AccountId> {
     type StorageItem;
     type CurrencyId;
     fn take_deposit(who: AccountId, deposit_id: Self::DepositId, item: Self::StorageItem, currency_id: Self::CurrencyId) -> DispatchResult;
-    fn reinstate_deposit(deposit_id: Self::DepositId) -> DispatchResult;
+    fn return_deposit(deposit_id: Self::DepositId) -> DispatchResult;
+    fn slash_reserve_deposit(deposit_id: Self::DepositId) -> DispatchResult;
 }

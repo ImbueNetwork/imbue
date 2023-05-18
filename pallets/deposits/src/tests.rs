@@ -30,11 +30,11 @@ fn take_deposit_id_already_exists() {
 }
 
 #[test]
-fn reinstate_deposit_works() {
+fn return_deposit_works() {
     new_test_ext().execute_with(|| {
         let deposit_id = DepositId::Project(0);
         assert_ok!(Deposits::take_deposit(*ALICE, deposit_id, StorageItem::Project, CurrencyId::Native));
-        assert_ok!(Deposits::reinstate_deposit(deposit_id));
+        assert_ok!(Deposits::return_deposit(deposit_id));
         let reserved: Balance = <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
         assert_eq!(reserved, 0);
     });
@@ -42,22 +42,22 @@ fn reinstate_deposit_works() {
 
 
 #[test]
-fn reinstate_deposit_removes_from_storage() {
+fn return_deposit_removes_from_storage() {
     new_test_ext().execute_with(|| {
         let deposit_id = DepositId::Project(0);
         assert_ok!(Deposits::take_deposit(*ALICE, deposit_id, StorageItem::Project, CurrencyId::Native));
-        assert_ok!(Deposits::reinstate_deposit(deposit_id));
+        assert_ok!(Deposits::return_deposit(deposit_id));
         assert!(!CurrentDeposits::<Test>::contains_key(deposit_id));
     });
 }
 
 
 #[test]
-fn reinstate_deposit_not_found() {
+fn return_deposit_not_found() {
     new_test_ext().execute_with(|| {
         let deposit_id = DepositId::Project(0);
         assert_ok!(Deposits::take_deposit(*ALICE, deposit_id, StorageItem::Project, CurrencyId::Native));
-        assert_ok!(Deposits::reinstate_deposit(deposit_id));
-        assert_noop!(Deposits::reinstate_deposit(deposit_id), Error::<Test>::DepositDoesntExist);
+        assert_ok!(Deposits::return_deposit(deposit_id));
+        assert_noop!(Deposits::return_deposit(deposit_id), Error::<Test>::DepositDoesntExist);
     });
 }

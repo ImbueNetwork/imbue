@@ -17,13 +17,11 @@ mod traits;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_support::dispatch::fmt::Debug;
-
 	use frame_system::pallet_prelude::*;
-	use orml_traits::{MultiReservableCurrency, MultiCurrency, arithmetic::Bounded};
+	use orml_traits::{MultiReservableCurrency, MultiCurrency, arithmetic::Bounded, BalanceStatus};
 	use common_types::{FundingType};
 	use crate::traits::{DepositCalculator, DepositHandler};
 	use codec::FullCodec;
-
 	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
@@ -34,6 +32,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		type CurrencyId: Clone + Copy + PartialOrd + Ord + PartialEq + Eq + Debug + Encode + Decode + TypeInfo + MaxEncodedLen;
 		type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = Self::CurrencyId>;
 		/// The ID used to differentitate storage types.
 		type DepositId: FullCodec + Copy + Eq + PartialEq + Debug + MaxEncodedLen + TypeInfo;
@@ -41,7 +40,8 @@ pub mod pallet {
 		type StorageItem: FullCodec + Eq + PartialEq + Copy + Debug;
 		/// The type responsible for calculating the cost of a storage item based on its type.
 		type DepositCalculator: DepositCalculator<BalanceOf<Self>, CurrencyId = Self::CurrencyId, StorageItem = Self::StorageItem>;
-		type CurrencyId: Clone + Copy + PartialOrd + Ord + PartialEq + Eq + Debug + Encode + Decode + TypeInfo + MaxEncodedLen;
+		/// The account slashed deposits are sent to.
+		type DepositSlashAccount: Get<AccountIdOf<Self>>;
 	}
 
 	/// A list of current deposits and the amount taken for the deposit.
@@ -54,7 +54,8 @@ pub mod pallet {
 		/// A deposit has been taken.
 		DepositTaken(T::DepositId, BalanceOf<T>),
 		/// A deposit has been reinstated.
-		DepositReinstated(T::DepositId, BalanceOf<T>),
+		DepositReturned(T::DepositId, BalanceOf<T>),
+		DepositSlashed(T::DepositId, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -87,12 +88,23 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		fn reinstate_deposit(deposit_id: T::DepositId) -> DispatchResult {
+		fn return_deposit(deposit_id: T::DepositId) -> DispatchResult {
 			let deposit = CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
 			<T as Config>::MultiCurrency::unreserve(deposit.currency_id, &deposit.who, deposit.amount);
 
 			CurrentDeposits::<T>::remove(deposit_id);
-			Self::deposit_event(Event::<T>::DepositReinstated(deposit_id, deposit.amount));
+			Self::deposit_event(Event::<T>::DepositReturned(deposit_id, deposit.amount));
+			Ok(().into())
+		}
+
+		/// Doesnt do a slash in the normal sense, this simply takes the deposit and sends it to.
+		fn slash_reserve_deposit(deposit_id: T::DepositId) -> DispatchResult {
+			let deposit = CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
+			let beneficiary = &<T as Config>::DepositSlashAccount::get();
+			<T as Config>::MultiCurrency::repatriate_reserved(deposit.currency_id, &deposit.who, beneficiary, deposit.amount, BalanceStatus::Free)
+
+			CurrentDeposits::<T>::remove(deposit_id);
+			Self::deposit_event(Event::<T>::DepositSlashed(deposit_id, deposit.amount));
 			Ok(().into())
 		}
 	}
