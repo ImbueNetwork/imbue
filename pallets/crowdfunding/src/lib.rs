@@ -1,6 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
 
+mod weights;
+
 #[cfg(test)]
 mod mock;
 
@@ -26,6 +28,7 @@ pub mod pallet {
     use sp_std::collections::btree_map::BTreeMap;
     use pallet_identity::Judgement;
     use frame_support::sp_runtime::Saturating;
+    use crate::weights::WeightInfo;
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -65,7 +68,7 @@ pub mod pallet {
             BalanceOf<Self>,
             BlockNumberFor<Self>,
         >;
-        type WeightInfo: crate::weights::WeightInfo;
+        type WeightInfo: WeightInfo;
 	}
 
     /// The count of crowdfunds, used as an id.
@@ -410,7 +413,7 @@ impl<T: Config> Pallet<T> {
         required_funds: Option<BalanceOf<T>>,
         currency_id: Option<CurrencyId>,
         agreement_hash: Option<H256>,
-    ) {
+    ) -> DispatchResult {
         if let Some(ms) = proposed_milestones {
             let total_percentage = ms.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
             ensure!(
@@ -429,7 +432,8 @@ impl<T: Config> Pallet<T> {
             crowdfund.agreement_hash = ah;
         }
         
-        <CrowdFunds<T>>::insert(crowdfund_key, crowdfund)
+        <CrowdFunds<T>>::insert(crowdfund_key, crowdfund);
+        Ok(())
     }
 
     pub fn start_contribution_round(

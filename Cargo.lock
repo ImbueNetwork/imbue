@@ -6290,6 +6290,7 @@ dependencies = [
  "frame-system",
  "orml-tokens",
  "orml-traits",
+ "pallet-xcm",
  "parity-scale-codec 3.4.0",
  "scale-info 2.5.0",
  "sp-core",
