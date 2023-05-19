@@ -225,6 +225,8 @@ pub mod pallet {
         MilestoneDoesNotExist,
         /// You dont have enough IMBU for the project storage deposit.
         ImbueRequiredForStorageDep,
+        /// Your account doenst have the privilage.
+        InvalidAccount,
     }
 
     #[pallet::hooks]

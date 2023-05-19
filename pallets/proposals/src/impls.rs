@@ -44,7 +44,9 @@ impl<T: Config> Pallet<T> {
         let expiry_block = <T as Config>::MilestoneVotingWindow::get() + frame_system::Pallet::<T>::block_number();
         Rounds::<T>::insert(project_key, RoundType::VotingRound, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
-            keys.try_insert(project_key).map_err(|_| Error::<T>::Overflow)?;
+            if let Some(k) = keys {
+                k.try_push((project_key, RoundType::VotingRound)).map_err(|_| Error::<T>::Overflow)?;
+            }
             Ok::<(), DispatchError>(())
         })?;
         let vote = Vote::default();
@@ -66,7 +68,7 @@ impl<T: Config> Pallet<T> {
         let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let round = Rounds::<T>::get(project_key, RoundType::VotingRound).ok_or(Error::<T>::KeyNotFound)?;
         let contribution_amount = project.contributions.get(&who).ok_or(Error::<T>::OnlyContributorsCanVote)?.value;
-        let vote_lookup_key = (who.clone(), project_key, milestone_key);
+        let vote_lookup_key = (who.clone(), project_key, milestone_key, RoundType::VotingRound);
         let now = frame_system::Pallet::<T>::block_number();
 
         ensure!(!UserVotes::<T>::contains_key(&vote_lookup_key), Error::<T>::VoteAlreadyExists);
@@ -143,7 +145,7 @@ impl<T: Config> Pallet<T> {
         let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(
             project.initiator == who,
-            Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone
+            Error::<T>::InvalidAccount
         );
         // TODO: this is also messy with the mut reference, clean up
         let mut milestone = project.milestones.get_mut(&milestone_key).ok_or(Error::<T>::MilestoneDoesNotExist)?;
@@ -236,7 +238,7 @@ impl<T: Config> Pallet<T> {
             if let Some(p) = project {
                 p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
                 if p.withdrawn_funds == p.raised_funds {
-                    Self::reinstate_storage_deposit(&p.initiator)?;
+                    // TODO: reinstate storage deposit
                     *project = None;
                 }
             }
@@ -259,7 +261,7 @@ impl<T: Config> Pallet<T> {
     pub fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
         //ensure that who is a contributor or root
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let contribution = project.contributors.get(&who).map_err(|_| Error::<T>::KeyNotFound)?;
+        let contribution = project.contributions.get(&who).ok_or(Error::<T>::KeyNotFound)?;
 
         // Also ensure that a vote has not already been raised.
         ensure!(
@@ -279,7 +281,9 @@ impl<T: Config> Pallet<T> {
 
         Rounds::<T>::insert(project_key, RoundType::VoteOfNoConfidence, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
-            keys.try_insert(project_key).map_err(|_| Error::<T>::Overflow)?;
+            if let Some(k) = keys {
+                k.try_push((project_key, RoundType::VoteOfNoConfidence)).map_err(|_| Error::<T>::Overflow)?;
+            }
             Ok::<(), DispatchError>(())
         })?;
         NoConfidenceVotes::<T>::insert(project_key, vote);
@@ -294,15 +298,15 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         is_yay: bool,
     ) -> DispatchResult {
-        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound);
+        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
 
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-        let contribution = project.contributors.get(&who).map_err(|_| Error::<T>::KeyNotFound)?;
+        let contribution = project.contributions.get(&who).ok_or(Error::<T>::KeyNotFound)?;
         let mut vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
         
         ensure!(
-            UserVotes::<T>::get((&who, project_key, )).is_none(),
+            !UserVotes::<T>::contains_key((&who, project_key, 0, RoundType::VoteOfNoConfidence)),
             Error::<T>::VoteAlreadyExists
         );
 
@@ -328,9 +332,9 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         majority_required: u8,
     ) -> DispatchResultWithPostInfo {
-        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound);
+        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        ensure!(project.contributors.contains_key(&who), Error::<T>::OnlyContributorsCanVote);
+        ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanVote);
 
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
