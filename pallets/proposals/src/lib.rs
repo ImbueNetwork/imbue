@@ -119,6 +119,7 @@ pub mod pallet {
     >;
 
     // TODO: MIGRATION NEEDED
+    #[pallet::storage]
     #[pallet::getter(fn user_votes)]
     pub(super) type UserVotes<T: Config> = StorageMap<
         _,
@@ -149,7 +150,7 @@ pub mod pallet {
 
     /// Stores the project keys and round types ending on a given block
     #[pallet::storage]
-    pub type RoundEnding<T> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>>;
+    pub type RoundsExpiring<T> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
@@ -167,14 +168,12 @@ pub mod pallet {
             common_types::CurrencyId,
             T::AccountId,
         ),
-        /// A funding round has been created.
-        FundingRoundCreated(RoundKey, Vec<ProjectKey>),
         /// A voting round has been created.
-        VotingRoundCreated(RoundKey, Vec<ProjectKey>),
+        VotingRoundCreated(ProjectKey),
         /// You have submitted a milestone.
         MilestoneSubmitted(T::AccountId, ProjectKey, MilestoneKey),
         /// A project has been cancelled.
-        ProjectCancelled(RoundKey, ProjectKey),
+        ProjectCancelled(ProjectKey),
         /// Successfully withdrawn funds from the project.
         ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyId),
         /// Vote submited successfully.
@@ -182,11 +181,11 @@ pub mod pallet {
         /// A milestone has been approved.
         MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, T::BlockNumber),
         /// You have created a vote of no confidence.
-        NoConfidenceRoundCreated(RoundKey, ProjectKey),
+        NoConfidenceRoundCreated(ProjectKey),
         /// You have voted upon a round of no confidence.
-        NoConfidenceRoundVotedUpon(RoundKey, ProjectKey),
+        NoConfidenceRoundVotedUpon(ProjectKey),
         /// You have finalised a vote of no confidence.
-        NoConfidenceRoundFinalised(RoundKey, ProjectKey),
+        NoConfidenceRoundFinalised(ProjectKey),
     }
 
     // Errors inform users that something went wrong.
