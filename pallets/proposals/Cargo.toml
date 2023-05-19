@@ -59,7 +59,7 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release
 
 [features]
 default = ['std']
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks"]
 std = [
 	"codec/std",
 	"serde/std",
