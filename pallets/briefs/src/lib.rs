@@ -38,7 +38,7 @@ pub mod pallet {
 
     pub(crate) type BoundedBriefContributions<T> = BoundedBTreeMap<
         AccountIdOf<T>,
-        Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
+        Contribution<BalanceOf<T>, BlockNumberFor<T>>,
         <T as Config>::MaxBriefOwners,
     >;
     pub(crate) type BoundedProposedMilestones<T> =
@@ -54,7 +54,7 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_timestamp::Config {
+    pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         /// The hasher used to generate the brief id.
@@ -67,7 +67,6 @@ pub mod pallet {
             AccountIdOf<Self>,
             BalanceOf<Self>,
             BlockNumberFor<Self>,
-            <Self as pallet_timestamp::Config>::Moment,
         >;
 
         /// The maximum amount of owners to a brief.
@@ -219,7 +218,7 @@ pub mod pallet {
                             who.clone(),
                             Contribution {
                                 value: initial_contribution,
-                                timestamp: pallet_timestamp::Pallet::<T>::get(),
+                                timestamp: frame_system::Pallet::<T>::block_number(),
                             },
                         )
                         .map_err(|_| Error::<T>::TooManyBriefOwners)?;
@@ -269,14 +268,14 @@ pub mod pallet {
             BriefContributions::<T>::try_mutate(brief_id, |contributions| {
                 if let Some(contribution) = contributions.get_mut(&who) {
                     contribution.value = contribution.value.saturating_add(amount);
-                    contribution.timestamp = pallet_timestamp::Pallet::<T>::get();
+                    contribution.timestamp = frame_system::Pallet::<T>::block_number();
                 } else {
                     // This should never fail as the the bound is ensured when a brief is created.
                     contributions
                         .try_insert(who.clone(), {
                             Contribution {
                                 value: amount,
-                                timestamp: pallet_timestamp::Pallet::<T>::get(),
+                                timestamp: frame_system::Pallet::<T>::block_number(),
                             }
                         })
                         .map_err(|_| Error::<T>::TooManyBriefOwners)?;
