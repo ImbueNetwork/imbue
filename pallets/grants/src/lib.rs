@@ -297,7 +297,7 @@ pub mod pallet {
                     .milestones
                     .try_into()
                     .map_err(|_| Error::<T>::Overflow)?,
-                FundingType::Treasury(grant.treasury_origin),
+                FundingType::Grant(grant.treasury_origin),
             )
             .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
 
