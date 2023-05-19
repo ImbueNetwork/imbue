@@ -54,7 +54,7 @@ std = [
 	"pallet-proposals/std",
 	"sp-core/std",
 	"pallet-identity/std",
-	"pallet-xcm/runtime-benchmarks"
+	"pallet-xcm/std"
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks"]

@@ -170,6 +170,8 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MaxMilestonesPerProject: u32 = 50;
+    pub ProjectStorageDeposit: Balance = 10000;
+    pub ImbueFee: u8 = 20;
 }
 
 impl pallet_proposals::Config for Test {
@@ -188,6 +190,8 @@ impl pallet_proposals::Config for Test {
     type MilestoneVotingWindow = TwoWeekBlockUnit;
     type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
+    type ProjectStorageDeposit = ProjectStorageDeposit;
+    type ImbueFee = ImbueFee;
 }
 
 pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
