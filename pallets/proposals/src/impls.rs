@@ -3,8 +3,11 @@ use common_types::milestone_origin::FundingType;
 use pallet_identity::Judgement;
 use sp_runtime::traits::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, vec};
-pub const MAX_PERCENTAGE: u32 = 100u32;
 use scale_info::prelude::format;
+use crate::Error::*;
+
+pub const MAX_PERCENTAGE: u32 = 100u32;
+
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
     ///
@@ -22,7 +25,7 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    pub fn project_account_id(key: ProjectKey) -> ProjectAccountId<T> {
+    pub fn project_account_id(key: ProjectKey) -> AccountIdOf<T> {
         T::PalletId::get().into_sub_account_truncating(format!("//{key}"))
     }
 
@@ -49,7 +52,7 @@ impl<T: Config> Pallet<T> {
         <MilestoneVotes<T>>::insert(vote_lookup_key, vote);
 
         Self::deposit_event(Event::MilestoneSubmitted(who, project_key, milestone_key));
-        Self::deposit_event(Event::VotingRoundCreated(round_key, vec![project_key]));
+        Self::deposit_event(Event::VotingRoundCreated(project_key));
         Ok(().into())
     }
 
@@ -64,6 +67,7 @@ impl<T: Config> Pallet<T> {
         let round = Rounds::<T>::get(project_key, RoundType::VotingRound).ok_or(Error::<T>::KeyNotFound)?;
         let contribution_amount = project.contributions.get(&who).ok_or(Error::<T>::OnlyContributorsCanVote)?.value;
         let vote_lookup_key = (who.clone(), project_key, milestone_key);
+        let now = frame_system::Pallet::<T>::block_number();
 
         ensure!(!UserVotes::<T>::contains_key(&vote_lookup_key), Error::<T>::VoteAlreadyExists);
         <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
@@ -126,9 +130,8 @@ impl<T: Config> Pallet<T> {
                 now,
             ));
         }
-        <Rounds<T>>::insert(round_key, Some(round));
-        <MilestoneVotes<T>>::insert((project_key, milestone_key), &updated_vote);
 
+        <MilestoneVotes<T>>::insert((project_key, milestone_key), &updated_vote);
         Ok(().into())
     }
 
@@ -256,7 +259,7 @@ impl<T: Config> Pallet<T> {
     pub fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
         //ensure that who is a contributor or root
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let contribution = Self::ensure_contributor_of(&project, &who)?;
+        let contribution = project.contributors.get(&who).map_err(|_| Error::<T>::KeyNotFound)?;
 
         // Also ensure that a vote has not already been raised.
         ensure!(
@@ -267,7 +270,7 @@ impl<T: Config> Pallet<T> {
         // Create the accosiated vote struct, index can be used as an ensure on length has been called.
         let vote = Vote {
             yay: Default::default(),
-            nay: contribution,
+            nay: contribution.value,
             // not using this so approved will be false.
             is_approved: false,
         };
@@ -280,7 +283,7 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
         NoConfidenceVotes::<T>::insert(project_key, vote);
-        Self::deposit_event(Event::NoConfidenceRoundCreated(round_key, project_key));
+        Self::deposit_event(Event::NoConfidenceRoundCreated(project_key));
         Ok(())
     }
 
@@ -291,30 +294,28 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         is_yay: bool,
     ) -> DispatchResult {
-        let round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
-        ensure!(
-            round.project_keys.contains(&project_key),
-            Error::<T>::ProjectNotInRound
-        );
-        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let contribution = Self::ensure_contributor_of(&project, &who)?;
+        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound);
 
+        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
+        let contribution = project.contributors.get(&who).map_err(|_| Error::<T>::KeyNotFound)?;
         let mut vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
+        
         ensure!(
             UserVotes::<T>::get((&who, project_key, )).is_none(),
             Error::<T>::VoteAlreadyExists
         );
 
         if is_yay {
-            vote.yay = vote.yay.saturating_add(contribution);
+            vote.yay = vote.yay.saturating_add(contribution.value);
         } else {
-            vote.nay = vote.nay.saturating_add(contribution);
+            vote.nay = vote.nay.saturating_add(contribution.value);
         }
 
         NoConfidenceVotes::<T>::insert(project_key, vote);
         UserVotes::<T>::insert((who, project_key, 0, RoundType::VoteOfNoConfidence), true);
 
-        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(round_key, project_key));
+        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(project_key));
         Ok(())
     }
 
@@ -324,18 +325,13 @@ impl<T: Config> Pallet<T> {
     /// This also calls a refund of funds to the users.
     pub fn call_finalise_no_confidence_vote(
         who: T::AccountId,
-        round_key: RoundKey,
         project_key: ProjectKey,
         majority_required: u8,
     ) -> DispatchResultWithPostInfo {
-        let mut round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
-        ensure!(
-            round.project_keys.contains(&project_key),
-            Error::<T>::ProjectNotInRound
-        );
+        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound);
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        ensure!(project.contributors.contains_key(&who), Error::<T>::OnlyContributorsCanVote);
 
-        let _ = Self::ensure_contributor_of(&project, &who)?;
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
         let total_contribute = project.raised_funds;
@@ -393,7 +389,7 @@ impl<T: Config> Pallet<T> {
             }
 
             Projects::<T>::remove(project_key);
-            Self::deposit_event(Event::NoConfidenceRoundFinalised(round_key, project_key));
+            Self::deposit_event(Event::NoConfidenceRoundFinalised(project_key));
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into());
         }
