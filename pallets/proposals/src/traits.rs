@@ -1,4 +1,4 @@
-use crate::{AccountIdOf, BalanceOf, TimestampOf};
+use crate::{AccountIdOf, BalanceOf};
 use crate::{
     Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
     ProposedMilestone,
@@ -16,14 +16,14 @@ use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
 
-pub trait IntoProposal<AccountId, Balance, BlockNumber, TimeStamp> {
-    /// Convert a set of milestones into a project.
+pub trait IntoProposal<AccountId, Balance, BlockNumber> {
+    /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.
     /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
     /// (if using crate) This function should bypass the usual checks when creating a proposal and
     /// instantiate everything carefully.  
     fn convert_to_proposal(
         currency_id: CurrencyId,
-        contributions: BTreeMap<AccountId, Contribution<Balance, TimeStamp>>,
+        current_contribution: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
         brief_hash: H256,
         benificiary: AccountId,
         milestones: Vec<ProposedMilestone>,
@@ -48,19 +48,18 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
 
 // Some implementations used in Imbue of the traits above.
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
-type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, TimestampOf<T>>>;
+type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>;
 
-impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>
+impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
     for crate::Pallet<T>
 where
-    Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>: EncodeLike<
+    Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>: EncodeLike<
         Project<
             <T as frame_system::Config>::AccountId,
             <<T as crate::Config>::MultiCurrency as MultiCurrency<
                 <T as frame_system::Config>::AccountId,
             >>::Balance,
             <T as frame_system::Config>::BlockNumber,
-            <T as pallet_timestamp::Config>::Moment,
         >,
     >,
 {
@@ -118,7 +117,7 @@ where
             milestone_key = milestone_key.saturating_add(1);
         }
 
-        let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>> =
+        let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> =
             Project {
                 milestones,
                 contributions,
