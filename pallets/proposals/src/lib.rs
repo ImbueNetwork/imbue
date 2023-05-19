@@ -70,10 +70,9 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+        type WeightInfo: WeightInfo;
 
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
-
-        type WeightInfo: WeightInfo;
 
         /// The amount of time given, up to point of decision, when a vote of no confidence is held.
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
@@ -84,9 +83,6 @@ pub mod pallet {
 
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
-
-        // Defines wether an identity is required when creating a proposal.
-        type IsIdentityRequired: Get<bool>;
 
         /// Defines the length that a milestone can be voted on.
         type MilestoneVotingWindow: Get<Self::BlockNumber>;
@@ -171,40 +167,20 @@ pub mod pallet {
             common_types::CurrencyId,
             T::AccountId,
         ),
-        // Project has been updated
-        ProjectUpdated(T::AccountId, ProjectKey, BalanceOf<T>),
         /// A funding round has been created.
         FundingRoundCreated(RoundKey, Vec<ProjectKey>),
         /// A voting round has been created.
         VotingRoundCreated(RoundKey, Vec<ProjectKey>),
         /// You have submitted a milestone.
         MilestoneSubmitted(T::AccountId, ProjectKey, MilestoneKey),
-        /// Contribution has succeded.
-        ContributeSucceeded(
-            T::AccountId,
-            ProjectKey,
-            BalanceOf<T>,
-            common_types::CurrencyId,
-            T::BlockNumber,
-        ),
         /// A project has been cancelled.
         ProjectCancelled(RoundKey, ProjectKey),
         /// Successfully withdrawn funds from the project.
         ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyId),
-        /// A project has been approved.
-        ProjectApproved(RoundKey, ProjectKey),
-        /// A round has been cancelled.
-        RoundCancelled(RoundKey),
         /// Vote submited successfully.
         VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
         /// A milestone has been approved.
         MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, T::BlockNumber),
-        /// A white list has been added.
-        WhitelistAdded(ProjectKey, T::BlockNumber),
-        /// A white list has been removed.
-        WhitelistRemoved(ProjectKey, T::BlockNumber),
-        /// A project has been added to refund queue.
-        ProjectFundsAddedToRefundQueue(ProjectKey, BalanceOf<T>),
         /// You have created a vote of no confidence.
         NoConfidenceRoundCreated(RoundKey, ProjectKey),
         /// You have voted upon a round of no confidence.
@@ -216,74 +192,40 @@ pub mod pallet {
     // Errors inform users that something went wrong.
     #[pallet::error]
     pub enum Error<T> {
-        /// Contribution has exceeded the maximum capacity of the project.
-        ContributionMustBeLowerThanMaxCap,
-        /// This block number must be later than the current.
-        EndBlockNumberInvalid,
-        /// The starting block number must be before the ending block number.
-        EndTooEarly,
-        /// Required identity not found.
-        IdentityNeeded,
         /// Input parameter is invalid
         InvalidParam,
         /// There are no avaliable funds to withdraw.
         NoAvailableFundsToWithdraw,
-        /// Your account does not have the correct authority.
-        InvalidAccount,
         /// Project does not exist.
         ProjectDoesNotExist,
-        /// Milestones totals do not add up to 100%.
-        MilestonesTotalPercentageMustEqual100,
         /// Currently no active round to participate in.
         NoActiveRound,
         /// There was an overflow in pallet_proposals.
         Overflow,
-        /// A project must be approved before the submission of milestones.
-        OnlyApprovedProjectsCanSubmitMilestones,
         /// Only contributors can vote.
         OnlyContributorsCanVote,
         /// You do not have permission to do this.
         UserIsNotInitiator,
-        /// You do not have permission to do this.
-        OnlyInitiatorOrAdminCanApproveMilestone,
-        /// You do not have permission to do this.
-        OnlyWhitelistedAccountsCanContribute,
         /// The selected project does not exist in the round.
         ProjectNotInRound,
         /// The project has been cancelled.
         ProjectWithdrawn,
-        /// Parameter limit exceeded.
-        ParamLimitExceed,
         /// Round has already started and cannot be modified.
         RoundStarted,
-        /// Round stll in progress.
-        RoundNotEnded,
         /// Round has been cancelled.
         RoundCanceled,
-        /// The start block number is invalid.
-        StartBlockNumberInvalid,
         /// You have already voted on this round.
         VoteAlreadyExists,
         /// The voting threshhold has not been met.
         MilestoneVotingNotComplete,
         /// The given key must exist in storage.
         KeyNotFound,
-        /// The input vector must exceed length zero.
-        LengthMustExceedZero,
         /// The voting threshold has not been met.
         VoteThresholdNotMet,
-        /// The project must be approved.
-        ProjectApprovalRequired,
-        /// The round type specified is invalid.
-        InvalidRoundType,
-        /// The project already be approved, cannot be updated.
-        ProjectAlreadyApproved,
         /// The milestone does not exist.
         MilestoneDoesNotExist,
         /// You dont have enough IMBU for the project storage deposit.
         ImbueRequiredForStorageDep,
-        /// White list spot not found
-        WhiteListNotFound,
     }
 
     #[pallet::hooks]
