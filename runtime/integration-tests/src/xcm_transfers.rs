@@ -66,7 +66,7 @@ fn test_xcm_refund_handler_to_kusama() {
                 BOB.into(),
                 transfer_amount,
                 CurrencyId::KSM,
-                FundingType::Treasury(TreasuryOrigin::Kusama)
+                FundingType::Grant(TreasuryOrigin::Kusama)
             )
         );
     });

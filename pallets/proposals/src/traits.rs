@@ -102,7 +102,7 @@ where
                     )?;
                 }
             }
-            FundingType::Treasury(_) => {}
+            FundingType::Grant(_) => {}
         }
 
         let mut milestone_key: u32 = 0;
@@ -195,7 +195,7 @@ where
         funding_type: FundingType,
     ) -> Result<(), DispatchError> {
         match funding_type {
-            FundingType::Treasury(treasury_origin) => {
+            FundingType::Grant(treasury_origin) => {
                 let beneficiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
                 let location: MultiLocation = treasury_origin
                     .get_multi_location(beneficiary)

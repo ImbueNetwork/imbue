@@ -840,7 +840,7 @@ impl<T: Config> Pallet<T> {
                         )?;
                     }
                 }
-                FundingType::Treasury(_) => {
+                FundingType::Grant(_) => {
                     let mut refund_amount: BalanceOf<T> = Default::default();
                     // Sum the contributions and send a single xcm.
                     for (_acc_id, contribution) in project.contributions.iter() {
