@@ -221,7 +221,7 @@ pub mod pallet {
                 Error::<T>::CrowdFundCancelled
             );
 
-            Self::try_update_existing_crowdfund(
+            Self::do_update_crowdfund(
                 who.clone(),
                 crowdfund,
                 crowdfund_key,
@@ -402,7 +402,7 @@ impl<T: Config> Pallet<T> {
         Ok(crowdfund_key)
     }
 
-    pub fn try_update_existing_crowdfund(
+    pub fn do_update_crowdfund(
         who: T::AccountId,
         mut crowdfund: CrowdFund<T>,
         crowdfund_key: CrowdFundKey,
@@ -410,7 +410,7 @@ impl<T: Config> Pallet<T> {
         required_funds: Option<BalanceOf<T>>,
         currency_id: Option<CurrencyId>,
         agreement_hash: Option<H256>,
-    ) -> DispatchResultWithPostInfo {
+    ) {
         if let Some(ms) = proposed_milestones {
             let total_percentage = ms.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
             ensure!(
@@ -429,8 +429,7 @@ impl<T: Config> Pallet<T> {
             crowdfund.agreement_hash = ah;
         }
         
-        <CrowdFunds<T>>::insert(crowdfund_key, crowdfund);
-        Ok(().into())
+        <CrowdFunds<T>>::insert(crowdfund_key, crowdfund)
     }
 
     pub fn start_contribution_round(
