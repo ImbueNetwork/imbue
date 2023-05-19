@@ -24,6 +24,7 @@ pub mod pallet {
 	use codec::FullCodec;
 	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+	use sp_runtime::traits::Zero;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -97,11 +98,12 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Doesnt do a slash in the normal sense, this simply takes the deposit and sends it to.
+		/// Doesnt do a slash in the normal sense, this simply takes the deposit and sends it to the DepositSlashAccount.
 		fn slash_reserve_deposit(deposit_id: T::DepositId) -> DispatchResult {
 			let deposit = CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
 			let beneficiary = &<T as Config>::DepositSlashAccount::get();
-			<T as Config>::MultiCurrency::repatriate_reserved(deposit.currency_id, &deposit.who, beneficiary, deposit.amount, BalanceStatus::Free)
+			// TODO: if the reserve amount is returned then take from free balance?
+			let _imbalance = <T as Config>::MultiCurrency::repatriate_reserved(deposit.currency_id, &deposit.who, beneficiary, deposit.amount, BalanceStatus::Free)?;
 
 			CurrentDeposits::<T>::remove(deposit_id);
 			Self::deposit_event(Event::<T>::DepositSlashed(deposit_id, deposit.amount));

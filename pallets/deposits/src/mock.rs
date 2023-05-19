@@ -84,6 +84,9 @@ impl orml_tokens::Config for Test {
     type ReserveIdentifier = [u8; 8];
 }
 
+parameter_types!{
+	pub DepositSlashAccount: AccountId = Public::from_raw([66u8; 32]);
+}
 
 impl pallet_deposits::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -92,6 +95,7 @@ impl pallet_deposits::Config for Test {
 	type StorageItem = StorageItem;
 	type DepositCalculator = MockDepositCalculator;
 	type CurrencyId = CurrencyId;
+	type DepositSlashAccount = DepositSlashAccount;
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Encode, Decode)]
