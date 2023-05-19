@@ -44,9 +44,7 @@ impl<T: Config> Pallet<T> {
         let expiry_block = <T as Config>::MilestoneVotingWindow::get() + frame_system::Pallet::<T>::block_number();
         Rounds::<T>::insert(project_key, RoundType::VotingRound, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
-            if let Some(k) = keys {
-                k.try_push((project_key, RoundType::VotingRound)).map_err(|_| Error::<T>::Overflow)?;
-            }
+            keys.try_push((project_key, RoundType::VotingRound)).map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
         let vote = Vote::default();
@@ -281,9 +279,7 @@ impl<T: Config> Pallet<T> {
 
         Rounds::<T>::insert(project_key, RoundType::VoteOfNoConfidence, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
-            if let Some(k) = keys {
-                k.try_push((project_key, RoundType::VoteOfNoConfidence)).map_err(|_| Error::<T>::Overflow)?;
-            }
+            keys.try_push((project_key, RoundType::VoteOfNoConfidence)).map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
         NoConfidenceVotes::<T>::insert(project_key, vote);

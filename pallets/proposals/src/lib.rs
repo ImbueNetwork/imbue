@@ -150,7 +150,7 @@ pub mod pallet {
 
     /// Stores the project keys and round types ending on a given block
     #[pallet::storage]
-    pub type RoundsExpiring<T> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>>;
+    pub type RoundsExpiring<T> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
@@ -239,6 +239,20 @@ pub mod pallet {
                 weight += migration::v3::migrate::<T>();
                 StorageVersion::<T>::set(Release::V3);
             }
+            weight
+        }
+
+        // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
+        fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            let key_type_vec = RoundsExpiring::<T>::take(n);
+
+            key_type_vec.iter().for_each(|item| {
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                Rounds::<T>::remove(item.0, item.1);
+                // TODO: Match round type then Remove votes
+            });
+
             weight
         }
     }
@@ -348,7 +362,7 @@ pub mod pallet {
     }
 }
 
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, TypeInfo)]
 pub enum RoundType {
     VotingRound,
     VoteOfNoConfidence,
