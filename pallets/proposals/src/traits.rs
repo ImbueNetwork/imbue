@@ -1,7 +1,7 @@
-use crate::{AccountIdOf, BalanceOf};
+use crate::{};
 use crate::{
     Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
-    ProposedMilestone,
+    ProposedMilestone, ContributionsFor, AccountIdOf, BalanceOf
 };
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
 use frame_support::{
@@ -48,7 +48,6 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
 
 // Some implementations used in Imbue of the traits above.
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
-type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>;
 
 impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
     for crate::Pallet<T>
@@ -90,6 +89,7 @@ where
             FundingType::Proposal | FundingType::Brief => {
                 for (acc, cont) in contributions.iter() {
                     let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
+                    // TODO: use repatriate reserved.
                     <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
                         AccountIdOf<T>,
                     >>::unreserve(currency_id, acc, cont.value);
@@ -122,13 +122,10 @@ where
                 milestones,
                 contributions,
                 currency_id,
-                required_funds: sum_of_contributions,
                 withdrawn_funds: 0u32.into(),
                 raised_funds: sum_of_contributions,
                 initiator: benificiary.clone(),
                 created_on: frame_system::Pallet::<T>::block_number(),
-                approved_for_funding: true,
-                funding_threshold_met: true,
                 cancelled: false,
                 agreement_hash: brief_hash,
                 funding_type,
