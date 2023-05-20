@@ -53,6 +53,7 @@ pub type BoundedProposedMilestones<T> =
     BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
 pub type AgreementHash = H256;
 type BoundedProjectKeysPerBlock<T> = BoundedVec<(ProjectKey, RoundType), <T as Config>::ExpiringProjectRoundsPerBlock>;
+type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -64,14 +65,10 @@ pub mod pallet {
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
         type PalletId: Get<PalletId>;
-
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         type WeightInfo: WeightInfo;
-
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
 
         /// The amount of time given, up to point of decision, when a vote of no confidence is held.
@@ -232,14 +229,15 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
-            let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            // Only supporting latest upgrade for now.
-            if StorageVersion::<T>::get() == Release::V2
-            {
-                weight += migration::v3::migrate::<T>();
-                StorageVersion::<T>::set(Release::V3);
-            }
-            weight
+            // let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            // // Only supporting latest upgrade for now.
+            // if StorageVersion::<T>::get() == Release::V2
+            // {
+            //     weight += migration::v3::migrate::<T>();
+            //     StorageVersion::<T>::set(Release::V3);
+            // }
+            // weight
+            Default::default()
         }
 
         // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
@@ -420,22 +418,19 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
     }
 }
 
+
+// MIGRATION REQUIRED, REMOVED FIELDS: required_funds, approved_for_funding, funding_threshold_met
 /// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber> {
     pub agreement_hash: H256,
-    // TODO: BOund
     pub milestones: BTreeMap<MilestoneKey, Milestone>,
-    // TODO: BOund
     pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
     pub currency_id: common_types::CurrencyId,
-    pub required_funds: Balance,
     pub withdrawn_funds: Balance,
     pub raised_funds: Balance,
     pub initiator: AccountId,
     pub created_on: BlockNumber,
-    pub approved_for_funding: bool,
-    pub funding_threshold_met: bool,
     pub cancelled: bool,
     pub funding_type: FundingType,
 }
