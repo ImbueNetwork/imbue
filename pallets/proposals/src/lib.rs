@@ -224,6 +224,8 @@ pub mod pallet {
         ImbueRequiredForStorageDep,
         /// Your account doenst have the privilage.
         InvalidAccount,
+        /// The voting round has not started yet.
+        VotingRoundNotStarted,
     }
 
     #[pallet::hooks]
