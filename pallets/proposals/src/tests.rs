@@ -19,6 +19,13 @@ fn submit_milestone_milestone_doesnt_exist() {
 }
 
 #[test]
+fn submit_milestone_no_project() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), 0, 1), Error::<Test>::ProjectDoesNotExist);
+    });
+}
+
+#[test]
 fn submit_milestone_not_initiator() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
@@ -73,6 +80,110 @@ fn submit_milestone_already_submitted() {
     });
 }
 
+#[test]
+fn submit_milestone_can_submit_again_after_failed_vote() {
+    build_test_externality().execute_with(|| {
+        assert!(false)
+    });
+}
+
+#[test]
+fn submit_milestone_cannot_submit_again_after_success_vote() {
+    build_test_externality().execute_with(|| {
+        assert!(false)
+    });
+}
+
+#[test]
+fn vote_on_milestone_no_project() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*ALICE), 0, 0, true), Error::<Test>::ProjectDoesNotExist);
+    });
+}
+
+#[test]
+fn vote_on_milestone_before_round_starts_fails() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_noop!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true), Error::<Test>::VotingRoundNotStarted);
+    });
+}
+
+#[test]
+fn vote_on_milestone_after_round_end_fails() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let expiring_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::MilestoneVotingWindow::get();
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+        run_to_block(expiring_block);
+        assert_noop!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true), Error::<Test>::VotingRoundNotStarted);
+    });
+}
+
+#[test]
+fn vote_on_milestone_already_voted() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+        assert_noop!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key), Error::<Test>::VoteAlreadyExists);
+    });
+}
+
+#[test]
+fn vote_on_milestone_not_contributor() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+        assert_noop!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*DAVE), project_key, milestone_key, true), Error::<Test>::OnlyContributorsCanVote);
+    });
+}
+
+#[test]
+fn vote_on_milestone_actually_adds_to_vote() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+        assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true));
+        let vote = MilestoneVotes::<Test>::get((project_key, milestone_key)).expect("vote should exist");
+        assert!(vote.yay == 50_000u64);
+        assert!(vote.nay == 0u64);
+        assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*CHARLIE), project_key, milestone_key, false));
+        let vote = MilestoneVotes::<Test>::get((project_key, milestone_key)).expect("vote should exist");
+        assert!(vote.yay == 50_000u64);
+        assert!(vote.nay == 50_000u64);
+    });
+}
+
+#[test]
+fn vote_on_milestone_doesnt_auto_finalise_below_threshold() {
+    build_test_externality().execute_with(|| {
+        assert!(false)
+    });
+}
+
+
+#[test]
+fn vote_on_milestone_does_auto_finalise_above_or_equal_threshold() {
+    build_test_externality().execute_with(|| {
+        assert!(false)
+    });
+}
+
 
 fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> ContributionsFor<Test> {
     let v = total_amount / accs.len() as u64;
@@ -94,6 +205,14 @@ pub fn get_milestones(mut n: u32) -> Vec<ProposedMilestone> {
             percentage_to_unlock: 100u32 / n
         }
     }).collect::<Vec<ProposedMilestone>>()
+}
+
+pub fn run_to_block(n: BlockNumber) {
+    while System::block_number() < n {
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Proposals::on_initialize(System::block_number());
+    }
 }
 
 /// Create a project for test purposes, this will not test the paths coming into this pallet via
