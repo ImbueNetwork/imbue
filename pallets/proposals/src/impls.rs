@@ -66,7 +66,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
 
         let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let round = Rounds::<T>::get(project_key, RoundType::VotingRound).ok_or(Error::<T>::KeyNotFound)?;
+        let round = Rounds::<T>::get(project_key, RoundType::VotingRound).ok_or(Error::<T>::VotingRoundNotStarted)?;
         let contribution_amount = project.contributions.get(&who).ok_or(Error::<T>::OnlyContributorsCanVote)?.value;
         let vote_lookup_key = (who.clone(), project_key, milestone_key, RoundType::VotingRound);
         let now = frame_system::Pallet::<T>::block_number();
@@ -74,8 +74,9 @@ impl<T: Config> Pallet<T> {
         ensure!(!UserVotes::<T>::contains_key(&vote_lookup_key), Error::<T>::VoteAlreadyExists);
         <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
 
+        // This should never fail as a round has been created
         let existing_milestone_vote =
-            Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::KeyNotFound)?;
+            Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::VotingRoundNotStarted)?;
         
         let mut updated_vote = Vote::default();
         if approve_milestone {
