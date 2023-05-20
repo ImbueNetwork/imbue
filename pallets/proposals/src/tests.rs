@@ -50,17 +50,29 @@ fn submit_milestones_too_many_this_block() {
 #[test]
 fn submit_milestone_creates_non_bias_vote() {
     build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1));
+        let created_vote = MilestoneVotes::<Test>::get((project_key, 1)).expect("should exist");
 
+        assert_eq!(created_vote.nay, 0);
+        assert_eq!(created_vote.yay, 0);
     });
 }
-
 
 #[test]
 fn submit_milestone_already_submitted() {
     build_test_externality().execute_with(|| {
-
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1));
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 2));
+        assert_noop!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1), Error::<Test>::VoteAlreadyExists);
     });
 }
+
 
 fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> ContributionsFor<Test> {
     let v = total_amount / accs.len() as u64;
