@@ -40,7 +40,9 @@ impl<T: Config> Pallet<T> {
 
         // Ensure that only the initiator has submitted
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
-        
+        ensure!(!MilestoneVotes::<T>::contains_key((project_key, milestone_key)), Error::<T>::VoteAlreadyExists);
+        ensure!(project.milestones.contains_key(&milestone_key), Error::<T>::MilestoneDoesNotExist);
+
         let expiry_block = <T as Config>::MilestoneVotingWindow::get() + frame_system::Pallet::<T>::block_number();
         Rounds::<T>::insert(project_key, RoundType::VotingRound, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
