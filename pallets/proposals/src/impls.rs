@@ -70,71 +70,58 @@ impl<T: Config> Pallet<T> {
         let contribution_amount = project.contributions.get(&who).ok_or(Error::<T>::OnlyContributorsCanVote)?.value;
         let vote_lookup_key = (who.clone(), project_key, milestone_key, RoundType::VotingRound);
         let now = frame_system::Pallet::<T>::block_number();
-
-        ensure!(!UserVotes::<T>::contains_key(&vote_lookup_key), Error::<T>::VoteAlreadyExists);
+        
+        ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanVote);
+        ensure!(!UserVotes::<T>::contains_key(&vote_lookup_key), Error::<T>::VotesAreImmutable);
         <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
 
         // This should never fail as a round has been created
         let existing_milestone_vote =
-            Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::VotingRoundNotStarted)?;
+        Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::VotingRoundNotStarted)?;
         
-        let mut updated_vote = Vote::default();
-        if approve_milestone {
-            updated_vote = Vote {
-                yay: existing_milestone_vote
-                    .yay
-                    .saturating_add(contribution_amount),
-                nay: existing_milestone_vote.nay,
-                is_approved: existing_milestone_vote.is_approved,
-            };
-            //TODO: put this into a function, its too messy.
-
-            //once the voting is complete check if the milestone is eligible for auto approval
-            //Getting the total threshold required for the milestone to be approved based on the raised funds
-            let funding_threshold: BalanceOf<T> = project
-                .raised_funds
-                .saturating_mul(T::PercentRequiredForVoteToPass::get().into())
-                / 100u32.into();
-
-            let mut milestone = project
-                .milestones
-                .get_mut(&milestone_key)
-                .ok_or(Error::<T>::KeyNotFound)?;
-            //if the yay votes are both greater than the nay votes and the funding threshold then the milestone is approved
-            if updated_vote.yay >= funding_threshold {
-                milestone.is_approved = true;
-                updated_vote = Vote {
-                    yay: updated_vote.yay,
-                    nay: updated_vote.nay,
-                    is_approved: true,
-                };
-                let now = <frame_system::Pallet<T>>::block_number();
-                Self::deposit_event(Event::MilestoneApproved(
-                    project.initiator.clone(),
-                    project_key,
-                    milestone_key,
-                    now,
-                ));
-                <Projects<T>>::insert(project_key, &project);
+        let yay_vote = MilestoneVotes::<T>::try_mutate((project_key, milestone_key)|maybe_vote| {
+            let v = maybe_vote.ok_or(Error::<T>::VotingRoundNotStarted)?;
+            if approve_milestone {
+                *v.yay = v.yay.saturating_add(contribution_amount);
+            } else {
+                *v.nay = v.yay.saturating_add(contribution_amount);
             }
-        } else {
-            updated_vote = Vote {
-                yay: existing_milestone_vote.yay,
-                nay: existing_milestone_vote
-                    .nay
-                    .saturating_add(contribution_amount),
-                is_approved: existing_milestone_vote.is_approved,
-            };
-            Self::deposit_event(Event::VoteComplete(
-                who,
+            Ok::<BalanceOf<T>, DispatchError>(v.yay);
+        })?;
+
+        //once the voting is complete check if the milestone is eligible for auto approval
+        //Getting the total threshold required for the milestone to be approved based on the raised funds
+        let funding_threshold: BalanceOf<T> = project
+            .raised_funds
+            .saturating_mul(T::PercentRequiredForVoteToPass::get().into())
+            / 100u32.into();
+
+        let mut milestone = project
+            .milestones
+            .get_mut(&milestone_key)
+            .ok_or(Error::<T>::KeyNotFound)?;
+
+        //if the yay votes are both greater than the nay votes and the funding threshold then the milestone is approved
+        if yay_vote >= funding_threshold {
+            let now = <frame_system::Pallet<T>>::block_number();
+            Self::deposit_event(Event::MilestoneApproved(
+                project.initiator.clone(),
                 project_key,
                 milestone_key,
-                approve_milestone,
                 now,
             ));
+            //TODO: Set vote as approved.
+            // set the vote as approved, set the milestone as approved.
+            <Projects<T>>::insert(project_key, &project);
         }
 
-        <MilestoneVotes<T>>::insert((project_key, milestone_key), &updated_vote);
+        Self::deposit_event(Event::VoteSubmitted(
+            who,
+            project_key,
+            milestone_key,
+            approve_milestone,
+            now,
+        ));
         Ok(().into())
     }
 
