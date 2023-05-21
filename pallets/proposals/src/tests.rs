@@ -191,20 +191,179 @@ fn vote_on_milestone_actually_adds_to_vote() {
 }
 
 #[test]
-fn vote_on_milestone_doesnt_auto_finalise_below_threshold() {
+fn withdraw_not_initiator() {
     build_test_externality().execute_with(|| {
-        assert!(false)
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+        assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true));
+        assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*CHARLIE), project_key, milestone_key, true));
+        
+        assert_noop!(Proposals::withdraw(RuntimeOrigin::signed(*BOB), project_key), Error::<Test>::UserIsNotInitiator);
+        assert_noop!(Proposals::withdraw(RuntimeOrigin::signed(*DAVE), project_key), Error::<Test>::UserIsNotInitiator);
     });
 }
-
 
 #[test]
-fn vote_on_milestone_does_auto_finalise_above_or_equal_threshold() {
+fn withdraw_only_transfers_approved_milestones() {
     build_test_externality().execute_with(|| {
-        assert!(false)
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*CHARLIE), project_key, milestone_key, true).unwrap();
+
+        let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 10000 / 100;
+        let alice_expected_balance = alice_before + 10000 - expected_fee;
+        assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
+
+        let project_account = crate::Pallet::<Test>::project_account_id(project_key);
+        assert_eq!(<Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &project_account), 90_000, "funds havent been taken out of project as expected.");
     });
 }
 
+#[test]
+fn withdraw_removes_project_after_all_funds_taken() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(1);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true).unwrap();
+        assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
+        assert!(Projects::<Test>::get(project_key).is_none(), "Project should have been removed after funds withdrawn.")
+    });
+}
+
+#[test]
+fn withdraw_takes_imbue_fee() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let pallet_account = crate::Pallet::<Test>::account_id();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true).unwrap();
+        assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
+        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 10000 / 100;
+        assert_eq!(<Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &pallet_account), expected_fee, "fee hasnt been taken out of project as expected.");
+    });
+}
+
+#[test]
+fn withdraw_cannot_double_withdraw() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let pallet_account = crate::Pallet::<Test>::account_id();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true).unwrap();
+        assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
+        assert_noop!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key), Error::<Test>::NoAvailableFundsToWithdraw);
+    });
+}
+
+#[test]
+fn withdraw_once_times_with_double_submissions() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let pallet_account = crate::Pallet::<Test>::account_id();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true).unwrap();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true).unwrap();
+
+        let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 20000 / 100;
+        let alice_expected_balance = alice_before + 20000 - expected_fee;
+        assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
+    });
+}
+
+// kind of a beast but worth it.
+#[test]
+fn withdraw_twice_with_intermitent_submission() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let pallet_account = crate::Pallet::<Test>::account_id();
+        
+        // The first submission and withdraw
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true).unwrap();
+        let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 10000 / 100;
+        let alice_expected_balance = alice_before + 10000 - expected_fee;
+        assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
+
+        // The second submission and withdraw
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true).unwrap();
+        let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 10000 / 100;
+        let alice_expected_balance = alice_before + 10000 - expected_fee;
+        assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
+    });
+}
+
+#[test]
+fn withdraw_with_variable_percentage() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB], 100_000);
+        let prop_milestones = vec![
+            ProposedMilestone {
+                percentage_to_unlock: 70
+            },
+            ProposedMilestone {
+                percentage_to_unlock: 30
+            },
+        ];
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let pallet_account = crate::Pallet::<Test>::account_id();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true).unwrap();
+        let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 70000 / 100;
+        let alice_expected_balance = alice_before + 70000 - expected_fee;
+        assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
+    });
+}
+
+#[test]
+fn withdraw_fails_before_approval() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let pallet_account = crate::Pallet::<Test>::account_id();
+        assert_noop!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key), Error::<Test>::NoAvailableFundsToWithdraw);
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
+        assert_noop!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key), Error::<Test>::NoAvailableFundsToWithdraw);
+    });
+}
 
 fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> ContributionsFor<Test> {
     let v = total_amount / accs.len() as u64;
