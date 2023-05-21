@@ -184,7 +184,7 @@ impl<T: Config> Pallet<T> {
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
-        ensure!(who == project.initiator, Error::<T>::InvalidAccount);
+        ensure!(who == project.initiator, Error::<T>::UserIsNotInitiator);
 
         let unlocked_funds: BalanceOf<T> =
             project
@@ -203,11 +203,7 @@ impl<T: Config> Pallet<T> {
                 });
 
         let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
-
-        ensure!(
-            withdrawable > (0_u32).into(),
-            Error::<T>::NoAvailableFundsToWithdraw
-        );
+        ensure!(withdrawable != Zero::zero(), Error::<T>::NoAvailableFundsToWithdraw);
 
         let fee = withdrawable.saturating_mul(<T as Config>::ImbueFee::get().into())
             / MAX_PERCENTAGE.into();
@@ -287,7 +283,6 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Allows a contributer to agree or disagree with a vote of no confidence.
-    /// Additional contributions after the vote is set are not counted and cannot be voted on again, todo?
     pub fn add_vote_no_confidence(
         who: T::AccountId,
         project_key: ProjectKey,
@@ -352,6 +347,7 @@ impl<T: Config> Pallet<T> {
 
             let project_account_id = Self::project_account_id(project_key);
 
+            // TODO: this should be generic and not bound to funding type..
             match project.funding_type {
                 FundingType::Brief | FundingType::Proposal => {
                     // Handle refunds on native chain, there is no need to deal with xcm here.
