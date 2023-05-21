@@ -41,7 +41,8 @@ impl<T: Config> Pallet<T> {
         // Ensure that only the initiator has submitted
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
         ensure!(!MilestoneVotes::<T>::contains_key(project_key, milestone_key), Error::<T>::VoteAlreadyExists);
-        ensure!(project.milestones.contains_key(&milestone_key), Error::<T>::MilestoneDoesNotExist);
+        let milestone = project.milestones.get(&milestone_key).ok_or(Error::<T>::MilestoneDoesNotExist)?;
+        ensure!(!milestone.is_approved, Error::<T>::MilestoneAlreadyApproved);
 
         let expiry_block = <T as Config>::MilestoneVotingWindow::get() + frame_system::Pallet::<T>::block_number();
         Rounds::<T>::insert(project_key, RoundType::VotingRound, expiry_block);
@@ -85,7 +86,7 @@ impl<T: Config> Pallet<T> {
                 if approve_milestone {
                     v.yay = v.yay.saturating_add(contribution_amount);
                 } else {
-                    v.nay = v.yay.saturating_add(contribution_amount);
+                    v.nay = v.nay.saturating_add(contribution_amount);
                 }
                 Ok::<BalanceOf<T>, DispatchError>(v.yay)
             } else {
@@ -100,23 +101,24 @@ impl<T: Config> Pallet<T> {
             .saturating_mul(T::PercentRequiredForVoteToPass::get().into())
             / 100u32.into();
 
-        let mut milestone = project
-            .milestones
-            .get_mut(&milestone_key)
-            .ok_or(Error::<T>::KeyNotFound)?;
-
         //if the yay votes are both greater than the nay votes and the funding threshold then the milestone is approved
         if yay_vote >= funding_threshold {
-            let now = <frame_system::Pallet<T>>::block_number();
+            Projects::<T>::mutate(project_key, |maybe_project| {
+                if let Some(p) = maybe_project {
+                    if let Some(ms) = p.milestones.get_mut(&milestone_key) {
+                        ms.is_approved = true
+                    }
+                }
+            });            
+            
             Self::deposit_event(Event::MilestoneApproved(
                 project.initiator.clone(),
                 project_key,
                 milestone_key,
-                now,
+                <frame_system::Pallet<T>>::block_number(),
             ));
             //TODO: Set vote as approved.
             // set the vote as approved, set the milestone as approved.
-            <Projects<T>>::insert(project_key, &project);
         }
 
         Self::deposit_event(Event::VoteSubmitted(
