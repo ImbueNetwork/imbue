@@ -1,7 +1,7 @@
 use crate::*;
 use common_types::milestone_origin::FundingType;
 use pallet_identity::Judgement;
-use sp_runtime::traits::Saturating;
+use sp_runtime::traits::{Saturating, Zero};
 use sp_std::{collections::btree_map::BTreeMap, vec};
 use scale_info::prelude::format;
 use crate::Error::*;
@@ -46,7 +46,7 @@ impl<T: Config> Pallet<T> {
         let expiry_block = <T as Config>::MilestoneVotingWindow::get() + frame_system::Pallet::<T>::block_number();
         Rounds::<T>::insert(project_key, RoundType::VotingRound, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
-            keys.try_push((project_key, RoundType::VotingRound)).map_err(|_| Error::<T>::Overflow)?;
+            keys.try_push((project_key, RoundType::VotingRound, milestone_key)).map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
         let vote = Vote::default();
@@ -257,11 +257,9 @@ impl<T: Config> Pallet<T> {
             Error::<T>::RoundStarted
         );
 
-        // Create the accosiated vote struct, index can be used as an ensure on length has been called.
         let vote = Vote {
-            yay: Default::default(),
+            yay: Zero::zero(),
             nay: contribution.value,
-            // not using this so approved will be false.
             is_approved: false,
         };
 
@@ -269,7 +267,8 @@ impl<T: Config> Pallet<T> {
 
         Rounds::<T>::insert(project_key, RoundType::VoteOfNoConfidence, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
-            keys.try_push((project_key, RoundType::VoteOfNoConfidence)).map_err(|_| Error::<T>::Overflow)?;
+            // The milestone key does not matter here as we are voting on the entire project.
+            keys.try_push((project_key, RoundType::VoteOfNoConfidence, 0)).map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
         NoConfidenceVotes::<T>::insert(project_key, vote);

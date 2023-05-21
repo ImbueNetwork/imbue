@@ -52,7 +52,7 @@ type BoundedMilestoneKeys<T> = BoundedVec<ProjectKey, <T as Config>::MaxMileston
 pub type BoundedProposedMilestones<T> =
     BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
 pub type AgreementHash = H256;
-type BoundedProjectKeysPerBlock<T> = BoundedVec<(ProjectKey, RoundType), <T as Config>::ExpiringProjectRoundsPerBlock>;
+type BoundedProjectKeysPerBlock<T> = BoundedVec<(ProjectKey, RoundType, MilestoneKey), <T as Config>::ExpiringProjectRoundsPerBlock>;
 type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>;
 
 #[frame_support::pallet]
@@ -115,7 +115,7 @@ pub mod pallet {
         OptionQuery,
     >;
 
-    // TODO: MIGRATION NEEDED
+    // TODO: MIGRATION NEEDE???? WHY?
     #[pallet::storage]
     #[pallet::getter(fn user_votes)]
     pub(super) type UserVotes<T: Config> = StorageMap<
@@ -126,10 +126,11 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    //TODO: Migration from storagemap to doublemap, also using blake 2 128 hasher
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]  
     pub(super) type MilestoneVotes<T: Config> =
-        StorageMap<_, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, OptionQuery>;
+        StorageDoubleMap<_, Blake2_128, ProjectKey, Blake2_128, MilestoneKey, Vote<BalanceOf<T>>, OptionQuery>;
 
     /// This holds the votes when a no confidence round is raised.
     #[pallet::storage]
@@ -141,6 +142,8 @@ pub mod pallet {
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
 
+    // TODO: STORAGE MIGRATION
+    // everything has changed.
     /// Stores the ending block of the project key and round.
     #[pallet::storage]
     pub type Rounds<T> = StorageDoubleMap<_, Blake2_128, ProjectKey, Blake2_128, RoundType, BlockNumberFor<T>, OptionQuery>;
@@ -250,10 +253,20 @@ pub mod pallet {
             let key_type_vec = RoundsExpiring::<T>::take(n);
 
             key_type_vec.iter().for_each(|item| {
+                let (project_key, round_type, milestone_key) = item;
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                Rounds::<T>::remove(item.0, item.1);
-
-                // TODO: Match round type then Remove votes
+                Rounds::<T>::remove(project_key, round_type);
+                match round_type {
+                    RoundType::VotingRound => {
+                        // Since the threshold hasnt been met we must remove the vote to allow further
+                        // milestone submission.
+                        MilestoneVotes::<T>::remove(project_key, milestone_key);
+                    }
+                    RoundType::VoteOfNoConfidence => {
+                        // Here the vote can still be finalised, so do nothing for now
+                        //TODO:
+                    }
+                }
             });
 
             weight
@@ -291,7 +304,6 @@ pub mod pallet {
                 milestone_key,
                 approve_milestone,
             )
-            
         }
 
         /// Step 7 (INITATOR)
@@ -366,6 +378,8 @@ pub mod pallet {
     }
 }
 
+
+// TODO: MIGRATION NEEDED, removed field Contributionround
 #[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, TypeInfo)]
 pub enum RoundType {
     VotingRound,
