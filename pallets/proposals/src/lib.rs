@@ -78,6 +78,7 @@ pub mod pallet {
         // TODO: use percent
         type PercentRequiredForVoteToPass: Get<u8>;
 
+        // TODO: use this.
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
 
@@ -115,16 +116,21 @@ pub mod pallet {
         OptionQuery,
     >;
 
-    // TODO: MIGRATION NEEDE???? WHY?
+    // TODO: MIGRATION NEEDE???? USER votes has been removed in favor of UserHasVoted.
+    // This is because we need to clean up storage.
+    // #[pallet::storage]
+    // #[pallet::getter(fn user_votes)]
+    // pub(super) type UserVotes<T: Config> = StorageMap<
+    //     _,
+    //     Identity,
+    //     (T::AccountId, ProjectKey, MilestoneKey, RoundType),
+    //     bool,
+    //     ValueQuery,
+    // >;
+
+    // Bitmap of users that has voted, bounded by the number of contributors in a project.
     #[pallet::storage]
-    #[pallet::getter(fn user_votes)]
-    pub(super) type UserVotes<T: Config> = StorageMap<
-        _,
-        Identity,
-        (T::AccountId, ProjectKey, MilestoneKey, RoundType),
-        bool,
-        ValueQuery,
-    >;
+    pub(super) type UserHasVoted<T: Config> = StorageMap<_, Blake2_128, (ProjectKey, RoundType, MilestoneKey), BoundedBTreeMap<T::AccountId, bool, <T as Config>::MaximumContributorsPerProject>, ValueQuery>; 
 
     //TODO: Migration from storagemap to doublemap, also using blake 2 128 hasher
     #[pallet::storage]
@@ -255,12 +261,15 @@ pub mod pallet {
             key_type_vec.iter().for_each(|item| {
                 let (project_key, round_type, milestone_key) = item;
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                
+                // Remove the round prevents further voting.
                 Rounds::<T>::remove(project_key, round_type);
                 match round_type {
                     RoundType::VotingRound => {
                         // Since the threshold hasnt been met we must remove the vote to allow further
                         // milestone submission.
                         MilestoneVotes::<T>::remove(project_key, milestone_key);
+                        UserHasVoted::<T>::remove((project_key, RoundType::VotingRound, milestone_key));
                     }
                     RoundType::VoteOfNoConfidence => {
                         // Here the vote can still be finalised, so do nothing for now

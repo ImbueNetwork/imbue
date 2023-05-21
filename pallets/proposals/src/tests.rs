@@ -61,7 +61,7 @@ fn submit_milestone_creates_non_bias_vote() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
         assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1));
-        let created_vote = MilestoneVotes::<Test>::get((project_key, 1)).expect("should exist");
+        let created_vote = MilestoneVotes::<Test>::get(project_key, 1).expect("should exist");
 
         assert_eq!(created_vote.nay, 0);
         assert_eq!(created_vote.yay, 0);
@@ -172,11 +172,11 @@ fn vote_on_milestone_actually_adds_to_vote() {
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
         assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true));
-        let vote = MilestoneVotes::<Test>::get((project_key, milestone_key)).expect("vote should exist");
+        let vote = MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
         assert!(vote.yay == 50_000u64);
         assert!(vote.nay == 0u64);
         assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*CHARLIE), project_key, milestone_key, false));
-        let vote = MilestoneVotes::<Test>::get((project_key, milestone_key)).expect("vote should exist");
+        let vote = MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
         assert!(vote.yay == 50_000u64);
         assert!(vote.nay == 50_000u64);
     });
