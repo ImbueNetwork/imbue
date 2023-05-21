@@ -40,7 +40,7 @@ impl<T: Config> Pallet<T> {
 
         // Ensure that only the initiator has submitted
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
-        ensure!(!MilestoneVotes::<T>::contains_key((project_key, milestone_key)), Error::<T>::VoteAlreadyExists);
+        ensure!(!MilestoneVotes::<T>::contains_key(project_key, milestone_key), Error::<T>::VoteAlreadyExists);
         ensure!(project.milestones.contains_key(&milestone_key), Error::<T>::MilestoneDoesNotExist);
 
         let expiry_block = <T as Config>::MilestoneVotingWindow::get() + frame_system::Pallet::<T>::block_number();
@@ -49,9 +49,9 @@ impl<T: Config> Pallet<T> {
             keys.try_push((project_key, RoundType::VotingRound, milestone_key)).map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
+        
         let vote = Vote::default();
-        let vote_lookup_key = (project_key, milestone_key);
-        <MilestoneVotes<T>>::insert(vote_lookup_key, vote);
+        <MilestoneVotes<T>>::insert(project_key, milestone_key, vote);
 
         Self::deposit_event(Event::MilestoneSubmitted(who, project_key, milestone_key));
         Self::deposit_event(Event::VotingRoundCreated(project_key));
@@ -68,25 +68,29 @@ impl<T: Config> Pallet<T> {
         let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let round = Rounds::<T>::get(project_key, RoundType::VotingRound).ok_or(Error::<T>::VotingRoundNotStarted)?;
         let contribution_amount = project.contributions.get(&who).ok_or(Error::<T>::OnlyContributorsCanVote)?.value;
-        let vote_lookup_key = (who.clone(), project_key, milestone_key, RoundType::VotingRound);
         let now = frame_system::Pallet::<T>::block_number();
-        
-        ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanVote);
-        ensure!(!UserVotes::<T>::contains_key(&vote_lookup_key), Error::<T>::VotesAreImmutable);
-        <UserVotes<T>>::insert(vote_lookup_key, approve_milestone);
+        let voters_bitmap_key = (project_key, RoundType::VotingRound, milestone_key);
 
-        // This should never fail as a round has been created
+        UserHasVoted::<T>::try_mutate(voters_bitmap_key, |votes| {
+            ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
+            votes.try_insert(who.clone(), approve_milestone).map_err(|_|Error::<T>::Overflow)?;
+            Ok::<(), DispatchError>(())
+        })?;
+
         let existing_milestone_vote =
-        Self::milestone_votes((project_key, milestone_key)).ok_or(Error::<T>::VotingRoundNotStarted)?;
+        Self::milestone_votes(project_key, milestone_key).ok_or(Error::<T>::VotingRoundNotStarted)?;
         
-        let yay_vote = MilestoneVotes::<T>::try_mutate((project_key, milestone_key)|maybe_vote| {
-            let v = maybe_vote.ok_or(Error::<T>::VotingRoundNotStarted)?;
-            if approve_milestone {
-                *v.yay = v.yay.saturating_add(contribution_amount);
+        let yay_vote = MilestoneVotes::<T>::try_mutate(project_key, milestone_key,|vote| {
+            if let Some(v) = vote {
+                if approve_milestone {
+                    v.yay = v.yay.saturating_add(contribution_amount);
+                } else {
+                    v.nay = v.yay.saturating_add(contribution_amount);
+                }
+                Ok::<BalanceOf<T>, DispatchError>(v.yay)
             } else {
-                *v.nay = v.yay.saturating_add(contribution_amount);
+                return Err(Error::<T>::VotingRoundNotStarted.into())
             }
-            Ok::<BalanceOf<T>, DispatchError>(v.yay);
         })?;
 
         //once the voting is complete check if the milestone is eligible for auto approval
@@ -139,8 +143,7 @@ impl<T: Config> Pallet<T> {
         let mut milestone = project.milestones.get_mut(&milestone_key).ok_or(Error::<T>::MilestoneDoesNotExist)?;
 
         // set is_approved
-        let vote_lookup_key = (project_key, milestone_key);
-        let vote = Self::milestone_votes(vote_lookup_key).ok_or(Error::<T>::KeyNotFound)?;
+        let vote = Self::milestone_votes(project_key, milestone_key).ok_or(Error::<T>::KeyNotFound)?;
 
         // let the 100 x threshold required = total_votes * majority required
         let threshold_votes: BalanceOf<T> = project
@@ -148,6 +151,7 @@ impl<T: Config> Pallet<T> {
             .saturating_mul(T::PercentRequiredForVoteToPass::get().into());
         let percent_multiple: BalanceOf<T> = 100u32.into();
 
+        // TODO: use mutate.
         ensure!(
             percent_multiple.saturating_mul(vote.yay.saturating_add(vote.nay)) >= threshold_votes,
             Error::<T>::MilestoneVotingNotComplete
@@ -166,7 +170,7 @@ impl<T: Config> Pallet<T> {
                 milestone_key,
                 now,
             ));
-            <MilestoneVotes<T>>::insert(vote_lookup_key, updated_vote);
+            <MilestoneVotes<T>>::insert(project_key, milestone_key, updated_vote);
         }
         <Projects<T>>::insert(project_key, project);
 
@@ -271,6 +275,12 @@ impl<T: Config> Pallet<T> {
             keys.try_push((project_key, RoundType::VoteOfNoConfidence, 0)).map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
+        UserHasVoted::<T>::try_mutate((project_key, RoundType::VoteOfNoConfidence, 0), |votes| {
+            ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
+            votes.try_insert(who.clone(), false).map_err(|_|Error::<T>::Overflow)?;
+            Ok::<(), DispatchError>(())
+        })?;
+
         NoConfidenceVotes::<T>::insert(project_key, vote);
         Self::deposit_event(Event::NoConfidenceRoundCreated(project_key));
         Ok(())
@@ -284,25 +294,26 @@ impl<T: Config> Pallet<T> {
         is_yay: bool,
     ) -> DispatchResult {
         ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
-
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-
         let contribution = project.contributions.get(&who).ok_or(Error::<T>::KeyNotFound)?;
-        let mut vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
-        
-        ensure!(
-            !UserVotes::<T>::contains_key((&who, project_key, 0, RoundType::VoteOfNoConfidence)),
-            Error::<T>::VoteAlreadyExists
-        );
 
-        if is_yay {
-            vote.yay = vote.yay.saturating_add(contribution.value);
-        } else {
-            vote.nay = vote.nay.saturating_add(contribution.value);
-        }
-
-        NoConfidenceVotes::<T>::insert(project_key, vote);
-        UserVotes::<T>::insert((who, project_key, 0, RoundType::VoteOfNoConfidence), true);
+        NoConfidenceVotes::<T>::try_mutate(project_key, |maybe_vote| {
+            if let Some(v) = maybe_vote {
+                if is_yay {
+                    v.yay = v.yay.saturating_add(contribution.value);
+                } else {
+                    v.nay = v.nay.saturating_add(contribution.value);
+                }
+                Ok::<(), DispatchError>(())
+            } else {
+                Err(Error::<T>::VotingRoundNotStarted.into())
+            }
+        })?;
+        UserHasVoted::<T>::try_mutate((project_key, RoundType::VoteOfNoConfidence, 0), |votes| {
+            ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
+            votes.try_insert(who, false).map_err(|_|Error::<T>::Overflow)?;
+            Ok::<(), DispatchError>(())
+        })?;
 
         Self::deposit_event(Event::NoConfidenceRoundVotedUpon(project_key));
         Ok(())
