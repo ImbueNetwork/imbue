@@ -317,7 +317,6 @@ pub mod pallet {
             )
         }
 
-        /// Step 7 (INITATOR)
         /// Finalise the voting on a milestone.
         #[pallet::call_index(10)]
         #[pallet::weight(<T as Config>::WeightInfo::finalise_milestone_voting())]
@@ -331,7 +330,6 @@ pub mod pallet {
             Self::do_finalise_milestone_voting(who, project_key, milestone_key)
         }
 
-        /// Step 8 (INITATOR)
         /// Withdraw some avaliable funds from the project.
         #[pallet::call_index(11)]
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
@@ -358,7 +356,7 @@ pub mod pallet {
 
         /// Vote on an already existing "Vote of no condidence" round.
         /// is_yay is FOR the project's continuation.
-        /// so is_yay = false == against the project from continuing perhaps should be flipped.
+        /// so is_yay = false == against the project from continuing.
         #[pallet::call_index(13)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         pub fn vote_on_no_confidence_round(

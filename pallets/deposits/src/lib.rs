@@ -56,6 +56,7 @@ pub mod pallet {
 		DepositTaken(T::DepositId, BalanceOf<T>),
 		/// A deposit has been reinstated.
 		DepositReturned(T::DepositId, BalanceOf<T>),
+		/// A deposit has been slashed and sent to the slash account.
 		DepositSlashed(T::DepositId, BalanceOf<T>),
 	}
 
@@ -66,7 +67,6 @@ pub mod pallet {
 		/// The deposit doesnt exist.
 		DepositDoesntExist,
 	}
-
 
 	impl <T: Config> DepositHandler<BalanceOf<T>, AccountIdOf<T>> for Pallet<T> {
 		type CurrencyId = T::CurrencyId;
