@@ -133,6 +133,13 @@ fn vote_on_milestone_after_round_end_fails() {
 }
 
 #[test]
+fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone() {
+    build_test_externality().execute_with(|| {
+        assert!(false)
+    });
+}
+
+#[test]
 fn vote_on_milestone_already_voted() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
