@@ -238,6 +238,7 @@ fn withdraw_removes_project_after_all_funds_taken() {
         let milestone_key = 0;
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
         let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true).unwrap();
+        assert!(Projects::<Test>::get(project_key).is_some());
         assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
         assert!(Projects::<Test>::get(project_key).is_none(), "Project should have been removed after funds withdrawn.")
     });
@@ -266,7 +267,6 @@ fn withdraw_cannot_double_withdraw() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        let pallet_account = crate::Pallet::<Test>::account_id();
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
         let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true).unwrap();
         assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
@@ -280,7 +280,6 @@ fn withdraw_once_times_with_double_submissions() {
         let cont = get_contributions(vec![*BOB], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        let pallet_account = crate::Pallet::<Test>::account_id();
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
         let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true).unwrap();
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
@@ -302,7 +301,6 @@ fn withdraw_twice_with_intermitent_submission() {
         let cont = get_contributions(vec![*BOB], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        let pallet_account = crate::Pallet::<Test>::account_id();
         
         // The first submission and withdraw
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
