@@ -87,7 +87,7 @@ fn submit_milestone_can_submit_again_after_failed_vote() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
         assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1));
-        let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::ExpiringProjectRoundsPerBlock::get() as u64;
+        let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::MilestoneVotingWindow::get() as u64;
         run_to_block(expiry_block + 1);
         assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1));
     });
@@ -96,7 +96,17 @@ fn submit_milestone_can_submit_again_after_failed_vote() {
 #[test]
 fn submit_milestone_cannot_submit_again_after_success_vote() {
     build_test_externality().execute_with(|| {
-        assert!(false)
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+        assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true));
+        assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*CHARLIE), project_key, milestone_key, true));
+        // The auto approval should have approved it here.
+        let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::MilestoneVotingWindow::get() as u64;
+        run_to_block(expiry_block + 1);
+        assert_noop!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key), Error::<Test>::MilestoneAlreadyApproved);
     });
 }
 

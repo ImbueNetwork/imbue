@@ -237,6 +237,8 @@ pub mod pallet {
         VotingRoundNotStarted,
         /// you have already voted and cannot change your vote.
         VotesAreImmutable,
+        /// The milestone has already been approved.
+        MilestoneAlreadyApproved,
     }
 
     #[pallet::hooks]
