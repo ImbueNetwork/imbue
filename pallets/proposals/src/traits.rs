@@ -148,9 +148,7 @@ where
 }
 
 #[cfg(feature = "std")]
-pub struct MockRefundHandler<T> {
-    phantom_t: sp_std::marker::PhantomData<T>,
-}
+pub struct MockRefundHandler<T>(T);
 
 #[cfg(feature = "std")]
 impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
@@ -171,10 +169,7 @@ impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
     }
 }
 
-pub struct XcmRefundHandler<T, U> {
-    phantom_t: sp_std::marker::PhantomData<T>,
-    phantom_u: sp_std::marker::PhantomData<U>,
-}
+pub struct XcmRefundHandler<T, U>(T, U);
 
 impl<T, U> RefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for XcmRefundHandler<T, U>
 where
