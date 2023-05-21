@@ -238,8 +238,8 @@ parameter_types! {
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
-pub static DAVE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
-pub static JOHN: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
+pub static DAVE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([128u8; 32]));
+pub static JOHN: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([255u8; 32]));
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()

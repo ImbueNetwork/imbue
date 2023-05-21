@@ -174,7 +174,7 @@ pub mod pallet {
         /// Successfully withdrawn funds from the project.
         ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyId),
         /// Vote submited successfully.
-        VoteComplete(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
+        VoteSubmitted(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
         /// A milestone has been approved.
         MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, T::BlockNumber),
         /// You have created a vote of no confidence.
@@ -226,6 +226,8 @@ pub mod pallet {
         InvalidAccount,
         /// The voting round has not started yet.
         VotingRoundNotStarted,
+        /// you have already voted and cannot change your vote.
+        VotesAreImmutable,
     }
 
     #[pallet::hooks]
@@ -250,6 +252,7 @@ pub mod pallet {
             key_type_vec.iter().for_each(|item| {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                 Rounds::<T>::remove(item.0, item.1);
+
                 // TODO: Match round type then Remove votes
             });
 
@@ -288,6 +291,7 @@ pub mod pallet {
                 milestone_key,
                 approve_milestone,
             )
+            
         }
 
         /// Step 7 (INITATOR)
