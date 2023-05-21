@@ -38,9 +38,7 @@ impl<T: Config> Pallet<T> {
         let now = <frame_system::Pallet<T>>::block_number();
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
-        // Ensure that only the initiator has submitted
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
-        ensure!(!MilestoneVotes::<T>::contains_key(project_key, milestone_key), Error::<T>::VoteAlreadyExists);
         let milestone = project.milestones.get(&milestone_key).ok_or(Error::<T>::MilestoneDoesNotExist)?;
         ensure!(!milestone.is_approved, Error::<T>::MilestoneAlreadyApproved);
 
@@ -50,10 +48,10 @@ impl<T: Config> Pallet<T> {
             keys.try_push((project_key, RoundType::VotingRound, milestone_key)).map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
-        
+        UserHasVoted::<T>::remove((project_key, RoundType::VotingRound, milestone_key));
+
         let vote = Vote::default();
         <MilestoneVotes<T>>::insert(project_key, milestone_key, vote);
-
         Self::deposit_event(Event::MilestoneSubmitted(who, project_key, milestone_key));
         Self::deposit_event(Event::VotingRoundCreated(project_key));
         Ok(().into())

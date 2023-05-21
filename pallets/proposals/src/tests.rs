@@ -63,20 +63,26 @@ fn submit_milestone_creates_non_bias_vote() {
         assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1));
         let created_vote = MilestoneVotes::<Test>::get(project_key, 1).expect("should exist");
 
-        assert_eq!(created_vote.nay, 0);
-        assert_eq!(created_vote.yay, 0);
+        assert_eq!(created_vote.nay, 0, "initial vote should be default");
+        assert_eq!(created_vote.yay, 0, "initial vote should be default");
     });
 }
 
 #[test]
-fn submit_milestone_already_submitted() {
+fn submit_milestone_can_resubmit_during_voting_round() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1));
-        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 2));
-        assert_noop!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1), Error::<Test>::VoteAlreadyExists);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+        assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true));
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+        let user_voted = UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key));
+        dbg!(&user_voted);
+        assert_eq!(user_voted.len(), 0usize, "User votes should be defaulted on resubmission.");
+        let group_vote = MilestoneVotes::<Test>::get(project_key, milestone_key).expect("group vote should exist.");
+        assert_eq!(group_vote, Default::default(), "Group vote should have defaulted on resubmission");
     });
 }
 
@@ -145,19 +151,11 @@ fn vote_on_milestone_after_round_end_fails() {
 #[test]
 fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone() {
     build_test_externality().execute_with(|| {
-        assert!(false)
-    });
-}
-
-#[test]
-fn vote_on_milestone_already_voted() {
-    build_test_externality().execute_with(|| {
         let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        let milestone_key = 0;
-        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
-        assert_noop!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key), Error::<Test>::VoteAlreadyExists);
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0));
+        assert_noop!(Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true), Error::<Test>::VotingRoundNotStarted);
     });
 }
 
