@@ -307,6 +307,8 @@ impl<T: Config> Pallet<T> {
 
     /// Collect the vote, if the vote is above the threshold, refund.
     /// Currently this must be called before the round is over to refund.
+    // TODO: Move to pallet-dispute and test there, this pallet should not know what a funding type is.
+    // Instead it should be dealt with in Refund handler trait.
     pub fn call_finalise_no_confidence_vote(
         who: T::AccountId,
         project_key: ProjectKey,
@@ -314,6 +316,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+
         ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanVote);
 
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;

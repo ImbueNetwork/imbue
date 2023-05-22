@@ -267,15 +267,16 @@ pub mod pallet {
                 // Remove the round prevents further voting.
                 Rounds::<T>::remove(project_key, round_type);
                 match round_type {
+                    // Voting rounds automatically finalise if its reached its threshold.
+                    // Therefore we can remove it on round end.
                     RoundType::VotingRound => {
-                        // Since the threshold hasnt been met we must remove the vote to allow further
-                        // milestone submission.
                         MilestoneVotes::<T>::remove(project_key, milestone_key);
                         UserHasVoted::<T>::remove((project_key, RoundType::VotingRound, milestone_key));
                     }
+                    // Votes of no confidence do not finaliese automatically
                     RoundType::VoteOfNoConfidence => {
-                        // Here the vote can still be finalised, so do nothing for now
-                        //TODO:
+                        // for now keep the round in tact and let them finalise.
+                        // todo, this should be handled in pallet-dispute.
                     }
                 }
             });
