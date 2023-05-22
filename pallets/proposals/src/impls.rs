@@ -276,13 +276,11 @@ impl<T: Config> Pallet<T> {
             now,
         ));
 
-        let timestamp = <pallet_timestamp::Pallet<T>>::get();
-
         project.contributions.insert(
             who,
             Contribution {
                 value: new_amount,
-                timestamp,
+                timestamp: frame_system::Pallet::<T>::block_number(),
             },
         );
         project.raised_funds = project.raised_funds.saturating_add(value);
@@ -872,7 +870,7 @@ impl<T: Config> Pallet<T> {
                         )?;
                     }
                 }
-                FundingType::Treasury(_) => {
+                FundingType::Grant(_) => {
                     let mut refund_amount: BalanceOf<T> = Default::default();
                     // Sum the contributions and send a single xcm.
                     for (_acc_id, contribution) in project.contributions.iter() {
@@ -903,7 +901,7 @@ impl<T: Config> Pallet<T> {
 
     // Called to ensure that an account is is a contributor to a project.
     fn ensure_contributor_of<'a>(
-        project: &'a Project<T::AccountId, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>,
+        project: &'a Project<T::AccountId, BalanceOf<T>, T::BlockNumber>,
         account_id: &'a T::AccountId,
     ) -> Result<BalanceOf<T>, Error<T>> {
         let contribution = project.contributions.get(account_id);
