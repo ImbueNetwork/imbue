@@ -17,14 +17,6 @@ impl<T: Config> Pallet<T> {
         T::PalletId::get().into_account_truncating()
     }
 
-    pub fn ensure_initiator(who: T::AccountId, project_key: ProjectKey) -> Result<(), Error<T>> {
-        let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        match project.initiator == who {
-            true => Ok(()),
-            false => Err(Error::<T>::UserIsNotInitiator),
-        }
-    }
-
     pub fn project_account_id(key: ProjectKey) -> AccountIdOf<T> {
         T::PalletId::get().into_sub_account_truncating(format!("//{key}"))
     }
@@ -245,11 +237,10 @@ impl<T: Config> Pallet<T> {
 
     /// This function raises a vote of no confidence.
     /// This round can only be called once and there after can only be voted on.
-    /// The person calling it must be a contributor.
     pub fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
         //ensure that who is a contributor or root
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let contribution = project.contributions.get(&who).ok_or(Error::<T>::KeyNotFound)?;
+        let contribution = project.contributions.get(&who).ok_or(Error::<T>::OnlyContributorsCanVote)?;
 
         // Also ensure that a vote has not already been raised.
         ensure!(
@@ -290,7 +281,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let contribution = project.contributions.get(&who).ok_or(Error::<T>::KeyNotFound)?;
+        let contribution = project.contributions.get(&who).ok_or(Error::<T>::OnlyContributorsCanVote)?;
 
         NoConfidenceVotes::<T>::try_mutate(project_key, |maybe_vote| {
             if let Some(v) = maybe_vote {
@@ -314,10 +305,8 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    /// Called when a contributor wants to finalise a vote of no confidence.
-    /// Votes for the vote of no confidence must reach the majority requred for the vote to pass.
-    /// As defined in the config.
-    /// This also calls a refund of funds to the users.
+    /// Collect the vote, if the vote is above the threshold, refund.
+    /// Currently this must be called before the round is over to refund.
     pub fn call_finalise_no_confidence_vote(
         who: T::AccountId,
         project_key: ProjectKey,
