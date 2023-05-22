@@ -82,8 +82,6 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
         )
         .unwrap();
 
-        tests::run_to_block(System::block_number() + 1u64);
-
         let _ = Proposals::contribute(
             RuntimeOrigin::signed(*BOB),
             Some(1),
@@ -111,6 +109,8 @@ fn assert_state_from_brief_conversion_is_same_as_proposals_flow() {
         );
 
         let contributions_standard = standard_p.contributions.values().collect::<Vec<_>>();
+        dbg!(&contributions_standard);
+        dbg!(&brief_p.contributions.values());
         assert!(brief_p
             .contributions
             .values()

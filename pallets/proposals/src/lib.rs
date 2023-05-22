@@ -52,7 +52,6 @@ pub type MilestoneKey = u32;
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type RoundOf<T> = Round<<T as frame_system::Config>::BlockNumber>;
-pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 pub type ProjectAccountId<T> = <T as frame_system::Config>::AccountId;
 pub type Refunds<T> = Vec<(
     AccountIdOf<T>,
@@ -144,7 +143,7 @@ pub mod pallet {
         _,
         Identity,
         ProjectKey,
-        Project<T::AccountId, BalanceOf<T>, T::BlockNumber, TimestampOf<T>>,
+        Project<T::AccountId, BalanceOf<T>, T::BlockNumber>,
         OptionQuery,
     >;
 
@@ -350,11 +349,11 @@ pub mod pallet {
         /// >
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            if StorageVersion::<T>::get() == Release::V0
-                || StorageVersion::<T>::get() == Release::V1
+            // Only supporting latest upgrade for now.
+            if StorageVersion::<T>::get() == Release::V2
             {
-                weight += migration::v2::migrate::<T>();
-                StorageVersion::<T>::set(Release::V2);
+                weight += migration::v3::migrate::<T>();
+                StorageVersion::<T>::set(Release::V3);
             }
             weight
         }
@@ -713,6 +712,7 @@ pub enum Release {
     V0,
     V1,
     V2,
+    V3
 }
 
 impl Default for Release {
@@ -805,12 +805,12 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 
 /// The struct that holds the descriptive properties of a project.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
+pub struct Project<AccountId, Balance, BlockNumber> {
     pub agreement_hash: H256,
     // TODO: BOund
     pub milestones: BTreeMap<MilestoneKey, Milestone>,
     // TODO: BOund
-    pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
+    pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
     pub currency_id: common_types::CurrencyId,
     pub required_funds: Balance,
     pub withdrawn_funds: Balance,
@@ -826,11 +826,11 @@ pub struct Project<AccountId, Balance, BlockNumber, Timestamp> {
 /// The contribution users made to a proposal project.
 /// TODO: Move to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-pub struct Contribution<Balance, Timestamp> {
+pub struct Contribution<Balance, BlockNumber> {
     /// Contribution value.
     pub value: Balance,
     /// Timestamp of the last contribution.
-    pub timestamp: Timestamp,
+    pub timestamp: BlockNumber,
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]

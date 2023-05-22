@@ -45,7 +45,7 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_timestamp::Config {
+    pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// Maximum amount of milestones per grant.
         type MaxMilestonesPerGrant: Get<u32>;
@@ -58,7 +58,6 @@ pub mod pallet {
             AccountIdOf<Self>,
             BalanceOf<Self>,
             BlockNumberFor<Self>,
-            <Self as pallet_timestamp::Config>::Moment,
         >;
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
@@ -278,7 +277,7 @@ pub mod pallet {
 
             let mut contributions: BTreeMap<
                 AccountIdOf<T>,
-                Contribution<BalanceOf<T>, <T as pallet_timestamp::Config>::Moment>,
+                Contribution<BalanceOf<T>, BlockNumberFor<T>>,
             > = BTreeMap::new();
             let _ = grant
                 .approvers
@@ -288,7 +287,7 @@ pub mod pallet {
                         approver_id.clone(),
                         Contribution {
                             value: grant.amount_requested / (grant.approvers.len() as u32).into(),
-                            timestamp: pallet_timestamp::Pallet::<T>::get(),
+                            timestamp: frame_system::Pallet::<T>::block_number(),
                         },
                     )
                 })
@@ -303,7 +302,7 @@ pub mod pallet {
                     .milestones
                     .try_into()
                     .map_err(|_| Error::<T>::Overflow)?,
-                FundingType::Treasury(grant.treasury_origin),
+                FundingType::Grant(grant.treasury_origin),
             )
             .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
 
