@@ -128,7 +128,7 @@ pub mod pallet {
     //     ValueQuery,
     // >;
 
-    // Bitmap of users that has voted, bounded by the number of contributors in a project.
+    // BTree of users that has voted, bounded by the number of contributors in a project.
     #[pallet::storage]
     pub(super) type UserHasVoted<T: Config> = StorageMap<_, Blake2_128, (ProjectKey, RoundType, MilestoneKey), BoundedBTreeMap<T::AccountId, bool, <T as Config>::MaximumContributorsPerProject>, ValueQuery>; 
 
@@ -288,7 +288,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
 
         /// Submit a milestones to be voted on.
-        #[pallet::call_index(8)]
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
             origin: OriginFor<T>,
@@ -300,7 +300,7 @@ pub mod pallet {
         }
 
         /// The contributors call this to vote on a milestone submission.
-        #[pallet::call_index(9)]
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_milestone())]
         pub fn vote_on_milestone(
             origin: OriginFor<T>,
@@ -318,7 +318,7 @@ pub mod pallet {
         }
 
         /// Finalise the voting on a milestone.
-        #[pallet::call_index(10)]
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::finalise_milestone_voting())]
         pub fn finalise_milestone_voting(
             origin: OriginFor<T>,
@@ -331,7 +331,7 @@ pub mod pallet {
         }
 
         /// Withdraw some avaliable funds from the project.
-        #[pallet::call_index(11)]
+        #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
@@ -344,7 +344,7 @@ pub mod pallet {
         /// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
         /// This will start a round which each contributor can vote on.
         /// The round will last as long as set in the Config.
-        #[pallet::call_index(12)]
+        #[pallet::call_index(4)]
         #[pallet::weight(<T as Config>::WeightInfo::raise_vote_of_no_confidence())]
         pub fn raise_vote_of_no_confidence(
             origin: OriginFor<T>,
@@ -354,10 +354,11 @@ pub mod pallet {
             Self::raise_no_confidence_round(who, project_key)
         }
 
+        /// pallet-disputes?
         /// Vote on an already existing "Vote of no condidence" round.
         /// is_yay is FOR the project's continuation.
-        /// so is_yay = false == against the project from continuing.
-        #[pallet::call_index(13)]
+        /// so is_yay == false == against the project from continuing.
+        #[pallet::call_index(5)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         pub fn vote_on_no_confidence_round(
             origin: OriginFor<T>,
@@ -371,7 +372,7 @@ pub mod pallet {
         /// Finalise a "vote of no condidence" round.
         /// Votes must pass a threshold as defined in the config trait for the vote to succeed.
         #[transactional]
-        #[pallet::call_index(14)]
+        #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::finalise_no_confidence_round())]
         pub fn finalise_no_confidence_round(
             origin: OriginFor<T>,
@@ -449,7 +450,7 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 
 
 // MIGRATION REQUIRED, REMOVED FIELDS: required_funds, approved_for_funding, funding_threshold_met
-/// The struct that holds the descriptive properties of a project.
+/// The struct which contain milestones that can be submitted.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber> {
     pub agreement_hash: H256,

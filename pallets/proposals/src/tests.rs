@@ -363,6 +363,101 @@ fn withdraw_fails_before_approval() {
     });
 }
 
+#[test]
+fn raise_no_confidence_round_already_started() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true).unwrap();
+        assert_ok!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key));
+        assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key), Error::<Test>::RoundStarted);
+    });
+}
+
+#[test]
+fn raise_no_confidence_round_not_contributor() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+
+        assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), project_key), Error::<Test>::OnlyContributorsCanVote);
+    });
+}
+
+#[test]
+fn raise_no_confidence_round_no_project() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), 20), Error::<Test>::ProjectDoesNotExist);
+    });
+}
+
+#[test]
+fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true).unwrap();
+        assert_ok!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key));
+
+        let vote = NoConfidenceVotes::<Test>::get(project_key).expect("vote should exist");
+        assert_eq!(vote.nay, 50_000, "Bobs vote does not equal expected amount.");
+
+        let has_voted = UserHasVoted::<Test>::get((project_key, RoundType::VoteOfNoConfidence, 0));
+        assert!(has_voted.values().len() == 1usize, "The btree should only have a single value, the caller of the round.");
+        assert!(has_voted.contains_key(&BOB), "Bob called the round so should be recorded as voted.");
+    });
+}
+
+#[test]
+fn vote_on_no_confidence_round_no_project() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), 20), Error::<Test>::ProjectDoesNotExist);
+    });
+}
+
+#[test]
+fn vote_on_no_confidence_round_not_in_round() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), 20), Error::<Test>::ProjectDoesNotExist);
+    });
+}
+
+#[test]
+fn vote_on_no_confidence_round_not_contributor() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), 20), Error::<Test>::ProjectDoesNotExist);
+    });
+}
+
+#[test]
+fn vote_on_no_confidence_round_already_voted() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), 20), Error::<Test>::AlreadyVoted);
+    });
+}
+
+#[test]
+fn vote_on_no_confidence_mutates_vote() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), 20), Error::<Test>::AlreadyVoted);
+    });
+}
+
+
+
+
+// Todo: assert the last event of each extrinsic
+
 fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> ContributionsFor<Test> {
     let v = total_amount / accs.len() as u64;
     let now = frame_system::Pallet::<Test>::block_number();
