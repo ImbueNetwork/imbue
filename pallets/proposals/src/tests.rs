@@ -8,6 +8,7 @@ use frame_support::{
     dispatch::{DispatchErrorWithPostInfo, PostDispatchInfo},
 };
 
+use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 
 use sp_std::vec::Vec;
@@ -27,7 +28,7 @@ fn create_a_test_project_with_less_than_100_percent() {
                 RuntimeOrigin::signed(*ALICE),
                 gen_hash(1),
                 bounded_vec![ProposedMilestone {
-                    percentage_to_unlock: 99
+                    percentage_to_unlock: Percent::from_percent(99)
                 }],
                 //funds required
                 1000000u64,
@@ -974,14 +975,14 @@ fn test_finalize_a_milestone_without_voting() {
     let milestone2_key = 1;
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 20,
+        percentage_to_unlock: Percent::from_percent(20u8),
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 30,
+        percentage_to_unlock: Percent::from_percent(30u8),
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 50,
+        percentage_to_unlock: Percent::from_percent(50u8),
     };
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
@@ -1066,14 +1067,14 @@ fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 20,
+        percentage_to_unlock: Percent::from_percent(20u8),
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 30,
+        percentage_to_unlock: Percent::from_percent(30u8),
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 50,
+        percentage_to_unlock: Percent::from_percent(50u8),
     };
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
@@ -1190,14 +1191,14 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 20,
+        percentage_to_unlock: Percent::from_percent(20u8),
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 30,
+        percentage_to_unlock: Percent::from_percent(30u8),
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 50,
+        percentage_to_unlock: Percent::from_percent(50u8),
     };
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
@@ -1296,9 +1297,11 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
         ));
 
         //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let initial_percentage_to_withdraw: u32 =
-            proposed_milestones1.get(0).unwrap().percentage_to_unlock
-                + proposed_milestones1.get(1).unwrap().percentage_to_unlock;
+        let initial_percentage_to_withdraw = proposed_milestones1
+            .get(0)
+            .unwrap()
+            .percentage_to_unlock
+            .saturating_add(proposed_milestones1.get(1).unwrap().percentage_to_unlock);
 
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
@@ -1307,7 +1310,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed()
             additional_amount + required_funds
         );
 
-        let available = required_funds.saturating_mul(initial_percentage_to_withdraw as u64) / 100;
+        let available = initial_percentage_to_withdraw.mul_floor(required_funds);
 
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &ALICE),
@@ -1390,14 +1393,14 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 20,
+        percentage_to_unlock: Percent::from_percent(20u8),
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 30,
+        percentage_to_unlock: Percent::from_percent(30u8),
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 50,
+        percentage_to_unlock: Percent::from_percent(50u8),
     };
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
@@ -1458,9 +1461,11 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         ));
 
         //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw: u32 =
-            proposed_milestones1.get(0).unwrap().percentage_to_unlock
-                + proposed_milestones1.get(1).unwrap().percentage_to_unlock;
+        let total_percentage_to_withdraw = proposed_milestones1
+            .get(0)
+            .unwrap()
+            .percentage_to_unlock
+            .saturating_add(proposed_milestones1.get(1).unwrap().percentage_to_unlock);
 
         let project = Projects::<Test>::get(project_key).expect("qed");
         //making sure that only balance is equal to the amount withdrawn
@@ -1469,10 +1474,7 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
             Tokens::free_balance(CurrencyId::Native, &*ALICE),
             initial_balance
                 .saturating_add(deduct_imbue_fee(
-                    project
-                        .raised_funds
-                        .saturating_mul(total_percentage_to_withdraw as u64)
-                        / 100
+                    total_percentage_to_withdraw.mul_floor(project.raised_funds)
                 ))
                 .saturating_sub(<Test as Config>::ProjectStorageDeposit::get())
         );
@@ -1498,14 +1500,16 @@ fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone
         );
 
         //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw: u32 =
-            proposed_milestones1.get(0).unwrap().percentage_to_unlock
-                + proposed_milestones1.get(1).unwrap().percentage_to_unlock;
+        let total_percentage_to_withdraw = proposed_milestones1
+            .get(0)
+            .unwrap()
+            .percentage_to_unlock
+            .saturating_add(proposed_milestones1.get(1).unwrap().percentage_to_unlock);
 
         //making sure that only balance is equal to the amount withdrawn
         //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
         let project = Pallet::<Test>::projects(project_key).unwrap();
-        let withdrawal_amount = project.raised_funds * (total_percentage_to_withdraw as u64) / 100;
+        let withdrawal_amount = total_percentage_to_withdraw.mul_floor(project.raised_funds);
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &ALICE),
             initial_balance
@@ -1718,10 +1722,10 @@ fn submit_multiple_milestones() {
     let voting_round2_key = 3;
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 50,
+        percentage_to_unlock: Percent::from_percent(50u8),
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 50,
+        percentage_to_unlock: Percent::from_percent(50u8),
     };
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
@@ -1805,14 +1809,14 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
 
     let milestone1: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 20,
+        percentage_to_unlock: Percent::from_percent(20u8),
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 30,
+        percentage_to_unlock: Percent::from_percent(30u8),
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 50,
+        percentage_to_unlock: Percent::from_percent(50u8),
     };
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
@@ -1923,7 +1927,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
         ));
 
         //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw: u32 =
+        let total_percentage_to_withdraw =
             proposed_milestones1.get(0).unwrap().percentage_to_unlock;
 
         //making sure that only balance is equal to the amount withdrawn
@@ -1935,7 +1939,7 @@ fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
                 .saturating_add(required_funds)
                 .saturating_sub(<Test as Config>::ProjectStorageDeposit::get())
         );
-        let available = required_funds * (total_percentage_to_withdraw as u64) / 100;
+        let available = total_percentage_to_withdraw.mul_floor(required_funds);
         let withdrawn = deduct_imbue_fee(available);
         assert_eq!(
             Tokens::free_balance(CurrencyId::Native, &ALICE),
@@ -2466,14 +2470,14 @@ fn update_an_existing_project() {
     let updated_agreement_hash = gen_hash(200);
     let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let milestone1: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 20,
+        percentage_to_unlock: Percent::from_percent(20u8),
     };
     let milestone2: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 30,
+        percentage_to_unlock: Percent::from_percent(30u8),
     };
 
     let milestone3: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 50,
+        percentage_to_unlock: Percent::from_percent(50u8),
     };
     proposed_milestones.push(milestone1);
     proposed_milestones.push(milestone2);
@@ -2481,10 +2485,10 @@ fn update_an_existing_project() {
 
     let mut updated_proposed_milestones: Vec<ProposedMilestone> = Vec::new();
     let updated_milestone1: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 70,
+        percentage_to_unlock: Percent::from_percent(70u8),
     };
     let updated_milestone2: ProposedMilestone = ProposedMilestone {
-        percentage_to_unlock: 30,
+        percentage_to_unlock: Percent::from_percent(30u8),
     };
 
     updated_proposed_milestones.push(updated_milestone1);
@@ -2533,11 +2537,11 @@ fn only_the_initiator_can_update_project() {
         let project_key = 0;
         let updated_funds = 1_000;
         let updated_milestone1: ProposedMilestone = ProposedMilestone {
-            percentage_to_unlock: 70,
+            percentage_to_unlock: Percent::from_percent(70u8),
         };
 
         let updated_milestone2: ProposedMilestone = ProposedMilestone {
-            percentage_to_unlock: 30,
+            percentage_to_unlock: Percent::from_percent(30u8),
         };
 
         assert_noop!(
@@ -2680,7 +2684,7 @@ pub fn create_project() -> DispatchResultWithPostInfo {
         RuntimeOrigin::signed(*ALICE),
         gen_hash(1),
         bounded_vec![ProposedMilestone {
-            percentage_to_unlock: 100
+            percentage_to_unlock: Percent::from_percent(100u8)
         }],
         //funds required
         1_000_000u64,
@@ -2735,5 +2739,5 @@ fn deduct_imbue_fee(fund: u64) -> u64 {
 }
 
 fn calc_imbue_fee(fund: u64) -> u64 {
-    fund.saturating_mul(<Test as Config>::ImbueFee::get() as u64) / 100
+    <Test as Config>::ImbueFee::get().mul_floor(fund)
 }

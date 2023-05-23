@@ -8,6 +8,7 @@ use sp_runtime::{
 };
 use frame_system::EnsureRoot;
 use common_types::CurrencyId;
+use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519::{Public, Signature};
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
@@ -171,7 +172,7 @@ parameter_types! {
     pub IsIdentityRequired: bool = false;
     pub MaxMilestonesPerProject: u32 = 50;
     pub ProjectStorageDeposit: Balance = 10000;
-    pub ImbueFee: u8 = 20;
+    pub ImbueFee: Percent = Percent::from_percent(20u8);
 }
 
 impl pallet_proposals::Config for Test {
