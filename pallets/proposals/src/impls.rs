@@ -321,11 +321,9 @@ impl<T: Config> Pallet<T> {
 
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
-        let total_contribute = project.raised_funds;
-
         // 100 * Threshold =  (total_contribute * majority_required%)
         let threshold_votes: BalanceOf<T> =
-            total_contribute.saturating_mul(majority_required.into());
+            project.raised_funds.saturating_mul(majority_required.into());
 
         if vote.nay.saturating_mul(100u8.into()) >= threshold_votes {
             NoConfidenceVotes::<T>::remove(project_key);
@@ -357,8 +355,9 @@ impl<T: Config> Pallet<T> {
                         )?;
                     }
                 }
+                // Must a grant be treasury funded?
                 FundingType::Grant(_) => {
-                    let mut refund_amount: BalanceOf<T> = Default::default();
+                    let mut refund_amount: BalanceOf<T> = Zero::zero();
                     // Sum the contributions and send a single xcm.
                     for (_acc_id, contribution) in project.contributions.iter() {
                         let per_contributor = contribution
