@@ -682,11 +682,6 @@ pub enum RoundType {
     VoteOfNoConfidence,
 }
 
-/// <HB SBP Review:
-///
-/// I suspect this comes from the weights v2 migration?
-///
-/// >
 #[derive(Encode, Decode, TypeInfo, PartialEq)]
 #[repr(u32)]
 pub enum Release {
