@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![recursion_limit = "16384"]
 
 use codec::{Decode, Encode};
 use common_types::{CurrencyId, FundingType};
@@ -40,7 +41,6 @@ pub use impls::*;
 type MaxProjectKeysPerRound = ConstU32<1000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
 
-pub type RoundKey = u32;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -116,27 +116,14 @@ pub mod pallet {
         OptionQuery,
     >;
 
-    // TODO: MIGRATION NEEDE???? USER votes has been removed in favor of UserHasVoted.
-    // This is because we need to clean up storage.
-    // #[pallet::storage]
-    // #[pallet::getter(fn user_votes)]
-    // pub(super) type UserVotes<T: Config> = StorageMap<
-    //     _,
-    //     Identity,
-    //     (T::AccountId, ProjectKey, MilestoneKey, RoundType),
-    //     bool,
-    //     ValueQuery,
-    // >;
-
     // BTree of users that has voted, bounded by the number of contributors in a project.
     #[pallet::storage]
     pub(super) type UserHasVoted<T: Config> = StorageMap<_, Blake2_128, (ProjectKey, RoundType, MilestoneKey), BoundedBTreeMap<T::AccountId, bool, <T as Config>::MaximumContributorsPerProject>, ValueQuery>; 
 
-    //TODO: Migration from storagemap to doublemap, also using blake 2 128 hasher
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]  
     pub(super) type MilestoneVotes<T: Config> =
-        StorageDoubleMap<_, Blake2_128, ProjectKey, Blake2_128, MilestoneKey, Vote<BalanceOf<T>>, OptionQuery>;
+        StorageDoubleMap<_, Identity, ProjectKey, Blake2_128, MilestoneKey, Vote<BalanceOf<T>>, OptionQuery>;
 
     /// This holds the votes when a no confidence round is raised.
     #[pallet::storage]
@@ -148,8 +135,6 @@ pub mod pallet {
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
 
-    // TODO: STORAGE MIGRATION
-    // everything has changed.
     /// Stores the ending block of the project key and round.
     #[pallet::storage]
     pub type Rounds<T> = StorageDoubleMap<_, Blake2_128, ProjectKey, Blake2_128, RoundType, BlockNumberFor<T>, OptionQuery>;
@@ -372,7 +357,6 @@ pub mod pallet {
 
         /// Finalise a "vote of no condidence" round.
         /// Votes must pass a threshold as defined in the config trait for the vote to succeed.
-        #[transactional]
         #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::finalise_no_confidence_round())]
         pub fn finalise_no_confidence_round(
@@ -448,7 +432,6 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
         }
     }
 }
-
 
 // MIGRATION REQUIRED, REMOVED FIELDS: required_funds, approved_for_funding, funding_threshold_met
 /// The struct which contain milestones that can be submitted.
