@@ -139,16 +139,25 @@ pub mod v1 {
 pub mod v2 {
     use super::*;
 
+    #[derive(Encode, Clone, Decode)]
+    pub struct MilestoneV1 {
+        pub project_key: u32,
+        pub milestone_key: u32,
+        pub percentage_to_unlock: u32,
+        pub is_approved: bool,
+    }
+
     #[storage_alias]
     pub type Projects<T: Config> =
         StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV2Of<T>, OptionQuery>;
 
-    pub type ProjectV2Of<T> = ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
+    pub type ProjectV2Of<T> =
+        ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
 
     #[derive(Encode, Clone, Decode)]
     pub struct ProjectV2<AccountId, Balance, BlockNumber, Timestamp> {
         pub agreement_hash: H256,
-        pub milestones: BTreeMap<MilestoneKey, Milestone>,
+        pub milestones: BTreeMap<MilestoneKey, MilestoneV1>,
         pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
         pub currency_id: common_types::CurrencyId,
         pub required_funds: Balance,
@@ -164,11 +173,13 @@ pub mod v2 {
 
     pub fn migrate<T: Config + pallet_timestamp::Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
-        let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-        Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
+        let mut migrated_milestones: BTreeMap<MilestoneKey, MilestoneV1> = BTreeMap::new();
+        v2::Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
             let _ = project
-                .milestones.into_values().map(|milestone| {
-                    let migrated_milestone = Milestone {
+                .milestones
+                .into_values()
+                .map(|milestone| {
+                    let migrated_milestone = MilestoneV1 {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,
                         percentage_to_unlock: milestone.percentage_to_unlock,
@@ -179,8 +190,7 @@ pub mod v2 {
                 .collect::<Vec<_>>();
 
             weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: ProjectV2Of<T> =
-            ProjectV2 {
+            let migrated_project: ProjectV2Of<T> = ProjectV2 {
                 milestones: migrated_milestones.clone(),
                 contributions: project.contributions,
                 required_funds: project.required_funds,
@@ -201,13 +211,75 @@ pub mod v2 {
     }
 }
 
-
 // A migration to change depricate the timestamp pallet and use frame_systems blocknumber instead.
 pub mod v3 {
-    use super::*;
+    use super::{v2::MilestoneV1, *};
+
+    pub type ProjectV3Of<T> = ProjectV3<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>;
+    #[storage_alias]
+    pub type Projects<T: Config> =
+        StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV3Of<T>, OptionQuery>;
 
     #[derive(Encode, Decode, Clone)]
     pub struct ProjectV3<AccountId, Balance, BlockNumber> {
+        pub agreement_hash: H256,
+        pub milestones: BTreeMap<MilestoneKey, MilestoneV1>,
+        pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
+        pub currency_id: common_types::CurrencyId,
+        pub required_funds: Balance,
+        pub withdrawn_funds: Balance,
+        pub raised_funds: Balance,
+        pub initiator: AccountId,
+        pub created_on: BlockNumber,
+        pub approved_for_funding: bool,
+        pub funding_threshold_met: bool,
+        pub cancelled: bool,
+        pub funding_type: FundingType,
+    }
+
+    pub fn migrate<T: Config + pallet_timestamp::Config>() -> Weight {
+        let mut weight = T::DbWeight::get().reads_writes(1, 1);
+        let mut migrated_contributions = BTreeMap::new();
+        v3::Projects::<T>::translate(|_project_key, project: v2::ProjectV2Of<T>| {
+            project.contributions.iter().for_each(|(key, cont)| {
+                migrated_contributions.insert(
+                    key.clone(),
+                    Contribution {
+                        value: cont.value,
+                        timestamp: frame_system::Pallet::<T>::block_number(),
+                    },
+                );
+            });
+
+            weight += T::DbWeight::get().reads_writes(1, 1);
+            let migrated_project: ProjectV3<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> =
+                ProjectV3 {
+                    milestones: project.milestones,
+                    contributions: migrated_contributions.clone(),
+                    required_funds: project.required_funds,
+                    currency_id: project.currency_id,
+                    withdrawn_funds: project.withdrawn_funds,
+                    initiator: project.initiator,
+                    created_on: project.created_on,
+                    agreement_hash: Default::default(),
+                    approved_for_funding: project.approved_for_funding,
+                    funding_threshold_met: project.funding_threshold_met,
+                    cancelled: project.cancelled,
+                    raised_funds: project.raised_funds,
+                    funding_type: FundingType::Proposal,
+                };
+            Some(migrated_project)
+        });
+        weight
+    }
+}
+
+// A migration to use `sp_arithmetic` for percent calculations like `percentage_to_unlock`
+pub mod v4 {
+    use super::*;
+
+    #[derive(Encode, Decode, Clone)]
+    pub struct ProjectV4<AccountId, Balance, BlockNumber> {
         pub agreement_hash: H256,
         pub milestones: BTreeMap<MilestoneKey, Milestone>,
         pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
@@ -222,37 +294,42 @@ pub mod v3 {
         pub cancelled: bool,
         pub funding_type: FundingType,
     }
-    
+
     pub fn migrate<T: Config + pallet_timestamp::Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
-        let mut migrated_contributions = BTreeMap::new();
-        Projects::<T>::translate(|_project_key, project: v2::ProjectV2Of<T>| {
-            project.contributions.iter().for_each(|(key, cont)| {
-                migrated_contributions.insert(key.clone(), 
-                    Contribution {
-                        value: cont.value,
-                        timestamp: frame_system::Pallet::<T>::block_number()
-                    }
+        Projects::<T>::translate(|_project_key, project: v3::ProjectV3Of<T>| {
+            let mut migrated_milestones = BTreeMap::new();
+            project.milestones.iter().for_each(|(key, milestone)| {
+                migrated_milestones.insert(
+                    key.clone(),
+                    Milestone {
+                        project_key: milestone.project_key,
+                        milestone_key: milestone.milestone_key,
+                        percentage_to_unlock: Percent::from_percent(
+                            milestone.percentage_to_unlock as u8,
+                        ),
+                        is_approved: milestone.is_approved,
+                    },
                 );
             });
 
             weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> = 
-            Project {
-                milestones: project.milestones,
-                contributions: migrated_contributions.clone(),
-                required_funds: project.required_funds,
-                currency_id: project.currency_id,
-                withdrawn_funds: project.withdrawn_funds,
-                initiator: project.initiator,
-                created_on: project.created_on,
-                agreement_hash: Default::default(),
-                approved_for_funding: project.approved_for_funding,
-                funding_threshold_met: project.funding_threshold_met,
-                cancelled: project.cancelled,
-                raised_funds: project.raised_funds,
-                funding_type: FundingType::Proposal,
-            };
+            let migrated_project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> =
+                Project {
+                    milestones: migrated_milestones,
+                    contributions: project.contributions,
+                    required_funds: project.required_funds,
+                    currency_id: project.currency_id,
+                    withdrawn_funds: project.withdrawn_funds,
+                    initiator: project.initiator,
+                    created_on: project.created_on,
+                    agreement_hash: Default::default(),
+                    approved_for_funding: project.approved_for_funding,
+                    funding_threshold_met: project.funding_threshold_met,
+                    cancelled: project.cancelled,
+                    raised_funds: project.raised_funds,
+                    funding_type: FundingType::Proposal,
+                };
             Some(migrated_project)
         });
         weight

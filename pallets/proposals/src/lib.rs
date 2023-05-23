@@ -12,8 +12,10 @@ use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
+use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Zero};
+use sp_runtime::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
 pub mod traits;
@@ -124,7 +126,7 @@ pub mod pallet {
         type ProjectStorageDeposit: Get<BalanceOf<Self>>;
 
         // Imbue fee in percent 0-99
-        type ImbueFee: Get<u8>;
+        type ImbueFee: Get<Percent>;
     }
 
     #[pallet::pallet]
@@ -366,21 +368,14 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            /// <HB SBP Review:
-            ///
-            /// Re: sp_arithmetic library
-            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough,
-            /// but using the sp_arithmetic library is a safer practice.
-            ///
-            /// >
             // Validation
             let total_percentage = proposed_milestones
                 .iter()
-                .fold(0, |acc: u32, ms: &ProposedMilestone| {
+                .fold(Percent::zero(), |acc: Percent, ms: &ProposedMilestone| {
                     acc.saturating_add(ms.percentage_to_unlock)
                 });
             ensure!(
-                total_percentage == 100,
+                total_percentage.is_one(),
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
@@ -408,21 +403,14 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            /// <HB SBP Review:
-            ///
-            /// Re: sp_arithmetic library
-            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough,
-            /// but using the sp_arithmetic library is a safer practice.
-            ///
-            /// >
             let total_percentage = proposed_milestones
                 .iter()
-                .fold(0, |acc: u32, ms: &ProposedMilestone| {
+                .fold(Percent::zero(), |acc: Percent, ms: &ProposedMilestone| {
                     acc.saturating_add(ms.percentage_to_unlock)
                 });
 
             ensure!(
-                total_percentage == 100,
+                total_percentage.is_one(),
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
@@ -730,19 +718,12 @@ impl<BlockNumber: From<u32>> Round<BlockNumber> {
     }
 }
 
-/// <HB SBP Review:
-///
-/// I would recommend to consider library sp_arithmetic for all what it is percentage related: https://docs.rs/sp-arithmetic/15.0.0/sp_arithmetic/per_things/index.html
-/// This would give more flexibility and safety at the time to maniputale percentages.
-///
-/// >
-
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
 /// TODO: move these to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
-    pub percentage_to_unlock: u32,
+    pub percentage_to_unlock: Percent,
 }
 
 /// The contribution users made to a project project.
@@ -752,7 +733,7 @@ pub struct ProposedMilestone {
 pub struct Milestone {
     pub project_key: ProjectKey,
     pub milestone_key: MilestoneKey,
-    pub percentage_to_unlock: u32,
+    pub percentage_to_unlock: Percent,
     pub is_approved: bool,
 }
 
