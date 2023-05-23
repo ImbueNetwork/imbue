@@ -13,7 +13,7 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
 pub mod traits;
@@ -166,21 +166,12 @@ pub mod pallet {
     /// TODO: Use a multilocation for the refunds
     #[pallet::storage]
     #[pallet::getter(fn refund_queue)]
-    pub type RefundQueue<T> = StorageValue<
-        _,
-        /// <HB SBP Review:
-        ///
-        /// Unbounded Vec on a storage item. This should be addressed before deploying.
-        ///
-        /// >
-        Vec<(
-            AccountIdOf<T>,
-            ProjectAccountId<T>,
-            BalanceOf<T>,
-            CurrencyId,
-        )>,
-        ValueQuery,
-    >;
+    /// <HB SBP Review:
+    ///
+    /// Unbounded Vec on a storage item. This should be addressed before deploying.
+    ///
+    /// >
+    pub type RefundQueue<T> = StorageValue<_, Refunds<T>, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -264,9 +255,9 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         /// <HB SBP Review:
-        /// 
+        ///
         /// I see this hook valid on testnet but if you will deploy this with weights v2 already, you can totally remove this.
-        /// 
+        ///
         /// >
         fn on_runtime_upgrade() -> Weight {
              let mut weight = T::DbWeight::get().reads_writes(1, 1);
@@ -421,9 +412,9 @@ pub enum RoundType {
 }
 
 /// <HB SBP Review:
-/// 
+///
 /// I suspect this comes from the weights v2 migration?
-/// 
+///
 /// >
 #[derive(Encode, Decode, TypeInfo, PartialEq)]
 #[repr(u32)]
@@ -431,7 +422,7 @@ pub enum Release {
     V0,
     V1,
     V2,
-    V3
+    V3,
 }
 
 impl Default for Release {
@@ -477,13 +468,8 @@ pub struct Vote<Balance> {
 impl<Balance: From<u32>> Default for Vote<Balance> {
     fn default() -> Self {
         Self {
-            /// <HB SBP Review:
-            /// 
-            /// I would avoid hardocoding types of this kind. Please use Zero::zero() instead.
-            /// 
-            /// >
-            yay: (0_u32).into(),
-            nay: (0_u32).into(),
+            yay: Balance::from(Zero::zero()),
+            nay: Balance::from(Zero::zero()),
             is_approved: false,
         }
     }

@@ -30,6 +30,7 @@ pub mod pallet {
     use pallet_proposals::traits::IntoProposal;
     use pallet_proposals::{Contribution, ProposedMilestone};
     use sp_core::{Hasher, H256};
+    use sp_runtime::traits::Zero;
     use sp_std::convert::{From, TryInto};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -63,11 +64,7 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The type that allows for evolution from brief to proposal.
-        type IntoProposal: IntoProposal<
-            AccountIdOf<Self>,
-            BalanceOf<Self>,
-            BlockNumberFor<Self>,
-        >;
+        type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
 
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
@@ -148,12 +145,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Approve an account so that they can be accepted as an applicant.
         #[pallet::call_index(1)]
-        /// <HB SBP Review:
-        /// 
-        /// It seems you guys forgot to add the weight from the benchmarking result.
-        /// 
-        /// >
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::add_to_fellowship())]
         pub fn add_to_fellowship(
             origin: OriginFor<T>,
             account_id: AccountIdOf<T>,
@@ -190,11 +182,11 @@ pub mod pallet {
             );
 
             /// <HB SBP Review:
-            /// 
+            ///
             /// Re: sp_arithmetic library
-            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough, 
+            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough,
             /// but using the sp_arithmetic library is a safer practice.
-            /// 
+            ///
             /// >
             // Validation
             let total_percentage = milestones
@@ -221,24 +213,18 @@ pub mod pallet {
             // );
 
             /// <HB SBP Review:
-            /// 
+            ///
             /// Usually balances reverves are fixed and determined at the runtime level since it is supposed to be a storage sanity measure.
             /// With the current design i could just reserve 0.000001 USD and that would be still chip to attack the network.
             /// As you are working in a multi-currency environment, i would suggest creating a new pallet that might define reserve values per currency.
-            /// This new pallet would require root origin and it might be called from goverance chain. 
+            /// This new pallet would require root origin and it might be called from goverance chain.
             /// Or another option would be to only accept deposits in the native currency of the chain.
-            /// 
+            ///
             /// >
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
-            /// <HB SBP Review:
-            /// 
-            /// Please avoid this kind of hardcodes as 0u32.
-            /// You can use : Zero::zero()
-            /// use sp_runtime::traits::{Zero};
-            /// >
-            if initial_contribution > 0u32.into() {
-                 ::<T>::try_mutate(brief_id, |contributions| {
+            if initial_contribution > Zero::zero() {
+                BriefContributions::<T>::try_mutate(brief_id, |contributions| {
                     // This should never fail as the the bound is ensured when a brief is created.
                     let _ = contributions
                         .try_insert(
@@ -291,7 +277,7 @@ pub mod pallet {
             );
 
             /// <HB SBP Review:
-            /// 
+            ///
             /// Same as the previous comment, please about reserves amount.
             /// >
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;

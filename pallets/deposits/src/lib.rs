@@ -113,10 +113,9 @@ pub mod pallet {
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
-	pub struct Deposit<T: Config> {
-		who: AccountIdOf<T>,
-		amount: BalanceOf<T>,
-		currency_id: T::CurrencyId,
-	}
+    pub struct Deposit<T: Config> {
+        who: AccountIdOf<T>,
+        amount: BalanceOf<T>,
+        currency_id: T::CurrencyId,
+    }
 }
-
