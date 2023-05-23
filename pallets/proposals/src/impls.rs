@@ -1,16 +1,10 @@
 use crate::*;
 use common_types::milestone_origin::FundingType;
 use pallet_identity::Judgement;
-use sp_runtime::traits::Saturating;
+use sp_runtime::traits::{CheckedDiv, CheckedMul, Saturating, Zero};
 use sp_std::{collections::btree_map::BTreeMap, vec};
 pub const MAX_PERCENTAGE: u32 = 100u32;
 use scale_info::prelude::format;
-
-/// <HB SBP Review:
-///
-/// I would use checked_div for some divisions to be sure.
-///
-/// >
 
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
@@ -208,13 +202,8 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         value: BalanceOf<T>,
     ) -> DispatchResultWithPostInfo {
-        /// <HB SBP Review:
-        ///
-        /// I would avoid hardocoding types of this kind. Please use Zero::zero() instead.
-        ///
-        /// >
-        // TODO add configurable value for min and max contribution per contributor
-        ensure!(value > (0_u32).into(), Error::<T>::InvalidParam);
+        // TODO: add configurable value for min and max contribution per contributor
+        ensure!(value > Zero::zero(), Error::<T>::InvalidParam);
         let now = <frame_system::Pallet<T>>::block_number();
 
         // round list must be not none
@@ -342,7 +331,7 @@ impl<T: Config> Pallet<T> {
                     now,
                 ));
 
-                let mut milestone = project
+                let milestone = project
                     .milestones
                     .get_mut(&milestone_key)
                     .ok_or(Error::<T>::MilestoneDoesNotExist)?;
@@ -453,7 +442,8 @@ impl<T: Config> Pallet<T> {
             let funding_threshold: BalanceOf<T> = project
                 .raised_funds
                 .saturating_mul(T::PercentRequiredForVoteToPass::get().into())
-                / 100u32.into();
+                .checked_div(&100u32.into())
+                .ok_or(Error::<T>::MathError)?;
 
             let mut milestone = project
                 .milestones
@@ -514,12 +504,12 @@ impl<T: Config> Pallet<T> {
             Error::<T>::MilestoneDoesNotExist
         );
 
-        /// <HB SBP Review:
-        ///
-        /// Please remove this unwrap and manage the error properly.
-        ///
-        /// >
-        let mut milestone = project.milestones.get_mut(&milestone_key).unwrap().clone();
+        let milestone0 = project
+            .milestones
+            .get(&milestone_key)
+            .ok_or(Error::<T>::MilestoneDoesNotExist)?;
+
+        let mut milestone = milestone0.clone();
 
         // set is_approved
         let vote_lookup_key = (project_key, milestone_key);
@@ -553,7 +543,7 @@ impl<T: Config> Pallet<T> {
         }
         //TODO: Case for equal votes?
 
-        project.milestones.insert(milestone_key, milestone);
+        project.milestones.insert(milestone_key, milestone.clone());
         <Projects<T>>::insert(project_key, project);
 
         Ok(().into())
@@ -569,26 +559,23 @@ impl<T: Config> Pallet<T> {
         ensure!(who == project.initiator, Error::<T>::InvalidAccount);
         //ensure that the project is approved_for_funding?
 
-        let unlocked_funds: BalanceOf<T> =
-            project
-                .milestones
-                .iter()
-                .fold(Default::default(), |acc, ms| {
-                    if ms.1.is_approved {
-                        let per_milestone = project
-                            .raised_funds
-                            .saturating_mul(ms.1.percentage_to_unlock.into())
-                            / MAX_PERCENTAGE.into();
-                        acc.saturating_add(per_milestone)
-                    } else {
-                        acc
-                    }
-                });
+        let mut unlocked_funds: BalanceOf<T> = BalanceOf::<T>::zero();
+
+        for (_, ms) in project.milestones.iter() {
+            if ms.is_approved {
+                let per_milestone = project
+                    .raised_funds
+                    .saturating_mul(ms.percentage_to_unlock.into())
+                    .checked_div(&MAX_PERCENTAGE.into())
+                    .ok_or(Error::<T>::MathError)?;
+                unlocked_funds = unlocked_funds.saturating_add(per_milestone);
+            }
+        }
 
         let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
 
         ensure!(
-            withdrawable > (0_u32).into(),
+            withdrawable > BalanceOf::<T>::zero(),
             Error::<T>::NoAvailableFundsToWithdraw
         );
 
@@ -597,8 +584,10 @@ impl<T: Config> Pallet<T> {
         /// This is a good example about how sp_arithmetic can be used to manage percentages in a safe way.
         ///
         /// >
-        let fee = withdrawable.saturating_mul(<T as Config>::ImbueFee::get().into())
-            / MAX_PERCENTAGE.into();
+        let fee = withdrawable
+            .saturating_mul(<T as Config>::ImbueFee::get().into())
+            .checked_div(&MAX_PERCENTAGE.into())
+            .ok_or(Error::<T>::MathError)?;
         let withdrawn = withdrawable.saturating_sub(fee);
 
         let project_account = Self::project_account_id(project_key);
@@ -656,13 +645,11 @@ impl<T: Config> Pallet<T> {
         for (who, contribution) in project.contributions.iter() {
             let project_account_id = Self::project_account_id(project_key);
 
-            /// <HB SBP Review:
-            ///
-            /// Unsafe operation. Please use checked_mul or saturated_mul instead.
-            /// And for divisions i always try to use cheched_div just to be sure.
-            /// >
-            let refund_amount: BalanceOf<T> =
-                ((contribution).value * locked_milestone_percentage.into()) / MAX_PERCENTAGE.into();
+            let refund_amount: BalanceOf<T> = contribution
+                .value
+                .saturating_mul(locked_milestone_percentage.into())
+                .checked_div(&MAX_PERCENTAGE.into())
+                .ok_or(Error::<T>::MathError)?;
 
             current_refunds.push((
                 who.clone(),
@@ -670,7 +657,6 @@ impl<T: Config> Pallet<T> {
                 refund_amount,
                 project.currency_id,
             ));
-            //
             refunded_funds = refunded_funds.saturating_add(refund_amount);
         }
 
@@ -861,7 +847,8 @@ impl<T: Config> Pallet<T> {
                         let refund_amount: BalanceOf<T> = contribution
                             .value
                             .saturating_mul(locked_milestone_percentage.into())
-                            / MAX_PERCENTAGE.into();
+                            .checked_div(&MAX_PERCENTAGE.into())
+                            .ok_or(Error::<T>::MathError)?;
                         <T as Config>::MultiCurrency::transfer(
                             project.currency_id,
                             &project_account_id,
@@ -877,7 +864,8 @@ impl<T: Config> Pallet<T> {
                         let per_contributor = contribution
                             .value
                             .saturating_mul(locked_milestone_percentage.into())
-                            / MAX_PERCENTAGE.into();
+                            .checked_div(&MAX_PERCENTAGE.into())
+                            .ok_or(Error::<T>::MathError)?;
                         refund_amount = refund_amount.saturating_add(per_contributor);
                     }
                     <T as Config>::RefundHandler::send_refund_message_to_treasury(

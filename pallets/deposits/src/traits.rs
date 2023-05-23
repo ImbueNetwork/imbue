@@ -1,8 +1,5 @@
-
-
-use codec::FullCodec;
-use frame_support::pallet_prelude::*;
 use frame_support::dispatch::fmt::Debug;
+use frame_support::pallet_prelude::*;
 
 /// A deposit calculator generic over some type that defines what the storage deposit
 /// should be.
@@ -19,7 +16,12 @@ pub trait DepositHandler<Balance, AccountId> {
     type DepositId;
     type StorageItem;
     type CurrencyId;
-    fn take_deposit(who: AccountId, deposit_id: Self::DepositId, item: Self::StorageItem, currency_id: Self::CurrencyId) -> DispatchResult;
+    fn take_deposit(
+        who: AccountId,
+        deposit_id: Self::DepositId,
+        item: Self::StorageItem,
+        currency_id: Self::CurrencyId,
+    ) -> DispatchResult;
     fn return_deposit(deposit_id: Self::DepositId) -> DispatchResult;
     fn slash_reserve_deposit(deposit_id: Self::DepositId) -> DispatchResult;
 }

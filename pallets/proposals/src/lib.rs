@@ -13,7 +13,7 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
 pub mod traits;
@@ -197,21 +197,12 @@ pub mod pallet {
     /// TODO: Use a multilocation for the refunds
     #[pallet::storage]
     #[pallet::getter(fn refund_queue)]
-    pub type RefundQueue<T> = StorageValue<
-        _,
-        /// <HB SBP Review:
-        ///
-        /// Unbounded Vec on a storage item. This should be addressed before deploying.
-        ///
-        /// >
-        Vec<(
-            AccountIdOf<T>,
-            ProjectAccountId<T>,
-            BalanceOf<T>,
-            CurrencyId,
-        )>,
-        ValueQuery,
-    >;
+    /// <HB SBP Review:
+    ///
+    /// Unbounded Vec on a storage item. This should be addressed before deploying.
+    ///
+    /// >
+    pub type RefundQueue<T> = StorageValue<_, Refunds<T>, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -338,20 +329,21 @@ pub mod pallet {
         ImbueRequiredForStorageDep,
         /// White list spot not found
         WhiteListNotFound,
+        /// Error with a mathematical operation
+        MathError,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         /// <HB SBP Review:
-        /// 
+        ///
         /// I see this hook valid on testnet but if you will deploy this with weights v2 already, you can totally remove this.
-        /// 
+        ///
         /// >
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             // Only supporting latest upgrade for now.
-            if StorageVersion::<T>::get() == Release::V2
-            {
+            if StorageVersion::<T>::get() == Release::V2 {
                 weight += migration::v3::migrate::<T>();
                 StorageVersion::<T>::set(Release::V3);
             }
@@ -375,11 +367,11 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             /// <HB SBP Review:
-            /// 
+            ///
             /// Re: sp_arithmetic library
-            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough, 
+            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough,
             /// but using the sp_arithmetic library is a safer practice.
-            /// 
+            ///
             /// >
             // Validation
             let total_percentage = proposed_milestones
@@ -392,13 +384,8 @@ pub mod pallet {
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
-            /// <HB SBP Review:
-            /// 
-            /// Remove the let_ ?
-            /// 
-            /// >
-            let _ = Self::new_project(
-                // TODO: Optimise
+            // TODO: Optimise
+            Self::new_project(
                 who,
                 agreement_hash,
                 proposed_milestones,
@@ -422,11 +409,11 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             /// <HB SBP Review:
-            /// 
+            ///
             /// Re: sp_arithmetic library
-            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough, 
+            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough,
             /// but using the sp_arithmetic library is a safer practice.
-            /// 
+            ///
             /// >
             let total_percentage = proposed_milestones
                 .iter()
@@ -550,12 +537,6 @@ pub mod pallet {
         /// Contribute to a project
         #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::contribute())]
-        /// <HB SBP Review:
-        /// 
-        /// It is not needed anymore to use the transactional macro anymore since it is already added by default for every extrinsic.
-        /// 
-        /// >
-        #[transactional]
         pub fn contribute(
             origin: OriginFor<T>,
             round_key: Option<RoundKey>,
@@ -702,9 +683,9 @@ pub enum RoundType {
 }
 
 /// <HB SBP Review:
-/// 
+///
 /// I suspect this comes from the weights v2 migration?
-/// 
+///
 /// >
 #[derive(Encode, Decode, TypeInfo, PartialEq)]
 #[repr(u32)]
@@ -712,7 +693,7 @@ pub enum Release {
     V0,
     V1,
     V2,
-    V3
+    V3,
 }
 
 impl Default for Release {
@@ -791,13 +772,8 @@ pub struct Vote<Balance> {
 impl<Balance: From<u32>> Default for Vote<Balance> {
     fn default() -> Self {
         Self {
-            /// <HB SBP Review:
-            /// 
-            /// I would avoid hardocoding types of this kind. Please use Zero::zero() instead.
-            /// 
-            /// >
-            yay: (0_u32).into(),
-            nay: (0_u32).into(),
+            yay: Balance::from(Zero::zero()),
+            nay: Balance::from(Zero::zero()),
             is_approved: false,
         }
     }
