@@ -29,6 +29,7 @@ pub mod pallet {
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_proposals::traits::IntoProposal;
     use pallet_proposals::{Contribution, ProposedMilestone};
+    use sp_arithmetic::per_things::Percent;
     use sp_core::{Hasher, H256};
     use sp_runtime::traits::Zero;
     use sp_std::convert::{From, TryInto};
@@ -181,22 +182,14 @@ pub mod pallet {
                 Error::<T>::BriefAlreadyExists
             );
 
-            /// <HB SBP Review:
-            ///
-            /// Re: sp_arithmetic library
-            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough,
-            /// but using the sp_arithmetic library is a safer practice.
-            ///
-            /// >
-            // Validation
             let total_percentage = milestones
                 .iter()
-                .fold(0u32, |acc: u32, ms: &ProposedMilestone| {
+                .fold(Percent::zero(), |acc: Percent, ms: &ProposedMilestone| {
                     acc.saturating_add(ms.percentage_to_unlock)
                 });
 
             ensure!(
-                total_percentage == 100u32,
+                total_percentage.is_one(),
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 

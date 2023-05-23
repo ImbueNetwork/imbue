@@ -30,6 +30,8 @@ pub mod pallet {
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
     use sp_core::H256;
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+    use sp_arithmetic::per_things::Percent;
+    use sp_runtime::Saturating;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -138,17 +140,10 @@ pub mod pallet {
         ) -> DispatchResult {
             let submitter = ensure_signed(origin)?;
 
-            /// <HB SBP Review:
-            ///
-            /// Re: sp_arithmetic library
-            /// For the portion of the code below just acummulating the total percentage of the milestones with u32 seems to be enough,
-            /// but using the sp_arithmetic library is a safer practice.
-            ///
-            /// >
             let total_percentage = proposed_milestones
                 .iter()
-                .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
-            ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
+                .fold(Percent::zero(), |acc: Percent, x| acc.saturating_add(x.percentage_to_unlock));
+            ensure!(total_percentage.is_one(), Error::<T>::MustSumTo100);
 
             ensure!(
                 !PendingGrants::<T>::contains_key(grant_id),
@@ -204,8 +199,8 @@ pub mod pallet {
             if let Some(milestones) = edited_milestones {
                 let total_percentage = milestones
                     .iter()
-                    .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
-                ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
+                    .fold(Percent::zero(), |acc, x| acc.saturating_add(x.percentage_to_unlock));
+                ensure!(total_percentage.is_one(), Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
             if let Some(approvers) = edited_approvers {

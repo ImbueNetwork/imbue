@@ -1,4 +1,3 @@
-use frame_support::dispatch::fmt::Debug;
 use frame_support::pallet_prelude::*;
 
 /// A deposit calculator generic over some type that defines what the storage deposit

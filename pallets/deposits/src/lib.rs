@@ -19,7 +19,6 @@ pub mod pallet {
     use codec::FullCodec;
     use frame_support::dispatch::fmt::Debug;
     use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
