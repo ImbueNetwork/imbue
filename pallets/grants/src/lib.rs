@@ -54,11 +54,7 @@ pub mod pallet {
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
         /// The type that converts into a proposal for milestone submission.
-        type IntoProposal: IntoProposal<
-            AccountIdOf<Self>,
-            BalanceOf<Self>,
-            BlockNumberFor<Self>,
-        >;
+        type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
 
