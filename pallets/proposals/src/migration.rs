@@ -140,16 +140,25 @@ mod v1 {
 mod v2 {
     use super::*;
 
+    #[derive(Encode, Clone, Decode)]
+    pub struct MilestoneV1 {
+        pub project_key: u32,
+        pub milestone_key: u32,
+        pub percentage_to_unlock: u32,
+        pub is_approved: bool,
+    }
+
     #[storage_alias]
     pub type Projects<T: Config> =
         StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV2Of<T>, OptionQuery>;
 
-    pub type ProjectV2Of<T> = ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
+    pub type ProjectV2Of<T> =
+        ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
 
     #[derive(Encode, Clone, Decode)]
     pub struct ProjectV2<AccountId, Balance, BlockNumber, Timestamp> {
         pub agreement_hash: H256,
-        pub milestones: BTreeMap<MilestoneKey, Milestone>,
+        pub milestones: BTreeMap<MilestoneKey, MilestoneV1>,
         pub contributions: BTreeMap<AccountId, Contribution<Balance, Timestamp>>,
         pub currency_id: common_types::CurrencyId,
         pub required_funds: Balance,
@@ -165,11 +174,13 @@ mod v2 {
 
     pub fn migrate<T: Config + pallet_timestamp::Config>() -> Weight {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
-        let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+        let mut migrated_milestones: BTreeMap<MilestoneKey, MilestoneV1> = BTreeMap::new();
         v2::Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
             let _ = project
-                .milestones.into_values().map(|milestone| {
-                    let migrated_milestone = Milestone {
+                .milestones
+                .into_values()
+                .map(|milestone| {
+                    let migrated_milestone = MilestoneV1 {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,
                         percentage_to_unlock: milestone.percentage_to_unlock,
@@ -180,8 +191,7 @@ mod v2 {
                 .collect::<Vec<_>>();
 
             weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: ProjectV2Of<T> =
-            ProjectV2 {
+            let migrated_project: ProjectV2Of<T> = ProjectV2 {
                 milestones: migrated_milestones.clone(),
                 contributions: project.contributions,
                 required_funds: project.required_funds,
@@ -209,12 +219,17 @@ mod v2 {
 // 5. --DONE Rounds is also a DoubleMap
 // 6. --DONE Round type has had contribution_round removed
 pub mod v3 {
-    use super::*;
+    use super::{v2::MilestoneV1, *};
+
+    pub type ProjectV3Of<T> = ProjectV3<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>;
+    #[storage_alias]
+    pub type Projects<T: Config> =
+        StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV3Of<T>, OptionQuery>;
 
     #[derive(Encode, Decode, Clone)]
     pub struct ProjectV3<AccountId, Balance, BlockNumber> {
         pub agreement_hash: H256,
-        pub milestones: BTreeMap<MilestoneKey, Milestone>,
+        pub milestones: BTreeMap<MilestoneKey, MilestoneV1>,
         pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
         pub currency_id: common_types::CurrencyId,
         pub withdrawn_funds: Balance,
@@ -227,13 +242,14 @@ pub mod v3 {
     pub fn migrate_contribution_and_project<T: Config + pallet_timestamp::Config>(weight: &mut Weight) {
         // Migration #1 + #2
         let mut migrated_contributions = BTreeMap::new();
-        Projects::<T>::translate(|_project_key, project: v2::ProjectV2Of<T>| {
+        v3::Projects::<T>::translate(|_project_key, project: v2::ProjectV2Of<T>| {
             project.contributions.iter().for_each(|(key, cont)| {
-                migrated_contributions.insert(key.clone(), 
+                migrated_contributions.insert(
+                    key.clone(),
                     Contribution {
                         value: cont.value,
-                        timestamp: frame_system::Pallet::<T>::block_number()
-                    }
+                        timestamp: frame_system::Pallet::<T>::block_number(),
+                    },
                 );
             });
             *weight += T::DbWeight::get().reads_writes(1, 1);

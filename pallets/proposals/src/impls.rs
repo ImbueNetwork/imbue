@@ -198,9 +198,7 @@ impl<T: Config> Pallet<T> {
             if ms.is_approved {
                 let per_milestone = project
                     .raised_funds
-                    .saturating_mul(ms.percentage_to_unlock.into())
-                    .checked_div(&MAX_PERCENTAGE.into())
-                    .ok_or(Error::<T>::MathError)?;
+                    .saturating_mul(ms.percentage_to_unlock.deconstruct().into());
                 unlocked_funds = unlocked_funds.saturating_add(per_milestone);
             }
         }
@@ -208,15 +206,7 @@ impl<T: Config> Pallet<T> {
         let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
         ensure!(withdrawable != Zero::zero(), Error::<T>::NoAvailableFundsToWithdraw);
 
-        /// HB SBP Review:
-        ///
-        /// This is a good example about how sp_arithmetic can be used to manage percentages in a safe way.
-        ///
-        /// >
-        let fee = withdrawable
-            .saturating_mul(<T as Config>::ImbueFee::get().into())
-            .checked_div(&MAX_PERCENTAGE.into())
-            .ok_or(Error::<T>::MathError)?;
+        let fee = withdrawable.saturating_mul(<T as Config>::ImbueFee::get().deconstruct().into());
         let withdrawn = withdrawable.saturating_sub(fee);
 
         let project_account = Self::project_account_id(project_key);
@@ -362,9 +352,7 @@ impl<T: Config> Pallet<T> {
                     for (acc_id, contribution) in project.contributions.iter() {
                         let refund_amount: BalanceOf<T> = contribution
                             .value
-                            .saturating_mul(locked_milestone_percentage.into())
-                            .checked_div(&MAX_PERCENTAGE.into())
-                            .ok_or(Error::<T>::MathError)?;
+                            .saturating_mul(locked_milestone_percentage.deconstruct().into());
                         <T as Config>::MultiCurrency::transfer(
                             project.currency_id,
                             &project_account_id,
@@ -380,7 +368,7 @@ impl<T: Config> Pallet<T> {
                     for (_acc_id, contribution) in project.contributions.iter() {
                         let per_contributor = contribution
                             .value
-                            .saturating_mul(locked_milestone_percentage.into())
+                            .saturating_mul(locked_milestone_percentage.deconstruct().into())
                             .checked_div(&MAX_PERCENTAGE.into())
                             .ok_or(Error::<T>::MathError)?;
                         refund_amount = refund_amount.saturating_add(per_contributor);

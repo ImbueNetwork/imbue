@@ -11,6 +11,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 
 use pallet_collective::EnsureProportionAtLeast;
+use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto},
@@ -769,7 +770,7 @@ parameter_types! {
     pub const RefundsPerBlock: u8 = 20;
     pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
-    pub const ImbueFee: u8 = 5;
+    pub const ImbueFee: Percent = Percent::from_percent(5_u8);
     pub const ProjectStorageDeposit: Balance = DOLLARS * 200;
     pub const ExpiringProjectRoundsPerBlock: u32 = 50;
 }

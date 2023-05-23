@@ -12,8 +12,10 @@ use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
+use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Zero};
+use sp_runtime::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
 pub mod traits;
@@ -426,19 +428,12 @@ impl Default for Release {
     }
 }
 
-/// <HB SBP Review:
-///
-/// I would recommend to consider library sp_arithmetic for all what it is percentage related: https://docs.rs/sp-arithmetic/15.0.0/sp_arithmetic/per_things/index.html
-/// This would give more flexibility and safety at the time to maniputale percentages.
-///
-/// >
-
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
 /// TODO: move these to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
-    pub percentage_to_unlock: u32,
+    pub percentage_to_unlock: Percent,
 }
 
 /// The contribution users made to a project project.
@@ -448,7 +443,7 @@ pub struct ProposedMilestone {
 pub struct Milestone {
     pub project_key: ProjectKey,
     pub milestone_key: MilestoneKey,
-    pub percentage_to_unlock: u32,
+    pub percentage_to_unlock: Percent,
     pub is_approved: bool,
 }
 
