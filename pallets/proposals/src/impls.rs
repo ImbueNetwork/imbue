@@ -144,13 +144,10 @@ impl<T: Config> Pallet<T> {
         project.currency_id = currency_id;
         project.agreement_hash = agreement_hash;
 
-        /// <HB SBP Review:
-        ///
-        /// Maybe instead of using inset, this is a good candidate for try_mutate as well?
-        ///
-        /// >
         // Add project to list
-        <Projects<T>>::insert(project_key, project);
+        Projects::<T>::mutate_exists(project_key, |p| {
+            *p = Some(project);
+        });
 
         Ok(().into())
     }
