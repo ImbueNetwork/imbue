@@ -7,13 +7,12 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
-
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 
 use common_types::CurrencyId;
 
 use frame_support::once_cell::sync::Lazy;
-
+use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519;
 use sp_runtime::{
     testing::Header,
@@ -204,7 +203,7 @@ parameter_types! {
     pub IsIdentityRequired: bool = false;
     pub MaxMilestonesPerProject: u32 = 50;
     pub ProjectStorageDeposit: Balance = 100;
-    pub ImbueFee: u8 = 5;
+    pub ImbueFee: Percent = Percent::from_percent(5u8);
 }
 
 impl pallet_proposals::Config for Test {

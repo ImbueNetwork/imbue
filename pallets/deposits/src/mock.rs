@@ -118,6 +118,7 @@ impl DepositCalculator<Balance> for MockDepositCalculator {
 	type CurrencyId = CurrencyId;
 	type StorageItem = StorageItem;
     fn calculate_deposit(item: Self::StorageItem, currency: Self::CurrencyId) -> Balance {
+		// TODO:
 		10_000u64
 	}
 }
