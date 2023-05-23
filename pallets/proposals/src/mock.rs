@@ -178,7 +178,7 @@ parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
-    pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;

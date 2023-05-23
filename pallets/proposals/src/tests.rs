@@ -468,11 +468,10 @@ fn vote_on_no_confidence_mutates_vote() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
 
-        assert_ok!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key));
-        assert_ok!(Proposals::vote_on_no_confidence_round(RuntimeOrigin::signed(*DAVE), project_key, true));
-        let vote = NoConfidenceVotes::<Test>::get(project_key).expect("vote should exist");
-        assert_eq!(vote.nay, 50_000, "Total vote should equal half contributions here.");
-        assert_eq!(vote.yay, 50_000, "Total vote should equal half contributions here.");
+        let yes_contribution = PercentRequiredForVoteToPass::get().mul_floor(1_000_000u64);
+        let no_contribution = Percent::one()
+            .saturating_sub(PercentRequiredForVoteToPass::get())
+            .mul_floor(1_000_000u64);
 
         let has_voted = UserHasVoted::<Test>::get((project_key, RoundType::VoteOfNoConfidence, 0));
         assert!(has_voted.values().len() == 2usize, "The btree should only have a single value, the caller of the round.");

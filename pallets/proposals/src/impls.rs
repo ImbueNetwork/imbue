@@ -149,9 +149,8 @@ impl<T: Config> Pallet<T> {
         let vote = Self::milestone_votes(project_key, milestone_key).ok_or(Error::<T>::KeyNotFound)?;
 
         // let the 100 x threshold required = total_votes * majority required
-        let threshold_votes: BalanceOf<T> = project
-            .raised_funds
-            .saturating_mul(T::PercentRequiredForVoteToPass::get().into());
+        let threshold_votes: BalanceOf<T> =
+            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
         let percent_multiple: BalanceOf<T> = 100u32.into();
 
         // TODO: use mutate.
@@ -318,7 +317,7 @@ impl<T: Config> Pallet<T> {
     pub fn call_finalise_no_confidence_vote(
         who: T::AccountId,
         project_key: ProjectKey,
-        majority_required: u8,
+        majority_required: Percent,
     ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
@@ -326,11 +325,13 @@ impl<T: Config> Pallet<T> {
 
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
-        // 100 * Threshold =  (total_contribute * majority_required%)
-        let threshold_votes: BalanceOf<T> =
-            project.raised_funds.saturating_mul(majority_required.into());
+        let total_contribute = project.raised_funds;
 
-        if vote.nay.saturating_mul(100u8.into()) >= threshold_votes {
+        let threshold_votes: BalanceOf<T> = majority_required.mul_floor(total_contribute);
+
+        if vote.nay >= threshold_votes {
+            round.is_canceled = true;
+
             NoConfidenceVotes::<T>::remove(project_key);
             let locked_milestone_percentage = project.milestones.iter().fold(0, |acc, ms| {
                 if !ms.1.is_approved {

@@ -88,8 +88,7 @@ pub mod pallet {
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
 
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
-        // TODO: use percent
-        type PercentRequiredForVoteToPass: Get<u8>;
+        type PercentRequiredForVoteToPass: Get<Percent>;
 
         // TODO: use this.
         /// Maximum number of contributors per project.
