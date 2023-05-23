@@ -13,6 +13,7 @@ use common_types::CurrencyId;
 
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
+use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519;
 use sp_runtime::{
     testing::Header,

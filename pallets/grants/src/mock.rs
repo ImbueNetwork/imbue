@@ -1,10 +1,11 @@
 use crate as pallet_grants;
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
-use frame_support::traits::{ConstU16, ConstU64, Nothing};
+use frame_support::traits::{ConstU16, Nothing};
 use frame_support::{pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
+use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -143,8 +144,7 @@ parameter_types! {
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 50;
     pub ProjectStorageDeposit: Balance = 100;
-    pub ImbueFee: u8 = 5;
-    pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ImbueFee: Percent = Percent::from_percent(5u8);
 }
 
 impl pallet_proposals::Config for Test {

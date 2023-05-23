@@ -196,9 +196,7 @@ impl<T: Config> Pallet<T> {
 
         for (_, ms) in project.milestones.iter() {
             if ms.is_approved {
-                let per_milestone = project
-                    .raised_funds
-                    .saturating_mul(ms.percentage_to_unlock.deconstruct().into());
+                let per_milestone = ms.percentage_to_unlock.mul_floor(project.raised_funds);
                 unlocked_funds = unlocked_funds.saturating_add(per_milestone);
             }
         }
@@ -206,7 +204,7 @@ impl<T: Config> Pallet<T> {
         let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
         ensure!(withdrawable != Zero::zero(), Error::<T>::NoAvailableFundsToWithdraw);
 
-        let fee = withdrawable.saturating_mul(<T as Config>::ImbueFee::get().deconstruct().into());
+        let fee = <T as Config>::ImbueFee::get().mul_floor(withdrawable);
         let withdrawn = withdrawable.saturating_sub(fee);
 
         let project_account = Self::project_account_id(project_key);
@@ -350,9 +348,8 @@ impl<T: Config> Pallet<T> {
                     // Handle refunds on native chain, there is no need to deal with xcm here.
                     // Todo: Batch call using pallet-utility?
                     for (acc_id, contribution) in project.contributions.iter() {
-                        let refund_amount: BalanceOf<T> = contribution
-                            .value
-                            .saturating_mul(locked_milestone_percentage.deconstruct().into());
+                        let refund_amount =
+                            locked_milestone_percentage.mul_floor(contribution.value);
                         <T as Config>::MultiCurrency::transfer(
                             project.currency_id,
                             &project_account_id,
@@ -366,11 +363,8 @@ impl<T: Config> Pallet<T> {
                     let mut refund_amount: BalanceOf<T> = Zero::zero();
                     // Sum the contributions and send a single xcm.
                     for (_acc_id, contribution) in project.contributions.iter() {
-                        let per_contributor = contribution
-                            .value
-                            .saturating_mul(locked_milestone_percentage.deconstruct().into())
-                            .checked_div(&MAX_PERCENTAGE.into())
-                            .ok_or(Error::<T>::MathError)?;
+                        let per_contributor =
+                            locked_milestone_percentage.mul_floor(contribution.value);
                         refund_amount = refund_amount.saturating_add(per_contributor);
                     }
                     <T as Config>::RefundHandler::send_refund_message_to_treasury(

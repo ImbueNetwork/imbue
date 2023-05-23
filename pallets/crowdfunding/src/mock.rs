@@ -8,6 +8,7 @@ use sp_runtime::{
 };
 use frame_system::EnsureRoot;
 use common_types::CurrencyId;
+use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519::{Public, Signature};
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
