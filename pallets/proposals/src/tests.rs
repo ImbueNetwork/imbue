@@ -479,8 +479,9 @@ fn vote_on_no_confidence_mutates_vote() {
     });
 }
 
-
-// Todo: assert the last event of each extrinsic
+// todo: finalise voteof no confidence tests.
+// ^^ is connected to making the pallet generic over funding type.
+// Todo: assert the last event of each extrinsic/
 
 fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> ContributionsFor<Test> {
     let v = total_amount / accs.len() as u64;
