@@ -2420,9 +2420,10 @@ fn test_finalise_milestone_is_ok_on_threshold_vote() {
         )
         .unwrap();
 
-        let yes_contribution = 1_000_000u64 / 100u64 * PercentRequiredForVoteToPass::get() as u64;
-        let no_contribution =
-            1_000_000u64 / 100u64 * (100u8 - PercentRequiredForVoteToPass::get()) as u64;
+        let yes_contribution = PercentRequiredForVoteToPass::get().mul_floor(1_000_000u64);
+        let no_contribution = Percent::one()
+            .saturating_sub(PercentRequiredForVoteToPass::get())
+            .mul_floor(1_000_000u64);
 
         run_to_block(System::block_number() + 1);
 

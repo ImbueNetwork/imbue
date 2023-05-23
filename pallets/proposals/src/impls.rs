@@ -436,11 +436,8 @@ impl<T: Config> Pallet<T> {
             ));
             //once the voting is complete check if the milestone is eligible for auto approval
             //Getting the total threshold required for the milestone to be approved based on the raised funds
-            let funding_threshold: BalanceOf<T> = project
-                .raised_funds
-                .saturating_mul(T::PercentRequiredForVoteToPass::get().into())
-                .checked_div(&100u32.into())
-                .ok_or(Error::<T>::MathError)?;
+            let funding_threshold: BalanceOf<T> =
+                T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
 
             let milestone = project
                 .milestones
@@ -513,9 +510,8 @@ impl<T: Config> Pallet<T> {
         let vote = Self::milestone_votes(vote_lookup_key).ok_or(Error::<T>::KeyNotFound)?;
 
         // let the 100 x threshold required = total_votes * majority required
-        let threshold_votes: BalanceOf<T> = project
-            .raised_funds
-            .saturating_mul(T::PercentRequiredForVoteToPass::get().into());
+        let threshold_votes: BalanceOf<T> =
+            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
         let percent_multiple: BalanceOf<T> = 100u32.into();
 
         ensure!(
@@ -784,7 +780,7 @@ impl<T: Config> Pallet<T> {
         who: T::AccountId,
         round_key: RoundKey,
         project_key: ProjectKey,
-        majority_required: u8,
+        majority_required: Percent,
     ) -> DispatchResultWithPostInfo {
         let mut round = Self::rounds(round_key).ok_or(Error::<T>::KeyNotFound)?;
         ensure!(
@@ -798,11 +794,9 @@ impl<T: Config> Pallet<T> {
 
         let total_contribute = project.raised_funds;
 
-        // 100 * Threshold =  (total_contribute * majority_required%)
-        let threshold_votes: BalanceOf<T> =
-            total_contribute.saturating_mul(majority_required.into());
+        let threshold_votes: BalanceOf<T> = majority_required.mul_floor(total_contribute);
 
-        if vote.nay.saturating_mul(100u8.into()) >= threshold_votes {
+        if vote.nay >= threshold_votes {
             round.is_canceled = true;
 
             NoConfidenceVotes::<T>::remove(project_key);

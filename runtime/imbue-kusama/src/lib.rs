@@ -765,7 +765,7 @@ parameter_types! {
     pub const MaxProjectsPerRound: u32 = 256;
     pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
     pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
-    pub const PercentRequiredForVoteToPass: u8 = 75;
+    pub const PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub const MaximumContributorsPerProject: u32 = 5000;
     pub const RefundsPerBlock: u8 = 20;
     pub const IsIdentityRequired: bool = false;
