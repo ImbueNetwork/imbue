@@ -4,9 +4,6 @@ use pallet_identity::Judgement;
 use sp_runtime::traits::{Saturating, Zero};
 use sp_std::{collections::btree_map::BTreeMap, vec};
 use scale_info::prelude::format;
-use crate::Error::*;
-
-pub const MAX_PERCENTAGE: u32 = 100u32;
 
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
@@ -138,9 +135,8 @@ impl<T: Config> Pallet<T> {
         let vote = Self::milestone_votes(project_key, milestone_key).ok_or(Error::<T>::KeyNotFound)?;
 
         // let the 100 x threshold required = total_votes * majority required
-        let threshold_votes: BalanceOf<T> = project
-            .raised_funds
-            .saturating_mul(T::PercentRequiredForVoteToPass::get().into());
+        let threshold_votes: BalanceOf<T> =
+            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
         let percent_multiple: BalanceOf<T> = 100u32.into();
 
         // TODO: use mutate.
@@ -178,27 +174,19 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::UserIsNotInitiator);
 
-        let unlocked_funds: BalanceOf<T> =
-            project
-                .milestones
-                .iter()
-                .fold(Default::default(), |acc, ms| {
-                    if ms.1.is_approved {
-                        let per_milestone = project
-                            .raised_funds
-                            .saturating_mul(ms.1.percentage_to_unlock.into())
-                            / MAX_PERCENTAGE.into();
-                        acc.saturating_add(per_milestone)
-                    } else {
-                        acc
-                    }
-                });
+        let mut unlocked_funds: BalanceOf<T> = BalanceOf::<T>::zero();
+
+        for (_, ms) in project.milestones.iter() {
+            if ms.is_approved {
+                let per_milestone = ms.percentage_to_unlock.mul_floor(project.raised_funds);
+                unlocked_funds = unlocked_funds.saturating_add(per_milestone);
+            }
+        }
 
         let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
         ensure!(withdrawable != Zero::zero(), Error::<T>::NoAvailableFundsToWithdraw);
 
-        let fee = withdrawable.saturating_mul(<T as Config>::ImbueFee::get().into())
-            / MAX_PERCENTAGE.into();
+        let fee = <T as Config>::ImbueFee::get().mul_floor(withdrawable);
         let withdrawn = withdrawable.saturating_sub(fee);
 
         let project_account = Self::project_account_id(project_key);
@@ -312,7 +300,7 @@ impl<T: Config> Pallet<T> {
     pub fn call_finalise_no_confidence_vote(
         who: T::AccountId,
         project_key: ProjectKey,
-        majority_required: u8,
+        majority_required: Percent,
     ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
@@ -320,19 +308,26 @@ impl<T: Config> Pallet<T> {
 
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
-        // 100 * Threshold =  (total_contribute * majority_required%)
-        let threshold_votes: BalanceOf<T> =
-            project.raised_funds.saturating_mul(majority_required.into());
+        let total_contribute = project.raised_funds;
 
-        if vote.nay.saturating_mul(100u8.into()) >= threshold_votes {
+        let threshold_votes: BalanceOf<T> = majority_required.mul_floor(total_contribute);
+
+        if vote.nay >= threshold_votes {
+            round.is_canceled = true;
+
             NoConfidenceVotes::<T>::remove(project_key);
-            let locked_milestone_percentage = project.milestones.iter().fold(0, |acc, ms| {
-                if !ms.1.is_approved {
-                    acc.saturating_add(ms.1.percentage_to_unlock)
-                } else {
-                    acc
-                }
-            });
+            Rounds::<T>::insert(round_key, Some(round));
+            // TODO: Need a sane bound on contributors in a project.
+            // TODO: the same thing but with milestones.
+
+            let locked_milestone_percentage =
+                project.milestones.iter().fold(Percent::zero(), |acc, ms| {
+                    if !ms.1.is_approved {
+                        acc.saturating_add(ms.1.percentage_to_unlock)
+                    } else {
+                        acc
+                    }
+                });
 
             let project_account_id = Self::project_account_id(project_key);
 
@@ -342,10 +337,8 @@ impl<T: Config> Pallet<T> {
                     // Handle refunds on native chain, there is no need to deal with xcm here.
                     // Todo: Batch call using pallet-utility?
                     for (acc_id, contribution) in project.contributions.iter() {
-                        let refund_amount: BalanceOf<T> = contribution
-                            .value
-                            .saturating_mul(locked_milestone_percentage.into())
-                            / MAX_PERCENTAGE.into();
+                        let refund_amount =
+                            locked_milestone_percentage.mul_floor(contribution.value);
                         <T as Config>::MultiCurrency::transfer(
                             project.currency_id,
                             &project_account_id,
@@ -359,10 +352,8 @@ impl<T: Config> Pallet<T> {
                     let mut refund_amount: BalanceOf<T> = Zero::zero();
                     // Sum the contributions and send a single xcm.
                     for (_acc_id, contribution) in project.contributions.iter() {
-                        let per_contributor = contribution
-                            .value
-                            .saturating_mul(locked_milestone_percentage.into())
-                            / MAX_PERCENTAGE.into();
+                        let per_contributor =
+                            locked_milestone_percentage.mul_floor(contribution.value);
                         refund_amount = refund_amount.saturating_add(per_contributor);
                     }
                     <T as Config>::RefundHandler::send_refund_message_to_treasury(

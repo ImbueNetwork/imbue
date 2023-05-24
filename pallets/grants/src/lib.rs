@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
 pub use pallet::*;
 
 #[cfg(test)]
@@ -21,7 +20,6 @@ mod test_utils;
 pub mod weights;
 pub use weights::*;
 
-
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -32,6 +30,8 @@ pub mod pallet {
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
     use sp_core::H256;
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+    use sp_arithmetic::per_things::Percent;
+    use sp_runtime::Saturating;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -56,11 +56,7 @@ pub mod pallet {
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
         /// The type that converts into a proposal for milestone submission.
-        type IntoProposal: IntoProposal<
-            AccountIdOf<Self>,
-            BalanceOf<Self>,
-            BlockNumberFor<Self>,
-        >;
+        type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
 
@@ -146,8 +142,8 @@ pub mod pallet {
 
             let total_percentage = proposed_milestones
                 .iter()
-                .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
-            ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
+                .fold(Percent::zero(), |acc: Percent, x| acc.saturating_add(x.percentage_to_unlock));
+            ensure!(total_percentage.is_one(), Error::<T>::MustSumTo100);
 
             ensure!(
                 !PendingGrants::<T>::contains_key(grant_id),
@@ -203,8 +199,8 @@ pub mod pallet {
             if let Some(milestones) = edited_milestones {
                 let total_percentage = milestones
                     .iter()
-                    .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
-                ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
+                    .fold(Percent::zero(), |acc, x| acc.saturating_add(x.percentage_to_unlock));
+                ensure!(total_percentage.is_one(), Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
             if let Some(approvers) = edited_approvers {

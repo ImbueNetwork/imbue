@@ -12,8 +12,10 @@ use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
+use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, Zero};
+use sp_runtime::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
 pub mod traits;
@@ -36,6 +38,12 @@ pub mod migration;
 pub mod impls;
 pub use impls::*;
 
+/// <HB SBP Review:
+///
+///
+/// Why are these two constants not configurable as the others?
+///
+/// >
 // The Constants associated with the bounded parameters
 type MaxProjectKeysPerRound = ConstU32<1000>;
 type MaxWhitelistPerProject = ConstU32<10000>;
@@ -50,6 +58,12 @@ type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
 type BoundedMilestoneKeys<T> = BoundedVec<ProjectKey, <T as Config>::MaxMilestonesPerProject>;
 pub type BoundedProposedMilestones<T> =
     BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
+
+/// <HB SBP Review:
+///
+/// I think the project is missing a primitives.rs file where all these kind of definitions should be placed.
+///
+/// >
 pub type AgreementHash = H256;
 type BoundedProjectKeysPerBlock<T> = BoundedVec<(ProjectKey, RoundType, MilestoneKey), <T as Config>::ExpiringProjectRoundsPerBlock>;
 type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>;
@@ -74,8 +88,7 @@ pub mod pallet {
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
 
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
-        // TODO: use percent
-        type PercentRequiredForVoteToPass: Get<u8>;
+        type PercentRequiredForVoteToPass: Get<Percent>;
 
         // TODO: use this.
         /// Maximum number of contributors per project.
@@ -93,8 +106,7 @@ pub mod pallet {
         type ProjectStorageDeposit: Get<BalanceOf<Self>>;
         
         /// Imbue fee in percent 0-99
-        //TODO: use percent.
-        type ImbueFee: Get<u8>;
+        type ImbueFee: Get<Percent>;
 
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
         type ExpiringProjectRoundsPerBlock: Get<u32>;
@@ -102,6 +114,11 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    /// <HB SBP Review:
+    ///
+    /// CRITICAL: This macro should be removed asap. This basically allows storing unbounded Vecs on storage items.
+    ///
+    /// >
     #[pallet::without_storage_info]
     pub struct Pallet<T>(PhantomData<T>);
 
@@ -223,10 +240,17 @@ pub mod pallet {
         VotesAreImmutable,
         /// The milestone has already been approved.
         MilestoneAlreadyApproved,
+        /// Error with a mathematical operation
+        MathError,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        /// <HB SBP Review:
+        ///
+        /// I see this hook valid on testnet but if you will deploy this with weights v2 already, you can totally remove this.
+        ///
+        /// >
         fn on_runtime_upgrade() -> Weight {
              let mut weight = T::DbWeight::get().reads_writes(1, 1);
              // Only supporting latest upgrade for now.
@@ -385,7 +409,8 @@ pub enum Release {
     V0,
     V1,
     V2,
-    V3
+    V3,
+    V4
 }
 
 impl Default for Release {
@@ -399,7 +424,7 @@ impl Default for Release {
 /// TODO: move these to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
-    pub percentage_to_unlock: u32,
+    pub percentage_to_unlock: Percent,
 }
 
 /// The contribution users made to a project project.
@@ -409,7 +434,7 @@ pub struct ProposedMilestone {
 pub struct Milestone {
     pub project_key: ProjectKey,
     pub milestone_key: MilestoneKey,
-    pub percentage_to_unlock: u32,
+    pub percentage_to_unlock: Percent,
     pub is_approved: bool,
 }
 
@@ -424,8 +449,8 @@ pub struct Vote<Balance> {
 impl<Balance: From<u32>> Default for Vote<Balance> {
     fn default() -> Self {
         Self {
-            yay: (0_u32).into(),
-            nay: (0_u32).into(),
+            yay: Balance::from(Zero::zero()),
+            nay: Balance::from(Zero::zero()),
             is_approved: false,
         }
     }

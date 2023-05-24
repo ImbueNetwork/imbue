@@ -339,6 +339,68 @@ pub mod v3 {
     }
 }
 
+// A migration to use `sp_arithmetic` for percent calculations like `percentage_to_unlock`
+pub mod v4 {
+    use super::*;
+
+    #[derive(Encode, Decode, Clone)]
+    pub struct ProjectV4<AccountId, Balance, BlockNumber> {
+        pub agreement_hash: H256,
+        pub milestones: BTreeMap<MilestoneKey, Milestone>,
+        pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
+        pub currency_id: common_types::CurrencyId,
+        pub required_funds: Balance,
+        pub withdrawn_funds: Balance,
+        pub raised_funds: Balance,
+        pub initiator: AccountId,
+        pub created_on: BlockNumber,
+        pub approved_for_funding: bool,
+        pub funding_threshold_met: bool,
+        pub cancelled: bool,
+        pub funding_type: FundingType,
+    }
+
+    pub fn migrate<T: Config + pallet_timestamp::Config>() -> Weight {
+        let mut weight = T::DbWeight::get().reads_writes(1, 1);
+        Projects::<T>::translate(|_project_key, project: v3::ProjectV3Of<T>| {
+            let mut migrated_milestones = BTreeMap::new();
+            project.milestones.iter().for_each(|(key, milestone)| {
+                migrated_milestones.insert(
+                    key.clone(),
+                    Milestone {
+                        project_key: milestone.project_key,
+                        milestone_key: milestone.milestone_key,
+                        percentage_to_unlock: Percent::from_percent(
+                            milestone.percentage_to_unlock as u8,
+                        ),
+                        is_approved: milestone.is_approved,
+                    },
+                );
+            });
+
+            weight += T::DbWeight::get().reads_writes(1, 1);
+            let migrated_project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> =
+                Project {
+                    milestones: migrated_milestones,
+                    contributions: project.contributions,
+                    required_funds: project.required_funds,
+                    currency_id: project.currency_id,
+                    withdrawn_funds: project.withdrawn_funds,
+                    initiator: project.initiator,
+                    created_on: project.created_on,
+                    agreement_hash: Default::default(),
+                    approved_for_funding: project.approved_for_funding,
+                    funding_threshold_met: project.funding_threshold_met,
+                    cancelled: project.cancelled,
+                    raised_funds: project.raised_funds,
+                    funding_type: FundingType::Proposal,
+                };
+            Some(migrated_project)
+        });
+        weight
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

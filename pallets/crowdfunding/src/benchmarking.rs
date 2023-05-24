@@ -4,15 +4,16 @@ use super::*;
 
 #[allow(unused)]
 use crate::Pallet as Template;
-use frame_benchmarking::v1::{benchmarks, whitelisted_caller, impl_benchmark_test_suite, account};
-use frame_system::{RawOrigin, EventRecord};
-use pallet_proposals::ProposedMilestone;
-use frame_support::assert_ok;
-use common_types::CurrencyId;
-use sp_core::{H256, Get};
-use sp_std::collections::btree_map::BTreeMap;
-use orml_traits::MultiCurrency;
 use crate::Pallet as CrowdFunding;
+use common_types::CurrencyId;
+use frame_benchmarking::v1::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_support::assert_ok;
+use frame_system::{EventRecord, RawOrigin};
+use orml_traits::MultiCurrency;
+use pallet_proposals::ProposedMilestone;
+use sp_arithmetic::per_things::Percent;
+use sp_core::{Get, H256};
+use sp_std::collections::btree_map::BTreeMap;
 
 benchmarks! {
     where_clause {
@@ -151,7 +152,7 @@ fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
     }
     let milestones = (0..n)
         .map(|_| ProposedMilestone {
-            percentage_to_unlock: 100 / n,
+            percentage_to_unlock: Percent::from_percent((100 / n) as u8),
         })
         .collect::<Vec<ProposedMilestone>>()
         .try_into()
