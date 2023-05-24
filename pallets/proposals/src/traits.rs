@@ -47,6 +47,19 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
 
 // Some implementations used in Imbue of the traits above.
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
+// For test purposes
+impl <T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for (T) {
+    fn convert_to_proposal(
+        currency_id: CurrencyId,
+        contributions: ContributionsFor<T>,
+        brief_hash: H256,
+        benificiary: AccountIdOf<T>,
+        proposed_milestones: Vec<ProposedMilestone>,
+        funding_type: FundingType,
+    ) -> Result<(), DispatchError> {
+        Ok(())
+    }
+}
 
 impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
     for crate::Pallet<T>

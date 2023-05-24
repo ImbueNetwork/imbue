@@ -202,9 +202,11 @@ parameter_types! {
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
+    pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 50;
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: u8 = 5;
+    pub ExpiringProjectRoundsPerBlock: u32 = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -213,21 +215,18 @@ impl pallet_proposals::Config for Test {
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = ();
-    type MaxProjectsPerRound = ConstU32<4>;
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type RefundsPerBlock = RefundsPerBlock;
-    type IsIdentityRequired = IsIdentityRequired;
-    type MilestoneVotingWindow = TwoWeekBlockUnit;
+    type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
     type ImbueFee = ImbueFee;
+    type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
+    type ProjectStorageDeposit = ProjectStorageDeposit;
 }
-
 parameter_types! {
     pub const BasicDeposit: u64 = 10;
     pub const FieldDeposit: u64 = 10;
