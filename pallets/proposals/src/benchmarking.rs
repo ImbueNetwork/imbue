@@ -7,6 +7,7 @@ use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whiteli
 use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, Pallet as System, RawOrigin};
 use orml_traits::MultiCurrency;
+use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_std::str;
 const _CONTRIBUTION: u32 = 100;
@@ -242,7 +243,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(bob.clone()) ,0)
     verify {
         let fund: u32 = 10_000u32 * milestone_keys.len() as u32;
-        let fee: u32 = fund * (<T as Config>::ImbueFee::get() as u32) / 100;
+        let fee = <T as Config>::ImbueFee::get().mul_floor(fund);
         assert_last_event::<T>(Event::<T>::ProjectFundsWithdrawn(bob, 0, (fund - fee).into(), CurrencyId::Native).into());
     }
 
@@ -380,7 +381,7 @@ fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
     }
     let milestones = (0..n)
         .map(|_| ProposedMilestone {
-            percentage_to_unlock: 100 / n,
+            percentage_to_unlock: Percent::from_percent((100 / n) as u8),
         })
         .collect::<Vec<ProposedMilestone>>()
         .try_into()
