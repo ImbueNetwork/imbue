@@ -1,4 +1,4 @@
-use crate::{mock::*, Error, Event, traits::{DepositCalculator, DepositHandler}, Config, CurrentDeposits };
+use crate::{mock::*, Error, traits::{DepositCalculator, DepositHandler}, Config, CurrentDeposits };
 use frame_support::{assert_noop, assert_ok};
 use common_types::CurrencyId;
 use orml_traits::{MultiReservableCurrency, MultiCurrency};

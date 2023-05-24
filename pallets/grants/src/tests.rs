@@ -3,6 +3,7 @@ use crate::pallet::{BoundedApprovers, BoundedPMilestones, Config, Error, GrantId
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use pallet_proposals::ProposedMilestone;
+use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
 
@@ -10,7 +11,7 @@ use sp_runtime::DispatchError::BadOrigin;
 fn ensure_milestone_percent_equal_100() {
     new_test_ext().execute_with(|| {
         let milestones: BoundedPMilestones<Test> = vec![ProposedMilestone {
-            percentage_to_unlock: 50,
+            percentage_to_unlock: Percent::from_percent(50u8),
         }]
         .try_into()
         .expect("qed");
@@ -194,7 +195,7 @@ fn assert_properties_are_changed_on_edit() {
         let grant_before = PendingGrants::<Test>::get(grant_id).expect("qed");
 
         let edited_milestones: BoundedPMilestones<Test> = vec![ProposedMilestone {
-            percentage_to_unlock: 100,
+            percentage_to_unlock: Percent::from_percent(100u8),
         }]
         .try_into()
         .expect("qed");
@@ -261,7 +262,7 @@ fn assert_edit_fails_if_milestones_sum_less_than_100() {
             grant_id,
         );
         let edited_milestones: BoundedPMilestones<Test> = vec![ProposedMilestone {
-            percentage_to_unlock: 99,
+            percentage_to_unlock: Percent::from_percent(99u8),
         }]
         .try_into()
         .expect("qed");
@@ -380,10 +381,10 @@ pub(crate) fn get_milestones(mut n: u32) -> BoundedPMilestones<Test> {
     if n > max {
         n = max;
     }
-    let percent = 100 / n;
+    let percent = Percent::from_percent((100 / n) as u8);
     (0..n)
         .map(|_m| ProposedMilestone {
-            percentage_to_unlock: percent.try_into().expect("qed"),
+            percentage_to_unlock: percent,
         })
         .collect::<Vec<ProposedMilestone>>()
         .try_into()

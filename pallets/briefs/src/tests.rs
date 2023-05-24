@@ -7,6 +7,7 @@ use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::MultiCurrency;
 use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
+use sp_arithmetic::per_things::Percent;
 use sp_runtime::DispatchError::BadOrigin;
 use std::convert::TryInto;
 
@@ -320,7 +321,7 @@ pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
     }
     let milestones = (0..n)
         .map(|_| ProposedMilestone {
-            percentage_to_unlock: 100 / n,
+            percentage_to_unlock: Percent::from_percent((100 / n) as u8),
         })
         .collect::<Vec<ProposedMilestone>>()
         .try_into()

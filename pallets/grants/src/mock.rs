@@ -1,10 +1,11 @@
 use crate as pallet_grants;
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
-use frame_support::traits::{ConstU16, ConstU64, Nothing};
+use frame_support::traits::{ConstU16, Nothing};
 use frame_support::{pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
+use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -136,14 +137,14 @@ parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
-    pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 50;
     pub ProjectStorageDeposit: Balance = 100;
-    pub ImbueFee: u8 = 5;
+    pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
 }
 

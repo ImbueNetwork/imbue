@@ -10,6 +10,7 @@ use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, RawOrigin};
 use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;
+use sp_arithmetic::per_things::Percent;
 use sp_std::{convert::TryInto, str, vec::Vec};
 
 const SEED: u32 = 0;
@@ -139,7 +140,7 @@ fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
     }
     let milestones = (0..n)
         .map(|_| ProposedMilestone {
-            percentage_to_unlock: 100 / n,
+            percentage_to_unlock: Percent::from_percent((100 / n) as u8),
         })
         .collect::<Vec<ProposedMilestone>>()
         .try_into()

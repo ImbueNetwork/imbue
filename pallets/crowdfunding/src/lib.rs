@@ -20,12 +20,13 @@ pub mod pallet {
         transactional
     };
 	use frame_system::pallet_prelude::*;
-	use pallet_proposals::{Milestone, ProposedMilestone, Vote, Contribution};
+	use pallet_proposals::{Milestone, ProposedMilestone, Contribution};
 	use sp_core::H256;
 	use common_types::{CurrencyId, FundingType};
 	use orml_traits::{MultiReservableCurrency, MultiCurrency};
     use pallet_proposals::traits::IntoProposal;
     use sp_std::collections::btree_map::BTreeMap;
+    use sp_arithmetic::per_things::Percent;
     use pallet_identity::Judgement;
     use frame_support::sp_runtime::Saturating;
     use crate::weights::WeightInfo;
@@ -178,9 +179,9 @@ pub mod pallet {
             currency_id: common_types::CurrencyId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let total_percentage = proposed_milestones.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
+            let total_percentage = proposed_milestones.iter().fold(Percent::zero(), |acc: Percent, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
             ensure!(
-                total_percentage == 100,
+                total_percentage.is_one(),
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
             let _ = Self::new_crowdfund(
@@ -208,8 +209,7 @@ pub mod pallet {
                 let _ = Self::ensure_identity_is_decent(&who)?;
             }
             
-            let mut crowdfund =
-            CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
+            let crowdfund = CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
             ensure!(crowdfund.initiator == who, Error::<T>::UserIsNotInitiator);
             ensure!(
                 !crowdfund.is_converted,
@@ -342,7 +342,7 @@ pub mod pallet {
 #[pallet::hooks]
 impl  <T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
     fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-        let mut weight: Weight = Default::default(); 
+        let weight: Weight = Default::default(); 
         let crowdfund_keys: BoundedKeysPerRound<T> = RoundsExpiring::<T>::take(n);
         weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
@@ -415,9 +415,9 @@ impl<T: Config> Pallet<T> {
         agreement_hash: Option<H256>,
     ) -> DispatchResult {
         if let Some(ms) = proposed_milestones {
-            let total_percentage = ms.iter().fold(0, |acc: u32, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
+            let total_percentage = ms.iter().fold(Percent::zero(), |acc: Percent, ms: &ProposedMilestone| acc.saturating_add(ms.percentage_to_unlock));
             ensure!(
-                total_percentage == 100,
+                total_percentage.is_one(),
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
             crowdfund.milestones = ms;
@@ -517,10 +517,8 @@ impl<T: Config> Pallet<T> {
         crowdfund_key: CrowdFundKey,
     ) -> DispatchResultWithPostInfo {
 
-        let now = <frame_system::Pallet<T>>::block_number();
-        let mut crowdfund =
-            CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
-        let funds_matched = ensure!(crowdfund.raised_funds >= crowdfund.required_funds, Error::<T>::RequiredFundsNotReached);
+        let crowdfund = CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
+        ensure!(crowdfund.raised_funds >= crowdfund.required_funds, Error::<T>::RequiredFundsNotReached);
 
         <T as Config>::IntoProposals::convert_to_proposal(
             crowdfund.currency_id,
