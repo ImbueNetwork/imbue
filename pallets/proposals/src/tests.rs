@@ -21,7 +21,25 @@ fn submit_milestone_milestone_doesnt_exist() {
 #[test]
 fn submit_milestone_no_project() {
     build_test_externality().execute_with(|| {
-        assert_noop!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), 0, 1), Error::<Test>::ProjectDoesNotExist);
+        assert_noop!(
+            Proposals::create_project(
+                RuntimeOrigin::signed(*ALICE),
+                gen_hash(1),
+                bounded_vec![ProposedMilestone {
+                    percentage_to_unlock: Percent::from_percent(99u8)
+                }],
+                //funds required
+                1000000u64,
+                CurrencyId::Native
+            ),
+            DispatchErrorWithPostInfo {
+                post_info: PostDispatchInfo {
+                    actual_weight: None,
+                    pays_fee: Pays::Yes,
+                },
+                error: Error::<Test>::MilestonesTotalPercentageMustEqual100.into()
+            }
+        );
     });
 }
 
