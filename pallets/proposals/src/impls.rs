@@ -314,9 +314,8 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         majority_required: u8,
     ) -> DispatchResultWithPostInfo {
-        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-
+        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
         ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanVote);
 
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
