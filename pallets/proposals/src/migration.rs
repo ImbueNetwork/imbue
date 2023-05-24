@@ -47,7 +47,7 @@ mod v0 {
         StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV0Of<T>, OptionQuery>;
 }
 
-pub mod v1 {
+mod v1 {
     use super::*;
     use crate::migration::v0::MilestoneV0;
 
@@ -137,7 +137,7 @@ pub mod v1 {
     }
 }
 
-pub mod v2 {
+mod v2 {
     use super::*;
 
     #[storage_alias]
@@ -167,7 +167,6 @@ pub mod v2 {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
         let mut migrated_milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
         v2::Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
-            dbg!(&project.milestones);
             let _ = project
                 .milestones.into_values().map(|milestone| {
                     let migrated_milestone = Milestone {

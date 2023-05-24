@@ -484,7 +484,7 @@ fn vote_on_no_confidence_mutates_vote() {
 // ^^ is connected to making the pallet generic over funding type.
 // Todo: assert the last event of each extrinsic/
 
-fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> ContributionsFor<Test> {
+pub fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> ContributionsFor<Test> {
     let v = total_amount / accs.len() as u64;
     let now = frame_system::Pallet::<Test>::block_number();
     let mut out = BTreeMap::new();
@@ -516,7 +516,7 @@ pub fn run_to_block(n: BlockNumber) {
 
 /// Create a project for test purposes, this will not test the paths coming into this pallet via
 /// the IntoProposal trait.
-fn create_project(
+pub fn create_project(
     benificiary: AccountIdOf<Test>,
     contributions: ContributionsFor<Test>,
     proposed_milestones: Vec<ProposedMilestone>,

@@ -771,6 +771,7 @@ parameter_types! {
     pub const MilestoneVotingWindow: BlockNumber = 100800;
     pub const ImbueFee: u8 = 5;
     pub const ProjectStorageDeposit: Balance = DOLLARS * 200;
+    pub const ExpiringProjectRoundsPerBlock: u32 = 50;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -778,20 +779,17 @@ impl pallet_proposals::Config for Runtime {
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Currencies;
     type AuthorityOrigin = AdminOrigin;
-    type MaxProjectsPerRound = MaxProjectsPerRound;
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type RefundsPerBlock = RefundsPerBlock;
-    // TODO: weight info.
     type WeightInfo = ();
-    type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ProjectStorageDeposit = ProjectStorageDeposit;
     type ImbueFee = ImbueFee;
+    type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
 }
 
 parameter_types! {
