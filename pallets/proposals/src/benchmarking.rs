@@ -21,90 +21,38 @@ benchmarks! {
     submit_milestone {
         let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000);
         let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
-
-        let contribution_amount = 1_000_000u32;
-        let milestone_keys: BoundedMilestoneKeys<T> = vec![0].try_into().unwrap();
-
-        // Setup state.
-        create_project_common::<T>(contribution_amount.into());
-        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
-        run_to_block::<T>(5u32.into());
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1), 0, contribution_amount.into())?;
-        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
 
         // (Initiator, ProjectKey, MilestoneKey)
-    }: _(RawOrigin::Signed(bob.clone()), 0, 0)
+    }: _(RawOrigin::Signed(bob.clone()), project_key, 0)
     verify {
        assert_last_event::<T>(Event::<T>::VotingRoundCreated(2, vec![0]).into());
     }
 
     vote_on_milestone {
-        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1000);
+        let cont = get_contributions(vec![*], 10000);
+        let prop_milestones = get_milestones(u32::MAX);
+        let project_key = create_project(RawOrigin::Signed(alice.clone()), cont, prop_milestones, CurrencyId::Native);
 
-        let contribution_amount = 10_000u32;
-        let milestone_keys: BoundedMilestoneKeys<T> = vec![0].try_into().unwrap();
+        Proposals::<T>::submit_milestone(RawOrigin::Signed(alice), project_key, 0);
 
-        // Setup state.
-        create_project_common::<T>(contribution_amount.into());
-        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
-        run_to_block::<T>(5u32.into());
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1), 0, contribution_amount.into())?;
-        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
-        Proposals::<T>::submit_milestone(RawOrigin::Signed(bob.clone()).into(), 0, 0)?;
-
-        run_to_block::<T>(11u32.into());
-        // (Voter, ProjectKey, MilestoneKey, Option<RoundKey>, is_approved)
-    }: _(RawOrigin::Signed(alice.clone()), 0, 0, Some(2), true)
+    }: _(RawOrigin::Signed(alice.clone()), project_key, 0, true)
     verify {
          assert_last_event::<T>(Event::<T>::MilestoneApproved(bob, 0, 0, 11u32.into()).into());
     }
 
-    finalise_milestone_voting {
-        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
-
-        let contribution_amount = 10_000u32;
-        let milestone_keys: BoundedMilestoneKeys<T> = vec![0].try_into().unwrap();
-
-        // Setup state.
-        create_project_common::<T>(contribution_amount.into());
-        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
-        run_to_block::<T>(5u32.into());
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1), 0, contribution_amount.into())?;
-        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
-        Proposals::<T>::submit_milestone(RawOrigin::Signed(bob.clone()).into(), 0, 0)?;
-        run_to_block::<T>(11u32.into());
-        Proposals::<T>::vote_on_milestone(RawOrigin::Signed(alice.clone()).into(), 0, 0, Some(2), true)?;
-
-        // (Initiator, ProjectKey, MilestoneKey)
-    }: _(RawOrigin::Signed(bob.clone()), 0, 0)
-    verify {
-        assert_last_event::<T>(Event::<T>::MilestoneApproved(bob, 0, 0, 11u32.into()).into());
-    }
-
     withdraw {
-        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 10_000_000);
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
+        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(u32::MAX);
+        let project_key = create_project(RawOrigin::Signed(alice.clone()), cont, prop_milestones, CurrencyId::Native);
 
-        let contribution_amount = 10_000u32;
-        let milestone_keys: BoundedMilestoneKeys<T> = (0..<<T as Config>::MaxMilestonesPerProject as Get<u32>>::get()).collect::<Vec<MilestoneKey>>().try_into().unwrap();
-
-        // Setup state.
-        create_project_common::<T>(contribution_amount.into());
-        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0].try_into().unwrap(), RoundType::ContributionRound)?;
-        run_to_block::<T>(5u32.into());
-        for key in milestone_keys.clone() {
-            Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1), 0, contribution_amount.into())?;
-        }
-        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys.clone()))?;
-
-        for key in milestone_keys.clone() {
-            Proposals::<T>::submit_milestone(RawOrigin::Signed(bob.clone()).into(), 0, key)?;
-            run_to_block::<T>(System::<T>::block_number() + 1u32.into());
-            Proposals::<T>::vote_on_milestone(RawOrigin::Signed(alice.clone()).into(), 0, key, Some(key + 2u32), true)?;
-            Proposals::<T>::finalise_milestone_voting(RawOrigin::Signed(bob.clone()).into(), 0, key)?;
-        }
+        for 
+        Proposals::<T>::submit_milestone(RawOrigin::Signed(alice), project_key, 0);
 
         // (Initiator, ProjectKey)
     }: _(RawOrigin::Signed(bob.clone()) ,0)
@@ -214,18 +162,6 @@ fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
     bob
 }
 
-fn run_to_block<T: Config>(n: T::BlockNumber) {
-    while System::<T>::block_number() < n {
-        if System::<T>::block_number() > 1u32.into() {
-            Proposals::<T>::on_finalize(System::<T>::block_number());
-            System::<T>::on_finalize(System::<T>::block_number());
-        }
-        System::<T>::set_block_number(System::<T>::block_number() + 1u32.into());
-        System::<T>::on_initialize(System::<T>::block_number());
-        Proposals::<T>::on_initialize(System::<T>::block_number());
-    }
-}
-
 fn create_funded_user<T: Config>(
     string: &'static str,
     n: u32,
@@ -240,6 +176,8 @@ fn create_funded_user<T: Config>(
     );
     user
 }
+
+fn get_contribution<T: Config>()
 
 fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
     let max = <T as Config>::MaxMilestonesPerProject::get();
