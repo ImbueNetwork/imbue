@@ -28,7 +28,7 @@ fn create_a_test_project_with_less_than_100_percent() {
                 RuntimeOrigin::signed(*ALICE),
                 gen_hash(1),
                 bounded_vec![ProposedMilestone {
-                    percentage_to_unlock: Percent::from_percent(99)
+                    percentage_to_unlock: Percent::from_percent(99u8)
                 }],
                 //funds required
                 1000000u64,
