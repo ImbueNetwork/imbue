@@ -1,5 +1,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "16384"]
 
 use codec::{Decode, Encode};
 use common_types::{CurrencyId, FundingType};
@@ -123,7 +122,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]  
     pub(super) type MilestoneVotes<T: Config> =
-        StorageDoubleMap<_, Identity, ProjectKey, Blake2_128, MilestoneKey, Vote<BalanceOf<T>>, OptionQuery>;
+        StorageDoubleMap<_, Identity, ProjectKey, Identity, MilestoneKey, Vote<BalanceOf<T>>, OptionQuery>;
 
     /// This holds the votes when a no confidence round is raised.
     #[pallet::storage]
