@@ -1,7 +1,7 @@
 use crate::*;
 use common_types::milestone_origin::FundingType;
 use pallet_identity::Judgement;
-use sp_runtime::traits::{CheckedDiv, Saturating, Zero};
+use sp_runtime::traits::{Saturating, Zero};
 use sp_std::{collections::btree_map::BTreeMap, vec};
 pub const MAX_PERCENTAGE: u32 = 100u32;
 use scale_info::prelude::format;
