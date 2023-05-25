@@ -83,10 +83,8 @@ impl<T: Config> Pallet<T> {
 
         //once the voting is complete check if the milestone is eligible for auto approval
         //Getting the total threshold required for the milestone to be approved based on the raised funds
-        let funding_threshold: BalanceOf<T> = project
-            .raised_funds
-            .saturating_mul(T::PercentRequiredForVoteToPass::get().into())
-            / 100u32.into();
+        let funding_threshold: BalanceOf<T> =
+            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
 
         //if the yay votes are both greater than the nay votes and the funding threshold then the milestone is approved
         if yay_vote >= funding_threshold {
@@ -174,8 +172,7 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::UserIsNotInitiator);
 
-        let mut unlocked_funds: BalanceOf<T> = BalanceOf::<T>::zero();
-
+        let mut unlocked_funds: BalanceOf<T> = Zero::zero();
         for (_, ms) in project.milestones.iter() {
             if ms.is_approved {
                 let per_milestone = ms.percentage_to_unlock.mul_floor(project.raised_funds);
@@ -267,7 +264,7 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         is_yay: bool,
     ) -> DispatchResult {
-        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
+        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), Error::<T>::ProjectNotInRound);
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contribution = project.contributions.get(&who).ok_or(Error::<T>::OnlyContributorsCanVote)?;
 
@@ -303,23 +300,13 @@ impl<T: Config> Pallet<T> {
         majority_required: Percent,
     ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), ProjectNotInRound::<T>);
+        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence), Error::<T>::ProjectNotInRound);
         ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanVote);
 
         let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
-
-        let total_contribute = project.raised_funds;
-
-        let threshold_votes: BalanceOf<T> = majority_required.mul_floor(total_contribute);
+        let threshold_votes: BalanceOf<T> = majority_required.mul_floor(project.raised_funds);
 
         if vote.nay >= threshold_votes {
-            round.is_canceled = true;
-
-            NoConfidenceVotes::<T>::remove(project_key);
-            Rounds::<T>::insert(round_key, Some(round));
-            // TODO: Need a sane bound on contributors in a project.
-            // TODO: the same thing but with milestones.
-
             let locked_milestone_percentage =
                 project.milestones.iter().fold(Percent::zero(), |acc, ms| {
                     if !ms.1.is_approved {
