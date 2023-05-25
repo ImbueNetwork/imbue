@@ -236,9 +236,12 @@ fn withdraw_only_transfers_approved_milestones() {
         let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*CHARLIE), project_key, milestone_key, true).unwrap();
 
         let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        dbg!(&alice_before);
         assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 10000 / 100;
+        dbg!(&alice_after);
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10000);
+        dbg!(&expected_fee);
         let alice_expected_balance = alice_before + 10000 - expected_fee;
         assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
 
@@ -273,7 +276,7 @@ fn withdraw_takes_imbue_fee() {
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
         let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true).unwrap();
         assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
-        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 10000 / 100;
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10_000);
         assert_eq!(<Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &pallet_account), expected_fee, "fee hasnt been taken out of project as expected.");
     });
 }
@@ -306,7 +309,7 @@ fn withdraw_once_times_with_double_submissions() {
         let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 20000 / 100;
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(20000);
         let alice_expected_balance = alice_before + 20000 - expected_fee;
         assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
     });
@@ -326,7 +329,7 @@ fn withdraw_twice_with_intermitent_submission() {
         let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 10000 / 100;
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10_000);
         let alice_expected_balance = alice_before + 10000 - expected_fee;
         assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
 
@@ -336,7 +339,7 @@ fn withdraw_twice_with_intermitent_submission() {
         let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 10000 / 100;
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10000);
         let alice_expected_balance = alice_before + 10000 - expected_fee;
         assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
     });
@@ -348,10 +351,10 @@ fn withdraw_with_variable_percentage() {
         let cont = get_contributions(vec![*BOB], 100_000);
         let prop_milestones = vec![
             ProposedMilestone {
-                percentage_to_unlock: 70
+                percentage_to_unlock: Percent::from_percent(70u8)
             },
             ProposedMilestone {
-                percentage_to_unlock: 30
+                percentage_to_unlock: Percent::from_percent(30u8)
             },
         ];
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
@@ -361,7 +364,7 @@ fn withdraw_with_variable_percentage() {
         let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        let expected_fee = (<Test as Config>::ImbueFee::get() as u64) * 70000 / 100;
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(70000);
         let alice_expected_balance = alice_before + 70000 - expected_fee;
         assert_eq!(alice_after, alice_expected_balance, "Alice account is not the expected balance");
     });
@@ -518,7 +521,7 @@ pub fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> Contrib
 pub fn get_milestones(mut n: u32) -> Vec<ProposedMilestone> {
     (0..n).map(|_| {
         ProposedMilestone {
-            percentage_to_unlock: 100u32 / n
+            percentage_to_unlock: Percent::from_percent(100u8 / n as u8)
         }
     }).collect::<Vec<ProposedMilestone>>()
 }

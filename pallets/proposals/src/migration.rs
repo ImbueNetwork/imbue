@@ -155,7 +155,7 @@ mod v2 {
     pub type ProjectV2Of<T> =
         ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
 
-    #[derive(Encode, Clone, Decode)]
+    #[derive(Encode, Clone, Decode, TypeInfo)]
     pub struct ProjectV2<AccountId, Balance, BlockNumber, Timestamp> {
         pub agreement_hash: H256,
         pub milestones: BTreeMap<MilestoneKey, MilestoneV1>,
@@ -170,6 +170,14 @@ mod v2 {
         pub funding_threshold_met: bool,
         pub cancelled: bool,
         pub funding_type: FundingType,
+    }
+
+    #[derive(Clone, Debug, Encode, Decode, TypeInfo)]
+    pub struct MilestoneV1 {
+        pub project_key: ProjectKey,
+        pub milestone_key: MilestoneKey,
+        pub percentage_to_unlock: u32,
+        pub is_approved: bool,
     }
 
     pub fn migrate<T: Config + pallet_timestamp::Config>() -> Weight {
@@ -209,7 +217,7 @@ mod v2 {
             Some(migrated_project)
         });
         weight
-    }
+    }   
 }
 
 // 1. --DONE Use blocknumber instead of timestamp for contribution.
@@ -239,6 +247,7 @@ pub mod v3 {
         pub cancelled: bool,
         pub funding_type: FundingType,
     }
+
     pub fn migrate_contribution_and_project<T: Config + pallet_timestamp::Config>(weight: &mut Weight) {
         // Migration #1 + #2
         let mut migrated_contributions = BTreeMap::new();
@@ -252,10 +261,22 @@ pub mod v3 {
                     },
                 );
             });
+            project.milestones.iter().for_each(|(key, milestone)| {
+            *weight += T::DbWeight::get().reads_writes(1, 1);
+                migrated_milestones.insert(
+                    key.clone(),
+                    Milestone {
+                        project_key: milestone.project_key,
+                        milestone_key: milestone.milestone_key,
+                        percentage_to_unlock: Percent::from_percent(milestone.percentage_to_unlock as u8),
+                        is_approved: milestone.is_approved,
+                    });
+            });
+
             *weight += T::DbWeight::get().reads_writes(1, 1);
             let migrated_project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> = 
             Project {
-                milestones: project.milestones,
+                milestones: migrated_milestones.clone(),
                 contributions: migrated_contributions.clone(),
                 currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
@@ -294,7 +315,7 @@ pub mod v3 {
      #[storage_alias]
      pub type MilestoneVotes<T: Config> = StorageMap<Pallet<T>, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, ValueQuery>;
      fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
-        v3::MilestoneVotes::<T>::drain().map(|(old_key, vote)| {
+        v3::MilestoneVotes::<T>::drain().for_each(|(old_key, vote)| {
             let (project_key, milestone_key) = old_key;
             crate::MilestoneVotes::<T>::insert(project_key, milestone_key, vote);
             *weight += T::DbWeight::get().reads_writes(1, 1);
