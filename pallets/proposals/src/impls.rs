@@ -112,7 +112,8 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn do_finalise_milestone_voting(
+    #[deprecated(since="0.9.39", note="milestone voting is auto approved now")]
+    fn do_finalise_milestone_voting(
         who: T::AccountId,
         project_key: ProjectKey,
         milestone_key: MilestoneKey,

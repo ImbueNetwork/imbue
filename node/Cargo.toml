@@ -120,4 +120,4 @@ nix = "0.17"
 rand = "0.7.3"
 tempfile = "3.2.0"
 tokio = { version = "1.10.0", features = ["macros"] }
-
+cargo-llvm-cov = "0.1.13"

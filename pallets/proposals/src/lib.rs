@@ -313,19 +313,6 @@ pub mod pallet {
             )
         }
 
-        /// Finalise the voting on a milestone.
-        #[pallet::call_index(10)]
-        #[pallet::weight(<T as Config>::WeightInfo::finalise_milestone_voting())]
-        pub fn finalise_milestone_voting(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-            milestone_key: MilestoneKey,
-        ) -> DispatchResultWithPostInfo {
-            // Must be the initiator.
-            let who = ensure_signed(origin)?;
-            Self::do_finalise_milestone_voting(who, project_key, milestone_key)
-        }
-
         /// Withdraw some avaliable funds from the project.
         #[pallet::call_index(11)]
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]

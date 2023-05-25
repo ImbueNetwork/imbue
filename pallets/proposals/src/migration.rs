@@ -219,6 +219,7 @@ mod v2 {
 // 4. --DONE Milestone votes is now a double map (project_key, milestone_key) +
 // 5. --DONE Rounds is also a DoubleMap
 // 6. --DONE Round type has had contribution_round removed
+// 7, --DONE percent_to_unlock changed from u32 to Percent. (cuteolaf) 
 pub mod v3 {
     use super::*;
 
@@ -237,7 +238,7 @@ pub mod v3 {
     }
 
     pub fn migrate_contribution_and_project<T: Config + pallet_timestamp::Config>(weight: &mut Weight) {
-        // Migration #1 + #2
+        // Migration #1 + #2 + #7
         let mut migrated_contributions = BTreeMap::new();
         let mut migrated_milestones = BTreeMap::new();
 
@@ -283,7 +284,7 @@ pub mod v3 {
 
     // Migration #3
     #[storage_alias]
-    pub type UserVotes<T: Config> = StorageMap<Pallet<T>, Identity, (AccountIdOf<T>, ProjectKey, MilestoneKey, RoundType), bool, ValueQuery,>;
+    pub type UserVotes<T: Config> = StorageMap<Pallet<T>, Identity, (AccountIdOf<T>, ProjectKey, MilestoneKey, v3::RoundType), bool, ValueQuery,>;
     fn migrate_user_votes<T: Config>(weight: &mut Weight) {
         UserVotes::<T>::translate(|key, value| {
             let (account_id, project_key, milestone_key, round_type) = key;
@@ -513,6 +514,80 @@ mod test {
 
             assert_eq!(H256::default(), migrated_project.agreement_hash);
             assert_eq!(FundingType::Proposal, migrated_project.funding_type);
+        })
+    }
+
+    #[test]
+    fn migrate_v1_to_v2() {
+        build_test_externality().execute_with(|| {
+            // 1. -- Use blocknumber instead of timestamp for contribution.
+            // 2. -- Project has had required_funds, approved_for_funding and funding_threshold_met removed.
+            // 3. -- UserVotes storage map needs removing + placing into UserHasVoted
+            // 4. -- Milestone votes is now a double map (project_key, milestone_key) +
+            // 5. -- Rounds is also a DoubleMap
+            // 6. -- Round type has had contribution_round removed
+            // 7, -- percent_to_unlock changed from u32 to Percent. (cuteolaf) 
+            let old_milestones = vec![
+               MilestoneV1 {
+                    project_key,
+                    milestone_key: 0,
+                    percentage_to_unlock: 40u32,
+                    is_approved: true,
+                },
+                MilestoneV1 {
+                    project_key,
+                    milestone_key: 1,
+                    percentage_to_unlock: 60u32,
+                    is_approved: true,
+                },
+            ];
+            let mut contribution: ContributionsFor<T> = BTreeMap::new();
+            contributions.insert(
+                *CHARLIE,
+                Contribution<BalanceOf<T>, TimestampOf<T>> {
+                    value: contribution_value,
+                    timestamp: TimestampOf::<Test>::default(),
+                },
+            );
+            contributions.insert(
+                *BOB,
+                Contribution<BalanceOf<T>, TimestampOf<T>> {
+                    value: contribution_value,
+                    timestamp: TimestampOf::<Test>::default(),
+                },
+            );
+            let project = ProjectV2Of<Test> {
+                agreement_hash: Default::default(),
+                milestones: old_milestones,
+                contributions: contributions 
+                currency_id: CurrencyId::Native
+                required_funds: 1_000_000u32 
+                withdrawn_funds: 0u32
+                raised_funds: 1_000_000u32
+                initiator: *ALICE
+                created_on: frame_system::Pallet::<Test>::block_number()
+                approved_for_funding: false
+                funding_threshold_met: false
+                cancelled: false
+                funding_type: FundingType::Brief
+            }
+            v3::UserVotes::<Test>::insert(*ALICE, 10, 10, v3::RoundType::VotingRound);
+            v3::UserVotes::<Test>::insert(*ALICE, 10, 10, v3::RoundType::VoteOfNoConfidence);
+            v3::MilestoneVotes::<Test>::insert((10, 10), 100_000);
+            let old_round: Round<BlockNumberFor<T>> = v3::Round {
+                start: frame_system::Pallet::<Test>::block_number(),
+                end: frame_system::Pallet::<Test>::block_number() + 100,
+                project_keys: vec![1,2,3],
+                round_type: v3::RoundType::VotingRound,
+                is_cancelled: false,
+            }
+            v3::OldRounds::<Test>::insert(0, Some(old_round));
+            let w = v3::migrate_all();
+
+            let project = crate::Projects::<Test>::get(0)
+
+            dbg!(&w);
+
         })
     }
 }
