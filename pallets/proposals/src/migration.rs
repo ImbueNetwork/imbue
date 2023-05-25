@@ -1,8 +1,10 @@
+
 use crate::*;
 use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
 pub use pallet::*;
 pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 
+#[allow(unused)]
 mod v0 {
     use super::*;
     pub type ProjectV0Of<T> = ProjectV0<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>;
@@ -47,6 +49,7 @@ mod v0 {
         StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV0Of<T>, OptionQuery>;
 }
 
+#[allow(unused)]
 mod v1 {
     use super::*;
     use crate::migration::v0::MilestoneV0;
@@ -337,7 +340,7 @@ pub mod v3 {
     #[storage_alias]
     pub type OldRounds<T: pallet::Config> = StorageMap<Pallet<T>, Identity, u32, Option<Round<BlockNumberFor<T>>>, ValueQuery>;
     fn migrate_rounds_and_round_type<T: Config>(weight: &mut Weight) {
-        OldRounds::<T>::translate(|round_key, r: Option<Round<BlockNumberFor<T>>>| {
+        OldRounds::<T>::translate(|_, r: Option<Round<BlockNumberFor<T>>>| {
             if let Some(round) = r {
                 if !round.is_canceled && round.end < frame_system::Pallet::<T>::block_number() && round.round_type != v3::RoundType::ContributionRound {
                      round.project_keys.iter().for_each(|k| {

@@ -1,4 +1,3 @@
-use crate::{};
 use crate::{
     Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
     ProposedMilestone, ContributionsFor, AccountIdOf, BalanceOf
@@ -48,14 +47,14 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
 // Some implementations used in Imbue of the traits above.
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 // For test purposes
-impl <T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for (T) {
+impl <T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for T {
     fn convert_to_proposal(
-        currency_id: CurrencyId,
-        contributions: ContributionsFor<T>,
-        brief_hash: H256,
-        benificiary: AccountIdOf<T>,
-        proposed_milestones: Vec<ProposedMilestone>,
-        funding_type: FundingType,
+        _currency_id: CurrencyId,
+        _contributions: ContributionsFor<T>,
+        _brief_hash: H256,
+        _benificiary: AccountIdOf<T>,
+        _proposed_milestones: Vec<ProposedMilestone>,
+        _funding_type: FundingType,
     ) -> Result<(), DispatchError> {
         Ok(())
     }
