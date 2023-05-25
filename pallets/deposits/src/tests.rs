@@ -62,6 +62,7 @@ fn return_deposit_not_found() {
     });
 }
 
+#[test]
 fn slash_not_found() {
     new_test_ext().execute_with(|| {
         assert_noop!(Deposits::slash_reserve_deposit(DepositId::Project(0)), Error::<Test>::DepositDoesntExist);
@@ -101,5 +102,6 @@ fn slash_removes_deposit_from_storage() {
         assert_ok!(Deposits::slash_reserve_deposit(deposit_id));
         assert!(!CurrentDeposits::<Test>::contains_key(deposit_id));
         assert_eq!(<Test as Config>::MultiCurrency::reserved_balance(currency_id, &ALICE), 0u64);
+        assert_eq!(<Test as Config>::MultiCurrency::free_balance(currency_id, &slash_account), expected_deposit_taken);
     });
 }

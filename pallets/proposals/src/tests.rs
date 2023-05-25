@@ -5,7 +5,6 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok};
 use common_types::{CurrencyId, FundingType};
-use orml_traits::{MultiReservableCurrency, MultiCurrency};
 use sp_core::H256;
 
 #[test]
@@ -358,7 +357,6 @@ fn withdraw_with_variable_percentage() {
             },
         ];
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        let pallet_account = crate::Pallet::<Test>::account_id();
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
         let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true).unwrap();
         let alice_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
@@ -377,7 +375,6 @@ fn withdraw_fails_before_approval() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        let pallet_account = crate::Pallet::<Test>::account_id();
         assert_noop!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key), Error::<Test>::NoAvailableFundsToWithdraw);
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
         assert_noop!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key), Error::<Test>::NoAvailableFundsToWithdraw);
@@ -392,8 +389,8 @@ fn raise_no_confidence_round_already_started() {
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
 
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true).unwrap();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true).unwrap();
         assert_ok!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key));
         assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key), Error::<Test>::RoundStarted);
     });
@@ -405,8 +402,6 @@ fn raise_no_confidence_round_not_contributor() {
         let cont = get_contributions(vec![*BOB, *DAVE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        let milestone_key = 0;
-
         assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), project_key), Error::<Test>::OnlyContributorsCanVote);
     });
 }
@@ -426,8 +421,8 @@ fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
         let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
 
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true).unwrap();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, milestone_key, true).unwrap();
         assert_ok!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key));
 
         let vote = NoConfidenceVotes::<Test>::get(project_key).expect("vote should exist");
@@ -518,7 +513,7 @@ pub fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> Contrib
     out
 }
 
-pub fn get_milestones(mut n: u32) -> Vec<ProposedMilestone> {
+pub fn get_milestones(n: u32) -> Vec<ProposedMilestone> {
     (0..n).map(|_| {
         ProposedMilestone {
             percentage_to_unlock: Percent::from_percent(100u8 / n as u8)
@@ -590,7 +585,6 @@ pub fn create_project(
             };
 
         Projects::<Test>::insert(project_key, project);
-        let project_account = crate::Pallet::<Test>::project_account_id(project_key);
         ProjectCount::<Test>::mutate(|c| *c = c.saturating_add(1));
         project_key
 }

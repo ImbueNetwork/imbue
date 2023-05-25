@@ -3,10 +3,8 @@ use crate::test_utils::gen_hash;
 
 use crate::tests::{get_brief_owners, get_milestones};
 use common_types::CurrencyId;
-use frame_support::{assert_ok, bounded_vec};
-use orml_traits::MultiCurrency;
-use pallet_proposals::{Projects, RoundType};
-use std::convert::TryInto;
+use frame_support::{assert_ok};
+use pallet_proposals::{Projects};
 
 // all the integration tests for a brief to proposal conversion
 #[test]

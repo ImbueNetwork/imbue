@@ -5,8 +5,8 @@ use common_types::{CurrencyId, FundingType};
 use frame_support::{
     pallet_prelude::*,
     storage::bounded_btree_map::BoundedBTreeMap,
-    traits::{ConstU32, EnsureOrigin},
-    transactional, PalletId,
+    traits::EnsureOrigin,
+    PalletId,
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -15,7 +15,6 @@ use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Zero};
-use sp_runtime::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
 pub mod traits;
@@ -38,24 +37,13 @@ pub mod migration;
 pub mod impls;
 pub use impls::*;
 
-/// <HB SBP Review:
-///
-///
-/// Why are these two constants not configurable as the others?
-///
-/// >
-// The Constants associated with the bounded parameters
-type MaxProjectKeysPerRound = ConstU32<1000>;
-type MaxWhitelistPerProject = ConstU32<10000>;
-
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
-type BoundedProjectKeys = BoundedVec<ProjectKey, MaxProjectKeysPerRound>;
-type BoundedMilestoneKeys<T> = BoundedVec<ProjectKey, <T as Config>::MaxMilestonesPerProject>;
+type BoundedMilestoneKeys<T> = BoundedVec<MilestoneKey, <T as Config>::MaxMilestonesPerProject>;
 pub type BoundedProposedMilestones<T> =
     BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
 
@@ -465,7 +453,6 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
     }
 }
 
-// MIGRATION REQUIRED, REMOVED FIELDS: required_funds, approved_for_funding, funding_threshold_met
 /// The struct which contain milestones that can be submitted.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<AccountId, Balance, BlockNumber> {

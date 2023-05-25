@@ -1,6 +1,6 @@
 use crate as pallet_crowdfunding;
 use frame_support::traits::{ConstU16, ConstU64, Nothing};
-use frame_support::{parameter_types, PalletId, pallet_prelude::*};
+use frame_support::{parameter_types, PalletId};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,

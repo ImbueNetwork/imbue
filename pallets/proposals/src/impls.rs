@@ -1,8 +1,6 @@
 use crate::*;
 use common_types::milestone_origin::FundingType;
-use pallet_identity::Judgement;
 use sp_runtime::traits::{Saturating, Zero};
-use sp_std::{collections::btree_map::BTreeMap, vec};
 use scale_info::prelude::format;
 use crate::Error::*;
 
@@ -27,7 +25,6 @@ impl<T: Config> Pallet<T> {
         project_key: ProjectKey,
         milestone_key: MilestoneKey,
     ) -> DispatchResultWithPostInfo {
-        let now = <frame_system::Pallet<T>>::block_number();
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
 
         ensure!(project.initiator == who, Error::<T>::UserIsNotInitiator);
@@ -56,8 +53,8 @@ impl<T: Config> Pallet<T> {
         approve_milestone: bool,
     ) -> DispatchResultWithPostInfo {
 
-        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let round = Rounds::<T>::get(project_key, RoundType::VotingRound).ok_or(Error::<T>::VotingRoundNotStarted)?;
+        let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+        ensure!(Rounds::<T>::contains_key(project_key, RoundType::VotingRound), Error::<T>::VotingRoundNotStarted);
         let contribution_amount = project.contributions.get(&who).ok_or(Error::<T>::OnlyContributorsCanVote)?.value;
         let now = frame_system::Pallet::<T>::block_number();
         let voters_bitmap_key = (project_key, RoundType::VotingRound, milestone_key);
@@ -68,8 +65,7 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
 
-        let existing_milestone_vote =
-        Self::milestone_votes(project_key, milestone_key).ok_or(Error::<T>::VotingRoundNotStarted)?;
+        ensure!(MilestoneVotes::<T>::contains_key(project_key, milestone_key), Error::<T>::VotingRoundNotStarted);
         
         let yay_vote = MilestoneVotes::<T>::try_mutate(project_key, milestone_key,|vote| {
             if let Some(v) = vote {

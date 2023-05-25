@@ -225,7 +225,6 @@ pub mod pallet {
             );
 
             Self::do_update_crowdfund(
-                who.clone(),
                 crowdfund,
                 crowdfund_key,
                 proposed_milestones,
@@ -406,7 +405,6 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn do_update_crowdfund(
-        who: T::AccountId,
         mut crowdfund: CrowdFund<T>,
         crowdfund_key: CrowdFundKey,
         proposed_milestones: Option<BoundedProposedMilestones<T>>,
