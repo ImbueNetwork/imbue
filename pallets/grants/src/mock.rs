@@ -2,7 +2,7 @@ use crate as pallet_grants;
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
 use frame_support::traits::{ConstU16, Nothing};
-use frame_support::{pallet_prelude::*, parameter_types, PalletId};
+use frame_support::{parameter_types, PalletId};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::Percent;

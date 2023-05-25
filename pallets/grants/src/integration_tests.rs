@@ -1,12 +1,9 @@
 use crate::mock::*;
 use crate::test_utils::gen_grant_id;
 use crate::tests::{get_approvers, get_milestones};
-
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::assert_ok;
-use orml_traits::MultiCurrency;
-use pallet_proposals::{Projects, RoundType};
-use sp_core::bounded_vec;
+use pallet_proposals::{Projects};
 
 #[test]
 fn create_proposal_from_grant() {

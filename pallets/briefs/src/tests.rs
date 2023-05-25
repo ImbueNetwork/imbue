@@ -293,7 +293,7 @@ fn reserved_funds_are_transferred_to_project_kitty() {
     });
 }
 
-pub(crate) fn run_to_block(n: u64) {
+pub(crate) fn _run_to_block(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
