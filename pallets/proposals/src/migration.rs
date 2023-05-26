@@ -329,13 +329,14 @@ pub mod v3 {
             }
         }
     }
+    
     #[derive(Encode, Decode, Clone)]
     pub struct Round<BlockNumber> {
-        start: BlockNumber,
-        end: BlockNumber,
-        project_keys: Vec<ProjectKey>,
-        round_type: v3::RoundType,
-        is_canceled: bool,
+        pub(crate) start: BlockNumber,
+        pub(crate) end: BlockNumber,
+        pub(crate) project_keys: Vec<ProjectKey>,
+        pub(crate) round_type: v3::RoundType,
+        pub(crate) is_canceled: bool,
     }
 
     #[storage_alias]
@@ -518,7 +519,7 @@ mod test {
     }
 
     #[test]
-    fn migrate_v1_to_v2() {
+    fn migrate_v2_to_v3() {
         build_test_externality().execute_with(|| {
             // 1. -- Use blocknumber instead of timestamp for contribution.
             // 2. -- Project has had required_funds, approved_for_funding and funding_threshold_met removed.
@@ -527,66 +528,72 @@ mod test {
             // 5. -- Rounds is also a DoubleMap
             // 6. -- Round type has had contribution_round removed
             // 7, -- percent_to_unlock changed from u32 to Percent. (cuteolaf) 
-            let old_milestones = vec![
-               MilestoneV1 {
-                    project_key,
+            let mut old_milestones = BTreeMap::new();
+               old_milestones.insert(0,v2::MilestoneV1 {
+                    project_key: 0,
                     milestone_key: 0,
                     percentage_to_unlock: 40u32,
                     is_approved: true,
-                },
-                MilestoneV1 {
-                    project_key,
+                });
+                old_milestones.insert(1, v2::MilestoneV1 {
+                    project_key: 0,
                     milestone_key: 1,
                     percentage_to_unlock: 60u32,
                     is_approved: true,
-                },
-            ];
-            let mut contribution: ContributionsFor<T> = BTreeMap::new();
+                });
+            let mut contributions: ContributionsFor<Test> = BTreeMap::new();
             contributions.insert(
                 *CHARLIE,
-                Contribution<BalanceOf<T>, TimestampOf<T>> {
-                    value: contribution_value,
+                Contribution {
+                    value: 500_000,
                     timestamp: TimestampOf::<Test>::default(),
                 },
             );
             contributions.insert(
                 *BOB,
-                Contribution<BalanceOf<T>, TimestampOf<T>> {
-                    value: contribution_value,
+                Contribution {
+                    value: 500_000,
                     timestamp: TimestampOf::<Test>::default(),
                 },
             );
-            let project = ProjectV2Of<Test> {
+            let project = v2::ProjectV2 {
                 agreement_hash: Default::default(),
                 milestones: old_milestones,
-                contributions: contributions 
-                currency_id: CurrencyId::Native
-                required_funds: 1_000_000u32 
-                withdrawn_funds: 0u32
-                raised_funds: 1_000_000u32
-                initiator: *ALICE
-                created_on: frame_system::Pallet::<Test>::block_number()
-                approved_for_funding: false
-                funding_threshold_met: false
-                cancelled: false
-                funding_type: FundingType::Brief
-            }
-            v3::UserVotes::<Test>::insert(*ALICE, 10, 10, v3::RoundType::VotingRound);
-            v3::UserVotes::<Test>::insert(*ALICE, 10, 10, v3::RoundType::VoteOfNoConfidence);
-            v3::MilestoneVotes::<Test>::insert((10, 10), 100_000);
-            let old_round: Round<BlockNumberFor<T>> = v3::Round {
+                contributions: contributions ,
+                currency_id: CurrencyId::Native,
+                required_funds: 1_000_000 ,
+                withdrawn_funds: 0,
+                raised_funds: 1_000_000,
+                initiator: *ALICE,
+                created_on: frame_system::Pallet::<Test>::block_number(),
+                approved_for_funding: false,
+                funding_threshold_met: false,
+                cancelled: false,
+                funding_type: FundingType::Brief,
+            };
+            v3::UserVotes::<Test>::insert((*ALICE, 10u32, 10u32, v3::RoundType::VotingRound), true);
+            v3::UserVotes::<Test>::insert((*ALICE, 10u32, 10u32, v3::RoundType::VoteOfNoConfidence), true);
+            let v = Vote {
+                yay: 100_000u64,
+                nay: 50_000u64,
+                is_approved: false,
+            };
+            v3::MilestoneVotes::<Test>::insert((10, 10), v);
+            let old_round: v3::Round<BlockNumberFor<Test>> = v3::Round {
                 start: frame_system::Pallet::<Test>::block_number(),
                 end: frame_system::Pallet::<Test>::block_number() + 100,
                 project_keys: vec![1,2,3],
                 round_type: v3::RoundType::VotingRound,
-                is_cancelled: false,
-            }
+                is_canceled: false,
+            };
             v3::OldRounds::<Test>::insert(0, Some(old_round));
-            let w = v3::migrate_all();
+            let w = v3::migrate_all::<Test>();
+            // todo assert all the stuffs
 
-            let project = crate::Projects::<Test>::get(0)
+            let project = crate::Projects::<Test>::get(0);
 
             dbg!(&w);
+
 
         })
     }
