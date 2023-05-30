@@ -86,38 +86,32 @@ impl orml_tokens::Config for Test {
 
 parameter_types!{
 	pub DepositSlashAccount: AccountId = Public::from_raw([66u8; 32]);
+
 }
+
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
+	pub enum StorageItem {
+	CrowdFund,
+	Brief,
+	Grant,
+	Project,
+}
+pub(crate) type DepositId = u64;
 
 impl pallet_deposits::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Tokens;
-	type DepositId = DepositId;
 	type StorageItem = StorageItem;
+	type DepositId = DepositId;
 	type DepositCalculator = MockDepositCalculator;
-	type CurrencyId = CurrencyId;
 	type DepositSlashAccount = DepositSlashAccount;
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Encode, Decode)]
-pub enum StorageItem {
-	Project,
-	Grant,
-	Brief,
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug, MaxEncodedLen, TypeInfo, Encode, Decode)]
-pub enum DepositId {
-	Project(u32),
-	Grant(u32),
-	Brief(u32),
 }
 
 pub struct MockDepositCalculator;
 
 impl DepositCalculator<Balance> for MockDepositCalculator {
-	type CurrencyId = CurrencyId;
 	type StorageItem = StorageItem;
-    fn calculate_deposit(_item: Self::StorageItem, _currency: Self::CurrencyId) -> Balance {
+    fn calculate_deposit(_item: Self::StorageItem, _currency: CurrencyId) -> Balance {
 		// TODO:
 		10_000u64
 	}

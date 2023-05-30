@@ -19,7 +19,8 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber> {
     /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.
     /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
     /// (if using crate) This function should bypass the usual checks when creating a proposal and
-    /// instantiate everything carefully.  
+    /// instantiate everything carefully. 
+    // TODO: Generic over currencyId 
     fn convert_to_proposal(
         currency_id: CurrencyId,
         current_contribution: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
@@ -65,11 +66,9 @@ impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor
 where
     Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>: EncodeLike<
         Project<
-            <T as frame_system::Config>::AccountId,
-            <<T as crate::Config>::MultiCurrency as MultiCurrency<
-                <T as frame_system::Config>::AccountId,
-            >>::Balance,
-            <T as frame_system::Config>::BlockNumber,
+            AccountIdOf<T>,
+            BalanceOf<T>,
+            BlockNumberFor<T>,
         >,
     >,
 {

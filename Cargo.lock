@@ -6545,6 +6545,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-deposits",
  "pallet-identity",
  "pallet-proposals",
  "pallet-timestamp",

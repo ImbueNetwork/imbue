@@ -33,6 +33,7 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 # Local
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
+pallet-deposits = { path = "../deposits", default-features = false }
 
 [dev-dependencies]
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }

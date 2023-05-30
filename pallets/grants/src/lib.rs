@@ -23,8 +23,8 @@ pub use weights::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
-    use frame_support::{pallet_prelude::*, BoundedVec};
+    use common_types::{milestone_origin::FundingType, TreasuryOrigin, CurrencyId};
+    use frame_support::{pallet_prelude::*, BoundedVec, dispatch::fmt::Debug};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
@@ -32,6 +32,7 @@ pub mod pallet {
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
     use sp_arithmetic::per_things::Percent;
     use sp_runtime::Saturating;
+    use pallet_deposits::traits::{DepositHandler};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -41,6 +42,8 @@ pub mod pallet {
         BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerGrant>;
     pub(crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
     pub(crate) type GrantId = H256;
+    pub(crate) type DepositIdOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
+    pub(crate) type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -60,6 +63,10 @@ pub mod pallet {
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
 
+        /// The storage item is used to generate the deposit_id.
+        type GrantStorageItem: Get<StorageItemOf<Self>>;
+        type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
+        
         type WeightInfo: WeightInfo;
     }
 
@@ -150,6 +157,10 @@ pub mod pallet {
                 Error::<T>::GrantAlreadyExists
             );
 
+            let deposit_id: DepositIdOf<T> = T::DepositHandler::get_deposit_id();
+            let storage_item = T::GrantStorageItem::get();
+            T::DepositHandler::take_deposit(submitter.clone(), storage_item, deposit_id, CurrencyId::Native)?;
+
             let grant = Grant {
                 milestones: proposed_milestones,
                 submitter: submitter.clone(),
@@ -161,6 +172,7 @@ pub mod pallet {
                 currency_id,
                 amount_requested,
                 treasury_origin,
+                deposit_id,
             };
 
             PendingGrants::<T>::insert(grant_id, grant);
@@ -297,10 +309,12 @@ pub mod pallet {
             )
             .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
 
-            PendingGrants::<T>::mutate(grant_id, |grant| {
+            T::DepositHandler::return_deposit(grant.deposit_id)?;
+            let _ = PendingGrants::<T>::mutate_exists(grant_id, |grant| {
                 if let Some(g) = grant {
                     g.is_converted = true;
                 }
+                None::<T>
             });
 
             Ok(().into())
@@ -309,6 +323,7 @@ pub mod pallet {
         // TODO: runtime api to get the deposit address of the grants sovereign account.
     }
 
+    // TODO: MIGRATION FOR DEPOSITID
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct Grant<T: Config> {
@@ -322,5 +337,6 @@ pub mod pallet {
         pub currency_id: CurrencyId,
         pub amount_requested: BalanceOf<T>,
         pub treasury_origin: TreasuryOrigin,
+        pub deposit_id: DepositIdOf<T>,
     }
 }
