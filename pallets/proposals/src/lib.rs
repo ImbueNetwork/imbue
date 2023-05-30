@@ -3,10 +3,7 @@
 use codec::{Decode, Encode};
 use common_types::{CurrencyId, FundingType};
 use frame_support::{
-    pallet_prelude::*,
-    storage::bounded_btree_map::BoundedBTreeMap,
-    traits::EnsureOrigin,
-    PalletId,
+    pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap, traits::EnsureOrigin, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -25,6 +22,9 @@ mod mock;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod test_utils;
 
 #[cfg(test)]
 mod tests;
@@ -53,7 +53,8 @@ pub type BoundedProposedMilestones<T> =
 ///
 /// >
 pub type AgreementHash = H256;
-type BoundedProjectKeysPerBlock<T> = BoundedVec<(ProjectKey, RoundType, MilestoneKey), <T as Config>::ExpiringProjectRoundsPerBlock>;
+type BoundedProjectKeysPerBlock<T> =
+    BoundedVec<(ProjectKey, RoundType, MilestoneKey), <T as Config>::ExpiringProjectRoundsPerBlock>;
 type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>;
 
 #[frame_support::pallet]
@@ -92,7 +93,7 @@ pub mod pallet {
 
         /// The storage deposit taken when a project is created and returned on deletion/completion.
         type ProjectStorageDeposit: Get<BalanceOf<Self>>;
-        
+
         /// Imbue fee in percent 0-99
         //TODO: use percent.
         type ImbueFee: Get<u8>;
@@ -123,12 +124,25 @@ pub mod pallet {
 
     // BTree of users that has voted, bounded by the number of contributors in a project.
     #[pallet::storage]
-    pub(super) type UserHasVoted<T: Config> = StorageMap<_, Blake2_128, (ProjectKey, RoundType, MilestoneKey), BoundedBTreeMap<T::AccountId, bool, <T as Config>::MaximumContributorsPerProject>, ValueQuery>; 
+    pub(super) type UserHasVoted<T: Config> = StorageMap<
+        _,
+        Blake2_128,
+        (ProjectKey, RoundType, MilestoneKey),
+        BoundedBTreeMap<T::AccountId, bool, <T as Config>::MaximumContributorsPerProject>,
+        ValueQuery,
+    >;
 
     #[pallet::storage]
-    #[pallet::getter(fn milestone_votes)]  
-    pub(super) type MilestoneVotes<T: Config> =
-        StorageDoubleMap<_, Identity, ProjectKey, Identity, MilestoneKey, Vote<BalanceOf<T>>, OptionQuery>;
+    #[pallet::getter(fn milestone_votes)]
+    pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
+        _,
+        Identity,
+        ProjectKey,
+        Identity,
+        MilestoneKey,
+        Vote<BalanceOf<T>>,
+        OptionQuery,
+    >;
 
     /// This holds the votes when a no confidence round is raised.
     #[pallet::storage]
@@ -142,11 +156,20 @@ pub mod pallet {
 
     /// Stores the ending block of the project key and round.
     #[pallet::storage]
-    pub type Rounds<T> = StorageDoubleMap<_, Blake2_128, ProjectKey, Blake2_128, RoundType, BlockNumberFor<T>, OptionQuery>;
+    pub type Rounds<T> = StorageDoubleMap<
+        _,
+        Blake2_128,
+        ProjectKey,
+        Blake2_128,
+        RoundType,
+        BlockNumberFor<T>,
+        OptionQuery,
+    >;
 
     /// Stores the project keys and round types ending on a given block
     #[pallet::storage]
-    pub type RoundsExpiring<T> = StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>, ValueQuery>;
+    pub type RoundsExpiring<T> =
+        StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
@@ -249,14 +272,13 @@ pub mod pallet {
         ///
         /// >
         fn on_runtime_upgrade() -> Weight {
-             let mut weight = T::DbWeight::get().reads_writes(1, 1);
-             // Only supporting latest upgrade for now.
-             if StorageVersion::<T>::get() == Release::V2
-             {
-                 weight += migration::v3::migrate_all::<T>();
-                 StorageVersion::<T>::set(Release::V3);
-             }
-             weight
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            // Only supporting latest upgrade for now.
+            if StorageVersion::<T>::get() == Release::V2 {
+                weight += migration::v3::migrate_all::<T>();
+                StorageVersion::<T>::set(Release::V3);
+            }
+            weight
         }
 
         // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
@@ -267,7 +289,7 @@ pub mod pallet {
             key_type_vec.iter().for_each(|item| {
                 let (project_key, round_type, milestone_key) = item;
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                
+
                 // Remove the round prevents further voting.
                 Rounds::<T>::remove(project_key, round_type);
                 match round_type {
@@ -275,7 +297,11 @@ pub mod pallet {
                     // Therefore we can remove it on round end.
                     RoundType::VotingRound => {
                         MilestoneVotes::<T>::remove(project_key, milestone_key);
-                        UserHasVoted::<T>::remove((project_key, RoundType::VotingRound, milestone_key));
+                        UserHasVoted::<T>::remove((
+                            project_key,
+                            RoundType::VotingRound,
+                            milestone_key,
+                        ));
                     }
                     // Votes of no confidence do not finaliese automatically
                     RoundType::VoteOfNoConfidence => {
@@ -291,7 +317,6 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-
         /// Submit a milestones to be voted on.
         #[pallet::call_index(8)]
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
@@ -314,12 +339,7 @@ pub mod pallet {
             approve_milestone: bool,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::new_milestone_vote(
-                who,
-                project_key,
-                milestone_key,
-                approve_milestone,
-            )
+            Self::new_milestone_vote(who, project_key, milestone_key, approve_milestone)
         }
 
         /// Finalise the voting on a milestone.
@@ -392,7 +412,6 @@ pub mod pallet {
     }
 }
 
-
 // TODO: MIGRATION NEEDED, removed field Contributionround
 #[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, TypeInfo)]
 pub enum RoundType {
@@ -407,7 +426,7 @@ pub enum Release {
     V1,
     V2,
     V3,
-    V4
+    V4,
 }
 
 impl Default for Release {
