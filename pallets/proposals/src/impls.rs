@@ -107,7 +107,6 @@ impl<T: Config> Pallet<T> {
                     }
                 }
             });
-
             Self::deposit_event(Event::MilestoneApproved(
                 project.initiator.clone(),
                 project_key,
