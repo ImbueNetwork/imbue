@@ -36,8 +36,6 @@ pub mod migration;
 
 pub mod impls;
 pub use impls::*;
-<<<<<<< HEAD
-
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
