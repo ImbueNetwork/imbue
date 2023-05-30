@@ -1,4 +1,3 @@
-use crate::mock::System;
 use crate::Config;
 use crate::Pallet as Proposals;
 use crate::{
@@ -6,18 +5,25 @@ use crate::{
     ProjectKey, ProposedMilestone,
 };
 use common_types::{CurrencyId, FundingType};
+use frame_benchmarking::account;
 use frame_support::{assert_ok, traits::Hooks};
+use frame_system::EventRecord;
 use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::Percent;
-use sp_core::H256;
+use sp_core::{Get, H256};
 use sp_runtime::Saturating;
 use sp_std::collections::btree_map::BTreeMap;
 
-pub fn run_to_block<T: Config>(n: u64) {
-    while System::block_number() < n {
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-        Proposals::<T>::on_initialize((System::block_number() as u32).into());
+pub fn run_to_block<T: Config>(n: T::BlockNumber) {
+    loop {
+        let mut block = frame_system::Pallet::<T>::block_number();
+        if block >= n {
+            break;
+        }
+        block = block.saturating_add(1u32.into());
+        frame_system::Pallet::<T>::set_block_number(block);
+        frame_system::Pallet::<T>::on_initialize(block);
+        Proposals::<T>::on_initialize(block);
     }
 }
 
@@ -42,6 +48,10 @@ pub fn get_milestones(n: u8) -> Vec<ProposedMilestone> {
             percentage_to_unlock: Percent::from_percent(100u8 / n),
         })
         .collect::<Vec<ProposedMilestone>>()
+}
+
+pub fn get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
+    get_milestones(<T as Config>::MaxMilestonesPerProject::get() as u8)
 }
 
 /// Create a project for test purposes, this will not test the paths coming into this pallet via
@@ -101,4 +111,28 @@ pub fn create_project<T: Config>(
     crate::ProjectCount::<T>::put(project_key);
 
     project_key
+}
+
+pub fn create_funded_user<T: Config>(
+    seed: &'static str,
+    n: u32,
+    balance_factor: u32,
+) -> T::AccountId {
+    let user = account(seed, n, 0);
+    let balance: BalanceOf<T> = balance_factor.into();
+    assert_ok!(<T::MultiCurrency as MultiCurrency<
+        <T as frame_system::Config>::AccountId,
+    >>::deposit(CurrencyId::Native, &user, balance,));
+    user
+}
+
+pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
+where
+    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
+{
+    let events = frame_system::Pallet::<T>::events();
+    let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
+    // compare to the last event record
+    let EventRecord { event, .. } = &events[events.len() - 1];
+    assert_eq!(event, &system_event);
 }
