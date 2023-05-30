@@ -36,6 +36,7 @@ pub mod migration;
 
 pub mod impls;
 pub use impls::*;
+<<<<<<< HEAD
 
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
@@ -405,7 +406,6 @@ pub enum RoundType {
     VotingRound,
     VoteOfNoConfidence,
 }
-
 #[derive(Encode, Decode, TypeInfo, PartialEq)]
 #[repr(u32)]
 pub enum Release {
@@ -413,7 +413,7 @@ pub enum Release {
     V1,
     V2,
     V3,
-    V4,
+    V4
 }
 
 impl Default for Release {
