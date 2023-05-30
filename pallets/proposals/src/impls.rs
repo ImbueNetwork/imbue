@@ -128,68 +128,6 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn do_finalise_milestone_voting(
-        who: T::AccountId,
-        project_key: ProjectKey,
-        milestone_key: MilestoneKey,
-    ) -> DispatchResultWithPostInfo {
-        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        ensure!(
-            project.initiator == who,
-            Error::<T>::InvalidAccount
-            Error::<T>::OnlyInitiatorOrAdminCanApproveMilestone
-        );
-
-        ensure!(
-            project.milestones.contains_key(&milestone_key),
-            Error::<T>::MilestoneDoesNotExist
-        );
-
-        let milestone0 = project
-            .milestones
-            .get(&milestone_key)
-            .ok_or(Error::<T>::MilestoneDoesNotExist)?;
-
-        let mut milestone = milestone0.clone();
-
-        // set is_approved
-        let vote =
-            Self::milestone_votes(project_key, milestone_key).ok_or(Error::<T>::KeyNotFound)?;
-
-        // let the 100 x threshold required = total_votes * majority required
-        let threshold_votes: BalanceOf<T> =
-            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
-        let percent_multiple: BalanceOf<T> = 100u32.into();
-
-        // TODO: use mutate.
-        ensure!(
-            percent_multiple.saturating_mul(vote.yay.saturating_add(vote.nay)) >= threshold_votes,
-            Error::<T>::MilestoneVotingNotComplete
-        );
-        if vote.yay > vote.nay {
-            milestone.is_approved = true;
-            let updated_vote = Vote {
-                yay: vote.yay,
-                nay: vote.nay,
-                is_approved: true,
-            };
-            let now = <frame_system::Pallet<T>>::block_number();
-            Self::deposit_event(Event::MilestoneApproved(
-                project.initiator.clone(),
-                project_key,
-                milestone_key,
-                now,
-            ));
-            <MilestoneVotes<T>>::insert(project_key, milestone_key, updated_vote);
-        }
-        //TODO: Case for equal votes?
-
-        project.milestones.insert(milestone_key, milestone.clone());
-        <Projects<T>>::insert(project_key, project);
-
-        Ok(().into())
-    }
-
     pub fn new_withdrawal(
         who: T::AccountId,
         project_key: ProjectKey,
