@@ -5,7 +5,7 @@ use crate::{
     ProjectKey, ProposedMilestone,
 };
 use common_types::{CurrencyId, FundingType};
-use frame_benchmarking::account;
+use frame_benchmarking::{account, Vec};
 use frame_support::{assert_ok, traits::Hooks};
 use frame_system::EventRecord;
 use orml_traits::MultiCurrency;
