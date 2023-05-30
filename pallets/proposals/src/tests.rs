@@ -663,10 +663,6 @@ fn raise_no_confidence_round_not_contributor() {
             Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), project_key),
             Error::<Test>::OnlyContributorsCanVote
         );
-        let cont = get_contributions(vec![*BOB, *DAVE], 100_000);
-        let prop_milestones = get_milestones(10);
-        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        assert_noop!(Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), project_key), Error::<Test>::OnlyContributorsCanVote);
     });
 }
 
