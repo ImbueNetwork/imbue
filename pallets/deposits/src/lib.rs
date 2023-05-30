@@ -77,8 +77,6 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// A deposit has already been taken for this key.
-		DepositAlreadyExists,
 		/// The deposit doesnt exist.
 		DepositDoesntExist,
 	}
@@ -93,25 +91,19 @@ pub mod pallet {
 		fn take_deposit(
 			who: AccountIdOf<T>,
 			storage_item: T::StorageItem,
-			deposit_id: T::DepositId,
 			currency_id: CurrencyId,
 		) -> Result<T::DepositId, DispatchError> {
-			ensure!(
-				!CurrentDeposits::<T>::contains_key(&deposit_id),
-				Error::<T>::DepositAlreadyExists
-			);
+			let deposit_id = Self::get_new_deposit_id();
 			let amount = <T as Config>::DepositCalculator::calculate_deposit(storage_item, currency_id);
 			<T as Config>::MultiCurrency::reserve(currency_id, &who, amount)?;
 			let deposit = Deposit {
 				who,
 				amount,
 				currency_id,
-				deposit_id,
 			};
 			CurrentDeposits::<T>::insert(deposit_id, deposit);
 			Self::deposit_event(Event::<T>::DepositTaken(deposit_id, amount));
-
-			Ok(Self::get_deposit_id())
+			Ok(deposit_id)
 		}
 
 		/// Given a deposit id (the ticket generated when creating a deposit) return the deposit.
@@ -151,7 +143,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		/// Generate a DepositId, used as a ticket. Infallible.
-		fn get_deposit_id() -> T::DepositId {
+		fn get_new_deposit_id() -> T::DepositId {
 			let ticket_id = TicketId::<T>::get();
 			TicketId::<T>::put(ticket_id.saturating_add(One::one()));
 			ticket_id
@@ -164,6 +156,5 @@ pub mod pallet {
 		who: AccountIdOf<T>,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
-		deposit_id: T::DepositId,
 	}
 }

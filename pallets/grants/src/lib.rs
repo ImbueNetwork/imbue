@@ -157,9 +157,7 @@ pub mod pallet {
                 Error::<T>::GrantAlreadyExists
             );
 
-            let deposit_id: DepositIdOf<T> = T::DepositHandler::get_deposit_id();
-            let storage_item = T::GrantStorageItem::get();
-            T::DepositHandler::take_deposit(submitter.clone(), storage_item, deposit_id, CurrencyId::Native)?;
+            let deposit_id = T::DepositHandler::take_deposit(submitter.clone(), T::GrantStorageItem::get(), CurrencyId::Native)?;
 
             let grant = Grant {
                 milestones: proposed_milestones,
@@ -259,7 +257,6 @@ pub mod pallet {
                 }
             });
             Self::deposit_event(Event::<T>::GrantCancelled { grant_id });
-
             Ok(().into())
         }
 

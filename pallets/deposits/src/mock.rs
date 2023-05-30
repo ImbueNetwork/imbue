@@ -108,13 +108,31 @@ impl pallet_deposits::Config for Test {
 }
 
 pub struct MockDepositCalculator;
-
 impl DepositCalculator<Balance> for MockDepositCalculator {
 	type StorageItem = StorageItem;
     fn calculate_deposit(_item: Self::StorageItem, _currency: CurrencyId) -> Balance {
 		// TODO:
 		10_000u64
 	}
+}
+
+struct MockDepositHandler<T>(T);
+impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>> for MockDepositHandler<T> {
+    type DepositId = T::DepositId;
+    type StorageItem = T::StorageItem;
+    fn take_deposit(
+        _who: crate::AccountIdOf<T>,
+        _storage_item: Self::StorageItem,
+        _currency_id: CurrencyId,
+    ) -> Result<T::DepositId, DispatchError> {
+        todo!()
+    }
+    fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        todo!()
+    }
+    fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        todo!()
+    }
 }
 
 pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
