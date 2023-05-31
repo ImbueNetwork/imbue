@@ -28,6 +28,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 
 common-types = { path = "../../libs/common-types", default-features = false }
 pallet-proposals = { path= "../proposals", default-features = false}
+pallet-deposits = {path= "../deposits", default-features = false }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
@@ -42,6 +43,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39"}
+pallet-deposits = {path= "../deposits"}
 
 
 [features]

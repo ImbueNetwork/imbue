@@ -24,7 +24,7 @@ fn get_new_deposit_id_works() {
 fn take_deposit_takes_deposit() {
     new_test_ext().execute_with(|| {
         let item = StorageItem::CrowdFund;
-        let expected_deposit = MockDepositCalculator::calculate_deposit(item, CurrencyId::Native);
+        let expected_deposit = MockDepositCalculator::calculate_deposit(item, CurrencyId::Native).unwrap();
         let alice_reserved_before = <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
         let _ = crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native);
         let alice_reserved_after = <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);

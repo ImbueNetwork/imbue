@@ -1,6 +1,6 @@
 use crate as pallet_crowdfunding;
 use frame_support::traits::{ConstU16, ConstU64, Nothing};
-use frame_support::{parameter_types, PalletId};
+use frame_support::{parameter_types, PalletId, pallet_prelude::*};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -12,6 +12,7 @@ use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519::{Public, Signature};
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
+use pallet_deposits::traits::DepositHandler;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -174,6 +175,7 @@ parameter_types! {
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ProjectStorageItem: StorageItem = StorageItem::Project;
 }
 
 impl pallet_proposals::Config for Test {
@@ -192,8 +194,37 @@ impl pallet_proposals::Config for Test {
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
+    type ProjectStorageItem = ProjectStorageItem;
+    type DepositHandler = MockDepositHandler;
 }
+
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
+	pub enum StorageItem {
+	CrowdFund,
+	Brief,
+	Grant,
+	Project,
+}
+
+pub struct MockDepositHandler;
+impl DepositHandler<Balance, AccountId> for MockDepositHandler {
+    type DepositId = u64;
+    type StorageItem = StorageItem;
+    fn take_deposit(
+        _who: AccountId,
+        _storage_item: Self::StorageItem,
+        _currency_id: CurrencyId,
+    ) -> Result<Self::DepositId, DispatchError> {
+        Ok(0u64)
+    }
+    fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+    fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+}
+
 pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));

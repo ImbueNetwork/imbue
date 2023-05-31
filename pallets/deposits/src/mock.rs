@@ -110,9 +110,9 @@ impl pallet_deposits::Config for Test {
 pub struct MockDepositCalculator;
 impl DepositCalculator<Balance> for MockDepositCalculator {
 	type StorageItem = StorageItem;
-    fn calculate_deposit(_item: Self::StorageItem, _currency: CurrencyId) -> Balance {
+    fn calculate_deposit(_item: Self::StorageItem, _currency: CurrencyId) -> Result<Balance, ()> {
 		// TODO:
-		10_000u64
+		Ok(10_000u64)
 	}
 }
 

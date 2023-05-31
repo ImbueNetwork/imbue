@@ -81,6 +81,8 @@ pub mod pallet {
 		DepositDoesntExist,
 		/// The currency type is not supported.
 		UnsupportedCurrencyType,
+		/// You need more funds to cover the storage deposit.
+		NotEnoughFundsForStorageDeposit,
 	}
 
 	impl<T: Config> DepositHandler<BalanceOf<T>, AccountIdOf<T>> for Pallet<T> {
@@ -97,7 +99,7 @@ pub mod pallet {
 		) -> Result<T::DepositId, DispatchError> {
 			let deposit_id = Self::get_new_deposit_id();
 			let amount = <T as Config>::DepositCalculator::calculate_deposit(storage_item, currency_id).map_err(|_|Error::<T>::UnsupportedCurrencyType)?;
-			<T as Config>::MultiCurrency::reserve(currency_id, &who, amount)?;
+			<T as Config>::MultiCurrency::reserve(currency_id, &who, amount).map_err(|_| Error::<T>::NotEnoughFundsForStorageDeposit)?;
 			let deposit = Deposit {
 				who,
 				amount,

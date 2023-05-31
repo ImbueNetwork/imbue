@@ -4,6 +4,7 @@ use frame_support::{
     traits::{ConstU32, Nothing},
     weights::{ConstantMultiplier, IdentityFee},
     PalletId,
+    pallet_prelude::*,
 };
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
@@ -25,7 +26,7 @@ use sp_std::{
     str,
     vec::Vec,
 };
-
+use pallet_deposits::traits::DepositHandler;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -176,6 +177,33 @@ impl pallet_timestamp::Config for Test {
     type WeightInfo = ();
 }
 
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
+	pub enum StorageItem {
+	CrowdFund,
+	Brief,
+	Grant,
+	Project,
+}
+
+pub struct MockDepositHandler;
+impl DepositHandler<Balance, AccountId> for MockDepositHandler {
+    type DepositId = u64;
+    type StorageItem = StorageItem;
+    fn take_deposit(
+        _who: AccountId,
+        _storage_item: Self::StorageItem,
+        _currency_id: CurrencyId,
+    ) -> Result<Self::DepositId, DispatchError> {
+        Ok(0u64)
+    }
+    fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+    fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+}
+
 parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
@@ -206,6 +234,7 @@ parameter_types! {
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ProjectStorageItem: StorageItem = StorageItem::Project;
 }
 
 impl pallet_proposals::Config for Test {
@@ -224,7 +253,8 @@ impl pallet_proposals::Config for Test {
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
+    type ProjectStorageItem = ProjectStorageItem;
+    type DepositHandler = MockDepositHandler;
 }
 parameter_types! {
     pub const BasicDeposit: u64 = 10;

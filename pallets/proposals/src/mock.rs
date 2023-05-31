@@ -8,7 +8,7 @@ use frame_support::{
 
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
-
+use crate::*;
 use common_types::CurrencyId;
 
 use frame_support::once_cell::sync::Lazy;
@@ -186,7 +186,7 @@ parameter_types! {
     pub MaxMilestonesPerProject: u32 = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
-    pub ProjectStorageItem: StorageItems = StorageItem::Project;
+    pub ProjectStorageItem: StorageItems = StorageItems::Project;
 }
 
 impl pallet_proposals::Config for Test {
@@ -206,7 +206,7 @@ impl pallet_proposals::Config for Test {
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type ProjectStorageItem = ProjectStorageItem;
-    type DepositHandler = MockDepositHandler;
+    type DepositHandler = MockDepositHandler<Test>;
 }
 
 parameter_types! {
@@ -285,7 +285,7 @@ pub enum StorageItems {
 pub struct MockDepositHandler<T>(T);
 impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>> for MockDepositHandler<T> {
     type DepositId = u64;
-    type StorageItem = StorageItem;
+    type StorageItem = StorageItems;
     fn take_deposit(
         _who: crate::AccountIdOf<T>,
         _storage_item: Self::StorageItem,

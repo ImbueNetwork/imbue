@@ -9,7 +9,7 @@ use frame_benchmarking::{account, Vec};
 use frame_support::{assert_ok, traits::Hooks};
 use frame_system::EventRecord;
 use orml_traits::MultiCurrency;
-use sp_arithmetic::per_things::Percent;
+use sp_arithmetic::{per_things::Percent, traits::Zero};
 use sp_core::{Get, H256};
 use sp_runtime::Saturating;
 use sp_std::collections::btree_map::BTreeMap;
@@ -105,6 +105,7 @@ pub fn create_project<T: Config>(
         cancelled: false,
         agreement_hash,
         funding_type: FundingType::Brief,
+        deposit_id: Zero::zero(),
     };
 
     crate::Projects::<T>::insert(project_key, project);

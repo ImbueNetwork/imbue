@@ -772,8 +772,8 @@ parameter_types! {
     pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
     pub const ImbueFee: Percent = Percent::from_percent(5_u8);
-    pub const ProjectStorageDeposit: Balance = DOLLARS * 200;
     pub const ExpiringProjectRoundsPerBlock: u32 = 50;
+    pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -789,9 +789,10 @@ impl pallet_proposals::Config for Runtime {
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
+    type ProjectStorageItem = ProjectStorageItem;
+    type DepositHandler = Deposits;
 }
 
 parameter_types! {
@@ -836,7 +837,7 @@ pub struct ImbueDepositCalculator;
 impl DepositCalculator<Balance> for ImbueDepositCalculator {
     type StorageItem = StorageDepositItems;
     fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Result<Balance, ()> {
-        if currency != CurrencyId::Imbue {
+        if currency != CurrencyId::Native {
             return Err(())
         }
         Ok(match u {
