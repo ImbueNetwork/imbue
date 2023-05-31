@@ -132,13 +132,13 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
         _storage_item: Self::StorageItem,
         _currency_id: CurrencyId,
     ) -> Result<Self::DepositId, DispatchError> {
-        todo!()
+        Ok(0u64)
     }
     fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
-        todo!()
+        Ok(().into())
     }
     fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
-        todo!()
+        Ok(().into())
     }
 }
 

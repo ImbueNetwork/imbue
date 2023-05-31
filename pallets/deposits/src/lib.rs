@@ -42,7 +42,7 @@ pub mod pallet {
 			CurrencyId = CurrencyId,
 		>;
 		/// The actual storage types you want to take deposits for, abstracted as an enum.
-		type StorageItem: Copy + Eq + PartialEq + Debug + MaxEncodedLen + TypeInfo;
+		type StorageItem: Copy + Eq + PartialEq + Debug;
 		
 		type DepositId: AtLeast32BitUnsigned + Member + TypeInfo + Default + MaxEncodedLen + FullCodec + FullEncode + Copy;
 

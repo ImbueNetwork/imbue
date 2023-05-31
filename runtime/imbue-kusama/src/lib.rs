@@ -24,6 +24,7 @@ use sp_std::{
     prelude::*,
 };
 use common_runtime::storage_deposits::StorageDepositItems;
+use pallet_deposits::traits::DepositCalculator;
 use crate::xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -796,6 +797,7 @@ impl pallet_proposals::Config for Runtime {
 parameter_types! {
     pub MaxApprovers: u32 = 50;
     pub MaxMilestonesPerProject: u32 = 50;
+    pub GrantStorageItem: StorageDepositItems = StorageDepositItems::Grant;   
 }
 
 impl pallet_grants::Config for Runtime {
@@ -803,6 +805,8 @@ impl pallet_grants::Config for Runtime {
     type MaxMilestonesPerGrant = MaxMilestonesPerProject;
     type MaxApprovers = MaxApprovers;
     type RMultiCurrency = Currencies;
+    type GrantStorageItem = GrantStorageItem;
+    type DepositHandler = Deposits; 
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type CancellingAuthority = AdminOrigin;
     type WeightInfo = ();
@@ -827,16 +831,25 @@ impl pallet_briefs::Config for Runtime {
     type WeightInfo = ();
 }
 
-parameter_types! {
-    pub GrantStorageItem = StorageDepositItems::Grant;   
+pub type DepositId = u64;
+pub struct ImbueDepositCalculator;
+impl DepositCalculator<Balance> for ImbueDepositCalculator {
+    type StorageItem = StorageDepositItems;
+    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Balance {
+        match u {
+            StorageDepositItems::Project => DOLLARS.saturating_mul(500),
+            StorageDepositItems::CrowdFund => DOLLARS.saturating_mul(550),
+            StorageDepositItems::Grant => DOLLARS.saturating_mul(400),
+            StorageDepositItems::Brief => DOLLARS.saturating_mul(500),
+        }
+    }
 }
-
 impl pallet_deposits::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type MultiCurrency = Currencies;
-    type GrantStorageItem = GrantStorageItem;
+    type StorageItem = StorageDepositItems;
     type DepositId = DepositId;
-    type DepositCalculator = pallet_deposits::impls::ImbueDepositCalculator;
+    type DepositCalculator = ImbueDepositCalculator;
     type DepositSlashAccount = TreasuryAccount;
 }
 
@@ -896,6 +909,7 @@ construct_runtime! {
         ImbueProposals: pallet_proposals::{Pallet, Call, Storage, Event<T>} = 100,
         ImbueBriefs: pallet_briefs::{Pallet, Call, Storage, Event<T>} = 101,
         ImbueGrants: pallet_grants::{Pallet, Call, Storage, Event<T>} = 102,
+        Deposits: pallet_deposits::{Pallet, Storage, Event<T>} = 103,
     }
 }
 

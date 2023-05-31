@@ -2,6 +2,7 @@
 
 pub use constants::*;
 pub use types::*;
+use frame_support::pallet_prelude::*;
 
 /// Common types for all runtimes
 pub mod types {
@@ -280,7 +281,9 @@ pub mod common_xcm {
     }
 }
 
-mod storage_deposits {
+pub mod storage_deposits {
+use super::*;
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
     pub enum StorageDepositItems {
         Project,
         CrowdFund,

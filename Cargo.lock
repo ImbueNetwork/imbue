@@ -3947,6 +3947,7 @@ dependencies = [
  "pallet-collator-selection",
  "pallet-collective",
  "pallet-democracy",
+ "pallet-deposits",
  "pallet-grants",
  "pallet-identity",
  "pallet-membership",
@@ -6424,6 +6425,7 @@ dependencies = [
 name = "pallet-deposits"
 version = "4.0.0-dev"
 dependencies = [
+ "common-runtime",
  "common-types",
  "frame-benchmarking",
  "frame-support",
