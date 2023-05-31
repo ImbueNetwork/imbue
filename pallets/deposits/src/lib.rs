@@ -13,8 +13,6 @@ mod benchmarking;
 
 pub mod traits;
 
-pub mod impls;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use codec::{FullCodec, FullEncode, WrapperTypeEncode};
@@ -81,6 +79,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// The deposit doesnt exist.
 		DepositDoesntExist,
+		/// The currency type is not supported.
+		UnsupportedCurrencyType,
 	}
 
 	impl<T: Config> DepositHandler<BalanceOf<T>, AccountIdOf<T>> for Pallet<T> {
@@ -96,7 +96,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<T::DepositId, DispatchError> {
 			let deposit_id = Self::get_new_deposit_id();
-			let amount = <T as Config>::DepositCalculator::calculate_deposit(storage_item, currency_id);
+			let amount = <T as Config>::DepositCalculator::calculate_deposit(storage_item, currency_id).map_err(|_|Error::<T>::UnsupportedCurrencyType)?;
 			<T as Config>::MultiCurrency::reserve(currency_id, &who, amount)?;
 			let deposit = Deposit {
 				who,

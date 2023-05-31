@@ -184,9 +184,9 @@ parameter_types! {
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 100;
-    pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ProjectStorageItem: StorageItems = StorageItem::Project;
 }
 
 impl pallet_proposals::Config for Test {
@@ -205,7 +205,8 @@ impl pallet_proposals::Config for Test {
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
+    type ProjectStorageItem = ProjectStorageItem;
+    type DepositHandler = MockDepositHandler;
 }
 
 parameter_types! {
@@ -273,4 +274,29 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &JOHN, initial_balance);
     });
     ext
+}
+
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
+pub enum StorageItems {
+    Project,
+}
+
+
+pub struct MockDepositHandler<T>(T);
+impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>> for MockDepositHandler<T> {
+    type DepositId = u64;
+    type StorageItem = StorageItem;
+    fn take_deposit(
+        _who: crate::AccountIdOf<T>,
+        _storage_item: Self::StorageItem,
+        _currency_id: CurrencyId,
+    ) -> Result<Self::DepositId, DispatchError> {
+        Ok(0u64)
+    }
+    fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+    fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
 }

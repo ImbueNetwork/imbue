@@ -221,8 +221,9 @@ mod v2 {
 // 4. --DONE Milestone votes is now a double map (project_key, milestone_key) +
 // 5. --DONE Rounds is also a DoubleMap
 // 6. --DONE Round type has had contribution_round removed
-// 7, percent_to_unlock changed from u32 to Percent. (cuteolaf) 
-pub mod v3 {
+// 7, --DONE percent_to_unlock changed from u32 to Percent. (cuteolaf) 
+// 8, --DONE add depositid
+pub mod v3 {    
     use super::*;
 
     #[derive(Encode, Decode, Clone)]
@@ -284,7 +285,7 @@ pub mod v3 {
             });
 
             *weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> =
+            let migrated_project: Project<T> =
                 Project {
                     milestones: migrated_milestones.clone(),
                     contributions: migrated_contributions.clone(),
@@ -296,6 +297,7 @@ pub mod v3 {
                     cancelled: project.cancelled,
                     raised_funds: project.raised_funds,
                     funding_type: FundingType::Proposal,
+                    deposit_id: Zero::zero(),
                 };
             Some(migrated_project)
         });

@@ -20,7 +20,7 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber> {
     /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
     /// (if using crate) This function should bypass the usual checks when creating a proposal and
     /// instantiate everything carefully. 
-    // TODO: Generic over currencyId 
+    // TODO: Generic over currencyId: https://github.com/ImbueNetwork/imbue/issues/135
     fn convert_to_proposal(
         currency_id: CurrencyId,
         current_contribution: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
@@ -57,102 +57,6 @@ impl <T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFo
         _proposed_milestones: Vec<ProposedMilestone>,
         _funding_type: FundingType,
     ) -> Result<(), DispatchError> {
-        Ok(())
-    }
-}
-
-impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
-    for crate::Pallet<T>
-where
-    Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>: EncodeLike<
-        Project<
-            AccountIdOf<T>,
-            BalanceOf<T>,
-            BlockNumberFor<T>,
-        >,
-    >,
-{
-    /// The caller is used to take the storage deposit from.
-    /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
-    fn convert_to_proposal(
-        currency_id: CurrencyId,
-        contributions: ContributionsFor<T>,
-        brief_hash: H256,
-        benificiary: AccountIdOf<T>,
-        proposed_milestones: Vec<ProposedMilestone>,
-        funding_type: FundingType,
-    ) -> Result<(), DispatchError> {
-        let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
-        crate::ProjectCount::<T>::put(project_key);
-
-        <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
-                        AccountIdOf<T>,
-                    >>::reserve(currency_id, &benificiary, T::ProjectStorageDeposit::get())?;
-
-        let sum_of_contributions = contributions
-            .values()
-            .fold(Default::default(), |acc: BalanceOf<T>, x| {
-                acc.saturating_add(x.value)
-            });
-
-        match funding_type {
-            FundingType::Proposal | FundingType::Brief => {
-                for (acc, cont) in contributions.iter() {
-                    let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
-                    // TODO: use repatriate reserved.
-                    <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
-                        AccountIdOf<T>,
-                    >>::unreserve(currency_id, acc, cont.value);
-                    <T as crate::Config>::MultiCurrency::transfer(
-                        currency_id,
-                        acc,
-                        &project_account_id,
-                        cont.value,
-                    )?;
-                }
-            }
-            FundingType::Grant(_) => {}
-        }
-
-        let mut milestone_key: u32 = 0;
-        let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-        for milestone in proposed_milestones {
-            let milestone = Milestone {
-                project_key,
-                milestone_key,
-                percentage_to_unlock: milestone.percentage_to_unlock,
-                is_approved: false,
-            };
-            milestones.insert(milestone_key, milestone);
-            milestone_key = milestone_key.saturating_add(1);
-        }
-
-        let project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> =
-            Project {
-                milestones,
-                contributions,
-                currency_id,
-                withdrawn_funds: 0u32.into(),
-                raised_funds: sum_of_contributions,
-                initiator: benificiary.clone(),
-                created_on: frame_system::Pallet::<T>::block_number(),
-                cancelled: false,
-                agreement_hash: brief_hash,
-                funding_type,
-            };
-
-        Projects::<T>::insert(project_key, project);
-        let project_account = Self::project_account_id(project_key);
-        ProjectCount::<T>::mutate(|c| *c = c.saturating_add(1));
-        Self::deposit_event(Event::ProjectCreated(
-            benificiary,
-            brief_hash,
-            project_key,
-            sum_of_contributions,
-            currency_id,
-            project_account,
-        ));
-
         Ok(())
     }
 }

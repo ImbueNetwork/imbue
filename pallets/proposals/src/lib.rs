@@ -3,7 +3,7 @@
 use codec::{Decode, Encode};
 use common_types::{CurrencyId, FundingType};
 use frame_support::{
-    pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap, traits::EnsureOrigin, PalletId,
+    pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap, traits::EnsureOrigin, PalletId, dispatch::EncodeLike
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -11,11 +11,12 @@ pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
-use sp_runtime::traits::{AccountIdConversion, Zero};
+use sp_runtime::traits::{AccountIdConversion, Zero, Saturating};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
+use pallet_deposits::traits::DepositHandler;
 
 pub mod traits;
-use traits::RefundHandler;
+use traits::{RefundHandler, IntoProposal};
 
 #[cfg(test)]
 mod mock;
@@ -40,6 +41,8 @@ pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
+pub type DepositIdOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedMilestoneKeys<T> = BoundedVec<MilestoneKey, <T as Config>::MaxMilestonesPerProject>;
@@ -71,32 +74,25 @@ pub mod pallet {
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         type WeightInfo: WeightInfo;
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
-
         /// The amount of time given, up to point of decision, when a vote of no confidence is held.
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
-
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<Percent>;
-
         // TODO: use this.
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
-
         /// Defines the length that a milestone can be voted on.
         type MilestoneVotingWindow: Get<Self::BlockNumber>;
-
         /// The type responisble for handling refunds.
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
-
         type MaxMilestonesPerProject: Get<u32>;
-
-        /// The storage deposit taken when a project is created and returned on deletion/completion.
-        type ProjectStorageDeposit: Get<BalanceOf<Self>>;
         /// Imbue fee in percent 0-99
         type ImbueFee: Get<Percent>;
-
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
         type ExpiringProjectRoundsPerBlock: Get<u32>;
+        type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
+        /// The type that will be used to calculate the deposit of a project.
+        type ProjectStorageItem: Get<StorageItemOf<Self>>; 
     }
 
     #[pallet::pallet]
@@ -115,7 +111,7 @@ pub mod pallet {
         _,
         Identity,
         ProjectKey,
-        Project<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+        Project<T>,
         OptionQuery,
     >;
 
@@ -387,6 +383,93 @@ pub mod pallet {
             )
         }
     }
+    impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for crate::Pallet<T>
+    where
+    Project<T>: EncodeLike<Project<T>>,
+    {
+        /// The caller is used to take the storage deposit from.
+        /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
+        fn convert_to_proposal(
+            currency_id: CurrencyId,
+            contributions: ContributionsFor<T>,
+            brief_hash: H256,
+            benificiary: AccountIdOf<T>,
+            proposed_milestones: Vec<ProposedMilestone>,
+            funding_type: FundingType,
+        ) -> Result<(), DispatchError> {
+            let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
+            crate::ProjectCount::<T>::put(project_key);
+
+            // Take storage deposit only for a Project.
+            let deposit_id = <T as Config>::DepositHandler::take_deposit(benificiary.clone(), <T as Config>::ProjectStorageItem::get(), CurrencyId::Native)?;
+            
+            let sum_of_contributions = contributions
+                .values()
+                .fold(Default::default(), |acc: BalanceOf<T>, x| {
+                    acc.saturating_add(x.value)
+                });
+
+            match funding_type {
+                FundingType::Proposal | FundingType::Brief => {
+                    for (acc, cont) in contributions.iter() {
+                        let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
+                        // TODO: use repatriate reserved.
+                        <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
+                            AccountIdOf<T>,
+                        >>::unreserve(currency_id, acc, cont.value);
+                        <T as crate::Config>::MultiCurrency::transfer(
+                            currency_id,
+                            acc,
+                            &project_account_id,
+                            cont.value,
+                        )?;
+                    }
+                }
+                FundingType::Grant(_) => {}
+            }
+
+            let mut milestone_key: u32 = 0;
+            let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+            for milestone in proposed_milestones {
+                let milestone = Milestone {
+                    project_key,
+                    milestone_key,
+                    percentage_to_unlock: milestone.percentage_to_unlock,
+                    is_approved: false,
+                };
+                milestones.insert(milestone_key, milestone);
+                milestone_key = milestone_key.saturating_add(1);
+            }
+
+            let project: Project<T> =
+                Project {
+                    milestones,
+                    contributions,
+                    currency_id,
+                    withdrawn_funds: 0u32.into(),
+                    raised_funds: sum_of_contributions,
+                    initiator: benificiary.clone(),
+                    created_on: frame_system::Pallet::<T>::block_number(),
+                    cancelled: false,
+                    agreement_hash: brief_hash,
+                    funding_type,
+                    deposit_id,
+                };
+
+            Projects::<T>::insert(project_key, project);
+            let project_account = Self::project_account_id(project_key);
+            ProjectCount::<T>::mutate(|c| *c = c.saturating_add(1));
+            Self::deposit_event(Event::ProjectCreated(
+                benificiary,
+                brief_hash,
+                project_key,
+                sum_of_contributions,
+                currency_id,
+                project_account,
+            ));
+            Ok(())
+        }
+    }
 }
 
 // TODO: MIGRATION NEEDED, removed field Contributionround
@@ -449,18 +532,20 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 }
 
 /// The struct which contain milestones that can be submitted.
+#[scale_info(skip_type_params(T))]
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
-pub struct Project<AccountId, Balance, BlockNumber> {
+pub struct Project<T: Config> {
     pub agreement_hash: H256,
     pub milestones: BTreeMap<MilestoneKey, Milestone>,
-    pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
+    pub contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
     pub currency_id: common_types::CurrencyId,
-    pub withdrawn_funds: Balance,
-    pub raised_funds: Balance,
-    pub initiator: AccountId,
-    pub created_on: BlockNumber,
+    pub withdrawn_funds: BalanceOf<T>,
+    pub raised_funds: BalanceOf<T>,
+    pub initiator: AccountIdOf<T>,
+    pub created_on: BlockNumberFor<T>,
     pub cancelled: bool,
     pub funding_type: FundingType,
+    pub deposit_id: DepositIdOf<T>,
 }
 
 /// The contribution users made to a proposal project.

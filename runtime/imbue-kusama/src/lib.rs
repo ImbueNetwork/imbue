@@ -835,13 +835,16 @@ pub type DepositId = u64;
 pub struct ImbueDepositCalculator;
 impl DepositCalculator<Balance> for ImbueDepositCalculator {
     type StorageItem = StorageDepositItems;
-    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Balance {
-        match u {
+    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Result<Balance, ()> {
+        if currency != CurrencyId::Imbue {
+            return Err(())
+        }
+        Ok(match u {
             StorageDepositItems::Project => DOLLARS.saturating_mul(500),
             StorageDepositItems::CrowdFund => DOLLARS.saturating_mul(550),
             StorageDepositItems::Grant => DOLLARS.saturating_mul(400),
             StorageDepositItems::Brief => DOLLARS.saturating_mul(500),
-        }
+        })
     }
 }
 impl pallet_deposits::Config for Runtime {

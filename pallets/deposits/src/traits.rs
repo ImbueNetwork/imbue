@@ -7,7 +7,7 @@ use codec::{FullCodec, FullEncode};
 /// should be.
 pub trait DepositCalculator<Balance> {
     type StorageItem;
-    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Balance;
+    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Result<Balance, ()>;
 }
 
 /// The handler for taking and reinstating deposits.

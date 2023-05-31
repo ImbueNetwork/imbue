@@ -390,6 +390,7 @@ impl<T: Config> Pallet<T> {
             }
 
             Projects::<T>::remove(project_key);
+            <T as Config>::DepositHandler::return_deposit(project.deposit_id);
             Self::deposit_event(Event::NoConfidenceRoundFinalised(project_key));
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into());

@@ -6539,6 +6539,7 @@ dependencies = [
 name = "pallet-grants"
 version = "0.1.0"
 dependencies = [
+ "common-runtime",
  "common-traits",
  "common-types",
  "frame-benchmarking",
@@ -6805,6 +6806,7 @@ dependencies = [
  "orml-traits",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-deposits",
  "pallet-identity",
  "pallet-timestamp",
  "pallet-transaction-payment",

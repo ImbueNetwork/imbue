@@ -123,12 +123,12 @@ parameter_types! {
 	Project,
 }
 
-pub struct MockDepositHandler<T>(T);
-impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>> for MockDepositHandler<T> {
+pub struct MockDepositHandler;
+impl DepositHandler<Balance, AccountId> for MockDepositHandler {
     type DepositId = u64;
     type StorageItem = StorageItem;
     fn take_deposit(
-        _who: crate::AccountIdOf<T>,
+        _who: AccountId,
         _storage_item: Self::StorageItem,
         _currency_id: CurrencyId,
     ) -> Result<Self::DepositId, DispatchError> {
@@ -150,7 +150,7 @@ impl pallet_grants::Config for Test {
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type CancellingAuthority = EnsureRoot<AccountId>;
     type GrantStorageItem = GrantStorageItem;
-    type DepositHandler = MockDepositHandler<Test>;
+    type DepositHandler = MockDepositHandler;
     type WeightInfo = ();
 }
 
@@ -178,6 +178,7 @@ parameter_types! {
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ProjectStorageItem: StorageItem = StorageItem::Project;
 }
 
 impl pallet_proposals::Config for Test {
@@ -196,8 +197,10 @@ impl pallet_proposals::Config for Test {
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
+    type DepositHandler = MockDepositHandler;
+    type ProjectStorageItem = ProjectStorageItem;
 }
+
 parameter_types! {
     pub const BasicDeposit: u64 = 10;
     pub const FieldDeposit: u64 = 10;
