@@ -13,6 +13,8 @@ mod benchmarking;
 
 pub mod traits;
 
+pub mod impls;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use codec::{FullCodec, FullEncode, WrapperTypeEncode};
@@ -159,15 +161,13 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		/// Generate a DepositId, used as a ticket. Infallible.
-		fn get_new_deposit_id() -> T::DepositId {
+		pub(crate) fn get_new_deposit_id() -> T::DepositId {
 			let ticket_id = TicketId::<T>::get();
 			TicketId::<T>::put(ticket_id.saturating_add(One::one()));
 			ticket_id
 		}
 	}
 
-	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
-	#[scale_info(skip_type_params(T))]
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Deposit<T: Config> {

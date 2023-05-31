@@ -173,13 +173,6 @@ impl<T: Config> Pallet<T> {
         }
         <Projects<T>>::insert(project_key, project);
 
-        Self::deposit_event(Event::VoteSubmitted(
-            who,
-            project_key,
-            milestone_key,
-            approve_milestone,
-            now,
-        ));
         Ok(().into())
     }
 

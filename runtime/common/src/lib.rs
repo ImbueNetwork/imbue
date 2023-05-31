@@ -279,3 +279,12 @@ pub mod common_xcm {
         }
     }
 }
+
+mod storage_deposits {
+    pub enum StorageDepositItems {
+        Project,
+        CrowdFund,
+        Grant,
+        Brief,
+    }
+}

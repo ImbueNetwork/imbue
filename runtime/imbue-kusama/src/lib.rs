@@ -23,7 +23,7 @@ use sp_std::{
     convert::{TryFrom, TryInto},
     prelude::*,
 };
-
+use common_runtime::storage_deposits::StorageDepositItems;
 use crate::xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -825,7 +825,19 @@ impl pallet_briefs::Config for Runtime {
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
     type WeightInfo = ();
-    // TODO: Weight info
+}
+
+parameter_types! {
+    pub GrantStorageItem = StorageDepositItems::Grant;   
+}
+
+impl pallet_deposits::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MultiCurrency = Currencies;
+    type GrantStorageItem = GrantStorageItem;
+    type DepositId = DepositId;
+    type DepositCalculator = pallet_deposits::impls::ImbueDepositCalculator;
+    type DepositSlashAccount = TreasuryAccount;
 }
 
 construct_runtime! {

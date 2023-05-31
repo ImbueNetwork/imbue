@@ -221,7 +221,7 @@ mod v2 {
 // 4. --DONE Milestone votes is now a double map (project_key, milestone_key) +
 // 5. --DONE Rounds is also a DoubleMap
 // 6. --DONE Round type has had contribution_round removed
-// 7, --DONE percent_to_unlock changed from u32 to Percent. (cuteolaf) 
+// 7, percent_to_unlock changed from u32 to Percent. (cuteolaf) 
 pub mod v3 {
     use super::*;
 
@@ -360,11 +360,11 @@ pub mod v3 {
     }
     #[derive(Encode, Decode, Clone)]
     pub struct Round<BlockNumber> {
-        start: BlockNumber,
-        end: BlockNumber,
-        project_keys: Vec<ProjectKey>,
-        round_type: v3::RoundType,
-        is_canceled: bool,
+        pub start: BlockNumber,
+        pub end: BlockNumber,
+        pub project_keys: Vec<ProjectKey>,
+        pub round_type: v3::RoundType,
+        pub is_canceled: bool,
     }
 
     #[storage_alias]

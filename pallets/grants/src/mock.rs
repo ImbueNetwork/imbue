@@ -2,7 +2,7 @@ use crate as pallet_grants;
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
 use frame_support::traits::{ConstU16, Nothing};
-use frame_support::{parameter_types, PalletId};
+use frame_support::{parameter_types, PalletId, pallet_prelude::*};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::Percent;
@@ -13,6 +13,7 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
+use pallet_deposits::traits::DepositHandler;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -111,6 +112,34 @@ impl orml_tokens::Config for Test {
 parameter_types! {
     pub MaxMilestonesPerGrant: u32 = 50;
     pub MaxApprovers: u32 = 100;
+    pub GrantStorageItem: StorageItem = StorageItem::Grant;
+}
+
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
+	pub enum StorageItem {
+	CrowdFund,
+	Brief,
+	Grant,
+	Project,
+}
+
+pub struct MockDepositHandler<T>(T);
+impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>> for MockDepositHandler<T> {
+    type DepositId = u64;
+    type StorageItem = StorageItem;
+    fn take_deposit(
+        _who: crate::AccountIdOf<T>,
+        _storage_item: Self::StorageItem,
+        _currency_id: CurrencyId,
+    ) -> Result<Self::DepositId, DispatchError> {
+        todo!()
+    }
+    fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        todo!()
+    }
+    fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        todo!()
+    }
 }
 
 impl pallet_grants::Config for Test {
@@ -120,8 +149,11 @@ impl pallet_grants::Config for Test {
     type MaxApprovers = MaxApprovers;
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type CancellingAuthority = EnsureRoot<AccountId>;
+    type GrantStorageItem = GrantStorageItem;
+    type DepositHandler = MockDepositHandler<Test>;
     type WeightInfo = ();
 }
+
 
 parameter_types! {
     pub const MinimumPeriod: u64 = 1;

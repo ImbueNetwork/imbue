@@ -5,7 +5,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use crate::traits::DepositCalculator;
+use crate::traits::{DepositCalculator, DepositHandler};
 use common_types::CurrencyId;
 use frame_support::{pallet_prelude::*, parameter_types};
 use sp_runtime::traits::{IdentifyAccount, Verify};

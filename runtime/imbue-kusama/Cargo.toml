@@ -102,6 +102,7 @@ common-runtime = { path = "../common", default-features = false }
 pallet-proposals = { path = '../../pallets/proposals', default-features = false }
 pallet-briefs = {path = '../../pallets/briefs', default-features = false }
 pallet-grants = {path = '../../pallets/grants', default-features = false }
+pallet-deposits = {path = '../../pallets/deposits', default-features = false }
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 
