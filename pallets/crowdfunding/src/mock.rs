@@ -171,8 +171,8 @@ parameter_types! {
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 50;
-    pub ProjectStorageDeposit: Balance = 10000;
-    pub ImbueFee: Percent = Percent::from_percent(20u8);
+    pub ProjectStorageDeposit: Balance = 100;
+    pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
 }
 

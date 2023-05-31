@@ -6,8 +6,10 @@ use crate::{
 use frame_support::{assert_noop, assert_ok};
 use common_types::{CurrencyId, FundingType};
 use sp_core::H256;
+use test_utils::*;
 
 #[test]
+fn submit_milestone_milestone_doesnt_exist() {
 fn submit_milestone_milestone_doesnt_exist() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
@@ -395,6 +397,7 @@ fn raise_no_confidence_round_no_project() {
     });
 }
 
+// kind of a beast but worth it.
 #[test]
 fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
     build_test_externality().execute_with(|| {
@@ -482,92 +485,3 @@ fn vote_on_no_confidence_mutates_vote() {
 // ^^ is connected to making the pallet generic over funding type.
 // Todo: assert the last event of each extrinsic/
 
-pub fn get_contributions(accs: Vec<AccountId>, total_amount: Balance) -> ContributionsFor<Test> {
-    let v = total_amount / accs.len() as u64;
-    let now = frame_system::Pallet::<Test>::block_number();
-    let mut out = BTreeMap::new();
-    accs.iter().for_each(|a| {
-        let c = Contribution {
-            value: v,
-            timestamp: now,
-        };
-        out.insert(a.clone(), c);
-    });
-    out
-}
-
-pub fn get_milestones(n: u32) -> Vec<ProposedMilestone> {
-    (0..n).map(|_| {
-        ProposedMilestone {
-            percentage_to_unlock: Percent::from_percent(100u8 / n as u8)
-        }
-    }).collect::<Vec<ProposedMilestone>>()
-}
-
-pub fn run_to_block(n: BlockNumber) {
-    while System::block_number() < n {
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-        Proposals::on_initialize(System::block_number());
-    }
-}
-
-/// Create a project for test purposes, this will not test the paths coming into this pallet via
-/// the IntoProposal trait.
-pub fn create_project(
-    benificiary: AccountIdOf<Test>,
-    contributions: ContributionsFor<Test>,
-    proposed_milestones: Vec<ProposedMilestone>,
-    currency_id: CurrencyId,
-) -> ProjectKey
-{       
-    let aggrement_hash: H256 = Default::default();
-        let project_key = crate::ProjectCount::<Test>::get().saturating_add(1);
-        crate::ProjectCount::<Test>::put(project_key);
-        let sum_of_contributions = contributions
-            .values()
-            .fold(Default::default(), |acc: BalanceOf<Test>, x| {
-                acc.saturating_add(x.value)
-            });
-
-        for (acc, cont) in contributions.iter() {
-            let project_account_id = crate::Pallet::<Test>::project_account_id(project_key);
-            assert_ok!(<Test as crate::Config>::MultiCurrency::transfer(
-                RuntimeOrigin::signed(*acc),
-                project_account_id,
-                currency_id,
-                cont.value,
-            ));
-        }
-
-        let mut milestone_key: u32 = 0;
-        let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-        for milestone in proposed_milestones {
-            let milestone = Milestone {
-                project_key,
-                milestone_key,
-                percentage_to_unlock: milestone.percentage_to_unlock,
-                is_approved: false,
-            };
-            milestones.insert(milestone_key, milestone);
-            milestone_key = milestone_key.saturating_add(1);
-        }
-
-        let project: Project<AccountIdOf<Test>, BalanceOf<Test>, BlockNumberFor<Test>> =
-            Project {
-                milestones,
-                contributions,
-                currency_id,
-                withdrawn_funds: 0u32.into(),
-                raised_funds: sum_of_contributions,
-                initiator: benificiary.clone(),
-                created_on: frame_system::Pallet::<Test>::block_number(),
-                cancelled: false,
-                agreement_hash: aggrement_hash,
-                funding_type: FundingType::Brief,
-            };
-
-        Projects::<Test>::insert(project_key, project);
-        ProjectCount::<Test>::mutate(|c| *c = c.saturating_add(1));
-        project_key
-}

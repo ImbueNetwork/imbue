@@ -1,204 +1,121 @@
 #![cfg(feature = "runtime-benchmarks")]
 use super::*;
+use crate::test_utils::*;
 use crate::Pallet as Proposals;
-use common_types::CurrencyId;
-use frame_benchmarking::vec;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::{assert_ok, traits::Get};
-use frame_system::{EventRecord, Pallet as System, RawOrigin};
-use orml_traits::MultiCurrency;
-use sp_arithmetic::per_things::Percent;
-use sp_core::H256;
-use sp_std::str;
-const _CONTRIBUTION: u32 = 100;
-const SEED: u32 = 0;
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec};
+use frame_support::assert_ok;
+use frame_system::RawOrigin;
+use sp_core::Get;
+use sp_runtime::Saturating;
 
 benchmarks! {
     where_clause {
-        where
-        T::AccountId: AsRef<[u8]>,
+        where T::AccountId: AsRef<[u8]>,
     }
 
     submit_milestone {
         let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000);
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
-        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
-        let prop_milestones = get_milestones(10);
-        let project_key = create_project(*ALICE, cont, prop_milestones, CurrencyId::Native);
-
+        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
+        let contributions = get_contributions::<T>(vec![alice], 100_000);
+        let prop_milestones = get_max_milestones::<T>();
+        let project_key = create_project::<T>(bob.clone(), contributions, prop_milestones, CurrencyId::Native);
         // (Initiator, ProjectKey, MilestoneKey)
     }: _(RawOrigin::Signed(bob.clone()), project_key, 0)
-    verify {
-       assert_last_event::<T>(Event::<T>::VotingRoundCreated(2, vec![0]).into());
+    verify{
+        assert_last_event::<T>(Event::<T>::VotingRoundCreated(project_key).into());
     }
 
     vote_on_milestone {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1000);
-        let cont = get_contributions(vec![*], 10000);
-        let prop_milestones = get_milestones(u32::MAX);
-        let project_key = create_project(RawOrigin::Signed(alice.clone()), cont, prop_milestones, CurrencyId::Native);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
+        // TODO: should update the contributors list to have maximum available length
+        let contributions = get_contributions::<T>(vec![bob.clone()], 500);
+        let prop_milestones = get_max_milestones::<T>();
+        let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
 
-        Proposals::<T>::submit_milestone(RawOrigin::Signed(alice), project_key, 0);
-
-    }: _(RawOrigin::Signed(alice.clone()), project_key, 0, true)
+        assert_ok!(Proposals::<T>::submit_milestone(RawOrigin::Signed(alice).into(), project_key, 0));
+        // Contributor, ProjectKey, MilestoneKey, ApproveMilestone
+    }: _(RawOrigin::Signed(bob.clone()), project_key, 0, true)
     verify {
-         assert_last_event::<T>(Event::<T>::MilestoneApproved(bob, 0, 0, 11u32.into()).into());
+        let current_block: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+        assert_last_event::<T>(Event::<T>::VoteSubmitted(bob, project_key, 0, true, current_block).into())
     }
 
     withdraw {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1000);
-        let cont = get_contributions(vec![*BOB, *CHARLIE], 100_000);
-        let prop_milestones = get_milestones(u32::MAX);
-        let project_key = create_project(RawOrigin::Signed(alice.clone()), cont, prop_milestones, CurrencyId::Native);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
+        let contributions = get_contributions::<T>(vec![bob.clone()], 500);
+        let raised_funds:BalanceOf<T> = 500u32.into();
 
-        for 
-        Proposals::<T>::submit_milestone(RawOrigin::Signed(alice), project_key, 0);
+        let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
+        let prop_milestones = get_milestones(milestone_count as u8);
+
+        let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
+
+        for milestone_key in 0..milestone_count {
+            // The initiator submits a milestone
+            assert_ok!(Proposals::<T>::submit_milestone(RawOrigin::Signed(alice.clone()).into(), project_key, milestone_key));
+
+            // Contributors vote on the milestone
+            assert_ok!(Proposals::<T>::vote_on_milestone(RawOrigin::Signed(bob.clone()).into(), project_key, milestone_key, true));
+        }
+
+        // All the milestones are approved now
+        let fee:BalanceOf<T> = <T as Config>::ImbueFee::get().mul_floor(raised_funds).into();
+        let withdrawn:BalanceOf<T> = raised_funds.saturating_sub(fee);
 
         // (Initiator, ProjectKey)
-    }: _(RawOrigin::Signed(bob.clone()) ,0)
+    }: _(RawOrigin::Signed(alice.clone()), project_key)
     verify {
-        let fund: u32 = 10_000u32 * milestone_keys.len() as u32;
-        let fee = <T as Config>::ImbueFee::get().mul_floor(fund);
-        assert_last_event::<T>(Event::<T>::ProjectFundsWithdrawn(bob, 0, (fund - fee).into(), CurrencyId::Native).into());
+        assert_last_event::<T>(Event::<T>::ProjectFundsWithdrawn(alice, project_key, withdrawn, CurrencyId::Native).into());
     }
 
     raise_vote_of_no_confidence {
-        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
-        let contribution_amount = 10_000u32;
-        let milestone_keys: BoundedMilestoneKeys<T> = vec![0].try_into().unwrap();
-        // Setup state: Approved project.
-        create_project_common::<T>(contribution_amount.into());
-        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
-        run_to_block::<T>(5u32.into());
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1), 0, contribution_amount.into())?;
-        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
+        // TODO: should update the contributors list to have maximum available length
+        let contributions = get_contributions::<T>(vec![bob.clone()], 500);
+        let prop_milestones = get_max_milestones::<T>();
+        let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
 
-        // (Initiator, ProjectKey)
-    }: _(RawOrigin::Signed(alice.clone()) , 0)
+        // (Contributor, ProjectKey)
+    }: _(RawOrigin::Signed(bob.clone()), project_key)
     verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundCreated(2, 0).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundCreated(project_key).into());
     }
 
     vote_on_no_confidence_round {
-        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 100_000);
-        let charlie: T::AccountId = create_funded_user::<T>("contributor2", 1, 100_000);
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
-        let contribution_amount = 10_000u32;
-        let milestone_keys: BoundedMilestoneKeys<T> = vec![0].try_into().unwrap();
-        // Setup state: Approved project.
-        create_project_common::<T>(contribution_amount.into());
-        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
-        run_to_block::<T>(5u32.into());
-        Proposals::<T>::contribute(RawOrigin::Signed(charlie.clone()).into(), Some(1), 0, contribution_amount.into())?;
-        Proposals::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), Some(1), 0, contribution_amount.into())?;
-        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
-        Proposals::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(alice.clone()).into() , 0)?;
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
+        let charlie: T::AccountId = create_funded_user::<T>("contributor", 2, 1_000);
+        // TODO: should update the contributors list to have maximum available length
+        let contributions = get_contributions::<T>(vec![bob.clone(), charlie.clone()], 500);
+        let prop_milestones = get_max_milestones::<T>();
+        let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
 
-        // (Initiator, RoundKey, ProjectKey, boolean)
-    }: _(RawOrigin::Signed(charlie), Some(2u32), 0u32, true)
+        assert_ok!(Pallet::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(bob).into(), project_key));
+        // (Contributor, ProjectKey, IsYay)
+    }: _(RawOrigin::Signed(charlie), project_key, true)
     verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(2, 0).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(project_key).into());
     }
 
-
-    // Uses refund under hood so we need to account for maximum number of contributors.
     finalise_no_confidence_round {
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000);
-        let contributor: T::AccountId = create_funded_user::<T>("contributor", 0, 100_000);
-        let contribution_amount = 10_000u32;
-        let milestone_keys: BoundedMilestoneKeys<T> = vec![0].try_into().unwrap();
-        let mut contributors: Vec<T::AccountId> = vec![];
-        // Setup state: Approved project.
-        create_project_common::<T>((contribution_amount * T::MaximumContributorsPerProject::get()).into());
-        Proposals::<T>::schedule_round(RawOrigin::Root.into(), 2u32.into(), 10u32.into(), vec![0u32].try_into().unwrap(), RoundType::ContributionRound)?;
-        run_to_block::<T>(5u32.into());
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
+        let charlie: T::AccountId = create_funded_user::<T>("contributor", 2, 1_000);
+        // TODO: should update the contributors list to have maximum available length
+        let contributions = get_contributions::<T>(vec![bob.clone(), charlie.clone()], 500);
+        let prop_milestones = get_max_milestones::<T>();
+        let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
 
-        for i in 0..T::MaximumContributorsPerProject::get() {
-            let acc = create_funded_user::<T>("contributor", i, 100_000);
-            contributors.push(acc.clone());
-            Proposals::<T>::contribute(RawOrigin::Signed(acc.clone()).into(), Some(1), 0, contribution_amount.into())?;
-        }
-        Proposals::<T>::approve(RawOrigin::Root.into(), Some(1), 0, Some(milestone_keys))?;
-
-        Proposals::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(contributor.clone()).into() ,0)?;
-
-        for i in 1..T::MaximumContributorsPerProject::get() {
-            Proposals::<T>::vote_on_no_confidence_round(RawOrigin::Signed(contributors[i as usize].clone()).into(), Some(2), 0, false)?;
-        }
-        // (Contributor, RoundKey, ProjectKey)
-    }: _(RawOrigin::Signed(contributor), Some(2u32), 0u32)
+        assert_ok!(Pallet::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(bob.clone()).into(), project_key));
+        assert_ok!(Pallet::<T>::vote_on_no_confidence_round(RawOrigin::Signed(charlie).into(), project_key, false));
+        // (Contributor, ProjectKey)
+    }: _(RawOrigin::Signed(bob), project_key)
     verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(2, 0).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(project_key).into());
     }
-}
-
-fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
-where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
-{
-    let events = frame_system::Pallet::<T>::events();
-    let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
-    // compare to the last event record
-    let EventRecord { event, .. } = &events[events.len() - 1];
-    assert_eq!(event, &system_event);
-}
-
-fn create_project_common<T: Config>(contribution: u32) -> T::AccountId {
-    let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000);
-    let milestones = get_max_milestones::<T>();
-
-    let agg_hash = H256::from([20; 32]);
-    let required_funds: BalanceOf<T> = contribution.into();
-    let currency_id = CurrencyId::Native;
-
-    assert_ok!(Proposals::<T>::create_project(
-        RawOrigin::Signed(bob.clone()).into(),
-        agg_hash,
-        milestones,
-        required_funds,
-        currency_id
-    ));
-    bob
-}
-
-fn create_funded_user<T: Config>(
-    string: &'static str,
-    n: u32,
-    balance_factor: u32,
-) -> T::AccountId {
-    let user = account(string, n, SEED);
-    let balance: BalanceOf<T> = balance_factor.into();
-    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
-        CurrencyId::Native,
-        &user,
-        balance,
-    );
-    user
-}
-
-fn get_contribution<T: Config>()
-
-fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
-    let max = <T as Config>::MaxMilestonesPerProject::get();
-    if n > max {
-        n = max;
-    }
-    let milestones = (0..n)
-        .map(|_| ProposedMilestone {
-            percentage_to_unlock: Percent::from_percent((100 / n) as u8),
-        })
-        .collect::<Vec<ProposedMilestone>>()
-        .try_into()
-        .expect("qed");
-
-    milestones
-}
-
-fn get_max_milestones<T: Config>() -> BoundedProposedMilestones<T> {
-    let max_milestones: u32 = <T as Config>::MaxMilestonesPerProject::get();
-    get_milestones::<T>(max_milestones)
 }
 
 impl_benchmark_test_suite!(

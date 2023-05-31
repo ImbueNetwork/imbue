@@ -147,7 +147,8 @@ mod v2 {
     pub type Projects<T: Config> =
         StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV2Of<T>, OptionQuery>;
 
-    pub type ProjectV2Of<T> = ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
+    pub type ProjectV2Of<T> =
+        ProjectV2<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, TimestampOf<T>>;
 
     #[derive(Encode, Clone, Decode, TypeInfo)]
     pub struct ProjectV2<AccountId, Balance, BlockNumber, Timestamp> {
@@ -179,7 +180,9 @@ mod v2 {
         let mut migrated_milestones: BTreeMap<MilestoneKey, MilestoneV1> = BTreeMap::new();
         v2::Projects::<T>::translate(|_project_key, project: v1::ProjectV1Of<T>| {
             let _ = project
-                .milestones.into_values().map(|milestone| {
+                .milestones
+                .into_values()
+                .map(|milestone| {
                     let migrated_milestone = MilestoneV1 {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,
@@ -191,8 +194,7 @@ mod v2 {
                 .collect::<Vec<_>>();
 
             weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: ProjectV2Of<T> =
-            ProjectV2 {
+            let migrated_project: ProjectV2Of<T> = ProjectV2 {
                 milestones: migrated_milestones.clone(),
                 contributions: project.contributions,
                 required_funds: project.required_funds,
@@ -237,19 +239,36 @@ pub mod v3 {
         pub funding_type: FundingType,
     }
 
-    pub fn migrate_contribution_and_project<T: Config + pallet_timestamp::Config>(weight: &mut Weight) {
-        // Migration #1 + #2 + #7
+    pub fn migrate_contribution_and_project<T: Config + pallet_timestamp::Config>(
+        weight: &mut Weight,
+    ) {
+        // Migration #1 + #2
         let mut migrated_contributions = BTreeMap::new();
         let mut migrated_milestones = BTreeMap::new();
 
         Projects::<T>::translate(|_project_key, project: v2::ProjectV2Of<T>| {
             project.contributions.iter().for_each(|(key, cont)| {
                 *weight += T::DbWeight::get().reads_writes(1, 1);
-                migrated_contributions.insert(key.clone(), 
+                migrated_contributions.insert(
+                    key.clone(),
                     Contribution {
                         value: cont.value,
-                        timestamp: frame_system::Pallet::<T>::block_number()
-                    }
+                        timestamp: frame_system::Pallet::<T>::block_number(),
+                    },
+                );
+            });
+            project.milestones.iter().for_each(|(key, milestone)| {
+                *weight += T::DbWeight::get().reads_writes(1, 1);
+                migrated_milestones.insert(
+                    key.clone(),
+                    Milestone {
+                        project_key: milestone.project_key,
+                        milestone_key: milestone.milestone_key,
+                        percentage_to_unlock: Percent::from_percent(
+                            milestone.percentage_to_unlock as u8,
+                        ),
+                        is_approved: milestone.is_approved,
+                    },
                 );
             });
             project.milestones.iter().for_each(|(key, milestone)| {
@@ -265,53 +284,63 @@ pub mod v3 {
             });
 
             *weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> = 
-            Project {
-                milestones: migrated_milestones.clone(),
-                contributions: migrated_contributions.clone(),
-                currency_id: project.currency_id,
-                withdrawn_funds: project.withdrawn_funds,
-                initiator: project.initiator,
-                created_on: project.created_on,
-                agreement_hash: Default::default(),
-                cancelled: project.cancelled,
-                raised_funds: project.raised_funds,
-                funding_type: FundingType::Proposal,
-            };
+            let migrated_project: Project<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> =
+                Project {
+                    milestones: migrated_milestones.clone(),
+                    contributions: migrated_contributions.clone(),
+                    currency_id: project.currency_id,
+                    withdrawn_funds: project.withdrawn_funds,
+                    initiator: project.initiator,
+                    created_on: project.created_on,
+                    agreement_hash: Default::default(),
+                    cancelled: project.cancelled,
+                    raised_funds: project.raised_funds,
+                    funding_type: FundingType::Proposal,
+                };
             Some(migrated_project)
         });
     }
 
     // Migration #3
     #[storage_alias]
-    pub type UserVotes<T: Config> = StorageMap<Pallet<T>, Identity, (AccountIdOf<T>, ProjectKey, MilestoneKey, v3::RoundType), bool, ValueQuery,>;
+    pub type UserVotes<T: Config> = StorageMap<
+        Pallet<T>,
+        Identity,
+        (AccountIdOf<T>, ProjectKey, MilestoneKey, RoundType),
+        bool,
+        ValueQuery,
+    >;
     fn migrate_user_votes<T: Config>(weight: &mut Weight) {
         UserVotes::<T>::translate(|key, value| {
             let (account_id, project_key, milestone_key, round_type) = key;
-            let _ = UserHasVoted::<T>::try_mutate((project_key, round_type.into_new(), milestone_key), |btree| {
-                // Mutate UserHasVoted per k/v.
-                *weight += T::DbWeight::get().reads_writes(1, 1);
-                // If this insert fails it is because the MaxContributors bound has been violated.
-                // Shankar has been working on the bound in the project struct.
-                let _ = btree.try_insert(account_id, value);      
-                Ok::<(), ()>(())
-            });
+            let _ = UserHasVoted::<T>::try_mutate(
+                (project_key, round_type.into_new(), milestone_key),
+                |btree| {
+                    // Mutate UserHasVoted per k/v.
+                    *weight += T::DbWeight::get().reads_writes(1, 1);
+                    // If this insert fails it is because the MaxContributors bound has been violated.
+                    // Shankar has been working on the bound in the project struct.
+                    let _ = btree.try_insert(account_id, value);
+                    Ok::<(), ()>(())
+                },
+            );
             // Mutate UserVotes per k/v.
             *weight += T::DbWeight::get().reads_writes(1, 1);
             None
         });
     }
 
-     // Migration #4
-     #[storage_alias]
-     pub type MilestoneVotes<T: Config> = StorageMap<Pallet<T>, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, ValueQuery>;
-     fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
+    // Migration #4
+    #[storage_alias]
+    pub type MilestoneVotes<T: Config> =
+        StorageMap<Pallet<T>, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, ValueQuery>;
+    fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
         v3::MilestoneVotes::<T>::drain().for_each(|(old_key, vote)| {
             let (project_key, milestone_key) = old_key;
             crate::MilestoneVotes::<T>::insert(project_key, milestone_key, vote);
             *weight += T::DbWeight::get().reads_writes(1, 1);
         });
-      }
+    }
 
     //Migration #5 + #6
     #[derive(Clone, Encode, Decode, Eq, PartialEq)]
@@ -329,27 +358,30 @@ pub mod v3 {
             }
         }
     }
-    
     #[derive(Encode, Decode, Clone)]
     pub struct Round<BlockNumber> {
-        pub(crate) start: BlockNumber,
-        pub(crate) end: BlockNumber,
-        pub(crate) project_keys: Vec<ProjectKey>,
-        pub(crate) round_type: v3::RoundType,
-        pub(crate) is_canceled: bool,
+        start: BlockNumber,
+        end: BlockNumber,
+        project_keys: Vec<ProjectKey>,
+        round_type: v3::RoundType,
+        is_canceled: bool,
     }
 
     #[storage_alias]
-    pub type OldRounds<T: pallet::Config> = StorageMap<Pallet<T>, Identity, u32, Option<Round<BlockNumberFor<T>>>, ValueQuery>;
+    pub type OldRounds<T: pallet::Config> =
+        StorageMap<Pallet<T>, Identity, u32, Option<Round<BlockNumberFor<T>>>, ValueQuery>;
     fn migrate_rounds_and_round_type<T: Config>(weight: &mut Weight) {
         OldRounds::<T>::translate(|_, r: Option<Round<BlockNumberFor<T>>>| {
             if let Some(round) = r {
-                if !round.is_canceled && round.end < frame_system::Pallet::<T>::block_number() && round.round_type != v3::RoundType::ContributionRound {
-                     round.project_keys.iter().for_each(|k| {
-                         // Insert per project_key
-                         *weight += T::DbWeight::get().reads_writes(1, 1);
-                         Rounds::<T>::insert(k, round.round_type.into_new(), round.end);
-                     })
+                if !round.is_canceled
+                    && round.end < frame_system::Pallet::<T>::block_number()
+                    && round.round_type != v3::RoundType::ContributionRound
+                {
+                    round.project_keys.iter().for_each(|k| {
+                        // Insert per project_key
+                        *weight += T::DbWeight::get().reads_writes(1, 1);
+                        Rounds::<T>::insert(k, round.round_type.into_new(), round.end);
+                    })
                 }
             }
             // Remove the old round.
@@ -428,7 +460,8 @@ mod test {
 
             v0::Projects::<Test>::insert(project_key, &old_project);
             let _ = v1::migrate::<Test>();
-            let migrated_project = v1::Projects::<Test>::get(project_key).expect("project should exist");
+            let migrated_project =
+                v1::Projects::<Test>::get(project_key).expect("project should exist");
 
             assert_eq!(old_project.name, migrated_project.name);
 

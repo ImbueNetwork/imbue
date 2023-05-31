@@ -115,6 +115,13 @@ pub mod pallet {
 				&deposit.who,
 				deposit.amount,
 			);
+			let deposit =
+				CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
+			<T as Config>::MultiCurrency::unreserve(
+				deposit.currency_id,
+				&deposit.who,
+				deposit.amount,
+			);
 
 			CurrentDeposits::<T>::remove(deposit_id);
 			Self::deposit_event(Event::<T>::DepositReturned(deposit_id, deposit.amount));
@@ -125,8 +132,17 @@ pub mod pallet {
 		fn slash_reserve_deposit(deposit_id: T::DepositId) -> DispatchResult {
 			let deposit =
 				CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
+			let deposit =
+				CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
 			let beneficiary = &<T as Config>::DepositSlashAccount::get();
 			// TODO: if the reserve amount is returned then take from free balance?
+			let _imbalance = <T as Config>::MultiCurrency::repatriate_reserved(
+				deposit.currency_id,
+				&deposit.who,
+				beneficiary,
+				deposit.amount,
+				BalanceStatus::Free,
+			)?;
 			let _imbalance = <T as Config>::MultiCurrency::repatriate_reserved(
 				deposit.currency_id,
 				&deposit.who,
@@ -150,6 +166,8 @@ pub mod pallet {
 		}
 	}
 
+	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
+	#[scale_info(skip_type_params(T))]
 	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Deposit<T: Config> {
