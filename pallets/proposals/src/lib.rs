@@ -94,8 +94,7 @@ pub mod pallet {
         type ProjectStorageDeposit: Get<BalanceOf<Self>>;
 
         /// Imbue fee in percent 0-99
-        //TODO: use percent.
-        type ImbueFee: Get<u8>;
+        type ImbueFee: Get<Percent>;
 
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
         type ExpiringProjectRoundsPerBlock: Get<u32>;
@@ -174,16 +173,6 @@ pub mod pallet {
     #[pallet::getter(fn storage_version)]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
-    /// TODO: Use a multilocation for the refunds
-    #[pallet::storage]
-    #[pallet::getter(fn refund_queue)]
-    /// <HB SBP Review:
-    ///
-    /// Unbounded Vec on a storage item. This should be addressed before deploying.
-    ///
-    /// >
-    pub type RefundQueue<T> = StorageValue<_, Refunds<T>, ValueQuery>;
-
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -261,6 +250,8 @@ pub mod pallet {
         VotesAreImmutable,
         /// The milestone has already been approved.
         MilestoneAlreadyApproved,
+        /// Error with a mathematical operation
+        MathError,
     }
 
     #[pallet::hooks]
@@ -411,7 +402,7 @@ pub enum Release {
     V1,
     V2,
     V3,
-    V4
+    V4,
 }
 
 impl Default for Release {

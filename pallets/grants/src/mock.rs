@@ -145,6 +145,7 @@ parameter_types! {
     pub MaxMilestonesPerProject: u32 = 50;
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
+        pub ExpiringProjectRoundsPerBlock: u32 = 100;
 }
 
 impl pallet_proposals::Config for Test {
