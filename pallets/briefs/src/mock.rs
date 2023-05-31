@@ -27,6 +27,7 @@ use sp_std::{
     vec::Vec,
 };
 use pallet_deposits::traits::DepositHandler;
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -208,6 +209,7 @@ parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
     pub MaxBriefOwners: u32 = 100;
+    pub BriefStorageItem: StorageItem = StorageItem::Brief;
 }
 
 impl pallet_briefs::Config for Test {
@@ -218,6 +220,8 @@ impl pallet_briefs::Config for Test {
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
+    type BriefStorageItem = BriefStorageItem;
+    type DepositHandler = MockDepositHandler;
     type WeightInfo = ();
 }
 

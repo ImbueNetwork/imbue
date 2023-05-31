@@ -33,6 +33,7 @@ pub mod pallet {
     use sp_core::{Hasher, H256};
     use sp_runtime::traits::Zero;
     use sp_std::convert::{From, TryInto};
+    use pallet_deposits::traits::DepositHandler;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -48,8 +49,11 @@ pub mod pallet {
 
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
+    type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
+    type DepositIdOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
     pub type BriefHash = H256;
+
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -72,6 +76,9 @@ pub mod pallet {
         type MaxBriefOwners: Get<u32>;
 
         type MaxMilestonesPerBrief: Get<u32>;
+
+        type BriefStorageItem: Get<StorageItemOf<Self>>;
+        type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
 
         type WeightInfo: WeightInfo;
     }
@@ -199,21 +206,10 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::TooManyBriefOwners)?;
             }
 
-            // TODO: freelancer fellowship handler
-            // ensure!(
-            //     FreelanceFellowship::<T>::contains_key(&applicant),
-            //     Error::<T>::OnlyApprovedAccountPermitted
-            // );
+            // Take storage deposit
+            let deposit_id = <T as Config>::DepositHandler::take_deposit(who.clone(), <T as Config>::BriefStorageItem::get(), CurrencyId::Native)?;
 
-            /// <HB SBP Review:
-            ///
-            /// Usually balances reverves are fixed and determined at the runtime level since it is supposed to be a storage sanity measure.
-            /// With the current design i could just reserve 0.000001 USD and that would be still chip to attack the network.
-            /// As you are working in a multi-currency environment, i would suggest creating a new pallet that might define reserve values per currency.
-            /// This new pallet would require root origin and it might be called from goverance chain.
-            /// Or another option would be to only accept deposits in the native currency of the chain.
-            ///
-            /// >
+            // Now take the inital_contribution for the brief.
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             if initial_contribution > Zero::zero() {
@@ -240,6 +236,7 @@ pub mod pallet {
                 frame_system::Pallet::<T>::block_number(),
                 applicant,
                 milestones,
+                deposit_id,
             );
 
             Briefs::<T>::insert(brief_id, brief);
@@ -309,6 +306,9 @@ pub mod pallet {
 
             let contributions = BriefContributions::<T>::get(brief_id);
 
+            //RETURN DEPOSIT
+            <T as Config>::DepositHandler::return_deposit(brief.deposit_id);
+
             <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
                 contributions.into_inner(),
@@ -337,6 +337,7 @@ pub mod pallet {
         created_at: BlockNumberFor<T>,
         applicant: AccountIdOf<T>,
         milestones: BoundedProposedMilestones<T>,
+        deposit_id: DepositIdOf<T>,
     }
 
     impl<T: Config> Pallet<T> {
@@ -362,6 +363,7 @@ pub mod pallet {
             created_at: BlockNumberFor<T>,
             applicant: AccountIdOf<T>,
             milestones: BoundedProposedMilestones<T>,
+            deposit_id: DepositIdOf<T>,
         ) -> Self {
             Self {
                 created_at,
@@ -370,6 +372,7 @@ pub mod pallet {
                 currency_id,
                 applicant,
                 milestones,
+                deposit_id,
             }
         }
     }
