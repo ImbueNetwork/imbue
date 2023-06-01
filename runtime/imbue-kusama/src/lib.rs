@@ -774,6 +774,7 @@ parameter_types! {
     pub const ImbueFee: Percent = Percent::from_percent(5_u8);
     pub const ExpiringProjectRoundsPerBlock: u32 = 50;
     pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
+    pub const MaxMilestonesPerProject: u32 = 50;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -796,8 +797,8 @@ impl pallet_proposals::Config for Runtime {
 }
 
 parameter_types! {
+    // TODO: This should be the same as the max contributors bound
     pub MaxApprovers: u32 = 50;
-    pub MaxMilestonesPerProject: u32 = 50;
     pub GrantStorageItem: StorageDepositItems = StorageDepositItems::Grant;   
 }
 
@@ -817,8 +818,7 @@ parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32;
     pub MaxBriefOwners: u32 = 100;
-    pub MaxMilestones: u32 = 100;
-
+    pub BriefStorageItem: StorageDepositItems = StorageDepositItems::Brief;
 }
 
 impl pallet_briefs::Config for Runtime {
@@ -830,6 +830,8 @@ impl pallet_briefs::Config for Runtime {
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
     type WeightInfo = ();
+    type BriefStorageItem = BriefStorageItem;
+    type DepositHandler = Deposits;
 }
 
 pub type DepositId = u64;
