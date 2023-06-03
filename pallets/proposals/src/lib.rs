@@ -151,9 +151,9 @@ pub mod pallet {
     #[pallet::storage]
     pub type Rounds<T> = StorageDoubleMap<
         _,
-        Blake2_128,
+        Blake2_128Concat,
         ProjectKey,
-        Blake2_128,
+        Blake2_128Concat,
         RoundType,
         BlockNumberFor<T>,
         OptionQuery,
@@ -162,7 +162,7 @@ pub mod pallet {
     /// Stores the project keys and round types ending on a given block
     #[pallet::storage]
     pub type RoundsExpiring<T> =
-        StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]

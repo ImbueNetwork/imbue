@@ -57,6 +57,7 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39"}
+common-runtime = { path = "../../runtime/common"}
 
 [features]
 default = ['std']
@@ -81,6 +82,7 @@ std = [
 	"pallet-identity/std",
 	"xcm/std",
 	"common-types/std",
+	"common-runtime/std",
     "orml-xtokens/std",
 	"pallet-xcm/std"
 ]
