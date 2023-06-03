@@ -642,14 +642,11 @@ mod test {
             // #4
             assert_eq!(v3::OldMilestoneVotes::<Test>::get((10, 10)), Default::default());
             assert!(crate::MilestoneVotes::<Test>::contains_key(10, 10));
-
             let v = crate::MilestoneVotes::<Test>::get(10, 10).unwrap();
-
             assert_eq!(v.yay, 100_000);
             assert_eq!(v.nay, 50_000);
             assert!(!v.is_approved);
 
-            dbg!(&crate::Rounds::<Test>::iter().collect::<Vec<_>>());
             // #5
             assert!(OldRounds::<Test>::get(0).is_none());
             [1,2,3].iter().for_each(|k| {

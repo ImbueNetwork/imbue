@@ -17,6 +17,7 @@ use sp_runtime::{
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, Perbill, Permill,
+    DispatchError,
 };
 use sp_std::{
     cmp::Ordering,
@@ -838,9 +839,9 @@ pub type DepositId = u64;
 pub struct ImbueDepositCalculator;
 impl DepositCalculator<Balance> for ImbueDepositCalculator {
     type StorageItem = StorageDepositItems;
-    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Result<Balance, ()> {
+    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Result<Balance, DispatchError> {
         if currency != CurrencyId::Native {
-            return Err(())
+            return Err(pallet_deposits::pallet::Error::<Runtime>::UnsupportedCurrencyType.into())
         }
         Ok(match u {
             StorageDepositItems::Project => DOLLARS.saturating_mul(500),

@@ -15,14 +15,14 @@ pub mod traits;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use codec::{FullCodec, FullEncode, WrapperTypeEncode};
+	use codec::{FullCodec, FullEncode};
 	use crate::traits::{DepositCalculator, DepositHandler};
-	use frame_support::dispatch::{fmt::Debug, EncodeLike};
+	use frame_support::dispatch::{fmt::Debug};
 	use frame_support::pallet_prelude::*;
 	use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
 	use common_types::CurrencyId;
 	use sp_runtime::{
-		traits::{AtLeast32BitUnsigned, Zero, One},
+		traits::{AtLeast32BitUnsigned, One},
 		Saturating
 	};
 	pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -81,6 +81,8 @@ pub mod pallet {
 		DepositDoesntExist,
 		/// The currency type is not supported.
 		UnsupportedCurrencyType,
+		/// The storage type is not supported.
+		UnsupportedStorageType,
 		/// You need more funds to cover the storage deposit.
 		NotEnoughFundsForStorageDeposit,
 	}
@@ -97,8 +99,8 @@ pub mod pallet {
 			storage_item: T::StorageItem,
 			currency_id: CurrencyId,
 		) -> Result<T::DepositId, DispatchError> {
+			let amount = <T as Config>::DepositCalculator::calculate_deposit(storage_item, currency_id)?;
 			let deposit_id = Self::get_new_deposit_id();
-			let amount = <T as Config>::DepositCalculator::calculate_deposit(storage_item, currency_id).map_err(|_|Error::<T>::UnsupportedCurrencyType)?;
 			<T as Config>::MultiCurrency::reserve(currency_id, &who, amount).map_err(|_| Error::<T>::NotEnoughFundsForStorageDeposit)?;
 			let deposit = Deposit {
 				who,
@@ -112,13 +114,6 @@ pub mod pallet {
 
 		/// Given a deposit id (the ticket generated when creating a deposit) return the deposit.
 		fn return_deposit(deposit_id: T::DepositId) -> DispatchResult {
-			let deposit =
-				CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
-			<T as Config>::MultiCurrency::unreserve(
-				deposit.currency_id,
-				&deposit.who,
-				deposit.amount,
-			);
 			let deposit =
 				CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
 			<T as Config>::MultiCurrency::unreserve(
