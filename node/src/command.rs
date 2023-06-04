@@ -289,7 +289,7 @@ pub fn run() -> Result<()> {
                     let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(DEFAULT_PARA_ID));
 
 
-                let parachain_account = AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(&id);
+                let parachain_account = AccountIdConversion::<polkadot_primitives::v4::AccountId>::into_account_truncating(&id);
 				let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
 				let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
 					.map_err(|e| format!("{:?}", e))?;

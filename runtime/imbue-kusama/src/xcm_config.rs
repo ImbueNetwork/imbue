@@ -1,4 +1,5 @@
 use crate::{AllPalletsWithSystem, Balances, ConstU32};
+use frame_system::EnsureRoot;
 use sp_runtime::traits::{Convert, Zero};
 use sp_std::{marker::PhantomData, prelude::*};
 
@@ -267,6 +268,7 @@ impl pallet_xcm::Config for Runtime {
     type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
     #[cfg(feature = "runtime-benchmarks")]
     type ReachableDest = ReachableDest;
+    type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 impl orml_xcm::Config for Runtime {

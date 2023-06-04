@@ -6,10 +6,10 @@ use frame_support::{
     PalletId,
 };
 
-use frame_system::EnsureRoot;
-use sp_core::{sr25519::Signature, H256};
 use crate::*;
 use common_types::CurrencyId;
+use frame_system::EnsureRoot;
+use sp_core::{sr25519::Signature, H256};
 
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
@@ -162,6 +162,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type HoldIdentifier = ();
+    type FreezeIdentifier = ();
+    type MaxHolds = ConstU32<0>;
+    type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
@@ -281,9 +285,10 @@ pub enum StorageItems {
     Project,
 }
 
-
 pub struct MockDepositHandler<T>(T);
-impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>> for MockDepositHandler<T> {
+impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>>
+    for MockDepositHandler<T>
+{
     type DepositId = u64;
     type StorageItem = StorageItems;
     fn take_deposit(

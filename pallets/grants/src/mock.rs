@@ -2,9 +2,10 @@ use crate as pallet_grants;
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
 use frame_support::traits::{ConstU16, Nothing};
-use frame_support::{parameter_types, PalletId, pallet_prelude::*};
+use frame_support::{pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
+use pallet_deposits::traits::DepositHandler;
 use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
@@ -13,7 +14,6 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use pallet_deposits::traits::DepositHandler;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -54,6 +54,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type HoldIdentifier = ();
+    type FreezeIdentifier = ();
+    type MaxHolds = ConstU32<0>;
+    type MaxFreezes = ConstU32<0>;
 }
 
 impl frame_system::Config for Test {
@@ -116,11 +120,11 @@ parameter_types! {
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
-	pub enum StorageItem {
-	CrowdFund,
-	Brief,
-	Grant,
-	Project,
+pub enum StorageItem {
+    CrowdFund,
+    Brief,
+    Grant,
+    Project,
 }
 
 pub struct MockDepositHandler;
@@ -153,7 +157,6 @@ impl pallet_grants::Config for Test {
     type DepositHandler = MockDepositHandler;
     type WeightInfo = ();
 }
-
 
 parameter_types! {
     pub const MinimumPeriod: u64 = 1;

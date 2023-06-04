@@ -1,14 +1,14 @@
 use crate as pallet_briefs;
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use frame_support::{
+    pallet_prelude::*,
     parameter_types,
     traits::{ConstU32, Nothing},
     weights::{ConstantMultiplier, IdentityFee},
     PalletId,
-    pallet_prelude::*,
 };
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
-use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 
 use common_types::CurrencyId;
 
@@ -21,12 +21,12 @@ use sp_runtime::{
     BuildStorage,
 };
 
+use pallet_deposits::traits::DepositHandler;
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
     vec::Vec,
 };
-use pallet_deposits::traits::DepositHandler;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -166,6 +166,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type HoldIdentifier = ();
+    type FreezeIdentifier = ();
+    type MaxHolds = ConstU32<0>;
+    type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
@@ -179,11 +183,11 @@ impl pallet_timestamp::Config for Test {
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
-	pub enum StorageItem {
-	CrowdFund,
-	Brief,
-	Grant,
-	Project,
+pub enum StorageItem {
+    CrowdFund,
+    Brief,
+    Grant,
+    Project,
 }
 
 pub struct MockDepositHandler;
