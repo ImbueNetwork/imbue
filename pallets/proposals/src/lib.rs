@@ -472,12 +472,12 @@ pub mod pallet {
     }
 }
 
-// TODO: MIGRATION NEEDED, removed field Contributionround
 #[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, TypeInfo)]
 pub enum RoundType {
     VotingRound,
     VoteOfNoConfidence,
 }
+
 #[derive(Encode, Decode, TypeInfo, PartialEq)]
 #[repr(u32)]
 pub enum Release {
@@ -497,6 +497,7 @@ impl Default for Release {
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
 /// TODO: move these to a common repo (common_types will do)
+// MIGRATION! for briefs and grants
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
     pub percentage_to_unlock: Percent,

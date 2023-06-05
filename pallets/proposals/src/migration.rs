@@ -308,6 +308,7 @@ pub mod v3 {
                 |btree| {
                     // Mutate UserHasVoted per k/v.
                     *weight += T::DbWeight::get().reads_writes(1, 1);
+                    // TODO:
                     // If this insert fails it is because the MaxContributors bound has been violated.
                     // Shankar has been working on the bound in the project struct.
                     let _ = btree.try_insert(account_id, value);

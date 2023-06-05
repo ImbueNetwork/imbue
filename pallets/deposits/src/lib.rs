@@ -73,6 +73,8 @@ pub mod pallet {
 		DepositReturned(T::DepositId, BalanceOf<T>),
 		/// A deposit has been slashed and sent to the slash account.
 		DepositSlashed(T::DepositId, BalanceOf<T>),
+		/// A deposit has been ignored due to u32::MAX being passed.
+		DepositIgnored,
 	}
 
 	#[pallet::error]
@@ -113,7 +115,13 @@ pub mod pallet {
 		}
 
 		/// Given a deposit id (the ticket generated when creating a deposit) return the deposit.
+		/// If a deposit_id of u32::MAX is passed, the deposit_id will be ignored and nothing will be returned.
+		/// This should allow for easier migration of types.
 		fn return_deposit(deposit_id: T::DepositId) -> DispatchResult {
+			if deposit_id == u32::MAX.into() {
+				Self::deposit_event(Event::<T>::DepositIgnored);
+				return Ok(().into())
+			}
 			let deposit =
 				CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
 			<T as Config>::MultiCurrency::unreserve(
