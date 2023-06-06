@@ -1,13 +1,13 @@
 use frame_support::pallet_prelude::*;
 use common_types::CurrencyId;
-use sp_runtime::traits::{Zero, AtLeast32BitUnsigned};
+use sp_runtime::traits::{AtLeast32BitUnsigned};
 use codec::{FullCodec, FullEncode};
 
 /// A deposit calculator generic over some type that defines what the storage deposit
-/// should be.
+/// should be./*  */
 pub trait DepositCalculator<Balance> {
     type StorageItem;
-    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Result<Balance, ()>;
+    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Result<Balance, DispatchError>;
 }
 
 /// The handler for taking and reinstating deposits.

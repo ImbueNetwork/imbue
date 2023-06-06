@@ -20,6 +20,9 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
+#[cfg(test)]
+mod migrations;
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -64,6 +67,7 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         /// The hasher used to generate the brief id.
+        /// TODO: not in use;
         type BriefHasher: Hasher;
 
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -266,10 +270,6 @@ pub mod pallet {
                 Error::<T>::NotAuthorised
             );
 
-            /// <HB SBP Review:
-            ///
-            /// Same as the previous comment, please about reserves amount.
-            /// >
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
 
             BriefContributions::<T>::try_mutate(brief_id, |contributions| {
@@ -306,8 +306,7 @@ pub mod pallet {
 
             let contributions = BriefContributions::<T>::get(brief_id);
 
-            //RETURN DEPOSIT
-            <T as Config>::DepositHandler::return_deposit(brief.deposit_id);
+            <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
 
             <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
@@ -331,13 +330,13 @@ pub mod pallet {
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct BriefData<T: Config> {
-        brief_owners: BoundedBriefOwners<T>,
-        budget: BalanceOf<T>,
-        currency_id: CurrencyId,
-        created_at: BlockNumberFor<T>,
-        applicant: AccountIdOf<T>,
-        milestones: BoundedProposedMilestones<T>,
-        deposit_id: DepositIdOf<T>,
+        pub brief_owners: BoundedBriefOwners<T>,
+        pub budget: BalanceOf<T>,
+        pub currency_id: CurrencyId,
+        pub created_at: BlockNumberFor<T>,
+        pub applicant: AccountIdOf<T>,
+        pub milestones: BoundedProposedMilestones<T>,
+        pub deposit_id: DepositIdOf<T>,
     }
 
     impl<T: Config> Pallet<T> {

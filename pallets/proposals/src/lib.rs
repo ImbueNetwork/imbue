@@ -151,9 +151,9 @@ pub mod pallet {
     #[pallet::storage]
     pub type Rounds<T> = StorageDoubleMap<
         _,
-        Blake2_128,
+        Blake2_128Concat,
         ProjectKey,
-        Blake2_128,
+        Blake2_128Concat,
         RoundType,
         BlockNumberFor<T>,
         OptionQuery,
@@ -162,7 +162,7 @@ pub mod pallet {
     /// Stores the project keys and round types ending on a given block
     #[pallet::storage]
     pub type RoundsExpiring<T> =
-        StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedProjectKeysPerBlock<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
@@ -472,12 +472,12 @@ pub mod pallet {
     }
 }
 
-// TODO: MIGRATION NEEDED, removed field Contributionround
 #[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, TypeInfo)]
 pub enum RoundType {
     VotingRound,
     VoteOfNoConfidence,
 }
+
 #[derive(Encode, Decode, TypeInfo, PartialEq)]
 #[repr(u32)]
 pub enum Release {
@@ -497,6 +497,7 @@ impl Default for Release {
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
 /// TODO: move these to a common repo (common_types will do)
+// MIGRATION! for briefs and grants
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
     pub percentage_to_unlock: Percent,

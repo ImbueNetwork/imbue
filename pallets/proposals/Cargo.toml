@@ -51,12 +51,13 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42"}
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42" }
 serde = { version = "1.0.101" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
-pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42"}
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39"}
+common-runtime = { path = "../../runtime/common"}
 
 [features]
 default = ['std']
@@ -81,6 +82,7 @@ std = [
 	"pallet-identity/std",
 	"xcm/std",
 	"common-types/std",
+	"common-runtime/std",
     "orml-xtokens/std",
 	"pallet-xcm/std"
 ]
