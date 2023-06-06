@@ -29,40 +29,64 @@ mod v0 {
         pub(crate) currency_id: CurrencyId,
         pub(crate) created_at: BlockNumberFor<T>,
         pub(crate) applicant: AccountIdOf<T>,
-        pub(crate) milestones: BoundedProposedMilestones<T>,
+        pub(crate) milestones: BoundedVec<ProposedMilestoneV0, <T as Config>::MaxMilestonesPerBrief>,
     }
+
+    #[derive(Encode, Decode, Debug, MaxEncodedLen, TypeInfo)]
+    pub struct ProposedMilestoneV0 {
+        pub percentage_to_unlock: u32,
+    }
+
     #[storage_alias]
     pub type Briefs<T: Config> =
         CountedStorageMap<Pallet<T>, Blake2_128Concat, BriefHash, v0::BriefDataV0<T>, OptionQuery>;
 }
 
+// Migrate the proposed milestones to use Percent over a u32.
+// Add a deposit id to BriefData.
 mod v1 {
     use super::*;
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
         crate::Briefs::<T>::translate(|key, brief: v0::BriefDataV0<T>| {
             *weight += T::DbWeight::get().reads_writes(1, 1);
-            Some(crate::BriefData {
-                brief_owners: brief.brief_owners,
-                budget: brief.budget,
-                currency_id: brief.currency_id,
-                created_at: brief.created_at,
-                applicant: brief.applicant,
-                milestones: brief.milestones,
-                // A deposit_id of U32::Max is skipped and not returned. 
-                deposit_id: u32::MAX.into(),
-            })
+            let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief.milestones.iter().map(|ms| {
+                let convert: Result<u8, _> = ms.percentage_to_unlock.try_into();
+                if let Ok(n) = convert {
+                    Some(ProposedMilestone {
+                        percentage_to_unlock: Percent::from_percent(n)
+                    })           
+                } else {
+                    None
+                }
+            }).flatten().collect::<Vec<ProposedMilestone>>().try_into();
+
+            if let Ok(milestones) = maybe_milestones {
+                Some(crate::BriefData {
+                    brief_owners: brief.brief_owners,
+                    budget: brief.budget,
+                    currency_id: brief.currency_id,
+                    created_at: brief.created_at,
+                    applicant: brief.applicant,
+                    milestones,
+                    // A deposit_id of U32::Max is skipped and not returned. 
+                    deposit_id: u32::MAX.into(),
+                })
+            } else {
+                None
+            }
         })
     }
 
     #[test]
     fn migrate_v0_to_v1() {
         build_test_externality().execute_with(|| {
-            let milestones: BoundedProposedMilestones<Test> = vec![
-                ProposedMilestone {
-                    percentage_to_unlock: Percent::from_percent(60u8)
+            
+            let milestones: BoundedVec<v0::ProposedMilestoneV0, <Test as Config>::MaxMilestonesPerBrief> = vec![
+                v0::ProposedMilestoneV0 {
+                    percentage_to_unlock: 80u32,
                 },
-                ProposedMilestone {
-                    percentage_to_unlock: Percent::from_percent(40u8)
+                v0::ProposedMilestoneV0 {
+                    percentage_to_unlock: 20u32,
                 } 
             ].try_into().expect("2 should be lower than bound");
 
@@ -75,12 +99,14 @@ mod v1 {
                 milestones,
             };            
             let key: H256 = [1; 32].into();
-            v0::Briefs::<Test>::insert(key, old_brief);
+            v0::Briefs::<Test>::insert(key, &old_brief);
             let mut weight: Weight = Default::default();
             v1::migrate_to_v1::<Test>(&mut weight);
 
             let new_brief = crate::Briefs::<Test>::get(key).expect("should exist.");
             assert_eq!(new_brief.deposit_id, u32::MAX as u64);
+            assert_eq!(new_brief.milestones[0].percentage_to_unlock, Percent::from_percent(old_brief.milestones[0].percentage_to_unlock as u8));
+            assert_eq!(new_brief.milestones[1].percentage_to_unlock, Percent::from_percent(old_brief.milestones[1].percentage_to_unlock as u8));
         })
     }
 }
