@@ -264,7 +264,9 @@ pub mod asset_registry {
 
         #[cfg(feature = "runtime-benchmarks")]
         fn try_successful_origin(_asset_id: &Option<CurrencyId>) -> Result<Origin, ()> {
-            unimplemented!()
+            let zero_account_id = AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+			    .expect("infinite length input; no invalid inputs for type; qed");
+            Ok(Origin::from(RawOrigin::Signed(zero_account_id)))
         }
     }
 }

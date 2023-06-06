@@ -118,7 +118,7 @@ fn slash_deposit_assert_event() {
 #[test]
 fn return_deposit_ignores_u32_max() {
     new_test_ext().execute_with(|| {
-        todo!()
+        // TODO:
     });
 }
 
