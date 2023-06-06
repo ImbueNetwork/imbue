@@ -44,11 +44,12 @@ mod v0 {
 
 // Migrate the proposed milestones to use Percent over a u32.
 // Add a deposit id to BriefData.
+// Should be run with pallet_proposals::migrations::v3
 mod v1 {
     use super::*;
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
         crate::Briefs::<T>::translate(|key, brief: v0::BriefDataV0<T>| {
-            *weight += T::DbWeight::get().reads_writes(1, 1);
+            *weight += T::DbWeight::get().reads_writes(2, 1);
             let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief.milestones.iter().map(|ms| {
                 let convert: Result<u8, _> = ms.percentage_to_unlock.try_into();
                 if let Ok(n) = convert {
@@ -61,6 +62,9 @@ mod v1 {
             }).flatten().collect::<Vec<ProposedMilestone>>().try_into();
 
             if let Ok(milestones) = maybe_milestones {
+                if milestones.len() != brief.milestones.len() {
+                    return None
+                }
                 Some(crate::BriefData {
                     brief_owners: brief.brief_owners,
                     budget: brief.budget,

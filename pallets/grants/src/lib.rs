@@ -20,6 +20,8 @@ mod test_utils;
 pub mod weights;
 pub use weights::*;
 
+mod migrations;
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
