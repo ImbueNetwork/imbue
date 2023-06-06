@@ -108,6 +108,7 @@ pub mod pallet {
         AccountApproved(AccountIdOf<T>),
         BriefEvolution(BriefHash),
         BriefContribution(T::AccountId, BriefHash),
+        BriefCanceled(BriefHash),
     }
 
     #[pallet::error]
@@ -313,6 +314,22 @@ pub mod pallet {
             Briefs::<T>::remove(brief_id);
 
             Self::deposit_event(Event::<T>::BriefEvolution(brief_id));
+            Ok(())
+        }
+
+        /// Extrinsic to cancel a brief
+        #[pallet::call_index(5)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_brief())]
+        pub fn cancel_brief(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
+
+            ensure!(who == brief.applicant, Error::<T>::NotAuthorised);
+
+            BriefContributions::<T>::remove(brief_id);
+            Briefs::<T>::remove(brief_id);
+
+            Self::deposit_event(Event::<T>::BriefCanceled(brief_id));
             Ok(())
         }
     }
