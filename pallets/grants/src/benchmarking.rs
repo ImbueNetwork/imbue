@@ -142,6 +142,13 @@ fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
         &user,
         1_000_000u32.into(),
     );
+    assert_eq!(
+        <T::RMultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::free_balance(
+            CurrencyId::Native, 
+            &user
+        ), 
+        1_000_000u32.into()
+    );
     user
 }
 
