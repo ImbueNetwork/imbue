@@ -1,18 +1,18 @@
 #[allow(unused)]
 use crate::*;
 pub use pallet::*;
-use crate::mock::*;
 use frame_support::{
     pallet_prelude::*,
     storage_alias, 
     traits::Get, 
     weights::Weight
 };
-use common_types::CurrencyId;
+use common_types::{CurrencyId, TreasuryOrigin};
 use sp_std::convert::TryInto;
 use pallet_proposals::ProposedMilestone;
 use sp_core::H256;
 use sp_arithmetic::Percent;
+use sp_std::vec::Vec;
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
@@ -38,7 +38,7 @@ mod v0 {
     }
 
     #[storage_alias]
-    pub type PendingGrantsV0<T: Config> = StorageMap<_, Blake2_128, GrantId, GrantV0<T>, OptionQuery>;
+    pub type PendingGrantsV0<T: Config> = StorageMap<Pallet<T>, Blake2_128, GrantId, GrantV0<T>, OptionQuery>;
 }
 
 // Migrate the proposed milestones to use Percent over a u32.
@@ -47,7 +47,7 @@ mod v0 {
 mod v1 {
     use super::*;
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
-        crate::PendingGrants::migrate(|_key, g| {
+        v0::PendingGrantsV0::<T>::iter_keys(|_key, g| {
             *weight += T::DbWeight::get().reads_writes(2, 1);
             let maybe_milestones: Result<BoundedPMilestones<T>, _> = g.milestones.iter().map(|ms| {
                 let convert: Result<u8, _> = ms.percentage_to_unlock.try_into();
@@ -56,7 +56,7 @@ mod v1 {
                         percentage_to_unlock: Percent::from_percent(n)
                     })           
                 } else {
-                    None;
+                    None
                 }
             }).flatten().collect::<Vec<ProposedMilestone>>().try_into();
             if let Ok(milestones) = maybe_milestones {
@@ -72,8 +72,9 @@ mod v1 {
                     is_converted: g.is_converted,
                     currency_id: g.currency_id,
                     amount_requested: g.amount_requested,
+                    treasury_origin: g.treasury_origin,
                     // u32 max are ignored in the pallet-deposit conversion for backwards compatibility.
-                    treasury_origin: u32::MAX.into(),
+                    deposit_id: u32::MAX.into(),
                 })
             } else {
                 None
@@ -104,7 +105,8 @@ mod v1 {
                 currency_id: CurrencyId::Native,
                 amount_requested: 100_000u64,
                 treasury_origin: TreasuryOrigin::Imbue,
-            }
+            };
+
             let grant_id: H256 = [2; 32].into();
             v0::PendingGrantsV0::insert(grant_id, old_grant);
             let mut weight: Weight = Default::default();
