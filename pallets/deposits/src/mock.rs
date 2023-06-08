@@ -95,6 +95,7 @@ parameter_types!{
 	Brief,
 	Grant,
 	Project,
+    Unsupported,
 }
 pub(crate) type DepositId = u64;
 
@@ -110,8 +111,13 @@ impl pallet_deposits::Config for Test {
 pub struct MockDepositCalculator;
 impl DepositCalculator<Balance> for MockDepositCalculator {
 	type StorageItem = StorageItem;
-    fn calculate_deposit(_item: Self::StorageItem, _currency: CurrencyId) -> Result<Balance, ()> {
-		// TODO:
+    fn calculate_deposit(item: Self::StorageItem, currency: CurrencyId) -> Result<Balance, DispatchError> {
+        if currency != CurrencyId::Native {
+            return Err(crate::pallet::Error::<Test>::UnsupportedCurrencyType.into())
+        }
+        if item == StorageItem::Unsupported {
+            return Err(crate::pallet::Error::<Test>::UnsupportedStorageType.into())
+        }
 		Ok(10_000u64)
 	}
 }
