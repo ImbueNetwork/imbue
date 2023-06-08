@@ -91,12 +91,6 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
-    /// <HB SBP Review:
-    ///
-    /// CRITICAL: This macro should be removed asap. This basically allows storing unbounded Vecs on storage items.
-    ///
-    /// >
-    #[pallet::without_storage_info]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
@@ -468,13 +462,13 @@ pub mod pallet {
     }
 }
 
-#[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub enum RoundType {
     VotingRound,
     VoteOfNoConfidence,
 }
 
-#[derive(Encode, Decode, TypeInfo, PartialEq)]
+#[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
 #[repr(u32)]
 pub enum Release {
     V0,
@@ -511,7 +505,7 @@ pub struct Milestone {
 }
 
 /// The vote struct is used to
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Vote<Balance> {
     yay: Balance,
     nay: Balance,
@@ -530,7 +524,7 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 
 /// The struct which contain milestones that can be submitted.
 #[scale_info(skip_type_params(T))]
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Project<T: Config> {
     pub agreement_hash: H256,
     pub milestones: BoundedBTreeMilestones<T>,
@@ -555,7 +549,7 @@ pub struct Contribution<Balance, BlockNumber> {
     pub timestamp: BlockNumber,
 }
 
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,

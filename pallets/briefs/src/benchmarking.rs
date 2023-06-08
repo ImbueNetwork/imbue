@@ -12,6 +12,7 @@ use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_std::{convert::TryInto, str, vec::Vec};
+use sp_runtime::SaturatedConversion;
 
 const SEED: u32 = 0;
 
@@ -97,11 +98,12 @@ benchmarks! {
 
 fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
     let user = account(suri, n, SEED);
-    let _ = <T::RMultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
+    let initial_balance:_ = 10_000_000_000_000_000u128;
+    assert_ok!(T::RMultiCurrency::deposit(
         CurrencyId::Native,
         &user,
-        1_000_000u32.into(),
-    );
+        initial_balance.saturated_into()
+    ));
     user
 }
 

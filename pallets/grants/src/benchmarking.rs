@@ -8,10 +8,13 @@ use common_types::{CurrencyId, TreasuryOrigin};
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, RawOrigin};
-use orml_traits::MultiCurrency;
+use orml_traits::GetByKey;
+use orml_traits::{MultiCurrency, MultiCurrencyExtended, MultiReservableCurrency};
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
+use sp_core::sr25519::{Public, Signature};
 use sp_std::{convert::TryInto, str, vec::Vec};
+use sp_runtime::SaturatedConversion;
 
 const SEED: u32 = 0;
 
@@ -135,21 +138,15 @@ where
     let EventRecord { event, .. } = &events[events.len() - 1];
     assert_eq!(event, &system_event);
 }
+
 fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
     let user = account(suri, n, SEED);
-    let _ = <T::RMultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
+    let initial_balance:_ = 10_000_000_000_000_000u128;
+    assert_ok!(T::RMultiCurrency::deposit(
         CurrencyId::Native,
         &user,
-        1_000_000u32.into(),
-    );
-    assert_eq!(
-        <T::RMultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::free_balance(
-            CurrencyId::Native, 
-            &user
-        ), 
-        1_000_000u32.into()
-    );
+        initial_balance.saturated_into()
+    ));
     user
 }
-
 impl_benchmark_test_suite!(Grants, crate::mock::new_test_ext(), crate::mock::Test);

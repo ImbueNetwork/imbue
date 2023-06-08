@@ -12,6 +12,7 @@ use orml_traits::MultiCurrency;
 use sp_arithmetic::{per_things::Percent, traits::Zero};
 use sp_core::{Get, H256};
 use sp_runtime::Saturating;
+use sp_runtime::SaturatedConversion;
 use sp_std::{convert::TryInto, collections::btree_map::BTreeMap};
 use pallet_deposits::traits::DepositHandler;
 
@@ -30,9 +31,9 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber) {
 
 pub fn get_contributions<T: Config>(
     accounts: Vec<AccountIdOf<T>>,
-    total_amount: u32,
+    contribution: u128,
 ) -> ContributionsFor<T> {
-    let value: BalanceOf<T> = (total_amount / accounts.len() as u32).into();
+    let value: BalanceOf<T> = contribution.saturated_into();
     let timestamp = frame_system::Pallet::<T>::block_number();
     let mut contributions: ContributionsFor<T> = Default::default();
 
@@ -120,13 +121,12 @@ pub fn create_project<T: Config>(
 pub fn create_funded_user<T: Config>(
     seed: &'static str,
     n: u32,
-    balance_factor: u32,
+    balance_factor: u128,
 ) -> T::AccountId {
     let user = account(seed, n, 0);
-    let balance: BalanceOf<T> = balance_factor.into();
     assert_ok!(<T::MultiCurrency as MultiCurrency<
         <T as frame_system::Config>::AccountId,
-    >>::deposit(CurrencyId::Native, &user, balance,));
+    >>::deposit(CurrencyId::Native, &user, balance_factor.saturated_into()));
     user
 }
 
