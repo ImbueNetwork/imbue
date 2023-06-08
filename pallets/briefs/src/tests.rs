@@ -292,6 +292,39 @@ fn reserved_funds_are_transferred_to_project_kitty() {
     });
 }
 
+fn cancel_brief_after_creating_brief() {
+    build_test_externality().execute_with(|| {
+        let brief_id = gen_hash(101);
+        let contribution_value: Balance = 10000;
+
+        let _ = BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            tests::get_brief_owners(1),
+            *ALICE,
+            contribution_value,
+            contribution_value,
+            brief_id.clone(),
+            CurrencyId::Native,
+            get_milestones(10),
+        );
+
+        assert_ok!(BriefsMod::cancel_brief(
+            RuntimeOrigin::signed(*BOB),
+            brief_id
+        ));
+
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one RuntimeEventRecord to be found")
+            .event;
+
+        assert_eq!(
+            latest_event,
+            mock::RuntimeEvent::from(briefs::Event::BriefCanceled(brief_id))
+        );
+    });
+}
+
 pub(crate) fn run_to_block(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);

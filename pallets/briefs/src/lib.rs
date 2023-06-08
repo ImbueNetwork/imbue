@@ -324,7 +324,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
-            ensure!(who == brief.applicant, Error::<T>::NotAuthorised);
+            ensure!(who != brief.applicant, Error::<T>::NotAuthorised);
 
             BriefContributions::<T>::remove(brief_id);
             Briefs::<T>::remove(brief_id);
