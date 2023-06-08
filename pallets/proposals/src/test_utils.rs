@@ -13,6 +13,7 @@ use sp_arithmetic::{per_things::Percent, traits::Zero};
 use sp_core::{Get, H256};
 use sp_runtime::Saturating;
 use sp_std::{convert::TryInto, collections::btree_map::BTreeMap};
+use pallet_deposits::traits::DepositHandler;
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber) {
     loop {
@@ -62,6 +63,8 @@ pub fn create_project<T: Config>(
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
 ) -> ProjectKey {
+
+    let _ = <T as Config>::DepositHandler::take_deposit(beneficiary.clone(), <T as Config>::ProjectStorageItem::get(), CurrencyId::Native);
     let agreement_hash: H256 = Default::default();
 
     let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
