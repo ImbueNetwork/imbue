@@ -64,7 +64,7 @@ pub fn create_project<T: Config>(
     currency_id: CurrencyId,
 ) -> ProjectKey {
 
-    let _ = <T as Config>::DepositHandler::take_deposit(beneficiary.clone(), <T as Config>::ProjectStorageItem::get(), CurrencyId::Native);
+    let deposit_id = <T as Config>::DepositHandler::take_deposit(beneficiary.clone(), <T as Config>::ProjectStorageItem::get(), CurrencyId::Native);
     let agreement_hash: H256 = Default::default();
 
     let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
@@ -108,7 +108,7 @@ pub fn create_project<T: Config>(
         cancelled: false,
         agreement_hash,
         funding_type: FundingType::Brief,
-        deposit_id: Zero::zero(),
+        deposit_id,
     };
 
     crate::Projects::<T>::insert(project_key, project);
