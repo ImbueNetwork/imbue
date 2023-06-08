@@ -571,6 +571,7 @@ mod test {
             // 6. -- UNTESTED: Round type has had contribution_round removed. Cannot test as the contribution rounds dont exist anymore.
             // 7. -- TESTED - percent_to_unlock changed from u32 to Percent. (cuteolaf) 
             // 8. -- TESTED - Project new field deposit_id 
+            // 9. -- // - milestones and contributions have been bound, on overflow the project is removed.
             let mut old_milestones = BTreeMap::new();
                old_milestones.insert(0,v2::MilestoneV1 {
                     project_key: 0,
@@ -644,7 +645,7 @@ mod test {
             assert_eq!(project.milestones[&0].milestone_key, project_apres.milestones[&0].milestone_key);
             assert_eq!(project.milestones[&0].project_key, project_apres.milestones[&0].project_key);
             assert_eq!(Percent::from_percent(project.milestones[&0].percentage_to_unlock as u8), project_apres.milestones[&0].percentage_to_unlock);
-            assert_eq!(project_apres.deposit_id, <crate::DepositIdOf<Test> as Default>::default());
+            assert_eq!(project_apres.deposit_id, u32::MAX as u64);
 
             // #3
             let new_votes = UserHasVoted::<Test>::get((10u32, crate::RoundType::VotingRound, 10u32));
