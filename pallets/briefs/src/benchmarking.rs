@@ -47,9 +47,9 @@ benchmarks! {
         let brief_owners = get_max_brief_owners::<T>();
         let caller: T::AccountId = brief_owners[0].clone();
         let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
-        let budget = 10_000u32.into();
-        let initial_contribution = 5_000u32.into();
-        let contribution = 1_000u32.into();
+        let budget = 10_000_000_000_000u128.saturated_into();
+        let initial_contribution = 5_000_000_000_000u128.saturated_into();
+        let contribution = 5_000_000_000_000u128.saturated_into();
         let brief_id = gen_hash(1);
         let milestones = get_max_milestones::<T>();
         assert_ok!(Briefs::<T>::create_brief(
@@ -73,8 +73,8 @@ benchmarks! {
         let brief_owners = get_max_brief_owners::<T>();
         let caller: T::AccountId = brief_owners[0].clone();
         let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
-        let budget = 10_000u32.into();
-        let initial_contribution = 5_000u32.into();
+        let budget = 10_000_000_000_000u128.saturated_into();
+        let initial_contribution = 5_000_000_000_000u128.saturated_into();
         let brief_id = gen_hash(1);
         let max_milestones: u32 = <T as Config>::MaxMilestonesPerBrief::get();
         let milestones = get_max_milestones::<T>();
