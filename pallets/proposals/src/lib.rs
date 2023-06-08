@@ -12,7 +12,7 @@ use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Zero, Saturating};
-use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
+use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 use pallet_deposits::traits::DepositHandler;
 
 pub mod traits;
@@ -45,19 +45,13 @@ pub type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<Bal
 pub type DepositIdOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
-type BoundedMilestoneKeys<T> = BoundedVec<MilestoneKey, <T as Config>::MaxMilestonesPerProject>;
+type BoundedBTreeMilestones<T> = BoundedBTreeMap<MilestoneKey, Milestone, <T as Config>::MaxMilestonesPerProject>; 
 pub type BoundedProposedMilestones<T> =
     BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
-
-/// <HB SBP Review:
-///
-/// I think the project is missing a primitives.rs file where all these kind of definitions should be placed.
-///
-/// >
 pub type AgreementHash = H256;
 type BoundedProjectKeysPerBlock<T> =
     BoundedVec<(ProjectKey, RoundType, MilestoneKey), <T as Config>::ExpiringProjectRoundsPerBlock>;
-type ContributionsFor<T> = BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>;
+type ContributionsFor<T> = BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>, <T as Config>::MaximumContributorsPerProject>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -391,7 +385,7 @@ pub mod pallet {
         /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
         fn convert_to_proposal(
             currency_id: CurrencyId,
-            contributions: ContributionsFor<T>,
+            contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
             brief_hash: H256,
             benificiary: AccountIdOf<T>,
             proposed_milestones: Vec<ProposedMilestone>,
@@ -429,7 +423,7 @@ pub mod pallet {
             }
 
             let mut milestone_key: u32 = 0;
-            let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+            let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
             for milestone in proposed_milestones {
                 let milestone = Milestone {
                     project_key,
@@ -437,14 +431,16 @@ pub mod pallet {
                     percentage_to_unlock: milestone.percentage_to_unlock,
                     is_approved: false,
                 };
-                milestones.insert(milestone_key, milestone);
+                milestones.try_insert(milestone_key, milestone).map_err(|_| Error::<T>::Overflow)?;
                 milestone_key = milestone_key.saturating_add(1);
             }
+
+            let bounded_contributions: ContributionsFor<T> = contributions.try_into().map_err(|_| Error::<T>::Overflow)?;
 
             let project: Project<T> =
                 Project {
                     milestones,
-                    contributions,
+                    contributions: bounded_contributions,
                     currency_id,
                     withdrawn_funds: 0u32.into(),
                     raised_funds: sum_of_contributions,
@@ -537,8 +533,8 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct Project<T: Config> {
     pub agreement_hash: H256,
-    pub milestones: BTreeMap<MilestoneKey, Milestone>,
-    pub contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
+    pub milestones: BoundedBTreeMilestones<T>,
+    pub contributions: ContributionsFor<T>,
     pub currency_id: common_types::CurrencyId,
     pub withdrawn_funds: BalanceOf<T>,
     pub raised_funds: BalanceOf<T>,

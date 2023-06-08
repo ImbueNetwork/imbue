@@ -12,7 +12,7 @@ use orml_traits::MultiCurrency;
 use sp_arithmetic::{per_things::Percent, traits::Zero};
 use sp_core::{Get, H256};
 use sp_runtime::Saturating;
-use sp_std::collections::btree_map::BTreeMap;
+use sp_std::{convert::TryInto, collections::btree_map::BTreeMap};
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber) {
     loop {
@@ -37,7 +37,7 @@ pub fn get_contributions<T: Config>(
 
     accounts.iter().for_each(|account| {
         let contribution = Contribution { value, timestamp };
-        contributions.insert(account.clone(), contribution);
+        contributions.try_insert(account.clone(), contribution).expect("bound should be ensured");
     });
     contributions
 }
@@ -95,8 +95,8 @@ pub fn create_project<T: Config>(
     }
 
     let project = Project {
-        milestones,
-        contributions,
+        milestones: milestones.try_into().expect("too many milestones"),
+        contributions: contributions.try_into().expect("too many contributions"),
         currency_id,
         withdrawn_funds: 0u32.into(),
         raised_funds,

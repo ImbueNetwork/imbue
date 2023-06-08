@@ -51,7 +51,7 @@ type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 impl <T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for T {
     fn convert_to_proposal(
         _currency_id: CurrencyId,
-        _contributions: ContributionsFor<T>,
+        _contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
         _brief_hash: H256,
         _benificiary: AccountIdOf<T>,
         _proposed_milestones: Vec<ProposedMilestone>,

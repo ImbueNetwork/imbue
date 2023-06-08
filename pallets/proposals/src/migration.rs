@@ -223,6 +223,7 @@ mod v2 {
 // 6. --DONE Round type has had contribution_round removed
 // 7, --DONE percent_to_unlock changed from u32 to Percent. (cuteolaf) 
 // 8  --DONE Project new field deposit_id 
+// 9, --DONE Binding Contrbutions and milestones in project.
 pub mod v3 {    
     use super::*;
 
@@ -243,7 +244,7 @@ pub mod v3 {
     pub fn migrate_contribution_and_project<T: Config + pallet_timestamp::Config>(
         weight: &mut Weight,
     ) {
-        // Migration #1 + #2 + #7
+        // Migration #1 + #2 + #7 + #8 + #9
         let mut migrated_contributions = BTreeMap::new();
         let mut migrated_milestones = BTreeMap::new();
 
@@ -272,22 +273,33 @@ pub mod v3 {
                     },
                 );
             });
-            *weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: Project<T> =
-                Project {
-                    milestones: migrated_milestones.clone(),
-                    contributions: migrated_contributions.clone(),
-                    currency_id: project.currency_id,
-                    withdrawn_funds: project.withdrawn_funds,
-                    initiator: project.initiator,
-                    created_on: project.created_on,
-                    agreement_hash: Default::default(),
-                    cancelled: project.cancelled,
-                    raised_funds: project.raised_funds,
-                    funding_type: FundingType::Proposal,
-                    deposit_id: Zero::zero(),
-                };
-            Some(migrated_project)
+            let bounded_milestone: Result<BoundedBTreeMilestones<T>, _> = migrated_milestones.clone().try_into();
+            let bounded_contributions: Result<ContributionsFor<T>, _> = migrated_contributions.clone().try_into();
+            if let Ok(ms) = bounded_milestone {
+                if let Ok(cont) = bounded_contributions {
+                    *weight += T::DbWeight::get().reads_writes(1, 1);
+                    let migrated_project: Project<T> =
+                        Project {
+                            milestones: ms,
+                            contributions: cont,
+                            currency_id: project.currency_id,
+                            withdrawn_funds: project.withdrawn_funds,
+                            initiator: project.initiator,
+                            created_on: project.created_on,
+                            agreement_hash: Default::default(),
+                            cancelled: project.cancelled,
+                            raised_funds: project.raised_funds,
+                            funding_type: FundingType::Proposal,
+                            // A deposit_id of u32::MAX is ignored.
+                            deposit_id: u32::MAX.into(),
+                        };
+                    Some(migrated_project)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
         });
     }
 
@@ -572,7 +584,7 @@ mod test {
                     percentage_to_unlock: 60u32,
                     is_approved: true,
                 });
-            let mut contributions: ContributionsFor<Test> = BTreeMap::new();
+            let mut contributions = BTreeMap::new();
             contributions.insert(
                 *CHARLIE,
                 Contribution {
