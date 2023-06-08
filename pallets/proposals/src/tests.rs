@@ -1,7 +1,6 @@
 use crate::{mock::*, *};
-use common_types::{CurrencyId, FundingType};
+use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok};
-use sp_core::H256;
 use test_utils::*;
 
 #[test]

@@ -218,11 +218,11 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             if <T as Config>::IsIdentityRequired::get() {
-                let _ = Self::ensure_identity_is_decent(&who)?;
+                Self::ensure_identity_is_decent(&who)?;
             }
 
             let crowdfund =
-                CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
+                CrowdFunds::<T>::get(crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
             ensure!(crowdfund.initiator == who, Error::<T>::UserIsNotInitiator);
             ensure!(
                 !crowdfund.is_converted,
@@ -328,11 +328,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let _ = Self::new_contribution(&who, crowdfund_key, value)?;
-            Self::deposit_event(Event::ContributeSucceeded(
-                who.clone(),
-                crowdfund_key,
-                value,
-            ));
+            Self::deposit_event(Event::ContributeSucceeded(who, crowdfund_key, value));
             Ok(().into())
         }
 
@@ -383,7 +379,7 @@ pub mod pallet {
         ) -> Result<CrowdFundKey, DispatchError> {
             // Check if identity is required
             if <T as Config>::IsIdentityRequired::get() {
-                let _ = Self::ensure_identity_is_decent(&who)?;
+                Self::ensure_identity_is_decent(&who)?;
             }
 
             let crowdfund_key = CrowdFundCount::<T>::get();
@@ -462,8 +458,7 @@ pub mod pallet {
             let expiry_block = frame_system::Pallet::<T>::block_number()
                 .saturating_add(<T as Config>::RoundExpiry::get());
             RoundsExpiring::<T>::try_mutate(expiry_block, |list| -> DispatchResult {
-                let _ = list
-                    .try_push(crowdfund_key)
+                list.try_push(crowdfund_key)
                     .map_err(|_| Error::<T>::Overflow)?;
                 Ok(())
             })?;
@@ -488,13 +483,13 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             // ensure is in round and if exists expiry is less than now
             let crowdfund =
-                CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
+                CrowdFunds::<T>::get(crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
 
             ensure!(
                 CrowdFundsInRound::<T>::contains_key(crowdfund_key, RoundType::ContributionRound),
                 Error::<T>::ContributionRoundNotStarted
             );
-            let new_value = match crowdfund.contributions.get(&who) {
+            let new_value = match crowdfund.contributions.get(who) {
                 Some(contribution) => contribution.value,
                 None => Default::default(),
             }
@@ -520,7 +515,7 @@ pub mod pallet {
             }
 
             // Reserve amount to be used later.
-            T::MultiCurrency::reserve(crowdfund.currency_id, &who, additional_amount)?;
+            T::MultiCurrency::reserve(crowdfund.currency_id, who, additional_amount)?;
 
             CrowdFunds::<T>::try_mutate(crowdfund_key, |crowdfund| {
                 if let Some(cf) = crowdfund {
@@ -544,7 +539,7 @@ pub mod pallet {
 
         pub fn do_approve(crowdfund_key: CrowdFundKey) -> DispatchResultWithPostInfo {
             let crowdfund =
-                CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
+                CrowdFunds::<T>::get(crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
             ensure!(
                 crowdfund.raised_funds >= crowdfund.required_funds,
                 Error::<T>::RequiredFundsNotReached
@@ -575,7 +570,7 @@ pub mod pallet {
             crowdfund_key: CrowdFundKey,
         ) -> Result<(), Error<T>> {
             let crowdfund =
-                CrowdFunds::<T>::get(&crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
+                CrowdFunds::<T>::get(crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
             match crowdfund.initiator == who {
                 true => Ok(()),
                 false => Err(Error::<T>::UserIsNotInitiator),

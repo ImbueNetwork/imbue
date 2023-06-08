@@ -1,9 +1,8 @@
 use crate::mock::*;
-use crate::pallet::*;
 use crate::traits::{DepositCalculator, DepositHandler};
 use crate::*;
 use common_types::CurrencyId;
-use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
+use frame_support::{assert_noop, assert_ok};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 #[test]

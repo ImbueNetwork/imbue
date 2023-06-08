@@ -1,16 +1,10 @@
-use crate::{
-    AccountIdOf, BalanceOf, Contribution, ContributionsFor, Event, Milestone, MilestoneKey,
-    Project, ProjectCount, Projects, ProposedMilestone,
-};
+use crate::{AccountIdOf, BalanceOf, Contribution, ProposedMilestone};
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
-use frame_support::{
-    dispatch::EncodeLike, inherent::Vec, pallet_prelude::DispatchError, sp_runtime::Saturating,
-    transactional, PalletId,
-};
-use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
+use frame_support::{inherent::Vec, pallet_prelude::DispatchError, transactional, PalletId};
+use orml_traits::XcmTransfer;
 use orml_xtokens::Error;
 
-use sp_core::{Get, H256};
+use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};

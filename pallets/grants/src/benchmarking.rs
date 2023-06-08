@@ -8,11 +8,9 @@ use common_types::{CurrencyId, TreasuryOrigin};
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, RawOrigin};
-use orml_traits::GetByKey;
-use orml_traits::{MultiCurrency, MultiCurrencyExtended, MultiReservableCurrency};
+use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
-use sp_core::sr25519::{Public, Signature};
 use sp_runtime::SaturatedConversion;
 use sp_std::{convert::TryInto, str, vec::Vec};
 

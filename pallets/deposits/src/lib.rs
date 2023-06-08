@@ -122,7 +122,7 @@ pub mod pallet {
         fn return_deposit(deposit_id: T::DepositId) -> DispatchResult {
             if deposit_id == u32::MAX.into() {
                 Self::deposit_event(Event::<T>::DepositIgnored);
-                return Ok(().into());
+                return Ok(());
             }
             let deposit =
                 CurrentDeposits::<T>::get(deposit_id).ok_or(Error::<T>::DepositDoesntExist)?;
@@ -134,7 +134,7 @@ pub mod pallet {
 
             CurrentDeposits::<T>::remove(deposit_id);
             Self::deposit_event(Event::<T>::DepositReturned(deposit_id, deposit.amount));
-            Ok(().into())
+            Ok(())
         }
 
         /// Doesnt do a slash in the normal sense, this simply takes the deposit and sends it to the DepositSlashAccount.
@@ -153,7 +153,7 @@ pub mod pallet {
 
             CurrentDeposits::<T>::remove(deposit_id);
             Self::deposit_event(Event::<T>::DepositSlashed(deposit_id, deposit.amount));
-            Ok(().into())
+            Ok(())
         }
     }
 

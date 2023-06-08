@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use constants::*;
-use frame_support::pallet_prelude::*;
 pub use types::*;
 
 /// Common types for all runtimes
@@ -285,7 +284,6 @@ pub mod common_xcm {
 }
 
 pub mod storage_deposits {
-    use super::*;
     #[derive(PartialEq, Eq, Debug, Copy, Clone)]
     pub enum StorageDepositItems {
         Project,

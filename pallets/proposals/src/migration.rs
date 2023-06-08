@@ -260,7 +260,7 @@ pub mod v3 {
             project.milestones.iter().for_each(|(key, milestone)| {
                 *weight += T::DbWeight::get().reads_writes(1, 1);
                 migrated_milestones.insert(
-                    key.clone(),
+                    *key,
                     Milestone {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,

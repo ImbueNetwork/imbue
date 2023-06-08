@@ -10,7 +10,7 @@ use frame_support::{assert_ok, traits::Hooks};
 use frame_system::EventRecord;
 use orml_traits::MultiCurrency;
 use pallet_deposits::traits::DepositHandler;
-use sp_arithmetic::{per_things::Percent, traits::Zero};
+use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
 use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;

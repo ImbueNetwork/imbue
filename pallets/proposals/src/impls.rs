@@ -89,7 +89,7 @@ impl<T: Config> Pallet<T> {
                 }
                 Ok::<BalanceOf<T>, DispatchError>(v.yay)
             } else {
-                return Err(Error::<T>::VotingRoundNotStarted.into());
+                Err(Error::<T>::VotingRoundNotStarted.into())
             }
         })?;
 
@@ -109,7 +109,7 @@ impl<T: Config> Pallet<T> {
             });
 
             Self::deposit_event(Event::MilestoneApproved(
-                project.initiator.clone(),
+                project.initiator,
                 project_key,
                 milestone_key,
                 <frame_system::Pallet<T>>::block_number(),
