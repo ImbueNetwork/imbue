@@ -3,8 +3,8 @@
 // pub use pallet::*;
 // use frame_support::{
 //     pallet_prelude::*,
-//     storage_alias, 
-//     traits::Get, 
+//     storage_alias,
+//     traits::Get,
 //     weights::Weight
 // };
 // use common_types::{CurrencyId, TreasuryOrigin};
@@ -54,7 +54,7 @@
 //                 if let Ok(n) = convert {
 //                     Some(ProposedMilestone {
 //                         percentage_to_unlock: Percent::from_percent(n)
-//                     })           
+//                     })
 //                 } else {
 //                     None
 //                 }
@@ -85,14 +85,14 @@
 //     #[test]
 //     fn migrate_v0_to_v1() {
 //         build_test_externality().execute_with(|| {
-            
+
 //             let milestones: BoundedVec<v0::ProposedMilestoneV0, <Test as Config>::MaxMilestonesPerBrief> = vec![
 //                 v0::ProposedMilestoneV0 {
 //                     percentage_to_unlock: 80u32,
 //                 },
 //                 v0::ProposedMilestoneV0 {
 //                     percentage_to_unlock: 20u32,
-//                 } 
+//                 }
 //             ].try_into().expect("2 should be lower than bound");
 
 //             let old_grant = v0::GrantV0 {

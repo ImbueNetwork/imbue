@@ -25,16 +25,16 @@ mod migrations;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use common_types::{milestone_origin::FundingType, TreasuryOrigin, CurrencyId};
-    use frame_support::{pallet_prelude::*, BoundedVec, dispatch::fmt::Debug};
+    use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
+    use frame_support::{dispatch::fmt::Debug, pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
+    use pallet_deposits::traits::DepositHandler;
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
-    use sp_core::H256;
-    use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
     use sp_arithmetic::per_things::Percent;
+    use sp_core::H256;
     use sp_runtime::Saturating;
-    use pallet_deposits::traits::{DepositHandler};
+    use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -44,8 +44,12 @@ pub mod pallet {
         BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerGrant>;
     pub(crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
     pub(crate) type GrantId = H256;
-    pub(crate) type DepositIdOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
-    pub(crate) type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
+    pub(crate) type DepositIdOf<T> =
+        <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
+    pub(crate) type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<
+        BalanceOf<T>,
+        AccountIdOf<T>,
+    >>::StorageItem;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -68,7 +72,7 @@ pub mod pallet {
         /// The storage item is used to generate the deposit_id.
         type GrantStorageItem: Get<StorageItemOf<Self>>;
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
-        
+
         type WeightInfo: WeightInfo;
     }
 
@@ -151,7 +155,9 @@ pub mod pallet {
 
             let total_percentage = proposed_milestones
                 .iter()
-                .fold(Percent::zero(), |acc: Percent, x| acc.saturating_add(x.percentage_to_unlock));
+                .fold(Percent::zero(), |acc: Percent, x| {
+                    acc.saturating_add(x.percentage_to_unlock)
+                });
             ensure!(total_percentage.is_one(), Error::<T>::MustSumTo100);
 
             ensure!(
@@ -159,7 +165,11 @@ pub mod pallet {
                 Error::<T>::GrantAlreadyExists
             );
 
-            let deposit_id = T::DepositHandler::take_deposit(submitter.clone(), T::GrantStorageItem::get(), CurrencyId::Native)?;
+            let deposit_id = T::DepositHandler::take_deposit(
+                submitter.clone(),
+                T::GrantStorageItem::get(),
+                CurrencyId::Native,
+            )?;
 
             let grant = Grant {
                 milestones: proposed_milestones,
@@ -209,9 +219,9 @@ pub mod pallet {
             ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
 
             if let Some(milestones) = edited_milestones {
-                let total_percentage = milestones
-                    .iter()
-                    .fold(Percent::zero(), |acc, x| acc.saturating_add(x.percentage_to_unlock));
+                let total_percentage = milestones.iter().fold(Percent::zero(), |acc, x| {
+                    acc.saturating_add(x.percentage_to_unlock)
+                });
                 ensure!(total_percentage.is_one(), Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }

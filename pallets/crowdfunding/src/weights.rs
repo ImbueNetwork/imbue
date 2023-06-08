@@ -9,7 +9,6 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_grants.
 pub trait WeightInfo {
-    
     fn create_crowdfund() -> Weight;
     fn update_crowdfund() -> Weight;
     fn add_crowdfund_whitelist() -> Weight;
@@ -17,7 +16,6 @@ pub trait WeightInfo {
     fn open_contributions() -> Weight;
     fn contribute() -> Weight;
     fn approve_crowdfund_for_milestone_submission() -> Weight;
-    
 }
 
 /// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
@@ -60,7 +58,6 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
-    
 }
 
 // For backwards compatibility and tests

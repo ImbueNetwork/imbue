@@ -6,8 +6,8 @@ use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use sp_core::Get;
-use sp_runtime::Saturating;
 use sp_runtime::SaturatedConversion;
+use sp_runtime::Saturating;
 
 benchmarks! {
     where_clause {

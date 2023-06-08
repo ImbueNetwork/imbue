@@ -10,23 +10,22 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 
+use crate::xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
+use common_runtime::storage_deposits::StorageDepositItems;
 use pallet_collective::EnsureProportionAtLeast;
+use pallet_deposits::traits::DepositCalculator;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, Perbill, Permill,
-    DispatchError,
+    ApplyExtrinsicResult, DispatchError, Perbill, Permill,
 };
 use sp_std::{
     cmp::Ordering,
     convert::{TryFrom, TryInto},
     prelude::*,
 };
-use common_runtime::storage_deposits::StorageDepositItems;
-use pallet_deposits::traits::DepositCalculator;
-use crate::xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -800,7 +799,7 @@ impl pallet_proposals::Config for Runtime {
 parameter_types! {
     // TODO: This should be the same as the max contributors bound
     pub MaxApprovers: u32 = 50;
-    pub GrantStorageItem: StorageDepositItems = StorageDepositItems::Grant;   
+    pub GrantStorageItem: StorageDepositItems = StorageDepositItems::Grant;
 }
 
 impl pallet_grants::Config for Runtime {
@@ -809,7 +808,7 @@ impl pallet_grants::Config for Runtime {
     type MaxApprovers = MaxApprovers;
     type RMultiCurrency = Currencies;
     type GrantStorageItem = GrantStorageItem;
-    type DepositHandler = Deposits; 
+    type DepositHandler = Deposits;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type CancellingAuthority = AdminOrigin;
     type WeightInfo = ();
@@ -839,9 +838,12 @@ pub type DepositId = u64;
 pub struct ImbueDepositCalculator;
 impl DepositCalculator<Balance> for ImbueDepositCalculator {
     type StorageItem = StorageDepositItems;
-    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Result<Balance, DispatchError> {
+    fn calculate_deposit(
+        u: Self::StorageItem,
+        currency: CurrencyId,
+    ) -> Result<Balance, DispatchError> {
         if currency != CurrencyId::Native {
-            return Err(pallet_deposits::pallet::Error::<Runtime>::UnsupportedCurrencyType.into())
+            return Err(pallet_deposits::pallet::Error::<Runtime>::UnsupportedCurrencyType.into());
         }
         Ok(match u {
             StorageDepositItems::Project => DOLLARS.saturating_mul(500),

@@ -1,7 +1,7 @@
 use crate::*;
 use common_types::milestone_origin::FundingType;
-use sp_runtime::traits::{Saturating, Zero};
 use scale_info::prelude::format;
+use sp_runtime::traits::{Saturating, Zero};
 
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
@@ -89,7 +89,7 @@ impl<T: Config> Pallet<T> {
                 }
                 Ok::<BalanceOf<T>, DispatchError>(v.yay)
             } else {
-                return Err(Error::<T>::VotingRoundNotStarted.into())
+                return Err(Error::<T>::VotingRoundNotStarted.into());
             }
         })?;
 
@@ -106,8 +106,8 @@ impl<T: Config> Pallet<T> {
                         ms.is_approved = true
                     }
                 }
-            });            
-            
+            });
+
             Self::deposit_event(Event::MilestoneApproved(
                 project.initiator.clone(),
                 project_key,

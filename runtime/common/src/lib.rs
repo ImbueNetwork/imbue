@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use constants::*;
-pub use types::*;
 use frame_support::pallet_prelude::*;
+pub use types::*;
 
 /// Common types for all runtimes
 pub mod types {
@@ -264,8 +264,9 @@ pub mod asset_registry {
 
         #[cfg(feature = "runtime-benchmarks")]
         fn try_successful_origin(_asset_id: &Option<CurrencyId>) -> Result<Origin, ()> {
-            let zero_account_id = AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
-			    .expect("infinite length input; no invalid inputs for type; qed");
+            let zero_account_id =
+                AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                    .expect("infinite length input; no invalid inputs for type; qed");
             Ok(Origin::from(RawOrigin::Signed(zero_account_id)))
         }
     }
@@ -284,8 +285,8 @@ pub mod common_xcm {
 }
 
 pub mod storage_deposits {
-use super::*;
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+    use super::*;
+    #[derive(PartialEq, Eq, Debug, Copy, Clone)]
     pub enum StorageDepositItems {
         Project,
         CrowdFund,

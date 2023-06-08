@@ -30,13 +30,13 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
+    use pallet_deposits::traits::DepositHandler;
     use pallet_proposals::traits::IntoProposal;
     use pallet_proposals::{Contribution, ProposedMilestone};
     use sp_arithmetic::per_things::Percent;
     use sp_core::{Hasher, H256};
     use sp_runtime::traits::Zero;
     use sp_std::convert::{From, TryInto};
-    use pallet_deposits::traits::DepositHandler;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -52,11 +52,14 @@ pub mod pallet {
 
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
-    type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
-    type DepositIdOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
+    type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<
+        BalanceOf<T>,
+        AccountIdOf<T>,
+    >>::StorageItem;
+    type DepositIdOf<T> =
+        <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
     pub type BriefHash = H256;
-
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -211,7 +214,11 @@ pub mod pallet {
             }
 
             // Take storage deposit
-            let deposit_id = <T as Config>::DepositHandler::take_deposit(who.clone(), <T as Config>::BriefStorageItem::get(), CurrencyId::Native)?;
+            let deposit_id = <T as Config>::DepositHandler::take_deposit(
+                who.clone(),
+                <T as Config>::BriefStorageItem::get(),
+                CurrencyId::Native,
+            )?;
 
             // Now take the inital_contribution for the brief.
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;

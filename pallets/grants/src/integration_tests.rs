@@ -3,7 +3,7 @@ use crate::test_utils::gen_grant_id;
 use crate::tests::{get_approvers, get_milestones};
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::assert_ok;
-use pallet_proposals::{Projects};
+use pallet_proposals::Projects;
 
 #[test]
 fn create_proposal_from_grant() {

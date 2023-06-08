@@ -1,6 +1,6 @@
 use crate::{
-    Contribution, Event, Milestone, MilestoneKey, Project, ProjectCount, Projects,
-    ProposedMilestone, ContributionsFor, AccountIdOf, BalanceOf
+    AccountIdOf, BalanceOf, Contribution, ContributionsFor, Event, Milestone, MilestoneKey,
+    Project, ProjectCount, Projects, ProposedMilestone,
 };
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
 use frame_support::{
@@ -10,7 +10,7 @@ use frame_support::{
 use orml_traits::{MultiCurrency, MultiReservableCurrency, XcmTransfer};
 use orml_xtokens::Error;
 
-use sp_core::{H256, Get};
+use sp_core::{Get, H256};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
@@ -19,7 +19,7 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber> {
     /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.
     /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
     /// (if using crate) This function should bypass the usual checks when creating a proposal and
-    /// instantiate everything carefully. 
+    /// instantiate everything carefully.
     // TODO: Generic over currencyId: https://github.com/ImbueNetwork/imbue/issues/135
     fn convert_to_proposal(
         currency_id: CurrencyId,
@@ -48,7 +48,7 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
 // Some implementations used in Imbue of the traits above.
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 // For test purposes
-impl <T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for T {
+impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for T {
     fn convert_to_proposal(
         _currency_id: CurrencyId,
         _contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,

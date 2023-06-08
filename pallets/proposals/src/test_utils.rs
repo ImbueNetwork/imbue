@@ -9,12 +9,12 @@ use frame_benchmarking::{account, Vec};
 use frame_support::{assert_ok, traits::Hooks};
 use frame_system::EventRecord;
 use orml_traits::MultiCurrency;
+use pallet_deposits::traits::DepositHandler;
 use sp_arithmetic::{per_things::Percent, traits::Zero};
 use sp_core::{Get, H256};
-use sp_runtime::Saturating;
 use sp_runtime::SaturatedConversion;
-use sp_std::{convert::TryInto, collections::btree_map::BTreeMap};
-use pallet_deposits::traits::DepositHandler;
+use sp_runtime::Saturating;
+use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber) {
     loop {
@@ -39,7 +39,9 @@ pub fn get_contributions<T: Config>(
 
     accounts.iter().for_each(|account| {
         let contribution = Contribution { value, timestamp };
-        contributions.try_insert(account.clone(), contribution).expect("bound should be ensured");
+        contributions
+            .try_insert(account.clone(), contribution)
+            .expect("bound should be ensured");
     });
     contributions
 }
@@ -64,8 +66,12 @@ pub fn create_project<T: Config>(
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
 ) -> ProjectKey {
-
-    let deposit_id = <T as Config>::DepositHandler::take_deposit(beneficiary.clone(), <T as Config>::ProjectStorageItem::get(), CurrencyId::Native).expect("this should work");
+    let deposit_id = <T as Config>::DepositHandler::take_deposit(
+        beneficiary.clone(),
+        <T as Config>::ProjectStorageItem::get(),
+        CurrencyId::Native,
+    )
+    .expect("this should work");
     let agreement_hash: H256 = Default::default();
 
     let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
@@ -126,7 +132,9 @@ pub fn create_funded_user<T: Config>(
     let user = account(seed, n, 0);
     assert_ok!(<T::MultiCurrency as MultiCurrency<
         <T as frame_system::Config>::AccountId,
-    >>::deposit(CurrencyId::Native, &user, balance_factor.saturated_into()));
+    >>::deposit(
+        CurrencyId::Native, &user, balance_factor.saturated_into()
+    ));
     user
 }
 
