@@ -68,8 +68,8 @@ parameter_types! {
     pub RoundExpiry: BlockNumber = 100;
     pub MaxKeysPerRound: u32 = 50;
     pub MaxContributionsPerCrowdFund: u32 = 1000;
-    pub MaxMilestonesPerCrowdFund: u32 = 100;
-    pub MaxWhitelistPerCrowdFund: u32 = 100;
+    pub MaxMilestonesPerCrowdFund: u32 = 50;
+    pub MaxWhitelistPerCrowdFund: u32 = 50;
     pub MinimumRequiredFunds: Balance = 2000;
     pub MinimumContribution: Balance = 5;
 }
