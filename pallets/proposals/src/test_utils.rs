@@ -1,3 +1,6 @@
+#[allow(dead_code)]
+#[allow(unused)]
+
 use crate::Config;
 use crate::Pallet as Proposals;
 use crate::{
@@ -54,7 +57,7 @@ pub fn get_milestones(n: u8) -> Vec<ProposedMilestone> {
         .collect::<Vec<ProposedMilestone>>()
 }
 
-pub fn get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
+pub fn _get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
     get_milestones(<T as Config>::MaxMilestonesPerProject::get() as u8)
 }
 
@@ -124,7 +127,7 @@ pub fn create_project<T: Config>(
     project_key
 }
 
-pub fn create_funded_user<T: Config>(
+pub fn _create_funded_user<T: Config>(
     seed: &'static str,
     n: u32,
     balance_factor: u128,
@@ -138,7 +141,7 @@ pub fn create_funded_user<T: Config>(
     user
 }
 
-pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
+pub fn _assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
 where
     <T as frame_system::Config>::AccountId: AsRef<[u8]>,
 {

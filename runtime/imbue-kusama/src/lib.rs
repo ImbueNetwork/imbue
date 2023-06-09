@@ -10,7 +10,6 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 
-use crate::xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 use common_runtime::storage_deposits::StorageDepositItems;
 use pallet_collective::EnsureProportionAtLeast;
 use pallet_deposits::traits::DepositCalculator;
@@ -62,6 +61,7 @@ pub use common_runtime::{
     asset_registry::AuthorityOrigin,
     common_xcm::general_key,
     xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
+    constants::MAXIMUM_BLOCK_WEIGHT
 };
 pub use common_types::{CurrencyId, CustomMetadata};
 pub use pallet_balances::Call as BalancesCall;
@@ -110,14 +110,6 @@ pub fn native_version() -> NativeVersion {
         can_author_with: Default::default(),
     }
 }
-
-/// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
-/// by  Operational  extrinsics.
-/// We allow for .5 seconds of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
-    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-    cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
-);
 
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
@@ -786,7 +778,7 @@ impl pallet_proposals::Config for Runtime {
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type WeightInfo = ();
+    type WeightInfo = pallet_proposals::weights::SubstrateWeight<Self>;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
@@ -811,7 +803,7 @@ impl pallet_grants::Config for Runtime {
     type DepositHandler = Deposits;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type CancellingAuthority = AdminOrigin;
-    type WeightInfo = ();
+    type WeightInfo = pallet_grants::weights::SubstrateWeight<Self>;
 }
 
 parameter_types! {
@@ -829,7 +821,7 @@ impl pallet_briefs::Config for Runtime {
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
-    type WeightInfo = ();
+    type WeightInfo = pallet_briefs::weights::SubstrateWeight<Self>;
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = Deposits;
 }

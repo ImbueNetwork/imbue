@@ -14,7 +14,6 @@ type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 mod v0 {
     use super::*;
 
-    //TODO: ProposedMilestones from u8 to percent.
     #[derive(Encode, Decode, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct BriefDataV0<T: Config> {
@@ -43,7 +42,7 @@ mod v0 {
 mod v1 {
     use super::*;
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
-        crate::Briefs::<T>::translate(|key, brief: v0::BriefDataV0<T>| {
+        crate::Briefs::<T>::translate(|_, brief: v0::BriefDataV0<T>| {
             *weight += T::DbWeight::get().reads_writes(2, 1);
             let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief
                 .milestones

@@ -80,7 +80,7 @@ pub mod pallet {
     /// Key 1: GrantId
     /// Value: Grant<T>
     #[pallet::storage]
-    pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128, GrantId, Grant<T>, OptionQuery>;
+    pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128Concat, GrantId, Grant<T>, OptionQuery>;
 
     /// Stores all the grants a user has submitted.
     /// Key 1: AccountId
@@ -332,7 +332,6 @@ pub mod pallet {
         // TODO: runtime api to get the deposit address of the grants sovereign account.
     }
 
-    // TODO: MIGRATION FOR DEPOSITID
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct Grant<T: Config> {

@@ -138,6 +138,7 @@ mod v1 {
     }
 }
 
+#[allow(unused)]
 mod v2 {
     use super::*;
 
@@ -640,7 +641,7 @@ mod test {
             };
             v3::OldRounds::<Test>::insert(0, Some(old_round));
 
-            let w = v3::migrate_all::<Test>();
+            let _w = v3::migrate_all::<Test>();
 
             let project_apres = crate::Projects::<Test>::get(0).unwrap();
             // #1, 2, 7 & 8

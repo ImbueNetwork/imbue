@@ -1,21 +1,17 @@
-#[allow(unused)]
+
 use crate::*;
 pub use pallet::*;
 use frame_support::{
     pallet_prelude::*,
     storage_alias,
-    traits::Get,
     weights::Weight
 };
 use common_types::{CurrencyId, TreasuryOrigin};
-use sp_std::convert::TryInto;
-use pallet_proposals::ProposedMilestone;
-use sp_core::H256;
-use sp_arithmetic::Percent;
-use sp_std::vec::Vec;
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
+#[allow(unused)]
+#[allow(dead_code)]
 mod v0 {
     use super::*;
     #[derive(Encode, Decode, Debug, MaxEncodedLen, TypeInfo)]
@@ -41,10 +37,14 @@ mod v0 {
     pub type PendingGrantsV0<T: Config> = StorageMap<Pallet<T>, Blake2_128, GrantId, GrantV0<T>, OptionQuery>;
 }
 
+#[allow(unused)]
+#[allow(dead_code)]
 mod v1 {
     use super::*;
     pub fn rococo_migrate_to_v1<T: Config>(weight: &mut Weight) {
         // This is only for rococo so just clear the lot, (there were only 4 at time of writing)
-        v0::PendingGrantsV0::<T>::clear(10, None);
+        let limit: u32 = 10;
+        *weight += T::DbWeight::get().reads_writes(limit.into(), limit.into());
+        let _ = v0::PendingGrantsV0::<T>::clear(limit, None);
     }
 }

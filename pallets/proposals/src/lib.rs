@@ -91,7 +91,7 @@ pub mod pallet {
         type ImbueFee: Get<Percent>;
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
         type ExpiringProjectRoundsPerBlock: Get<u32>;
-        /// The type responsible for
+        /// The type responsible for storage deposits.
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
@@ -276,6 +276,8 @@ pub mod pallet {
                     // Voting rounds automatically finalise if its reached its threshold.
                     // Therefore we can remove it on round end.
                     RoundType::VotingRound => {
+                        weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
+
                         MilestoneVotes::<T>::remove(project_key, milestone_key);
                         UserHasVoted::<T>::remove((
                             project_key,
@@ -537,8 +539,8 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 }
 
 /// The struct which contain milestones that can be submitted.
-#[scale_info(skip_type_params(T))]
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
 pub struct Project<T: Config> {
     pub agreement_hash: H256,
     pub milestones: BoundedBTreeMilestones<T>,
