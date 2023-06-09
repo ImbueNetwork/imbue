@@ -340,7 +340,14 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
+            ensure!(brief.brief_owners.contains(&who), Error::<T>::NotAuthorised);
             ensure!(who != brief.applicant, Error::<T>::NotAuthorised);
+
+            <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
+            let contributions = BriefContributions::<T>::get(brief_id);
+            for (who, c) in contributions.iter() {
+                <T as Config>::RMultiCurrency::unreserve(brief.currency_id, &who, c.value);
+            }
 
             BriefContributions::<T>::remove(brief_id);
             Briefs::<T>::remove(brief_id);
