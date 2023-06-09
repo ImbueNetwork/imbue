@@ -415,14 +415,13 @@ pub mod pallet {
                     for (acc, cont) in contributions.iter() {
                         let project_account_id =
                             crate::Pallet::<T>::project_account_id(project_key);
-                        // TODO: use repatriate reserved.
                         <T as Config>::MultiCurrency::repatriate_reserved(
                             currency_id,
                             &acc,
                             &project_account_id,
                             cont.value,
-                            BalanceStatus::Free
-                        );
+                            BalanceStatus::Free,
+                        )?;
                     }
                 }
                 FundingType::Grant(_) => {}
