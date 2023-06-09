@@ -342,7 +342,7 @@ pub mod pallet {
             crowdfund_key: CrowdFundKey,
         ) -> DispatchResultWithPostInfo {
             T::AuthorityOrigin::ensure_origin(origin)?;
-            let _ = Self::do_approve(crowdfund_key)?;
+            Self::do_approve(crowdfund_key)?;
             Ok(().into())
         }
 
