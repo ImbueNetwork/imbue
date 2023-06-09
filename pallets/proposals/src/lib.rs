@@ -7,7 +7,7 @@ use frame_support::{
     traits::EnsureOrigin, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
 use scale_info::TypeInfo;
@@ -415,15 +415,12 @@ pub mod pallet {
                     for (acc, cont) in contributions.iter() {
                         let project_account_id =
                             crate::Pallet::<T>::project_account_id(project_key);
-                        // TODO: use repatriate reserved.
-                        <<T as crate::Config>::MultiCurrency as MultiReservableCurrency<
-                            AccountIdOf<T>,
-                        >>::unreserve(currency_id, acc, cont.value);
-                        <T as crate::Config>::MultiCurrency::transfer(
+                        <T as Config>::MultiCurrency::repatriate_reserved(
                             currency_id,
-                            acc,
+                            &acc,
                             &project_account_id,
                             cont.value,
+                            BalanceStatus::Free,
                         )?;
                     }
                 }
