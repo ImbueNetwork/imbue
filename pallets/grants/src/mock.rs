@@ -1,10 +1,12 @@
 use crate as pallet_grants;
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
-use frame_support::traits::{ConstU16, ConstU64, Nothing};
+use frame_support::traits::{ConstU16, Nothing};
 use frame_support::{pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
+use pallet_deposits::traits::DepositHandler;
+use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -110,6 +112,34 @@ impl orml_tokens::Config for Test {
 parameter_types! {
     pub MaxMilestonesPerGrant: u32 = 50;
     pub MaxApprovers: u32 = 100;
+    pub GrantStorageItem: StorageItem = StorageItem::Grant;
+}
+
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
+pub enum StorageItem {
+    CrowdFund,
+    Brief,
+    Grant,
+    Project,
+}
+
+pub struct MockDepositHandler;
+impl DepositHandler<Balance, AccountId> for MockDepositHandler {
+    type DepositId = u64;
+    type StorageItem = StorageItem;
+    fn take_deposit(
+        _who: AccountId,
+        _storage_item: Self::StorageItem,
+        _currency_id: CurrencyId,
+    ) -> Result<Self::DepositId, DispatchError> {
+        Ok(0u64)
+    }
+    fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+    fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
 }
 
 impl pallet_grants::Config for Test {
@@ -119,6 +149,8 @@ impl pallet_grants::Config for Test {
     type MaxApprovers = MaxApprovers;
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type CancellingAuthority = EnsureRoot<AccountId>;
+    type GrantStorageItem = GrantStorageItem;
+    type DepositHandler = MockDepositHandler;
     type WeightInfo = ();
 }
 
@@ -136,13 +168,16 @@ parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
-    pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
+    pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 50;
     pub ProjectStorageDeposit: Balance = 100;
-    pub ImbueFee: u8 = 5;
+    pub ImbueFee: Percent = Percent::from_percent(5u8);
+    pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ProjectStorageItem: StorageItem = StorageItem::Project;
 }
 
 impl pallet_proposals::Config for Test {
@@ -151,18 +186,18 @@ impl pallet_proposals::Config for Test {
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = ();
-    type MaxProjectsPerRound = ConstU32<4>;
+    // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type RefundsPerBlock = RefundsPerBlock;
-    type IsIdentityRequired = IsIdentityRequired;
-    type MilestoneVotingWindow = TwoWeekBlockUnit;
+    type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
     type ImbueFee = ImbueFee;
+    type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
+    type DepositHandler = MockDepositHandler;
+    type ProjectStorageItem = ProjectStorageItem;
 }
 
 parameter_types! {

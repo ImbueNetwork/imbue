@@ -20,6 +20,9 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
+#[cfg(test)]
+mod migrations;
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -27,9 +30,12 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
+    use pallet_deposits::traits::DepositHandler;
     use pallet_proposals::traits::IntoProposal;
     use pallet_proposals::{Contribution, ProposedMilestone};
+    use sp_arithmetic::per_things::Percent;
     use sp_core::{Hasher, H256};
+    use sp_runtime::traits::Zero;
     use sp_std::convert::{From, TryInto};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -46,6 +52,12 @@ pub mod pallet {
 
     pub(crate) type BoundedBriefOwners<T> =
         BoundedVec<AccountIdOf<T>, <T as Config>::MaxBriefOwners>;
+    type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<
+        BalanceOf<T>,
+        AccountIdOf<T>,
+    >>::StorageItem;
+    type DepositIdOf<T> =
+        <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
     pub type BriefHash = H256;
 
@@ -58,22 +70,22 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         /// The hasher used to generate the brief id.
+        /// TODO: not in use;
         type BriefHasher: Hasher;
 
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The type that allows for evolution from brief to proposal.
-        type IntoProposal: IntoProposal<
-            AccountIdOf<Self>,
-            BalanceOf<Self>,
-            BlockNumberFor<Self>,
-        >;
+        type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
 
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
         type MaxBriefOwners: Get<u32>;
 
         type MaxMilestonesPerBrief: Get<u32>;
+
+        type BriefStorageItem: Get<StorageItemOf<Self>>;
+        type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
 
         type WeightInfo: WeightInfo;
     }
@@ -149,7 +161,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Approve an account so that they can be accepted as an applicant.
         #[pallet::call_index(1)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::add_to_fellowship())]
         pub fn add_to_fellowship(
             origin: OriginFor<T>,
             account_id: AccountIdOf<T>,
@@ -185,15 +197,14 @@ pub mod pallet {
                 Error::<T>::BriefAlreadyExists
             );
 
-            // Validation
             let total_percentage = milestones
                 .iter()
-                .fold(0u32, |acc: u32, ms: &ProposedMilestone| {
+                .fold(Percent::zero(), |acc: Percent, ms: &ProposedMilestone| {
                     acc.saturating_add(ms.percentage_to_unlock)
                 });
 
             ensure!(
-                total_percentage == 100u32,
+                total_percentage.is_one(),
                 Error::<T>::MilestonesTotalPercentageMustEqual100
             );
 
@@ -203,15 +214,17 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::TooManyBriefOwners)?;
             }
 
-            // TODO: freelancer fellowship handler
-            // ensure!(
-            //     FreelanceFellowship::<T>::contains_key(&applicant),
-            //     Error::<T>::OnlyApprovedAccountPermitted
-            // );
+            // Take storage deposit
+            let deposit_id = <T as Config>::DepositHandler::take_deposit(
+                who.clone(),
+                <T as Config>::BriefStorageItem::get(),
+                CurrencyId::Native,
+            )?;
 
+            // Now take the inital_contribution for the brief.
             <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
-            if initial_contribution > 0u32.into() {
+            if initial_contribution > Zero::zero() {
                 BriefContributions::<T>::try_mutate(brief_id, |contributions| {
                     // This should never fail as the the bound is ensured when a brief is created.
                     let _ = contributions
@@ -235,6 +248,7 @@ pub mod pallet {
                 frame_system::Pallet::<T>::block_number(),
                 applicant,
                 milestones,
+                deposit_id,
             );
 
             Briefs::<T>::insert(brief_id, brief);
@@ -300,6 +314,8 @@ pub mod pallet {
 
             let contributions = BriefContributions::<T>::get(brief_id);
 
+            <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
+
             <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
                 contributions.into_inner(),
@@ -338,12 +354,13 @@ pub mod pallet {
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct BriefData<T: Config> {
-        brief_owners: BoundedBriefOwners<T>,
-        budget: BalanceOf<T>,
-        currency_id: CurrencyId,
-        created_at: BlockNumberFor<T>,
-        applicant: AccountIdOf<T>,
-        milestones: BoundedProposedMilestones<T>,
+        pub brief_owners: BoundedBriefOwners<T>,
+        pub budget: BalanceOf<T>,
+        pub currency_id: CurrencyId,
+        pub created_at: BlockNumberFor<T>,
+        pub applicant: AccountIdOf<T>,
+        pub milestones: BoundedProposedMilestones<T>,
+        pub deposit_id: DepositIdOf<T>,
     }
 
     impl<T: Config> Pallet<T> {
@@ -369,6 +386,7 @@ pub mod pallet {
             created_at: BlockNumberFor<T>,
             applicant: AccountIdOf<T>,
             milestones: BoundedProposedMilestones<T>,
+            deposit_id: DepositIdOf<T>,
         ) -> Self {
             Self {
                 created_at,
@@ -377,6 +395,7 @@ pub mod pallet {
                 currency_id,
                 applicant,
                 milestones,
+                deposit_id,
             }
         }
     }

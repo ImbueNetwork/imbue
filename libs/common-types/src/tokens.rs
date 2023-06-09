@@ -29,8 +29,6 @@ pub mod currency_decimals {
     pub const MGX: u32 = 18;
 }
 
-
-
 // A way to generate different currencies from a number.
 // Can be used in tests/benchmarks to generate different currencies.
 impl From<u32> for CurrencyId {

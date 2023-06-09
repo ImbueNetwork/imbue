@@ -6,13 +6,14 @@ use frame_support::{
     PalletId,
 };
 
+use crate::*;
+use common_types::CurrencyId;
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
 
-use common_types::CurrencyId;
-
 use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
+use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519;
 use sp_runtime::{
     testing::Header,
@@ -174,25 +175,18 @@ impl pallet_timestamp::Config for Test {
 }
 
 parameter_types! {
-    pub MaximumApplicants: u32 = 10_000u32;
-    pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
-    pub MaxBriefOwners: u32 = 100;
-    pub MaxMilestones: u32 = 100;
-
-}
-
-parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
-    pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
-    pub MaxMilestonesPerProject: u32 = 50;
-    pub ProjectStorageDeposit: Balance = 100;
-    pub ImbueFee: u8 = 5;
+    pub MaxMilestonesPerProject: u32 = 100;
+    pub ImbueFee: Percent = Percent::from_percent(5u8);
+    pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ProjectStorageItem: StorageItems = StorageItems::Project;
 }
 
 impl pallet_proposals::Config for Test {
@@ -201,19 +195,18 @@ impl pallet_proposals::Config for Test {
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = ();
-    type MaxProjectsPerRound = ConstU32<4>;
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type RefundsPerBlock = RefundsPerBlock;
-    type IsIdentityRequired = IsIdentityRequired;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
+    type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
+    type ProjectStorageItem = ProjectStorageItem;
+    type DepositHandler = MockDepositHandler<Test>;
 }
 
 parameter_types! {
@@ -247,6 +240,8 @@ parameter_types! {
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
+pub static DAVE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([128u8; 32]));
+pub static JOHN: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([255u8; 32]));
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()
@@ -270,11 +265,39 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
-        let initial_balance = 10_000_000u64;
+        let initial_balance = 100_000_000u64;
         System::set_block_number(1);
         let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &DAVE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &JOHN, initial_balance);
     });
     ext
+}
+
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
+pub enum StorageItems {
+    Project,
+}
+
+pub struct MockDepositHandler<T>(T);
+impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>>
+    for MockDepositHandler<T>
+{
+    type DepositId = u64;
+    type StorageItem = StorageItems;
+    fn take_deposit(
+        _who: crate::AccountIdOf<T>,
+        _storage_item: Self::StorageItem,
+        _currency_id: CurrencyId,
+    ) -> Result<Self::DepositId, DispatchError> {
+        Ok(0u64)
+    }
+    fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+    fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
 }

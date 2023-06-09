@@ -1,5 +1,7 @@
 use crate as pallet_briefs;
+use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use frame_support::{
+    pallet_prelude::*,
     parameter_types,
     traits::{ConstU32, Nothing},
     weights::{ConstantMultiplier, IdentityFee},
@@ -8,12 +10,10 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use sp_core::{sr25519::Signature, H256};
 
-use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
-
 use common_types::CurrencyId;
 
 use frame_support::once_cell::sync::Lazy;
-
+use sp_arithmetic::per_things::Percent;
 use sp_core::sr25519;
 use sp_runtime::{
     testing::Header,
@@ -21,6 +21,7 @@ use sp_runtime::{
     BuildStorage,
 };
 
+use pallet_deposits::traits::DepositHandler;
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
@@ -177,10 +178,38 @@ impl pallet_timestamp::Config for Test {
     type WeightInfo = ();
 }
 
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
+pub enum StorageItem {
+    CrowdFund,
+    Brief,
+    Grant,
+    Project,
+}
+
+pub struct MockDepositHandler;
+impl DepositHandler<Balance, AccountId> for MockDepositHandler {
+    type DepositId = u64;
+    type StorageItem = StorageItem;
+    fn take_deposit(
+        _who: AccountId,
+        _storage_item: Self::StorageItem,
+        _currency_id: CurrencyId,
+    ) -> Result<Self::DepositId, DispatchError> {
+        Ok(0u64)
+    }
+    fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+    fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+}
+
 parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
     pub MaxBriefOwners: u32 = 100;
+    pub BriefStorageItem: StorageItem = StorageItem::Brief;
 }
 
 impl pallet_briefs::Config for Test {
@@ -191,6 +220,8 @@ impl pallet_briefs::Config for Test {
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
+    type BriefStorageItem = BriefStorageItem;
+    type DepositHandler = MockDepositHandler;
     type WeightInfo = ();
 }
 
@@ -198,13 +229,16 @@ parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
-    pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
+    pub MilestoneVotingWindow: BlockNumber  =  100800u64;
     pub MaxMilestonesPerProject: u32 = 50;
     pub ProjectStorageDeposit: Balance = 100;
-    pub ImbueFee: u8 = 5;
+    pub ImbueFee: Percent = Percent::from_percent(5u8);
+    pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ProjectStorageItem: StorageItem = StorageItem::Project;
 }
 
 impl pallet_proposals::Config for Test {
@@ -213,21 +247,19 @@ impl pallet_proposals::Config for Test {
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = ();
-    type MaxProjectsPerRound = ConstU32<4>;
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type RefundsPerBlock = RefundsPerBlock;
-    type IsIdentityRequired = IsIdentityRequired;
-    type MilestoneVotingWindow = TwoWeekBlockUnit;
+    type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
     type ImbueFee = ImbueFee;
+    type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
+    type ProjectStorageItem = ProjectStorageItem;
+    type DepositHandler = MockDepositHandler;
 }
-
 parameter_types! {
     pub const BasicDeposit: u64 = 10;
     pub const FieldDeposit: u64 = 10;

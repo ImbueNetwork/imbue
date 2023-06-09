@@ -118,12 +118,15 @@ pub mod constants {
     /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used by
     /// Operational  extrinsics.
     pub const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
-
-    /// We allow for 0.5 seconds of compute with a 6 second average block time.
+    
+    /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
+    /// by  Operational  extrinsics.
+    /// We allow for .5 seconds of compute with a 12 second average block time.
     pub const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
         WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-        polkadot_primitives::MAX_POV_SIZE as u64,
+        cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
     );
+
 }
 
 pub mod parachains {
@@ -263,7 +266,10 @@ pub mod asset_registry {
 
         #[cfg(feature = "runtime-benchmarks")]
         fn try_successful_origin(_asset_id: &Option<CurrencyId>) -> Result<Origin, ()> {
-            unimplemented!()
+            let zero_account_id =
+                AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                    .expect("infinite length input; no invalid inputs for type; qed");
+            Ok(Origin::from(RawOrigin::Signed(zero_account_id)))
         }
     }
 }
@@ -277,5 +283,15 @@ pub mod common_xcm {
             length: key.len() as u8,
             data,
         }
+    }
+}
+
+pub mod storage_deposits {
+    #[derive(PartialEq, Eq, Debug, Copy, Clone)]
+    pub enum StorageDepositItems {
+        Project,
+        CrowdFund,
+        Grant,
+        Brief,
     }
 }

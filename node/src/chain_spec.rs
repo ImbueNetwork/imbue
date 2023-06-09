@@ -33,7 +33,7 @@ const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
+    TPublic::Pair::from_string(&format!("//{seed}"), None)
         .expect("static values are valid; qed")
         .public()
 }
@@ -67,7 +67,7 @@ where
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
+    TPublic::Pair::from_string(&format!("//{seed}"), None)
         .expect("static values are valid; qed")
         .public()
 }
@@ -82,9 +82,9 @@ pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
 pub fn development_local_config(environment: &str) -> ImbueKusamaChainSpec {
     ImbueKusamaChainSpec::from_genesis(
         // Name
-        format!("imbue {} testnet", environment).as_str(),
+        format!("imbue {environment} testnet").as_str(),
         // ID
-        format!("imbue-{}-testnet", environment).as_str(),
+        format!("imbue-{environment}-testnet").as_str(),
         ChainType::Local,
         move || {
             development_genesis(
@@ -111,9 +111,9 @@ pub fn development_local_config(environment: &str) -> ImbueKusamaChainSpec {
 
 pub fn development_environment_config(environment: &str) -> ImbueKusamaChainSpec {
     ImbueKusamaChainSpec::from_genesis(
-        format!("imbue {} testnet", environment).as_str(),
+        format!("imbue {environment} testnet").as_str(),
         // ID
-        format!("imbue-{}-testnet", environment).as_str(),
+        format!("imbue-{environment}-testnet").as_str(),
         ChainType::Live,
         move || {
             development_genesis(
