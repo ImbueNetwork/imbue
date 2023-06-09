@@ -253,8 +253,12 @@ pub mod pallet {
         /// >
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            // Only supporting latest upgrade for now.
-            if StorageVersion::<T>::get() == Release::V2 {
+            if StorageVersion::<T>::get() == Release::V1 {
+                weight += migration::v2::migrate::<T>();
+                weight += migration::v3::migrate_all::<T>();
+                StorageVersion::<T>::set(Release::V3);
+            }
+            else if StorageVersion::<T>::get() == Release::V2 {
                 weight += migration::v3::migrate_all::<T>();
                 StorageVersion::<T>::set(Release::V3);
             }

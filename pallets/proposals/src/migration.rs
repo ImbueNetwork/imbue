@@ -138,7 +138,7 @@ mod v1 {
     }
 }
 
-mod v2 {
+pub(crate) mod v2 {
     use super::*;
 
     #[storage_alias]
@@ -693,6 +693,67 @@ mod test {
                 let end = crate::Rounds::<Test>::get(k, crate::RoundType::VotingRound).unwrap();
                 assert_eq!(end, end_block_number);
             });
+        })
+    }
+
+    #[test]
+    fn migrate_v1_to_v3() {
+        build_test_externality().execute_with(|| {
+            use v3::*;
+            let project_key = 1;
+            let contribution_value = 1_000_000_u64;
+            let mut contributions: BTreeMap<
+                AccountIdOf<Test>,
+                Contribution<BalanceOf<Test>, TimestampOf<Test>>,
+            > = BTreeMap::new();
+
+            contributions.insert(
+                *ALICE,
+                Contribution {
+                    value: contribution_value,
+                    timestamp: TimestampOf::<Test>::default(),
+                },
+            );
+
+            contributions.insert(
+                *BOB,
+                Contribution {
+                    value: contribution_value,
+                    timestamp: TimestampOf::<Test>::default(),
+                },
+            );
+
+            let old_project = v1::ProjectV1 {
+                name: b"Project Pre-migrations".to_vec(),
+                logo: b"logo".to_vec(),
+                description: b"description".to_vec(),
+                website: b"https://imbue.network".to_vec(),
+                milestones: BTreeMap::new(),
+                contributions,
+                currency_id: CurrencyId::KSM,
+                required_funds: (100_000_000u32).into(),
+                raised_funds: (100_000_000u32).into(),
+                withdrawn_funds: (0u32).into(),
+                initiator: *ALICE,
+                create_block_number: 100u64,
+                approved_for_funding: true,
+                funding_threshold_met: true,
+                cancelled: false,
+            };
+            v1::Projects::<Test>::insert(project_key, &old_project);
+            let _ = v2::migrate::<Test>();
+            let _ = v3::migrate_all::<Test>();
+            dbg!(&v1::Projects::<Test>::iter_keys().collect::<Vec<u32>>());
+            let project = crate::Projects::<Test>::get(1).unwrap();
+            assert_eq!(
+                old_project.contributions[&ALICE].value,
+                project.contributions[&ALICE].value
+            );
+            assert_eq!(
+                project.funding_type,
+                FundingType::Proposal
+            );
+
         })
     }
 }
