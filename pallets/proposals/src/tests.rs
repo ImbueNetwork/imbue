@@ -307,7 +307,7 @@ fn vote_on_milestone_actually_adds_to_vote() {
         ));
         let vote =
             MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
-        assert!(vote.yay == 50_000u64);
+        assert!(vote.yay == 100_000u64);
         assert!(vote.nay == 0u64);
         assert_ok!(Proposals::vote_on_milestone(
             RuntimeOrigin::signed(*CHARLIE),
@@ -317,8 +317,8 @@ fn vote_on_milestone_actually_adds_to_vote() {
         ));
         let vote =
             MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
-        assert!(vote.yay == 50_000u64);
-        assert!(vote.nay == 50_000u64);
+        assert!(vote.yay == 100_000u64);
+        assert!(vote.nay == 100_000u64);
     });
 }
 
@@ -361,7 +361,8 @@ fn withdraw_not_initiator() {
 #[test]
 fn withdraw_only_transfers_approved_milestones() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let per_contribution = 100_000;
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], per_contribution);
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
@@ -385,25 +386,24 @@ fn withdraw_only_transfers_approved_milestones() {
 
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        dbg!(&alice_before);
         assert_ok!(Proposals::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        dbg!(&alice_after);
-        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10000);
-        dbg!(&expected_fee);
-        let alice_expected_balance = alice_before + 10000 - expected_fee;
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(per_contribution * 2 / 10);
+        // total_contribution / number of milestones - fee 
+        let alice_expected_balance = alice_before + ((per_contribution * 2 / 10) as u64) - expected_fee as u64;
         assert_eq!(
             alice_after, alice_expected_balance,
             "Alice account is not the expected balance"
         );
 
         let project_account = crate::Pallet::<Test>::project_account_id(project_key);
+        
         assert_eq!(
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &project_account),
-            90_000,
+            180_000,
             "funds havent been taken out of project as expected."
         );
     });
@@ -696,6 +696,7 @@ fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
             true,
         )
         .unwrap();
+        
         assert_ok!(Proposals::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key
@@ -703,7 +704,7 @@ fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
 
         let vote = NoConfidenceVotes::<Test>::get(project_key).expect("vote should exist");
         assert_eq!(
-            vote.nay, 50_000,
+            vote.nay, 100_000,
             "Bobs vote does not equal expected amount."
         );
 
@@ -810,11 +811,11 @@ fn vote_on_no_confidence_mutates_vote() {
         ));
         let vote = NoConfidenceVotes::<Test>::get(project_key).expect("vote should exist");
         assert_eq!(
-            vote.nay, 50_000,
+            vote.nay, 100_000,
             "Total vote should equal half contributions here."
         );
         assert_eq!(
-            vote.yay, 50_000,
+            vote.yay, 100_000,
             "Total vote should equal half contributions here."
         );
 

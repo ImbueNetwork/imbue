@@ -265,7 +265,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
-        let initial_balance = 10_000_000u64;
+        let initial_balance = 100_000_000u64;
         System::set_block_number(1);
         let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
