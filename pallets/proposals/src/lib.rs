@@ -80,7 +80,6 @@ pub mod pallet {
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<Percent>;
-        // TODO: use this.
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
         /// Defines the length that a milestone can be voted on.
@@ -92,6 +91,7 @@ pub mod pallet {
         type ImbueFee: Get<Percent>;
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
         type ExpiringProjectRoundsPerBlock: Get<u32>;
+        /// The type responsible for
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;

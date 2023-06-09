@@ -677,7 +677,6 @@ fn raise_no_confidence_round_no_project() {
     });
 }
 
-// kind of a beast but worth it.
 #[test]
 fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
     build_test_externality().execute_with(|| {
