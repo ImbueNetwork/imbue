@@ -1,105 +1,165 @@
-use crate::{mock::*, Error, Event, traits::{DepositCalculator, DepositHandler}, Config, CurrentDeposits };
-use frame_support::{assert_noop, assert_ok};
+use crate::mock::*;
+use crate::traits::{DepositCalculator, DepositHandler};
+use crate::*;
 use common_types::CurrencyId;
-use orml_traits::{MultiReservableCurrency, MultiCurrency};
+use frame_support::{assert_noop, assert_ok};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 #[test]
-fn take_deposit_works() {
+fn get_new_deposit_id_works() {
     new_test_ext().execute_with(|| {
-        let currency_id = CurrencyId::Native;
-        let storage_item = StorageItem::Project;
-        let deposit_id = DepositId::Project(0);
-        let expected_deposit_taken = MockDepositCalculator::calculate_deposit(storage_item, currency_id);
-        assert_ok!(Deposits::take_deposit(*ALICE, deposit_id, storage_item, currency_id));
-        let reserved = <Test as Config>::MultiCurrency::reserved_balance(currency_id, &ALICE);
-        assert_eq!(reserved, expected_deposit_taken);
-        assert!(CurrentDeposits::<Test>::contains_key(deposit_id));
-        assert!(!CurrentDeposits::<Test>::contains_key(DepositId::Project(1)));
-        assert!(!CurrentDeposits::<Test>::contains_key(DepositId::Grant(0)));
+        let id = crate::Pallet::<Test>::get_new_deposit_id();
+        assert!(id == 0);
+        let id = crate::Pallet::<Test>::get_new_deposit_id();
+        assert!(id == 1);
+        let id = crate::Pallet::<Test>::get_new_deposit_id();
+        assert_eq!(id, 2);
     });
 }
 
+#[test]
+fn take_deposit_takes_deposit() {
+    new_test_ext().execute_with(|| {
+        let item = StorageItem::CrowdFund;
+        let expected_deposit =
+            MockDepositCalculator::calculate_deposit(item, CurrencyId::Native).unwrap();
+        let alice_reserved_before =
+            <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(crate::Pallet::<Test>::take_deposit(
+            *ALICE,
+            item,
+            CurrencyId::Native
+        ));
+        let alice_reserved_after =
+            <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
+        assert_eq!(
+            alice_reserved_after - alice_reserved_before,
+            expected_deposit,
+            "Reserved balance should include the deposit."
+        );
+    });
+}
 
 #[test]
-fn take_deposit_id_already_exists() {
+fn take_deposit_assert_last_event() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Deposits::take_deposit(*ALICE, DepositId::Project(0), StorageItem::Project, CurrencyId::Native));
-        assert_noop!(Deposits::take_deposit(*ALICE, DepositId::Project(0), StorageItem::Project, CurrencyId::Native), Error::<Test>::DepositAlreadyExists);
-        assert_noop!(Deposits::take_deposit(*BOB, DepositId::Project(0), StorageItem::Project, CurrencyId::Native), Error::<Test>::DepositAlreadyExists);
+        let item = StorageItem::CrowdFund;
+        let deposit = MockDepositCalculator::calculate_deposit(item, CurrencyId::Native).unwrap();
+        assert_ok!(crate::Pallet::<Test>::take_deposit(
+            *ALICE,
+            item,
+            CurrencyId::Native
+        ));
+        System::assert_last_event(mock::RuntimeEvent::Deposits(
+            crate::Event::<Test>::DepositTaken(0, deposit),
+        ));
+    });
+}
+
+// Depends on implementation but for imbue we are only using native.
+// Therefore this is ok for now.
+#[test]
+fn take_deposit_unsupported_currency_type() {
+    new_test_ext().execute_with(|| {
+        let item = StorageItem::CrowdFund;
+        assert_noop!(
+            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::KSM),
+            Error::<Test>::UnsupportedCurrencyType
+        );
+    });
+}
+
+// Same as above.
+#[test]
+fn take_deposit_unsupported_storage_type() {
+    new_test_ext().execute_with(|| {
+        let item = StorageItem::Unsupported;
+        assert_noop!(
+            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native),
+            Error::<Test>::UnsupportedStorageType
+        );
     });
 }
 
 #[test]
 fn return_deposit_works() {
     new_test_ext().execute_with(|| {
-        let deposit_id = DepositId::Project(0);
-        assert_ok!(Deposits::take_deposit(*ALICE, deposit_id, StorageItem::Project, CurrencyId::Native));
-        assert_ok!(Deposits::return_deposit(deposit_id));
-        let reserved: Balance = <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
-        assert_eq!(reserved, 0);
+        let item = StorageItem::CrowdFund;
+        let alice_reserved_before =
+            <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
+        let deposit_id =
+            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native).unwrap();
+        assert_ok!(crate::Pallet::<Test>::return_deposit(deposit_id));
+        let alice_reserved_after =
+            <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
+        assert_eq!(alice_reserved_before, alice_reserved_after);
     });
 }
-
 
 #[test]
-fn return_deposit_removes_from_storage() {
+fn return_deposit_assert_event() {
     new_test_ext().execute_with(|| {
-        let deposit_id = DepositId::Project(0);
-        assert_ok!(Deposits::take_deposit(*ALICE, deposit_id, StorageItem::Project, CurrencyId::Native));
-        assert_ok!(Deposits::return_deposit(deposit_id));
-        assert!(!CurrentDeposits::<Test>::contains_key(deposit_id));
+        let item = StorageItem::CrowdFund;
+        let deposit = MockDepositCalculator::calculate_deposit(item, CurrencyId::Native).unwrap();
+        let deposit_id =
+            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native).unwrap();
+        assert_ok!(crate::Pallet::<Test>::return_deposit(deposit_id));
+        System::assert_last_event(mock::RuntimeEvent::Deposits(
+            crate::Event::<Test>::DepositReturned(0, deposit),
+        ));
     });
 }
-
 
 #[test]
-fn return_deposit_not_found() {
+fn slash_deposit_works() {
     new_test_ext().execute_with(|| {
-        let deposit_id = DepositId::Project(0);
-        assert_ok!(Deposits::take_deposit(*ALICE, deposit_id, StorageItem::Project, CurrencyId::Native));
-        assert_ok!(Deposits::return_deposit(deposit_id));
-        assert_noop!(Deposits::return_deposit(deposit_id), Error::<Test>::DepositDoesntExist);
-    });
-}
-
-fn slash_not_found() {
-    new_test_ext().execute_with(|| {
-        assert_noop!(Deposits::slash_reserve_deposit(DepositId::Project(0)), Error::<Test>::DepositDoesntExist);
-    });
-}
-
-
-#[test]
-fn slash_goes_to_slash_account_free_balance() {
-    new_test_ext().execute_with(|| {
-        let currency_id = CurrencyId::Native;
-        let deposit_id = DepositId::Project(0);
-        let storage_item = StorageItem::Project;
         let slash_account = <Test as Config>::DepositSlashAccount::get();
-        let expected_deposit_taken = MockDepositCalculator::calculate_deposit(storage_item, currency_id);
+        assert_eq!(
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &slash_account),
+            0,
+            "slash account should be empty to start"
+        );
+        let item = StorageItem::CrowdFund;
+        let deposit = MockDepositCalculator::calculate_deposit(item, CurrencyId::Native).unwrap();
+        let alice_reserved_before =
+            <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
+        let deposit_id =
+            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native).unwrap();
 
-        assert_eq!(<Test as Config>::MultiCurrency::free_balance(currency_id, &slash_account), 0u64);
-        assert_ok!(Deposits::take_deposit(*ALICE, deposit_id, storage_item, currency_id));
         assert_ok!(Deposits::slash_reserve_deposit(deposit_id));
-
-        let slash_account_free_balance = <Test as Config>::MultiCurrency::free_balance(currency_id, &slash_account);
-        assert_eq!(slash_account_free_balance, expected_deposit_taken);
+        let alice_reserved_after =
+            <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
+        let slash_account_balance_free =
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &slash_account);
+        assert_eq!(
+            alice_reserved_after, alice_reserved_before,
+            "Alice's reserve balance should have been emptied"
+        );
+        assert_eq!(
+            slash_account_balance_free, deposit,
+            "slash_account's free balance should equal the deposit"
+        );
     });
 }
 
 #[test]
-fn slash_removes_deposit_from_storage() {
+fn slash_deposit_assert_event() {
     new_test_ext().execute_with(|| {
-        let currency_id = CurrencyId::Native;
-        let deposit_id = DepositId::Project(0);
-        let storage_item = StorageItem::Project;
-        let slash_account = <Test as Config>::DepositSlashAccount::get();
-        let expected_deposit_taken = MockDepositCalculator::calculate_deposit(storage_item, currency_id);
+        let item = StorageItem::CrowdFund;
+        let deposit = MockDepositCalculator::calculate_deposit(item, CurrencyId::Native).unwrap();
+        let deposit_id =
+            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native).unwrap();
 
-        assert_ok!(Deposits::take_deposit(*ALICE, deposit_id, storage_item, currency_id));
-        assert_eq!(<Test as Config>::MultiCurrency::reserved_balance(currency_id, &ALICE), expected_deposit_taken);
         assert_ok!(Deposits::slash_reserve_deposit(deposit_id));
-        assert!(!CurrentDeposits::<Test>::contains_key(deposit_id));
-        assert_eq!(<Test as Config>::MultiCurrency::reserved_balance(currency_id, &ALICE), 0u64);
+        System::assert_last_event(mock::RuntimeEvent::Deposits(
+            crate::Event::<Test>::DepositSlashed(0, deposit),
+        ));
+    });
+}
+
+#[test]
+fn return_deposit_ignores_u32_max() {
+    new_test_ext().execute_with(|| {
+        // TODO:
     });
 }

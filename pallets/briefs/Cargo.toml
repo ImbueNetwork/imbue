@@ -24,14 +24,15 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-# Code coverage wrapper.
-#cargo-llvm-cov = "0.5.11"
+
 # local dependancies
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 pallet-proposals = {path= "../proposals", default-features = false }
+pallet-deposits = {path= "../deposits", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 
 [dev-dependencies]
@@ -49,6 +50,7 @@ pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-proposals = {path= "../proposals"}
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39"}
+pallet-deposits = {path= "../deposits"}
 
 
 [features]

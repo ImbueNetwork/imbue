@@ -10,20 +10,21 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 
+use common_runtime::storage_deposits::StorageDepositItems;
 use pallet_collective::EnsureProportionAtLeast;
+use pallet_deposits::traits::DepositCalculator;
+use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, Perbill, Permill,
+    ApplyExtrinsicResult, DispatchError, Perbill, Permill,
 };
 use sp_std::{
     cmp::Ordering,
     convert::{TryFrom, TryInto},
     prelude::*,
 };
-
-use crate::xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -60,6 +61,7 @@ pub use common_runtime::{
     asset_registry::AuthorityOrigin,
     common_xcm::general_key,
     xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
+    constants::MAXIMUM_BLOCK_WEIGHT
 };
 pub use common_types::{CurrencyId, CustomMetadata};
 pub use pallet_balances::Call as BalancesCall;
@@ -108,14 +110,6 @@ pub fn native_version() -> NativeVersion {
         can_author_with: Default::default(),
     }
 }
-
-/// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
-/// by  Operational  extrinsics.
-/// We allow for .5 seconds of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
-    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-    cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
-);
 
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
@@ -764,13 +758,15 @@ parameter_types! {
     pub const MaxProjectsPerRound: u32 = 256;
     pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
     pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
-    pub const PercentRequiredForVoteToPass: u8 = 75;
+    pub const PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub const MaximumContributorsPerProject: u32 = 5000;
     pub const RefundsPerBlock: u8 = 20;
     pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
-    pub const ImbueFee: u8 = 5;
-    pub const ProjectStorageDeposit: Balance = DOLLARS * 200;
+    pub const ImbueFee: Percent = Percent::from_percent(5_u8);
+    pub const ExpiringProjectRoundsPerBlock: u32 = 50;
+    pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
+    pub const MaxMilestonesPerProject: u32 = 50;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -778,25 +774,24 @@ impl pallet_proposals::Config for Runtime {
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Currencies;
     type AuthorityOrigin = AdminOrigin;
-    type MaxProjectsPerRound = MaxProjectsPerRound;
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type RefundsPerBlock = RefundsPerBlock;
-    // TODO: weight info.
-    type WeightInfo = ();
-    type IsIdentityRequired = IsIdentityRequired;
+    type WeightInfo = pallet_proposals::weights::SubstrateWeight<Self>;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
-    type ProjectStorageDeposit = ProjectStorageDeposit;
     type ImbueFee = ImbueFee;
+    type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
+    type ProjectStorageItem = ProjectStorageItem;
+    type DepositHandler = Deposits;
 }
 
 parameter_types! {
+    // TODO: This should be the same as the max contributors bound
     pub MaxApprovers: u32 = 50;
-    pub MaxMilestonesPerProject: u32 = 50;
+    pub GrantStorageItem: StorageDepositItems = StorageDepositItems::Grant;
 }
 
 impl pallet_grants::Config for Runtime {
@@ -804,17 +799,18 @@ impl pallet_grants::Config for Runtime {
     type MaxMilestonesPerGrant = MaxMilestonesPerProject;
     type MaxApprovers = MaxApprovers;
     type RMultiCurrency = Currencies;
+    type GrantStorageItem = GrantStorageItem;
+    type DepositHandler = Deposits;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type CancellingAuthority = AdminOrigin;
-    type WeightInfo = ();
+    type WeightInfo = pallet_grants::weights::SubstrateWeight<Self>;
 }
 
 parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32;
     pub MaxBriefOwners: u32 = 100;
-    pub MaxMilestones: u32 = 100;
-
+    pub BriefStorageItem: StorageDepositItems = StorageDepositItems::Brief;
 }
 
 impl pallet_briefs::Config for Runtime {
@@ -825,8 +821,37 @@ impl pallet_briefs::Config for Runtime {
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
-    type WeightInfo = ();
-    // TODO: Weight info
+    type WeightInfo = pallet_briefs::weights::SubstrateWeight<Self>;
+    type BriefStorageItem = BriefStorageItem;
+    type DepositHandler = Deposits;
+}
+
+pub type DepositId = u64;
+pub struct ImbueDepositCalculator;
+impl DepositCalculator<Balance> for ImbueDepositCalculator {
+    type StorageItem = StorageDepositItems;
+    fn calculate_deposit(
+        u: Self::StorageItem,
+        currency: CurrencyId,
+    ) -> Result<Balance, DispatchError> {
+        if currency != CurrencyId::Native {
+            return Err(pallet_deposits::pallet::Error::<Runtime>::UnsupportedCurrencyType.into());
+        }
+        Ok(match u {
+            StorageDepositItems::Project => DOLLARS.saturating_mul(500),
+            StorageDepositItems::CrowdFund => DOLLARS.saturating_mul(550),
+            StorageDepositItems::Grant => DOLLARS.saturating_mul(400),
+            StorageDepositItems::Brief => DOLLARS.saturating_mul(500),
+        })
+    }
+}
+impl pallet_deposits::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MultiCurrency = Currencies;
+    type StorageItem = StorageDepositItems;
+    type DepositId = DepositId;
+    type DepositCalculator = ImbueDepositCalculator;
+    type DepositSlashAccount = TreasuryAccount;
 }
 
 construct_runtime! {
@@ -885,6 +910,7 @@ construct_runtime! {
         ImbueProposals: pallet_proposals::{Pallet, Call, Storage, Event<T>} = 100,
         ImbueBriefs: pallet_briefs::{Pallet, Call, Storage, Event<T>} = 101,
         ImbueGrants: pallet_grants::{Pallet, Call, Storage, Event<T>} = 102,
+        Deposits: pallet_deposits::{Pallet, Storage, Event<T>} = 103,
     }
 }
 

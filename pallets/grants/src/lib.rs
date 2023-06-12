@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
 pub use pallet::*;
 
 #[cfg(test)]
@@ -21,16 +20,20 @@ mod test_utils;
 pub mod weights;
 pub use weights::*;
 
+mod migrations;
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
     use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
-    use frame_support::{pallet_prelude::*, BoundedVec};
+    use frame_support::{dispatch::fmt::Debug, pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
+    use pallet_deposits::traits::DepositHandler;
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
+    use sp_arithmetic::per_things::Percent;
     use sp_core::H256;
+    use sp_runtime::Saturating;
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -41,6 +44,12 @@ pub mod pallet {
         BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerGrant>;
     pub(crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
     pub(crate) type GrantId = H256;
+    pub(crate) type DepositIdOf<T> =
+        <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
+    pub(crate) type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<
+        BalanceOf<T>,
+        AccountIdOf<T>,
+    >>::StorageItem;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -56,13 +65,13 @@ pub mod pallet {
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
         /// The type that converts into a proposal for milestone submission.
-        type IntoProposal: IntoProposal<
-            AccountIdOf<Self>,
-            BalanceOf<Self>,
-            BlockNumberFor<Self>,
-        >;
+        type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
+
+        /// The storage item is used to generate the deposit_id.
+        type GrantStorageItem: Get<StorageItemOf<Self>>;
+        type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
 
         type WeightInfo: WeightInfo;
     }
@@ -71,7 +80,7 @@ pub mod pallet {
     /// Key 1: GrantId
     /// Value: Grant<T>
     #[pallet::storage]
-    pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128, GrantId, Grant<T>, OptionQuery>;
+    pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128Concat, GrantId, Grant<T>, OptionQuery>;
 
     /// Stores all the grants a user has submitted.
     /// Key 1: AccountId
@@ -146,13 +155,21 @@ pub mod pallet {
 
             let total_percentage = proposed_milestones
                 .iter()
-                .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
-            ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
+                .fold(Percent::zero(), |acc: Percent, x| {
+                    acc.saturating_add(x.percentage_to_unlock)
+                });
+            ensure!(total_percentage.is_one(), Error::<T>::MustSumTo100);
 
             ensure!(
                 !PendingGrants::<T>::contains_key(grant_id),
                 Error::<T>::GrantAlreadyExists
             );
+
+            let deposit_id = T::DepositHandler::take_deposit(
+                submitter.clone(),
+                T::GrantStorageItem::get(),
+                CurrencyId::Native,
+            )?;
 
             let grant = Grant {
                 milestones: proposed_milestones,
@@ -165,6 +182,7 @@ pub mod pallet {
                 currency_id,
                 amount_requested,
                 treasury_origin,
+                deposit_id,
             };
 
             PendingGrants::<T>::insert(grant_id, grant);
@@ -201,10 +219,10 @@ pub mod pallet {
             ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
 
             if let Some(milestones) = edited_milestones {
-                let total_percentage = milestones
-                    .iter()
-                    .fold(0u32, |acc, x| acc.saturating_add(x.percentage_to_unlock));
-                ensure!(total_percentage == 100, Error::<T>::MustSumTo100);
+                let total_percentage = milestones.iter().fold(Percent::zero(), |acc, x| {
+                    acc.saturating_add(x.percentage_to_unlock)
+                });
+                ensure!(total_percentage.is_one(), Error::<T>::MustSumTo100);
                 grant.milestones = milestones;
             }
             if let Some(approvers) = edited_approvers {
@@ -251,7 +269,6 @@ pub mod pallet {
                 }
             });
             Self::deposit_event(Event::<T>::GrantCancelled { grant_id });
-
             Ok(().into())
         }
 
@@ -301,10 +318,12 @@ pub mod pallet {
             )
             .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
 
-            PendingGrants::<T>::mutate(grant_id, |grant| {
+            T::DepositHandler::return_deposit(grant.deposit_id)?;
+            let _ = PendingGrants::<T>::mutate_exists(grant_id, |grant| {
                 if let Some(g) = grant {
                     g.is_converted = true;
                 }
+                None::<T>
             });
 
             Ok(().into())
@@ -326,5 +345,6 @@ pub mod pallet {
         pub currency_id: CurrencyId,
         pub amount_requested: BalanceOf<T>,
         pub treasury_origin: TreasuryOrigin,
+        pub deposit_id: DepositIdOf<T>,
     }
 }
