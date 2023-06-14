@@ -455,3 +455,24 @@ fn on_initialize_removes_contribution_round() {
         assert!(!RoundsExpiring::<Test>::contains_key(expiry_block));
     });
 }
+
+#[test]
+fn contribute_too_many_contributions() {
+    new_test_ext().execute_with(|| {
+        assert!(false)
+    });
+}
+
+#[test]
+fn approve_fails_as_funding_threshold_wasnt_met() {
+    new_test_ext().execute_with(|| {
+        assert!(false)
+    });
+}
+
+#[test]
+fn too_many_rounds_in_the_block() {
+    new_test_ext().execute_with(|| {
+        assert!(false)
+    });
+}

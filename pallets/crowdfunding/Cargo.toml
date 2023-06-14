@@ -27,6 +27,7 @@ pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "p
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39", default-features = false }
 
 common-types = { path = "../../libs/common-types", default-features = false }
+common-runtime = { path = "../../runtime/common", default-features = false}
 pallet-proposals = { path= "../proposals", default-features = false}
 pallet-deposits = {path= "../deposits", default-features = false }
 
@@ -36,6 +37,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-proposals = { path= "../proposals"}
 common-types = { path = "../../libs/common-types"}
+common-runtime = { path = "../../runtime/common"}
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39" }
@@ -57,8 +59,9 @@ std = [
 	"pallet-proposals/std",
 	"sp-core/std",
 	"pallet-identity/std",
-	"pallet-xcm/std"
+	"pallet-xcm/std",
+	"common-runtime/std",
 ]
 
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks"]
+runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks", "common-runtime/runtime-benchmarks"]
 try-runtime = ["frame-support/try-runtime"]

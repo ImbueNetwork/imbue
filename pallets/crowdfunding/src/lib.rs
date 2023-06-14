@@ -79,13 +79,13 @@ pub mod pallet {
 
     /// Stores a list of crowdfunds.
     #[pallet::storage]
-    pub type CrowdFunds<T> = StorageMap<_, Blake2_128, CrowdFundKey, CrowdFund<T>, OptionQuery>;
+    pub type CrowdFunds<T> = StorageMap<_, Blake2_128Concat, CrowdFundKey, CrowdFund<T>, OptionQuery>;
 
     /// Stores the crowdfund keys that are expiring on a given block.
     /// Handled in the hooks,
     #[pallet::storage]
     pub type RoundsExpiring<T> =
-        StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedKeysPerRound<T>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedKeysPerRound<T>, ValueQuery>;
 
     /// Tracks wether CrowdFunds are in a given round type.
     /// Key 1 : CrowdFundID
@@ -94,15 +94,17 @@ pub mod pallet {
     #[pallet::storage]
     pub type CrowdFundsInRound<T> = StorageDoubleMap<
         _,
-        Blake2_128,
+        Blake2_128Concat,
         CrowdFundKey,
-        Blake2_128,
+        Blake2_128Concat,
         RoundType,
         BlockNumberFor<T>,
         ValueQuery,
     >;
 
     /// Tracks the whitelists of a given crowdfund.
+    /// MIGRATION FROM PROPOSALS REFACTOR?
+    /// PALLET PREFIX HAS CHANGED
     #[pallet::storage]
     #[pallet::getter(fn whitelist_spots)]
     pub type WhitelistSpots<T: Config> =
@@ -173,6 +175,10 @@ pub mod pallet {
         CrowdFundCancelled,
         /// The conversion to a Project has failed.
         CrowdFundConversionFailedGeneric,
+        /// You are trying to add too many whitelist spots.
+        WhiteListSpotLimitReached,
+        /// There are too many rounds inserted this block, please wait for the next on (6s)
+        TooManyRoundsInBlock,
     }
 
     #[pallet::call]
@@ -259,16 +265,15 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             Self::ensure_initiator(who, crowdfund_key)?;
             let crowdfund_whitelist_spots = WhitelistSpots::<T>::get(crowdfund_key).unwrap_or(
-                BTreeMap::new()
-                    .try_into()
-                    .expect("Empty BTree is always smaller than bound; qed"),
+                BoundedBTreeMap::new()
             );
 
             let mut unbounded = crowdfund_whitelist_spots.into_inner();
             unbounded.extend(new_whitelist_spots);
 
             let bounded: BoundedWhitelistSpots<T> =
-                unbounded.try_into().map_err(|_| Error::<T>::Overflow)?;
+                unbounded.try_into().map_err(|_| Error::<T>::WhiteListSpotLimitReached)?;
+
             <WhitelistSpots<T>>::insert(crowdfund_key, bounded);
             let now = <frame_system::Pallet<T>>::block_number();
             Self::deposit_event(Event::WhitelistAdded(crowdfund_key, now));
@@ -459,7 +464,7 @@ pub mod pallet {
                 .saturating_add(<T as Config>::RoundExpiry::get());
             RoundsExpiring::<T>::try_mutate(expiry_block, |list| -> DispatchResult {
                 list.try_push(crowdfund_key)
-                    .map_err(|_| Error::<T>::Overflow)?;
+                    .map_err(|_| Error::<T>::TooManyRoundsInBlock)?;
                 Ok(())
             })?;
             CrowdFundsInRound::<T>::insert(
@@ -552,8 +557,7 @@ pub mod pallet {
                 crowdfund.initiator,
                 crowdfund.milestones.into_inner(),
                 FundingType::Proposal,
-            )
-            .map_err(|_| Error::<T>::CrowdFundConversionFailedGeneric)?;
+            )?;
 
             CrowdFunds::<T>::mutate(crowdfund_key, |crowdfund| {
                 if let Some(cf) = crowdfund {
@@ -561,10 +565,12 @@ pub mod pallet {
                 }
                 Ok::<(), DispatchError>(())
             })?;
+
             Self::deposit_event(Event::CrowdFundApproved(crowdfund_key));
             Ok(().into())
         }
 
+        /// Actually calls storage. Could be improved.
         pub fn ensure_initiator(
             who: T::AccountId,
             crowdfund_key: CrowdFundKey,
@@ -577,6 +583,7 @@ pub mod pallet {
             }
         }
 
+        /// Ensure the identity of an account is either Reasonable or KnownGood.
         fn ensure_identity_is_decent(who: &T::AccountId) -> Result<(), Error<T>> {
             let identity =
                 pallet_identity::Pallet::<T>::identity(who).ok_or(Error::<T>::IdentityNeeded)?;
@@ -607,8 +614,6 @@ pub mod pallet {
         pub created_on: BlockNumberFor<T>,
         pub is_converted: bool,
     }
-
-    // Called to ensure that an account is is a contributor to a crowdfund.
 }
 
 // Warning: This will allow the withdrawal of funds, approve is a governance action so should not be a problem.
