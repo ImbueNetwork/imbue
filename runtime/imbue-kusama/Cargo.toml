@@ -103,6 +103,7 @@ pallet-proposals = { path = '../../pallets/proposals', default-features = false 
 pallet-briefs = {path = '../../pallets/briefs', default-features = false }
 pallet-grants = {path = '../../pallets/grants', default-features = false }
 pallet-deposits = {path = '../../pallets/deposits', default-features = false }
+pallet-crowdfunding = {path = '../../pallets/crowdfunding', default-features = false }
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 
@@ -178,6 +179,7 @@ std = [
 	'pallet-proposals/std',
 	'pallet-briefs/std',
 	'pallet-grants/std',
+	'pallet-crowdfunding/std',
 ]
 
 runtime-benchmarks = [
@@ -197,6 +199,7 @@ runtime-benchmarks = [
 	'pallet-proposals/runtime-benchmarks',
 	'pallet-briefs/runtime-benchmarks',
 	'pallet-grants/runtime-benchmarks',
+	'pallet-crowdfunding/runtime-benchmarks',
 ]
 
 # A feature that should be enabled when the runtime should be build for on-chain

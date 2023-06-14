@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
 
-mod weights;
+pub mod weights;
 
 #[cfg(test)]
 mod mock;
@@ -26,6 +26,7 @@ pub mod pallet {
     use sp_arithmetic::per_things::Percent;
     use sp_core::H256;
     use sp_std::collections::btree_map::BTreeMap;
+    use pallet_deposits::traits::DepositHandler;
 
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub type BalanceOf<T> =
@@ -45,6 +46,9 @@ pub mod pallet {
         BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, <T as Config>::MaxWhitelistPerCrowdFund>;
     pub type BoundedProposedMilestones<T> =
         BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerCrowdFund>;
+
+    type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
+    type DepositIdOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
     pub type CrowdFundKey = u32;
     pub type MilestoneKey = u32;
@@ -78,6 +82,10 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// The type that converts a crowdfund into a project and allows milestone submission.
         type IntoProposals: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
+        /// The type reponsible for handling storage deposits.
+        type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
+        /// The type that the deposit fee will be calculated from.
+        type CrowdFundStorageItem: Get<StorageItemOf<Self>>;
         type WeightInfo: WeightInfo;
     }
 
@@ -177,8 +185,6 @@ pub mod pallet {
         IdentityNeeded,
         /// Below the minimum required funds.
         BelowMinimumRequiredFunds,
-        /// The crowdfund as already been converted to milestones.
-        CrowdFundAlreadyConverted,
         /// The crowdfund has already been cancelled.
         CrowdFundCancelled,
         /// The conversion to a Project has failed.
@@ -235,10 +241,6 @@ pub mod pallet {
             let crowdfund =
                 CrowdFunds::<T>::get(crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
             ensure!(crowdfund.initiator == who, Error::<T>::UserIsNotInitiator);
-            ensure!(
-                !crowdfund.is_converted,
-                Error::<T>::CrowdFundAlreadyConverted
-            );
             ensure!(
                 !crowdfund.approved_for_funding,
                 Error::<T>::CrowdFundAlreadyApproved
@@ -395,6 +397,11 @@ pub mod pallet {
             let crowdfund_key = CrowdFundCount::<T>::get();
 
             // Todo: Take storage deposit>
+            let deposit_id = <T as Config>::DepositHandler::take_deposit(
+                who.clone(),
+                <T as Config>::CrowdFundStorageItem::get(),
+                CurrencyId::Native,
+            )?;
 
             // For now we keep them as proposed milestones until the project is able to submit.
             let crowdfund = CrowdFund {
@@ -410,7 +417,7 @@ pub mod pallet {
                 created_on: <frame_system::Pallet<T>>::block_number(),
                 approved_for_funding: false,
                 cancelled: false,
-                is_converted: false,
+                deposit_id
             };
 
             // Add crowdfund to list
@@ -564,12 +571,8 @@ pub mod pallet {
                 FundingType::Proposal,
             )?;
 
-            CrowdFunds::<T>::mutate(crowdfund_key, |crowdfund| {
-                if let Some(cf) = crowdfund {
-                    cf.is_converted = true
-                }
-                Ok::<(), DispatchError>(())
-            })?;
+            <T as Config>::DepositHandler::return_deposit(crowdfund.deposit_id)?;
+            CrowdFunds::<T>::remove(crowdfund_key);
 
             Self::deposit_event(Event::CrowdFundApproved(crowdfund_key));
             Ok(().into())
@@ -617,7 +620,7 @@ pub mod pallet {
         pub agreement_hash: H256,
         pub initiator: AccountIdOf<T>,
         pub created_on: BlockNumberFor<T>,
-        pub is_converted: bool,
+        pub deposit_id: DepositIdOf<T>,
     }
 }
 

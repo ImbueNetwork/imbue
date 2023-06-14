@@ -72,6 +72,7 @@ parameter_types! {
     pub MaxWhitelistPerCrowdFund: u32 = 50;
     pub MinimumRequiredFunds: Balance = 2000;
     pub MinimumContribution: Balance = 5;
+    pub CrowdFundStorageItem: StorageItem = StorageItem::CrowdFund;
 }
 
 impl pallet_crowdfunding::Config for Test {
@@ -85,6 +86,8 @@ impl pallet_crowdfunding::Config for Test {
     type IsIdentityRequired = IsIdentityRequired;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposals = pallet_proposals::Pallet<Test>;
+    type CrowdFundStorageItem = CrowdFundStorageItem;
+    type DepositHandler = MockDepositHandler;
     type WeightInfo = ();
 }
 

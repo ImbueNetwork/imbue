@@ -149,7 +149,7 @@ fn update_crowdfund_already_converted() {
                 None,
                 None,
             ),
-            Error::<Test>::CrowdFundAlreadyConverted
+            Error::<Test>::CrowdFundDoesNotExist
         );
     });
 }

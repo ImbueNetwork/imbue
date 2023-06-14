@@ -13,7 +13,7 @@ use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
-use sp_std::collections::btree_map::BTreeMap;
+use sp_std::{vec::Vec, collections::btree_map::BTreeMap};
 
 benchmarks! {
     where_clause {
