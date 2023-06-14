@@ -67,7 +67,7 @@ impl frame_system::Config for Test {
 parameter_types! {
     pub RoundExpiry: BlockNumber = 100;
     pub MaxKeysPerRound: u32 = 50;
-    pub MaxContributionsPerCrowdFund: u32 = 1000;
+    pub MaxContributionsPerCrowdFund: u32 = 127;
     pub MaxMilestonesPerCrowdFund: u32 = 50;
     pub MaxWhitelistPerCrowdFund: u32 = 50;
     pub MinimumRequiredFunds: Balance = 2000;

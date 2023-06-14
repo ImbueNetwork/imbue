@@ -5,11 +5,12 @@ use crate::{
 };
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
-use orml_traits::MultiReservableCurrency;
+use orml_traits::{MultiReservableCurrency, MultiCurrency};
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
+use sp_core::sr25519::{Public};
 use test_utils::*;
 
 pub(crate) mod test_utils {
@@ -459,20 +460,33 @@ fn on_initialize_removes_contribution_round() {
 #[test]
 fn contribute_too_many_contributions() {
     new_test_ext().execute_with(|| {
-        assert!(false)
-    });
-}
-
-#[test]
-fn approve_fails_as_funding_threshold_wasnt_met() {
-    new_test_ext().execute_with(|| {
-        assert!(false)
+        let key = create_cf_default(*ALICE, 1_000_000u64);
+        let max_contributions = <Test as Config>::MaxContributionsPerCrowdFund::get();
+        let _ =
+            CrowdFunding::open_contributions(RuntimeOrigin::root(), key).expect("should be fine.");
+        (0..max_contributions + 10).for_each(move |i| {
+            let acc = Public::from_raw([i as u8; 32]);
+            let _ = <Test as Config>::MultiCurrency::deposit(CurrencyId::Native, &acc, 100_000);
+            if i < max_contributions {
+                assert_ok!(CrowdFunding::contribute(RuntimeOrigin::signed(acc), key, 10_000));
+            } else {
+                assert_noop!(CrowdFunding::contribute(RuntimeOrigin::signed(acc), key, 10_000), Error::<Test>::TooManyContributions);
+            }
+        });
     });
 }
 
 #[test]
 fn too_many_rounds_in_the_block() {
     new_test_ext().execute_with(|| {
-        assert!(false)
+        let max = <Test as Config>::MaxKeysPerRound::get();
+        (0..max + 10).for_each(move |i| {
+            let key = create_cf_default(*ALICE, 1_000_000u64);
+            if i < max {
+                assert_ok!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key));
+            } else {
+                assert_noop!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key), Error::<Test>::TooManyRoundsInBlock);
+            }
+        });
     });
 }

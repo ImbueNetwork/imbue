@@ -62,13 +62,21 @@ pub mod pallet {
     pub trait Config: frame_system::Config + pallet_identity::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+        /// The length of a round in the system.
         type RoundExpiry: Get<BlockNumberFor<Self>>;
+        /// The maximum number of crowdfund keys in a given round.
         type MaxKeysPerRound: Get<u32>;
+        /// The maximum number of contributors possible in a crowdfund.
         type MaxContributionsPerCrowdFund: Get<u32>;
+        /// The maximum number of milestones that is possible in a crowdfund.
         type MaxMilestonesPerCrowdFund: Get<u32>;
+        /// The maximum number of whitelist spots in a crowdfund.
         type MaxWhitelistPerCrowdFund: Get<u32>;
+        /// Define wether a decent identity is required when creating a crowdfund.
         type IsIdentityRequired: Get<bool>;
+        /// The authority responisble for governance actions.
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        /// The type that converts a crowdfund into a project and allows milestone submission.
         type IntoProposals: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
         type WeightInfo: WeightInfo;
     }
@@ -223,10 +231,7 @@ pub mod pallet {
             agreement_hash: Option<H256>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            if <T as Config>::IsIdentityRequired::get() {
-                Self::ensure_identity_is_decent(&who)?;
-            }
-
+            
             let crowdfund =
                 CrowdFunds::<T>::get(crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
             ensure!(crowdfund.initiator == who, Error::<T>::UserIsNotInitiator);
