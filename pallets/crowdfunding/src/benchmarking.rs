@@ -1,13 +1,10 @@
 //! Benchmarking setup for pallet-template
 
 use super::*;
-
-#[allow(unused)]
-use crate::Pallet as Template;
 use crate::Pallet as CrowdFunding;
 use common_types::CurrencyId;
-use frame_benchmarking::v1::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::assert_ok;
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_support::{assert_ok, sp_runtime::SaturatedConversion};
 use frame_system::{EventRecord, RawOrigin};
 use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;
@@ -21,14 +18,14 @@ benchmarks! {
     }
 
     create_crowdfund {
-        let caller: T::AccountId = whitelisted_caller();
+        let caller: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000_000_000_000u128);
         let milestones = get_max_milestones::<T>();
         let required_funds = u32::MAX;
         let currency_id = CurrencyId::Native;
         let agg_hash = H256::from([10u8; 32]);
         let crowdfund_key = 0;
         // (Origin, agg_hash, ProposedMilestones, RequiredFunds, CurrencyId)
-    }: _(RawOrigin::Signed(whitelisted_caller()), agg_hash, milestones, required_funds.into(), CurrencyId::Native)
+    }: _(RawOrigin::Signed(caller.clone()), agg_hash, milestones, required_funds.into(), CurrencyId::Native)
     verify {
         assert_last_event::<T>(Event::<T>::CrowdFundCreated(caller, agg_hash, crowdfund_key, required_funds.into(), CurrencyId::Native).into());
     }
@@ -87,7 +84,7 @@ benchmarks! {
     contribute {
         let required_funds = u32::MAX;
         create_crowdfund_common::<T>(required_funds);
-        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 100_000);
+        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 100_000_000_000_000_000u128);
         let caller: T::AccountId = whitelisted_caller();
         let _ = CrowdFunding::<T>::open_contributions(RawOrigin::Root.into(), 0);
 
@@ -98,11 +95,11 @@ benchmarks! {
     }
 
     approve_crowdfund_for_milestone_submission {
-        let required_funds: u32 = 100_000u32;
+        let required_funds: u32 = u32::MAX;
         create_crowdfund_common::<T>(required_funds);
-        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, required_funds.into());
-        let _ = CrowdFunding::<T>::open_contributions(RawOrigin::Root.into(), 0);
-        let _ = CrowdFunding::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0u32, required_funds.into());
+        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 100_000_000_000_000_000u128);
+        assert_ok!(CrowdFunding::<T>::open_contributions(RawOrigin::Root.into(), 0));
+        assert_ok!(CrowdFunding::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0u32, required_funds.into()));
 
         //(Origin, CrowdFundKey)
     }: _(RawOrigin::Root, 0)
@@ -111,25 +108,23 @@ benchmarks! {
     }
 }
 
-impl_benchmark_test_suite!(CrowdFunding, crate::mock::new_test_ext(), crate::mock::Test);
-
-fn create_funded_user<T: Config>(
-    string: &'static str,
+pub fn create_funded_user<T: Config>(
+    seed: &'static str,
     n: u32,
-    balance_factor: u32,
+    balance_factor: u128,
 ) -> T::AccountId {
-    let user = account(string, n, 99);
-    let balance: BalanceOf<T> = balance_factor.into();
-    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
-        CurrencyId::Native,
-        &user,
-        balance,
-    );
+    let user = account(seed, n, 0);
+    assert_ok!(<T::MultiCurrency as MultiCurrency<
+        <T as frame_system::Config>::AccountId,
+    >>::deposit(
+        CurrencyId::Native, &user, balance_factor.saturated_into()
+    ));
     user
 }
 
+
 fn create_crowdfund_common<T: Config>(required_funds: u32) -> T::AccountId {
-    let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000);
+    let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000_000_000_000u128);
     let milestones = get_max_milestones::<T>();
 
     let agg_hash = H256::from([20; 32]);
@@ -176,3 +171,5 @@ where
     let EventRecord { event, .. } = &events[events.len() - 1];
     assert_eq!(event, &system_event);
 }
+
+impl_benchmark_test_suite!(CrowdFunding, crate::mock::new_test_ext(), crate::mock::Test);
