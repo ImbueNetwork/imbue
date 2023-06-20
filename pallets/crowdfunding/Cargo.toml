@@ -1,6 +1,6 @@
 [package]
 name = "pallet-crowdfunding"
-version = "0.1.0"
+version = "1.0.0"
 description = "Used to setup the state for a proposal to morph into a project."
 authors = ['Imbue <https://github.com/ImbueNetwork>']
 homepage = 'https://github.com/ImbueNetwork/imbue'
