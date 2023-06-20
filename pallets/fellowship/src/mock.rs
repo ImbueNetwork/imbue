@@ -1,4 +1,4 @@
-use crate as pallet_template;
+use crate as pallet_fellowship;
 use frame_support::traits::{ConstU16, ConstU64};
 use sp_core::H256;
 use sp_runtime::{
@@ -17,7 +17,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
-		TemplateModule: pallet_template,
+		TemplateModule: pallet_fellowship,
 	}
 );
 
@@ -48,7 +48,7 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_template::Config for Test {
+impl pallet_fellowship::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 }
 
