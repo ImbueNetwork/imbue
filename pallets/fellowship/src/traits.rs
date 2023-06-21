@@ -9,7 +9,14 @@ pub trait DemocracyHandle<AccountId> {
 /// Used by external pallets that decide when to add and remove members from the fellowship.
 /// Makes a ying/yang with the democracy handle :)
 pub trait FellowshipHandle<AccountId> {
-    fn add_to_fellowship() -> ();
-    fn revoke_fellowship() -> ();
-    fn slash_fellowship_deposit() -> ();
+    type Role: Member
+    + TypeInfo
+    + Default
+    + MaxEncodedLen
+    + FullCodec
+    + FullEncode
+    + Copy;
+
+    fn add_to_fellowship(who: AccountId, role: Self::Role) -> Result<(), DispatchError>;
+    fn revoke_fellowship(who: AccountId, slash_deposit: bool) -> Result<(), DispatchError>;
 }
