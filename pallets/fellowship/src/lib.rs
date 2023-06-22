@@ -18,9 +18,9 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use orml_traits::MultiReservableCurrency;
 	use common_types::CurrencyId;
+	use sp_runtime::traits::BadOrigin;
 
 	type AccountIdOf<T> = <T as Config::frame_system>::AccountId;
-	type SponsorOf<T> = AccountIdOf<T>;
 	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 	#[pallet::pallet]
@@ -41,11 +41,9 @@ pub mod pallet {
 		type ShortlistPeriod: Get<BlockNumberFor<Self>>
 		/// The minimum deposit required for a freelancer to hold fellowship status.
 		type MembershipDeposit: Get<BalanceOf<Self>>;
-
 		/// Currently just send all slash deposits to a single account.
 		/// TODO: use OnUnbalanced.
 		type SlashAccount: Get<AccountIdOf<Self>>;
-		
 		/// The types of role one wants in the fellowship.
 		type Role: Member
 		+ TypeInfo
@@ -54,6 +52,7 @@ pub mod pallet {
 		+ FullCodec
 		+ FullEncode
 		+ Copy;
+		
 	}
 
 	/// Used to map who is a part of the fellowship.
@@ -67,8 +66,8 @@ pub mod pallet {
     pub type CandidateShortlist<T> =
         StorageValue<_, BoundedVec<AccountIdOf<T>, <T as Config>::MaxCandidatesPerShortlist>, ValueQuery>;
 
-		#[pallet::storage]
-		/// Holds all the accounts that are able to become fellows that have not given their deposit for membership.
+	#[pallet::storage]
+	/// Holds all the accounts that are able to become fellows that have not given their deposit for membership.
 	pub type PendingFellows<T> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
@@ -90,8 +89,12 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// This person does not have a role in the fellowship.
-		NotAFellow,
+		/// This account does not have a role in the fellowship.
+		RoleNotFound,
+		/// This account is not a fellow.
+		NotAFellow
+		/// This account is not a Vetter.
+		NotAVetter
 	}
 
 	#[pallet::call]
@@ -133,9 +136,12 @@ pub mod pallet {
 		#[pallet::call_index(3)]
 		#[pallet::weight(10_000)]
 		pub fn add_candidate_to_shortlist(origin: OriginFor<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let role = Roles::<T>::get(&who).ok_or(Error::<T>::NotAFellow);
+			ensure!(EnsureVetter::ensure_role(&who, role), )
+
 			// Ensure that the candidate has enough imbue in the account to take the deposit.
 			// Saves hassle for later
-			todo!()
 		}
 
 		#[pallet::call_index(4)]
@@ -173,37 +179,47 @@ pub mod pallet {
 		/// If they have not paid the deposit but are eligable then they can still be revoked
 		/// using this method.
 		fn revoke_fellowship(who: &AccountId, slash_deposit: bool) -> Result<(), DispatchError> {
-			ensure!(PendingFellows::<T>::contains_key(who) || Roles::<T>::contains_key(who), NotAFellow);
+			let has_role = Roles::<T>::contains_key(who);
+			ensure!(PendingFellows::<T>::contains_key(who) || has_role, NotAFellow);
 			PendingFellows::<T>::remove(who);
 			Roles::<T>::remove(who);
 
 			let deposit_amount: BalanceOf<T> = <T as Config>::MembershipDeposit::get();
-			if slash_deposit {
-				let _imbalance = <T as Config>::MultiCurrency::repatriate_reserved(
-					CurrencyId::Native,
-					who,
-					&<T as Config>::SlashAccount::get(),
-					deposit_amount,
-					BalanceStatus::Free,
-				)?;
-			} else {
-				<T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, deposit_amount);
+			// Essentially you can only slash a deposit if it has been taken
+			// Deposits are only taken when a role is assigned
+			if has_role {
+				if slash_deposit {
+					let _imbalance = <T as Config>::MultiCurrency::repatriate_reserved(
+						CurrencyId::Native,
+						who,
+						&<T as Config>::SlashAccount::get(),
+						deposit_amount,
+						BalanceStatus::Free,
+					)?;
+				} else {
+					<T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, deposit_amount);
+				}
 			}
 
 			Ok(())
 		}
 	}
 
-	pub struct EnsureFellow(T);
-	impl<T: Config> EnsureOrigin<AccountIdOf<T>> for EnsureFellowship {
-		//todo!
-	}
-	
-	pub struct EnsureVetter(T);
-	impl<T: Config> EnsureOrigin<AccountIdOf<T>> for EnsureFellowship {
-		//todo!
+	impl<T: Config> EnsureRole<AccountIdOf<T>, <T as Config>::Role> for Pallet<T> {
+		type Success = ();
+		
+		fn ensure_role(acc: AccountId, role: <T as Config>::Role) -> Result<Self::Success, BadOrigin> {
+			let actual = Roles::<T>::get(acc).ok_or(BadOrigin)?
+			if role == actual {
+				Ok(())
+			} else {
+				Err(Error::<T>::BadOrigin)
+			}
+		}
 	}
 
  }
+
+
 
 
