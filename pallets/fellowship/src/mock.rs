@@ -52,6 +52,26 @@ impl pallet_fellowship::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
+pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
+pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
+
+pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
+    let t = frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap();
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| {
+        let initial_balance = 100_000_000_000u64;
+        System::set_block_number(1);
+        let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
+    });
+    ext
+}
+
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()

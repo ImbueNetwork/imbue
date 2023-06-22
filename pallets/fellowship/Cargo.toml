@@ -28,6 +28,8 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 common-types = { path = "../../libs/common-types"}
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39"}
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39"}
 
 [features]
 default = ["std"]

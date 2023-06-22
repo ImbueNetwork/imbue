@@ -41,8 +41,11 @@ pub mod pallet {
 		type ShortlistPeriod: Get<BlockNumberFor<Self>>
 		/// The minimum deposit required for a freelancer to hold fellowship status.
 		type MembershipDeposit: Get<BalanceOf<Self>>;
-		/// Deal with the unbalance when a freelancer gets their deposit slashed.
-		type OnSlash: OnUnbalanced<BalanceOf<Self>>;
+
+		/// Currently just send all slash deposits to a single account.
+		/// TODO: use OnUnbalanced.
+		type SlashAccount: Get<AccountIdOf<Self>>;
+		
 		/// The types of role one wants in the fellowship.
 		type Role: Member
 		+ TypeInfo
@@ -51,8 +54,6 @@ pub mod pallet {
 		+ FullCodec
 		+ FullEncode
 		+ Copy;
-
-		type Vetter: 
 	}
 
 	/// Used to map who is a part of the fellowship.
@@ -66,8 +67,8 @@ pub mod pallet {
     pub type CandidateShortlist<T> =
         StorageValue<_, BoundedVec<AccountIdOf<T>, <T as Config>::MaxCandidatesPerShortlist>, ValueQuery>;
 
-	/// Holds all the accounts that are able to become fellows that have not given their deposit for membership.
-	#[pallet::storage]
+		#[pallet::storage]
+		/// Holds all the accounts that are able to become fellows that have not given their deposit for membership.
 	pub type PendingFellows<T> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
@@ -83,6 +84,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		FellowshipAdded(AccountIdOf<T>),
 		FellowshipRemoved(AccountIdOf<T>),
+		FellowshipSlashed(AccountIdOf<T>),
 		MemberAddedToPendingFellows(AccountIdOf<T>),
 	}
 
@@ -101,7 +103,7 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn force_add_fellowship(origin: OriginFor<T>, who: AccountIdOf<T>, deposit_sponsor: AccountIdOf<T>) -> DispatchResult {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
-			<Self as FellowshipHandler>::add_to_fellowship(&who, deposit_sponsor)?
+			<Self as FellowshipHandler>::add_to_fellowship(&who)?
 			Self::deposit_event(Event::<T>::FellowshipAdded(who));
 			Ok(().into())
 		}
@@ -112,7 +114,8 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn leave_fellowship(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			<Self as FellowshipHandler>::remove(&who, deposit_sponsor)?
+			// TODO: ensure that the fellow is not currently in a dispute.
+			<Self as FellowshipHandler>::revoke_fellowship(&who, false)?
 			Self::deposit_event(Event::<T>::FellowshipRemoved(who));
 			Ok(().into())
 		}
@@ -121,10 +124,10 @@ pub mod pallet {
 		#[pallet::call_index(2)]
 		#[pallet::weight(10_000)]
 		pub fn force_remove_and_slash_fellowship(origin: OriginFor<T>) -> DispatchResult {
-            <T as Config>::ForceAuthority::ensure_origin(origin)?;s
-			<Self as FellowshipHandler>::remove(&who, deposit_sponsor)?
-
-			todo!()
+            <T as Config>::ForceAuthority::ensure_origin(origin)?;
+			<Self as FellowshipHandler>::revoke_fellowship(&who, true)?;
+			Self::deposit_event(Event::<T>::FellowshipSlashed(who));
+			Ok(().into())
 		}
 
 		#[pallet::call_index(3)]
@@ -163,12 +166,31 @@ pub mod pallet {
 			} else {
 				Roles::<T>::insert(who, role);
 			}
+			Ok(())
 		}
+
 		/// Revoke the fellowship from an account.
 		/// If they have not paid the deposit but are eligable then they can still be revoked
 		/// using this method.
 		fn revoke_fellowship(who: &AccountId, slash_deposit: bool) -> Result<(), DispatchError> {
+			ensure!(PendingFellows::<T>::contains_key(who) || Roles::<T>::contains_key(who), NotAFellow);
+			PendingFellows::<T>::remove(who);
+			Roles::<T>::remove(who);
 
+			let deposit_amount: BalanceOf<T> = <T as Config>::MembershipDeposit::get();
+			if slash_deposit {
+				let _imbalance = <T as Config>::MultiCurrency::repatriate_reserved(
+					CurrencyId::Native,
+					who,
+					&<T as Config>::SlashAccount::get(),
+					deposit_amount,
+					BalanceStatus::Free,
+				)?;
+			} else {
+				<T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, deposit_amount);
+			}
+
+			Ok(())
 		}
 	}
 
