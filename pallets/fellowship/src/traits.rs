@@ -23,11 +23,11 @@ pub trait FellowshipHandle<AccountId> {
 
 pub trait EnsureRole<AccountId, Role> {
     type Success;
-    fn ensure_role(acc: AccountId, role: Role) -> Result<Self::Success, BadOrigin>;
+    fn ensure_role(acc: &AccountId, role: Role) -> Result<Self::Success, BadOrigin>;
+    fn ensure_fellowship(acc: &AccountId) -> Result<Self::Success, BadOrigin>;
 }
 
 
-// TODO: move this to runtime common or something
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
 pub enum Role {
     Vetter,
