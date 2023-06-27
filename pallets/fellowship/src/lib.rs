@@ -16,6 +16,7 @@ mod benchmarking;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use sp_std::collections::btree::BTreeMap;
 	use orml_traits::MultiReservableCurrency;
 	use common_types::CurrencyId;
 	use sp_runtime::traits::BadOrigin;
@@ -56,7 +57,7 @@ pub mod pallet {
 	/// Contains the shortlist of candidates to be sent for approval.
 	#[pallet::storage]
     pub type CandidateShortlist<T> =
-        StorageMap<_, ShortlistRound, BoundedVec<AccountIdOf<T>, <T as Config>::MaxCandidatesPerShortlist>, ValueQuery>;
+        StorageMap<_, ShortlistRound, BoundedBTreeMap<AccountIdOf<T>, Role, <T as Config>::MaxCandidatesPerShortlist>, ValueQuery>;
 
 	/// Keeps track of the round the shortlist is in.
 	#[pallet::storage]
@@ -143,7 +144,7 @@ pub mod pallet {
 		/// Also the candidate must already have the minimum deposit required.
 		#[pallet::call_index(3)]
 		#[pallet::weight(10_000)]
-		pub fn add_candidate_to_shortlist(origin: OriginFor<T>, candidate: AccountIdOf<T>) -> DispatchResult {
+		pub fn add_candidate_to_shortlist(origin: OriginFor<T>, candidate: AccountIdOf<T>, role: Role) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(EnsureFellowshipRole::<T>::ensure_has_role(&who).is_ok(), Error::<T>::NotAVetter);
 			ensure!(Roles::<T>::get(&candidate).is_none(), Error::<T>::AlreadyAFellow);
@@ -151,6 +152,7 @@ pub mod pallet {
 			let _ = CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get() |m_shortlist| -> DispatchResult {
 				ensure!(!m_shortlist.contains_key(&candidate), Error::<T>::CandidateAlreadyOnShortlist);
 				m_shortlist.try_insert(&candidate).map_err(|_| Error::<T>::TooManyCandidates)?;
+				Ok::<(), DispatchError>(())
 			})?;
 
 			Self::deposit_event(Event::<T>::CandidateAddedToShortlist(candidate));
@@ -162,6 +164,14 @@ pub mod pallet {
 		pub fn remove_candidate_from_shortlist(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(EnsureFellowshipRole::<T>::ensure_role(&who, Role::Vetter).is_ok(), Error::<T>::NotAVetter);
+			let _ = CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get() |m_shortlist| -> DispatchResult {
+				ensure!(!m_shortlist.contains_key(&candidate), Error::<T>::CandidateAlreadyOnShortlist);
+				m_shortlist.try_insert(&candidate).map_err(|_| Error::<T>::TooManyCandidates)?;
+				Ok::<(), DispatchError>(())
+			})?;
+
+			Self::deposit_event(Event::<T>::CandidateAddedToShortlist(candidate));
+			
 		}
 	}
 
@@ -241,8 +251,9 @@ pub mod pallet {
 			}
 		}
 
-		fn ensure_has_role(acc: &AccountId) -> Result<Self::Success, BadOrigin> {
-			let _ = Roles::<T>::get(acc).ok_or(BadOrigin);
+		fn ensure_role_in(acc: &AccountId, roles: Vec<Roles>) -> Result<Self::Success, BadOrigin> {
+			let role = Roles::<T>::get(acc).ok_or(BadOrigin);
+			ensure!(roles.contains(role), BadOrigin);
 			Ok(())
 		}
 	}
