@@ -1,6 +1,7 @@
 use sp_runtime::traits::BadOrigin;
 use frame_support::pallet_prelude::*;
 use codec::{FullCodec, FullEncode};
+use sp_std::collections::btree_map::BTreeMap;
 
 /// The democracy handle is used to inititate the regular referenda for new applicants into the fellowship.
 pub trait DemocracyHandle<AccountId> {
@@ -20,7 +21,6 @@ pub trait FellowshipHandle<AccountId> {
 
     fn add_to_fellowship(who: &AccountId, role: Self::Role) -> Result<(), DispatchError>;
     fn revoke_fellowship(who: &AccountId, slash_deposit: bool) -> Result<(), DispatchError>;
-    fn bulk_add_to_fellowship(shortlist: Vec<(AccountId, Self::Role)>) -> Result<(), DispatchError>;
 }
 
 pub trait EnsureRole<AccountId, Role> {

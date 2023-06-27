@@ -18,13 +18,14 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiReservableCurrency, MultiCurrency, BalanceStatus};
 	use common_types::CurrencyId;
-	use sp_runtime::traits::BadOrigin;
+	use sp_runtime::traits::{BadOrigin, Zero};
 	use sp_std::convert::TryInto;
 	use crate::traits::{EnsureRole, FellowshipHandle, DemocracyHandle};
 
 	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 	type ShortlistRoundKey = u32;
+	type BoundedShortlistPlaces<T> = BoundedBTreeMap<AccountIdOf<T>, Role, <T as Config>::MaxCandidatesPerShortlist>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -58,7 +59,7 @@ pub mod pallet {
 	/// Contains the shortlist of candidates to be sent for approval.
 	#[pallet::storage]
     pub type CandidateShortlist<T> =
-        StorageMap<_,  Blake2_128Concat, ShortlistRoundKey, BoundedBTreeMap<AccountIdOf<T>, Role, <T as Config>::MaxCandidatesPerShortlist>, ValueQuery>;
+        StorageMap<_,  Blake2_128Concat, ShortlistRoundKey, BoundedShortlistPlaces<T>, ValueQuery>;
 
 	/// Keeps track of the round the shortlist is in.
 	#[pallet::storage]
@@ -104,6 +105,24 @@ pub mod pallet {
 		TooManyCandidates,
 		/// The fellowship deposit has could not be found, contact development.
 		FellowshipReserveDisapeared,
+	}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			let mut weight = Weight::default();
+			if n % T::ShortlistPeriod::get() == Zero::zero() {
+				let round_key = ShortlistRound::<T>::get();
+				let shortlist =  CandidateShortlist::<T>::get(round_key);
+				// TODO: benchmark add_to_fellowship and add the according weight.
+				shortlist.iter().for_each(|(acc, role)| {
+					Self::add_to_fellowship(acc, *role);
+				});
+
+				ShortlistRound::<T>::put(round_key.saturating_add(1));
+			}
+			weight
+        }
 	}
 
 	#[pallet::call]
@@ -201,12 +220,9 @@ pub mod pallet {
 	impl<T: crate::Config> FellowshipHandle<AccountIdOf<T>> for Pallet<T> {
 		type Role = crate::pallet::Role;
 
-		fn bulk_add_to_fellowship(short_list: Vec<(AccountIdOf<T>, Role)>) -> Result<(), DispatchError>{
-			Ok(())
-		}
-
-		/// Add someone to the fellowship, if this fails to be tried again on demand.
-		/// The usual reason this will fail is due to not having enough $IMBU.
+		/// Add someone to the fellowship the only way this "fails" is when the candidate does not have
+		/// enough native token for the deposit, this candidate is then added to PendingFellows where they
+		/// can pay the deposit later to accept the membership.
 		/// The deposit amount is defined in the Config.
 		fn add_to_fellowship(who: &AccountIdOf<T>, role: Role) -> Result<(), DispatchError> {
 			// If they aleady have a role then dont reserve as the reservation has already been taken.
@@ -214,7 +230,7 @@ pub mod pallet {
 			if !Roles::<T>::contains_key(who) {
 				let membership_deposit = <T as Config>::MembershipDeposit::get();
 				if <T as Config>::MultiCurrency::can_reserve(CurrencyId::Native, who, membership_deposit) {
-					<T as Config>::MultiCurrency::reserve(CurrencyId::Native, who, membership_deposit)?;
+					let _ = <T as Config>::MultiCurrency::reserve(CurrencyId::Native, who, membership_deposit);
 					FellowshipReserves::<T>::insert(who, membership_deposit);
 					Roles::<T>::insert(who, role);
 				} else {
@@ -224,6 +240,7 @@ pub mod pallet {
 			} else {
 				Roles::<T>::insert(who, role);
 			}
+
 			Ok(())
 		}
 
