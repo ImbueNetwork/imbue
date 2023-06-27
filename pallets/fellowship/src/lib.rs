@@ -20,7 +20,6 @@ pub mod pallet {
 	use common_types::CurrencyId;
 	use sp_runtime::traits::BadOrigin;
 	use sp_std::convert::TryInto;
-
 	use crate::traits::{EnsureRole, FellowshipHandle, DemocracyHandle};
 
 	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -68,7 +67,7 @@ pub mod pallet {
 	#[pallet::storage]
 	/// Holds all the accounts that are able to become fellows that have not given their deposit for membership.
 	pub type PendingFellows<T> =
-		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, Role, OptionQuery>;
 
 	/// Keeps track of the deposits taken from a fellow. 
 	/// Needed incase the reserve amount will change.
@@ -144,7 +143,7 @@ pub mod pallet {
 		}
 
 		/// Add a candidate to a shortlist. 
-		/// The caller must be of type Vetter to add to a shortlist.
+		/// The caller must be of type Vetter or Freelancer to add to a shortlist.
 		/// Also the candidate must already have the minimum deposit required.
 		#[pallet::call_index(3)]
 		#[pallet::weight(10_000)]
@@ -163,10 +162,12 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Remove a candidate from the shortlist.
+		/// The caller must have a role of either Vetter or Freelancer.
 		#[pallet::call_index(4)]
 		#[pallet::weight(10_000)]
 		pub fn remove_candidate_from_shortlist(origin: OriginFor<T>, candidate: AccountIdOf<T>) -> DispatchResult {
-			let who = ensure_signed(origin)?;
+				let who = ensure_signed(origin)?;
 			ensure!(EnsureFellowshipRole::<T>::ensure_role_in(&who, vec![Role::Freelancer, Role::Vetter]).is_ok(), Error::<T>::NotAVetter);
 			let _ = CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {
 				m_shortlist.remove(&candidate);
@@ -174,6 +175,25 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::<T>::CandidateRemovedFromShortlist(candidate));
+			Ok(().into())			
+		}
+
+		/// If the freelancer fails to have enough native token at the time of shortlist approval they are
+		/// added to the PendingFellows, calling this allows them to attempt to take the deposit and
+		/// become a fellow.
+		#[pallet::call_index(5)]
+		#[pallet::weight(10_000)]
+		pub fn pay_deposit_to_remove_pending_status(origin: OriginFor<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let role = PendingFellows::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
+			let membership_deposit = <T as Config>::MembershipDeposit::get();
+
+			<T as Config>::MultiCurrency::reserve(CurrencyId::Native, &who, membership_deposit)?;
+			FellowshipReserves::<T>::insert(&who, membership_deposit);
+			PendingFellows::<T>::remove(&who);
+			Roles::<T>::insert(&who, role);
+
+			Self::deposit_event(Event::<T>::FellowshipAdded(who));
 			Ok(().into())			
 		}
 	}
@@ -198,7 +218,7 @@ pub mod pallet {
 					FellowshipReserves::<T>::insert(who, membership_deposit);
 					Roles::<T>::insert(who, role);
 				} else {
-					PendingFellows::<T>::insert(who, ());
+					PendingFellows::<T>::insert(who, role);
 					Self::deposit_event(Event::<T>::MemberAddedToPendingFellows(who.clone()));
 				}
 			} else {

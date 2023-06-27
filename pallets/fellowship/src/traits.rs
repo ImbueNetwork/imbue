@@ -28,10 +28,3 @@ pub trait EnsureRole<AccountId, Role> {
     fn ensure_role(acc: &AccountId, role: Role) -> Result<Self::Success, BadOrigin>;
     fn ensure_role_in(acc: &AccountId, roles: Vec<Role>) -> Result<Self::Success, BadOrigin>;
 }
-
-
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
-pub enum Role {
-    Vetter,
-    Fellow
-}
