@@ -329,6 +329,35 @@ pub mod pallet {
             Ok(().into())
         }
 
+
+        /// This is a hack for the demo, itll work but if we want to convert straight to a project
+        /// it can be done ALOT more efficiently.
+        #[pallet::call_index(4)]
+        #[pallet::weight(<T as Config>::WeightInfo::convert_to_project() + <T as Config>::WeightInfo::submit_initial_grant())]
+        pub fn create_and_convert(
+            origin: OriginFor<T>,
+            //ipfs_hash: [u8; 32],
+            proposed_milestones: BoundedPMilestones<T>,
+            assigned_approvers: BoundedApprovers<T>,
+            currency_id: CurrencyId,
+            amount_requested: BalanceOf<T>,
+            treasury_origin: TreasuryOrigin,
+            grant_id: GrantId
+        ) -> DispatchResultWithPostInfo {
+            Self::submit_initial_grant(
+                origin.clone(),
+                proposed_milestones,
+                assigned_approvers,
+                currency_id,
+                amount_requested,
+                treasury_origin,
+                grant_id,
+            )?;
+            Self::convert_to_project(origin, grant_id)?;
+            Ok(().into())
+        }
+
+
         // TODO: runtime api to get the deposit address of the grants sovereign account.
     }
 
