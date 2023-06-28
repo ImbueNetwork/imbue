@@ -127,7 +127,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
 		/// An origin check wrapping the standard add_to_fellowship call.
 		/// Force add someone to the fellowship. This is required to be called by the ForceOrigin
 		#[pallet::call_index(0)]
