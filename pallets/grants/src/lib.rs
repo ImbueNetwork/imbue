@@ -315,8 +315,7 @@ pub mod pallet {
                     .try_into()
                     .map_err(|_| Error::<T>::Overflow)?,
                 FundingType::Grant(grant.treasury_origin),
-            )
-            .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
+            )?;
 
             T::DepositHandler::return_deposit(grant.deposit_id)?;
             let _ = PendingGrants::<T>::mutate_exists(grant_id, |grant| {

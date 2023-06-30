@@ -322,8 +322,7 @@ pub mod pallet {
                 brief.applicant,
                 brief.milestones.into(),
                 FundingType::Brief,
-            )
-            .map_err(|_| Error::<T>::BriefConversionFailedGeneric)?;
+            )?;
 
             BriefContributions::<T>::remove(brief_id);
             Briefs::<T>::remove(brief_id);
