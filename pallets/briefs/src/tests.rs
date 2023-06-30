@@ -138,7 +138,7 @@ fn contribute_to_brief_not_brief_owner() {
                 brief_id,
                 contribution_value,
             ),
-            Error::<Test>::NotAuthorised
+            Error::<Test>::MustBeBriefOwner
         );
     });
 }
@@ -219,7 +219,7 @@ fn only_applicant_can_start_work() {
 
         assert_noop!(
             BriefsMod::commence_work(RuntimeOrigin::signed(*BOB), brief_id,),
-            Error::<Test>::NotAuthorised
+            Error::<Test>::MustBeApplicant
         );
 
         assert_ok!(BriefsMod::commence_work(

@@ -116,16 +116,16 @@ pub mod pallet {
         GrantNotFound,
         /// The grant already exists.
         GrantAlreadyExists,
-        /// Overflow Error in pallet-grants.
-        Overflow,
         /// Only the submitter can edit this grant.
         OnlySubmitterCanEdit,
         /// Cannot use a cancelled grant.
         GrantCancelled,
         /// This grant has already been converted.
         AlreadyConverted,
-        /// The conversion to proposals failed.
-        GrantConversionFailedGeneric,
+        /// There was an overflow prevented in pallet_grants.
+        Overflow,
+        /// There are too many milestones.
+        TooManyMilestones,
     }
 
     #[pallet::hooks]
@@ -313,10 +313,9 @@ pub mod pallet {
                 grant
                     .milestones
                     .try_into()
-                    .map_err(|_| Error::<T>::Overflow)?,
+                    .map_err(|_| Error::<T>::TooManyMilestones)?,
                 FundingType::Grant(grant.treasury_origin),
-            )
-            .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
+            )?;
 
             T::DepositHandler::return_deposit(grant.deposit_id)?;
             let _ = PendingGrants::<T>::mutate_exists(grant_id, |grant| {

@@ -146,10 +146,10 @@ pub mod pallet {
         BriefCurrencyNotSet,
         /// Too many brief owners.
         TooManyBriefOwners,
-        /// Not authorized to do this.
-        NotAuthorised,
-        /// The brief conversion failed.
-        BriefConversionFailedGeneric,
+        /// You must be a brief owner to do this.
+        MustBeBriefOwner,
+        /// You must be the brief applicant to do this.
+        MustBeApplicant,
         /// The brief has not yet been approved to commence by the freelancer.
         FreelancerApprovalRequired,
         /// Milestones total do not add up to 100%.
@@ -274,7 +274,7 @@ pub mod pallet {
 
             ensure!(
                 brief_record.brief_owners.contains(&who),
-                Error::<T>::NotAuthorised
+                Error::<T>::MustBeBriefOwner
             );
 
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
@@ -309,7 +309,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
-            ensure!(who == brief.applicant, Error::<T>::NotAuthorised);
+            ensure!(who == brief.applicant, Error::<T>::MustBeApplicant);
 
             let contributions = BriefContributions::<T>::get(brief_id);
 
@@ -322,8 +322,7 @@ pub mod pallet {
                 brief.applicant,
                 brief.milestones.into(),
                 FundingType::Brief,
-            )
-            .map_err(|_| Error::<T>::BriefConversionFailedGeneric)?;
+            )?;
 
             BriefContributions::<T>::remove(brief_id);
             Briefs::<T>::remove(brief_id);
