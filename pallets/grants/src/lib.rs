@@ -120,8 +120,6 @@ pub mod pallet {
         OnlySubmitterCanEdit,
         /// Cannot use a cancelled grant.
         GrantCancelled,
-        /// This grant has already been converted.
-        AlreadyConverted,
         /// There was an overflow prevented in pallet_grants.
         Overflow,
         /// There are too many milestones.
@@ -178,7 +176,6 @@ pub mod pallet {
                 // ipfs_hash,
                 created_on: frame_system::Pallet::<T>::block_number(),
                 is_cancelled: false,
-                is_converted: false,
                 currency_id,
                 amount_requested,
                 treasury_origin,
@@ -285,7 +282,6 @@ pub mod pallet {
 
             ensure!(grant.submitter == who, Error::<T>::OnlySubmitterCanEdit);
             ensure!(!grant.is_cancelled, Error::<T>::GrantCancelled);
-            ensure!(!grant.is_converted, Error::<T>::AlreadyConverted);
 
             let mut contributions: BTreeMap<
                 AccountIdOf<T>,
@@ -318,27 +314,25 @@ pub mod pallet {
             )?;
 
             T::DepositHandler::return_deposit(grant.deposit_id)?;
-            let _ = PendingGrants::<T>::mutate_exists(grant_id, |grant| {
-                None::<T>
-            });
-
+            PendingGrants::<T>::remove(grant_id);
             Ok(().into())
         }
 
 
         /// Instead of iterating, create a project from the parameters of a grant.
         #[pallet::call_index(5)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::create_and_convert())]
         pub fn create_and_convert(
             origin: OriginFor<T>,
-            //ipfs_hash: [u8; 32],
             proposed_milestones: BoundedPMilestones<T>,
             assigned_approvers: BoundedApprovers<T>,
             currency_id: CurrencyId,
             amount_requested: BalanceOf<T>,
             treasury_origin: TreasuryOrigin,
-            grant_id: GrantId
+            grant_id: GrantId,
         ) -> DispatchResultWithPostInfo {
+            let submitter = ensure_signed(origin)?;
+            let mut contributions = BTreeMap::new();
             let _ = 
             assigned_approvers
             .iter()
@@ -346,7 +340,7 @@ pub mod pallet {
                 contributions.insert(
                     approver_id.clone(),
                     Contribution {
-                        value: grant.amount_requested / (grant.approvers.len() as u32).into(),
+                        value: amount_requested / (assigned_approvers.len() as u32).into(),
                         timestamp: frame_system::Pallet::<T>::block_number(),
                     },
                 )
@@ -356,21 +350,19 @@ pub mod pallet {
                 currency_id,
                 contributions,
                 grant_id,
-                grant.submitter.clone(),
-                grant
-                    .milestones
+                submitter,
+                proposed_milestones
                     .try_into()
                     .map_err(|_| Error::<T>::TooManyMilestones)?,
-                FundingType::Grant(grant.treasury_origin),
+                FundingType::Grant(treasury_origin),
             )?;
 
             Ok(().into())
         }
-
-
         // TODO: runtime api to get the deposit address of the grants sovereign account.
     }
 
+    // Migration required for is_convertedf
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct Grant<T: Config> {
@@ -380,7 +372,6 @@ pub mod pallet {
         //pub ipfs_hash: [u8; 32],
         pub created_on: BlockNumberFor<T>,
         pub is_cancelled: bool,
-        pub is_converted: bool,
         pub currency_id: CurrencyId,
         pub amount_requested: BalanceOf<T>,
         pub treasury_origin: TreasuryOrigin,

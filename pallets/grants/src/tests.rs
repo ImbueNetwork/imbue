@@ -241,7 +241,6 @@ fn assert_properties_are_changed_on_edit() {
         // properties that should be the same
         assert_eq!(grant_before.created_on, grant_after.created_on);
         assert_eq!(grant_before.is_cancelled, grant_after.is_cancelled);
-        assert_eq!(grant_before.is_converted, grant_after.is_converted);
     });
 }
 
@@ -361,18 +360,21 @@ fn convert_to_proposal_not_submitter() {
 }
 
 #[test]
-fn convert_to_proposal_already_converted() {
+fn create_and_convert_works() {
     new_test_ext().execute_with(|| {
         let grant_id = Default::default();
-        create_native_default_grant(grant_id, *ALICE);
-        assert_ok!(Grant::convert_to_project(
+        let approvers = get_approvers(10);
+        let milestones = get_milestones(10);
+
+        assert_ok!(Grant::create_and_convert(
             RuntimeOrigin::signed(*ALICE),
+            milestones,
+            approvers,
+            CurrencyId::Native,
+            100_000_000,
+            TreasuryOrigin::Imbue,
             grant_id
         ));
-        assert_noop!(
-            Grant::convert_to_project(RuntimeOrigin::signed(*ALICE), grant_id),
-            Error::<Test>::AlreadyConverted
-        );
     });
 }
 

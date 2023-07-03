@@ -99,10 +99,26 @@ benchmarks! {
         // origin, grant_id
     }: _(RawOrigin::Signed(submitter.clone()), grant_id.clone())
     verify {
-        let grant = PendingGrants::<T>::get(grant_id).unwrap();
-        assert!(grant.is_converted);
+        let grant = PendingGrants::<T>::get(grant_id);
+        assert!(grant.is_none());
     }
+    
+    create_and_convert {
+        let submitter: T::AccountId = create_account_id::<T>("submitter", 1);
+        let proposed_milestones = get_max_milestones::<T>();
+        let assigned_approvers = get_max_approvers::<T>();
+        let grant_id = gen_grant_id(1);
+        let amount_requested = 1_000_000u32.into();
+
+    }: _(RawOrigin::Signed(submitter.clone()),
+        proposed_milestones.clone(),
+        assigned_approvers.clone(),
+        CurrencyId::Native,
+        amount_requested,
+        TreasuryOrigin::Kusama,
+        grant_id.clone())
 }
+
 
 fn get_max_approvers<T: Config>() -> BoundedApprovers<T> {
     let n = <T as Config>::MaxApprovers::get();

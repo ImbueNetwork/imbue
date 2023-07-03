@@ -13,6 +13,7 @@ pub trait WeightInfo {
     fn edit_grant() -> Weight;
     fn cancel_grant() -> Weight;
     fn convert_to_project() -> Weight;
+    fn create_and_convert() -> Weight;
 }
 
 /// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
@@ -37,6 +38,13 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().writes(1))
     }
     fn convert_to_project() -> Weight {
+        Weight::from_ref_time(212_709_000)
+            .saturating_add(Weight::from_proof_size(10360))
+            .saturating_add(T::DbWeight::get().reads(5))
+            .saturating_add(T::DbWeight::get().writes(7))
+    }
+
+    fn create_and_convert() -> Weight {
         Weight::from_ref_time(212_709_000)
             .saturating_add(Weight::from_proof_size(10360))
             .saturating_add(T::DbWeight::get().reads(5))
@@ -69,5 +77,12 @@ impl WeightInfo for () {
             .saturating_add(Weight::from_proof_size(10360))
             .saturating_add(RocksDbWeight::get().reads(5))
             .saturating_add(RocksDbWeight::get().writes(7))
-    }
+
+        }
+    fn create_and_convert() -> Weight {
+        Weight::from_ref_time(212_709_000)
+            .saturating_add(Weight::from_proof_size(10360))
+            .saturating_add(RocksDbWeight::get().reads(5))
+            .saturating_add(RocksDbWeight::get().writes(7))
+        }
 }
