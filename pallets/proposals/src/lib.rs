@@ -19,6 +19,9 @@ use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
 
+pub mod runtime_api;
+pub use runtime_api::*;
+
 #[cfg(test)]
 mod mock;
 
