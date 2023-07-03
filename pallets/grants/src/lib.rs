@@ -319,9 +319,6 @@ pub mod pallet {
 
             T::DepositHandler::return_deposit(grant.deposit_id)?;
             let _ = PendingGrants::<T>::mutate_exists(grant_id, |grant| {
-                if let Some(g) = grant {
-                    g.is_converted = true;
-                }
                 None::<T>
             });
 
@@ -329,10 +326,9 @@ pub mod pallet {
         }
 
 
-        /// This is a hack for the demo, itll work but if we want to convert straight to a project
-        /// it can be done ALOT more efficiently.
-        #[pallet::call_index(4)]
-        #[pallet::weight(<T as Config>::WeightInfo::convert_to_project() + <T as Config>::WeightInfo::submit_initial_grant())]
+        /// Instead of iterating, create a project from the parameters of a grant.
+        #[pallet::call_index(5)]
+        #[pallet::weight(10_000)]
         pub fn create_and_convert(
             origin: OriginFor<T>,
             //ipfs_hash: [u8; 32],
@@ -343,16 +339,31 @@ pub mod pallet {
             treasury_origin: TreasuryOrigin,
             grant_id: GrantId
         ) -> DispatchResultWithPostInfo {
-            Self::submit_initial_grant(
-                origin.clone(),
-                proposed_milestones,
-                assigned_approvers,
+            let _ = 
+            assigned_approvers
+            .iter()
+            .map(|approver_id| {
+                contributions.insert(
+                    approver_id.clone(),
+                    Contribution {
+                        value: grant.amount_requested / (grant.approvers.len() as u32).into(),
+                        timestamp: frame_system::Pallet::<T>::block_number(),
+                    },
+                )
+            })
+            .collect::<Vec<_>>();
+            <T as Config>::IntoProposal::convert_to_proposal(
                 currency_id,
-                amount_requested,
-                treasury_origin,
+                contributions,
                 grant_id,
+                grant.submitter.clone(),
+                grant
+                    .milestones
+                    .try_into()
+                    .map_err(|_| Error::<T>::TooManyMilestones)?,
+                FundingType::Grant(grant.treasury_origin),
             )?;
-            Self::convert_to_project(origin, grant_id)?;
+
             Ok(().into())
         }
 
