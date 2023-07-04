@@ -44,8 +44,5 @@ jobs:
       - name: Install Protobuf
         run: sudo apt install protobuf-compiler
 
-      - name: Build imbue collator
-        run: cargo build --release
-
       - name: Run tests with benchmarks
         run: cargo test --features runtime-benchmarks
