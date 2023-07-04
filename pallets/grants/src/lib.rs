@@ -116,16 +116,16 @@ pub mod pallet {
         GrantNotFound,
         /// The grant already exists.
         GrantAlreadyExists,
-        /// Overflow Error in pallet-grants.
-        Overflow,
         /// Only the submitter can edit this grant.
         OnlySubmitterCanEdit,
         /// Cannot use a cancelled grant.
         GrantCancelled,
         /// This grant has already been converted.
         AlreadyConverted,
-        /// The conversion to proposals failed.
-        GrantConversionFailedGeneric,
+        /// There was an overflow prevented in pallet_grants.
+        Overflow,
+        /// There are too many milestones.
+        TooManyMilestones,
     }
 
     #[pallet::hooks]
@@ -313,10 +313,9 @@ pub mod pallet {
                 grant
                     .milestones
                     .try_into()
-                    .map_err(|_| Error::<T>::Overflow)?,
+                    .map_err(|_| Error::<T>::TooManyMilestones)?,
                 FundingType::Grant(grant.treasury_origin),
-            )
-            .map_err(|_| Error::<T>::GrantConversionFailedGeneric)?;
+            )?;
 
             T::DepositHandler::return_deposit(grant.deposit_id)?;
             let _ = PendingGrants::<T>::mutate_exists(grant_id, |grant| {
@@ -328,6 +327,35 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+
+        /// This is a hack for the demo, itll work but if we want to convert straight to a project
+        /// it can be done ALOT more efficiently.
+        #[pallet::call_index(4)]
+        #[pallet::weight(<T as Config>::WeightInfo::convert_to_project() + <T as Config>::WeightInfo::submit_initial_grant())]
+        pub fn create_and_convert(
+            origin: OriginFor<T>,
+            //ipfs_hash: [u8; 32],
+            proposed_milestones: BoundedPMilestones<T>,
+            assigned_approvers: BoundedApprovers<T>,
+            currency_id: CurrencyId,
+            amount_requested: BalanceOf<T>,
+            treasury_origin: TreasuryOrigin,
+            grant_id: GrantId
+        ) -> DispatchResultWithPostInfo {
+            Self::submit_initial_grant(
+                origin.clone(),
+                proposed_milestones,
+                assigned_approvers,
+                currency_id,
+                amount_requested,
+                treasury_origin,
+                grant_id,
+            )?;
+            Self::convert_to_project(origin, grant_id)?;
+            Ok(().into())
+        }
+
 
         // TODO: runtime api to get the deposit address of the grants sovereign account.
     }

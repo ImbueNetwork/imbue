@@ -60,6 +60,7 @@ use orml_traits::parameter_type_with_key;
 pub use common_runtime::{
     asset_registry::AuthorityOrigin,
     common_xcm::general_key,
+    constants::MAXIMUM_BLOCK_WEIGHT,
     xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
     constants::MAXIMUM_BLOCK_WEIGHT
 };
@@ -1094,6 +1095,11 @@ impl_runtime_apis! {
         }
     }
 
+    impl pallet_proposals::runtime_api::ProjectsApi<Block, AccountId> for Runtime {
+        fn get_project_account_by_id(project_id: u32) -> AccountId {
+            ImbueProposals::project_account_id(project_id)
+        }
+    }
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
@@ -1145,9 +1151,6 @@ impl_runtime_apis! {
             Ok(batches)
         }
     }
-
-
-
 }
 
 struct CheckInherents;

@@ -19,6 +19,9 @@ use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
 
+pub mod runtime_api;
+pub use runtime_api::*;
+
 #[cfg(test)]
 mod mock;
 
@@ -206,7 +209,7 @@ pub mod pallet {
         ProjectDoesNotExist,
         /// Currently no active round to participate in.
         NoActiveRound,
-        /// There was an overflow in pallet_proposals.
+        /// There was an internal overflow prevented in pallet_proposals.
         Overflow,
         /// Only contributors can vote.
         OnlyContributorsCanVote,
@@ -242,6 +245,10 @@ pub mod pallet {
         MilestoneAlreadyApproved,
         /// Error with a mathematical operation
         MathError,
+        /// There are too many contributions.
+        TooManyContributions,
+        /// There are too many milestones.
+        TooManyMilestones,
     }
 
     #[pallet::hooks]
@@ -438,12 +445,12 @@ pub mod pallet {
                 };
                 milestones
                     .try_insert(milestone_key, milestone)
-                    .map_err(|_| Error::<T>::Overflow)?;
+                    .map_err(|_| Error::<T>::TooManyMilestones)?;
                 milestone_key = milestone_key.saturating_add(1);
             }
 
             let bounded_contributions: ContributionsFor<T> =
-                contributions.try_into().map_err(|_| Error::<T>::Overflow)?;
+                contributions.try_into().map_err(|_| Error::<T>::TooManyContributions)?;
 
             let project: Project<T> = Project {
                 milestones,
