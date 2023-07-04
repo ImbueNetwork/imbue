@@ -402,7 +402,6 @@ pub mod pallet {
             funding_type: FundingType,
         ) -> Result<(), DispatchError> {
             let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
-            crate::ProjectCount::<T>::put(project_key);
 
             // Take storage deposit only for a Project.
             let deposit_id = <T as Config>::DepositHandler::take_deposit(
@@ -416,12 +415,12 @@ pub mod pallet {
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
                     acc.saturating_add(x.value)
                 });
+                
+            let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
 
             match funding_type {
                 FundingType::Proposal | FundingType::Brief => {
                     for (acc, cont) in contributions.iter() {
-                        let project_account_id =
-                            crate::Pallet::<T>::project_account_id(project_key);
                         <T as Config>::MultiCurrency::repatriate_reserved(
                             currency_id,
                             &acc,
@@ -467,15 +466,16 @@ pub mod pallet {
             };
 
             Projects::<T>::insert(project_key, project);
-            let project_account = Self::project_account_id(project_key);
+
             ProjectCount::<T>::mutate(|c| *c = c.saturating_add(1));
+
             Self::deposit_event(Event::ProjectCreated(
                 benificiary,
                 brief_hash,
                 project_key,
                 sum_of_contributions,
                 currency_id,
-                project_account,
+                project_account_id,
             ));
             Ok(())
         }
