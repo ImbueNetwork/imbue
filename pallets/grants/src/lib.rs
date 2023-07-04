@@ -17,10 +17,11 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
+#[cfg(test)]
+mod migrations;
+
 pub mod weights;
 pub use weights::*;
-
-mod migrations;
 
 #[frame_support::pallet]
 pub mod pallet {
