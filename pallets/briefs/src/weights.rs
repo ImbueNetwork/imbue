@@ -19,22 +19,22 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn add_to_fellowship() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn create_brief() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn contribute_to_brief() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn commence_work() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
@@ -43,22 +43,22 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn add_to_fellowship() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn create_brief() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn contribute_to_brief() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn commence_work() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }

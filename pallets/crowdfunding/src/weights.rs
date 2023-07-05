@@ -24,39 +24,39 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn create_crowdfund() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn update_crowdfund() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn add_crowdfund_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
 
     fn remove_crowdfund_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
 
     fn open_contributions() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn contribute() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     fn approve_crowdfund_for_milestone_submission() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(T::DbWeight::get().reads(2_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
@@ -66,37 +66,37 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn create_crowdfund() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn update_crowdfund() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn add_crowdfund_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn remove_crowdfund_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn open_contributions() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn contribute() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
     fn approve_crowdfund_for_milestone_submission() -> Weight {
-        Weight::from_ref_time(49_000_000 as u64)
+        Weight::from_parts(49_000_000,0)
             .saturating_add(RocksDbWeight::get().reads(2_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
     }

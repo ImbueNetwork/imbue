@@ -53,7 +53,7 @@ use sp_runtime::DispatchError;
 
 parameter_types! {
     // One XCM operation is 100_000_000 weight - almost certainly a conservative estimate.
-    pub UnitWeightCost: XcmWeight = XcmWeight::from_ref_time(200_000_000);
+    pub UnitWeightCost: XcmWeight = XcmWeight::from_parts(1_000_000_000, 1024);
     pub const MaxInstructions: u32 = 100;
 
 }
@@ -269,6 +269,9 @@ impl pallet_xcm::Config for Runtime {
     #[cfg(feature = "runtime-benchmarks")]
     type ReachableDest = ReachableDest;
     type AdminOrigin = EnsureRoot<AccountId>;
+    type MaxRemoteLockConsumers = ConstU32<0>;
+    type RemoteLockConsumerIdentifier = ();
+
 }
 
 impl orml_xcm::Config for Runtime {
@@ -410,7 +413,7 @@ pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, R
 
 parameter_types! {
     //TODO(Sam): we may need to fine tune this value later on
-    pub const BaseXcmWeight: XcmWeight = XcmWeight::from_ref_time(100_000_000);
+    pub const BaseXcmWeight: XcmWeight = XcmWeight::from_parts(1_000_000_000, 1024);
     pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -462,15 +465,4 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
     }
 }
 
-/// Allow checking in assets that have issuance > 0.
-/// This is defined in cumulus but it doesn't seem made available to the world.
-pub struct NonZeroIssuance<AccountId, Assets>(PhantomData<(AccountId, Assets)>);
-impl<AccountId, Assets> Contains<<Assets as fungibles::Inspect<AccountId>>::AssetId>
-    for NonZeroIssuance<AccountId, Assets>
-where
-    Assets: fungibles::Inspect<AccountId>,
-{
-    fn contains(id: &<Assets as fungibles::Inspect<AccountId>>::AssetId) -> bool {
-        !Assets::total_issuance(*id).is_zero()
-    }
-}
+
