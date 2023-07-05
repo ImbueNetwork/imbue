@@ -64,7 +64,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
-        Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
+        ImbueProjects: pallet_projects::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -217,7 +217,7 @@ impl pallet_briefs::Config for Test {
     type RMultiCurrency = Tokens;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type IntoProposal = pallet_proposals::Pallet<Test>;
+    type IntoProject = pallet_projects::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
     type BriefStorageItem = BriefStorageItem;
@@ -227,7 +227,7 @@ impl pallet_briefs::Config for Test {
 
 parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
-    pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
+    pub const ProjectsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
@@ -241,9 +241,9 @@ parameter_types! {
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
 }
 
-impl pallet_proposals::Config for Test {
+impl pallet_projects::Config for Test {
     type RuntimeEvent = RuntimeEvent;
-    type PalletId = ProposalsPalletId;
+    type PalletId = ProjectsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = ();
@@ -253,7 +253,7 @@ impl pallet_proposals::Config for Test {
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type RefundHandler = pallet_projects::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;

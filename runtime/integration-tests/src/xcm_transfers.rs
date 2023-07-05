@@ -29,7 +29,7 @@ use imbue_kusama_runtime::{
     Runtime as R, RuntimeOrigin, XTokens,
 };
 use orml_traits::MultiCurrency;
-use pallet_proposals::traits::RefundHandler;
+use pallet_projects::traits::RefundHandler;
 
 #[test]
 fn test_xcm_refund_handler_to_kusama() {
@@ -37,7 +37,7 @@ fn test_xcm_refund_handler_to_kusama() {
 
     let treasury_origin = TreasuryOrigin::Kusama;
     let kusama_treasury_address =
-        <R as pallet_proposals::Config>::RefundHandler::get_treasury_account_id(treasury_origin)
+        <R as pallet_projects::Config>::RefundHandler::get_treasury_account_id(treasury_origin)
             .unwrap();
 
     let bob_initial_balance = ksm_amount(1000);
@@ -62,7 +62,7 @@ fn test_xcm_refund_handler_to_kusama() {
     Development::execute_with(|| {
         // Just gonna use bobs account as the project account id
         assert_ok!(
-            <R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(
+            <R as pallet_projects::Config>::RefundHandler::send_refund_message_to_treasury(
                 BOB.into(),
                 transfer_amount,
                 CurrencyId::KSM,

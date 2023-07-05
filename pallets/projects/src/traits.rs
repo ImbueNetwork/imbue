@@ -9,13 +9,13 @@ use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
 
-pub trait IntoProposal<AccountId, Balance, BlockNumber> {
-    /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.
+pub trait IntoProject<AccountId, Balance, BlockNumber> {
+    /// Convert a set of milestones into a project, the bounty must be fully funded before calling this.
     /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
-    /// (if using crate) This function should bypass the usual checks when creating a proposal and
+    /// (if using crate) This function should bypass the usual checks when creating a project and
     /// instantiate everything carefully.
     // TODO: Generic over currencyId: https://github.com/ImbueNetwork/imbue/issues/135
-    fn convert_to_proposal(
+    fn convert_to_project(
         currency_id: CurrencyId,
         current_contribution: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
         brief_hash: H256,
@@ -42,8 +42,8 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
 // Some implementations used in Imbue of the traits above.
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 // For test purposes
-impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for T {
-    fn convert_to_proposal(
+impl<T: crate::Config> IntoProject<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for T {
+    fn convert_to_project(
         _currency_id: CurrencyId,
         _contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
         _brief_hash: H256,
@@ -85,7 +85,7 @@ where
     T: orml_xtokens::Config,
     U: XcmTransfer<T::AccountId, T::Balance, CurrencyId>,
 {
-    /// Only used for xcm. Therefore not for briefs and proposals as they use funds which are on imbue.
+    /// Only used for xcm. Therefore not for briefs and projects as they use funds which are on imbue.
     #[transactional]
     fn send_refund_message_to_treasury(
         from: T::AccountId,

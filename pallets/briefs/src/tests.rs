@@ -6,7 +6,7 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::MultiCurrency;
-use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
+use pallet_projects::{BoundedProposedMilestones, Projects, ProposedMilestone};
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::DispatchError::BadOrigin;
 use std::convert::TryInto;
@@ -287,7 +287,7 @@ fn reserved_funds_are_transferred_to_project_kitty() {
             brief_id
         ));
 
-        let project_id: AccountId = Proposals::project_account_id(1);
+        let project_id: AccountId = ImbueProjects::project_account_id(1);
         let project_balance = Tokens::free_balance(CurrencyId::Native, &project_id);
         assert_eq!(project_balance, contribution_value);
     });
@@ -297,7 +297,7 @@ pub(crate) fn _run_to_block(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
-        Proposals::on_initialize(System::block_number());
+        ImbueProjects::on_initialize(System::block_number());
         //BriefsMod::on_initialize(System::block_number());
     }
 }

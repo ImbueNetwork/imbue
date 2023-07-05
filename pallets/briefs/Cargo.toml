@@ -31,7 +31,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 # local dependancies
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
-pallet-proposals = {path= "../proposals", default-features = false }
+pallet-projects = {path= "../projects", default-features = false }
 pallet-deposits = {path= "../deposits", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 
@@ -47,7 +47,7 @@ serde = { version = "1.0.101" }
 common-traits = { path = "../../libs/common-traits" }
 common-types = { path = "../../libs/common-types" }
 pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-pallet-proposals = {path= "../proposals"}
+pallet-projects = {path= "../projects"}
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39"}
 pallet-deposits = {path= "../deposits"}
@@ -67,7 +67,7 @@ std = [
 	"sp-runtime/std", 
 	"sp-io/std",
 	"pallet-balances/std",
-	"pallet-proposals/std",
+	"pallet-projects/std",
 	"pallet-identity/std",
 	"pallet-timestamp/std",
 ]

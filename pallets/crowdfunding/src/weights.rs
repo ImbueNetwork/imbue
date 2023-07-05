@@ -18,7 +18,7 @@ pub trait WeightInfo {
     fn approve_crowdfund_for_milestone_submission() -> Weight;
 }
 
-/// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
+/// Weights for pallet_projects using the Substrate node, recommended hardware should be used.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn create_crowdfund() -> Weight {

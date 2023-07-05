@@ -15,7 +15,7 @@ pub trait WeightInfo {
     fn convert_to_project() -> Weight;
 }
 
-/// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
+/// Weights for pallet_projects using the Substrate node, recommended hardware should be used.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn submit_initial_grant() -> Weight {

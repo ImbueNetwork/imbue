@@ -32,7 +32,7 @@ frame_support::construct_runtime!(
         Tokens: orml_tokens,
         Identity: pallet_identity,
         Balances: pallet_balances,
-        Proposals: pallet_proposals,
+        Projects: pallet_projects,
         Timestamp: pallet_timestamp,
     }
 );
@@ -84,7 +84,7 @@ impl pallet_crowdfunding::Config for Test {
     type MaxWhitelistPerCrowdFund = MaxWhitelistPerCrowdFund;
     type IsIdentityRequired = IsIdentityRequired;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type IntoProposals = pallet_proposals::Pallet<Test>;
+    type IntoProjects = pallet_projects::Pallet<Test>;
     type WeightInfo = ();
 }
 
@@ -163,7 +163,7 @@ impl pallet_balances::Config for Test {
 }
 parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
-    pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
+    pub const ProjectsPalletId: PalletId = PalletId(*b"imbproje");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
@@ -177,9 +177,9 @@ parameter_types! {
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
 }
 
-impl pallet_proposals::Config for Test {
+impl pallet_projects::Config for Test {
     type RuntimeEvent = RuntimeEvent;
-    type PalletId = ProposalsPalletId;
+    type PalletId = ProjectsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = ();
@@ -189,7 +189,7 @@ impl pallet_proposals::Config for Test {
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type RefundHandler = pallet_projects::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;

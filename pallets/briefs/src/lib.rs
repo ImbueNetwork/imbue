@@ -31,8 +31,8 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
-    use pallet_proposals::traits::IntoProposal;
-    use pallet_proposals::{Contribution, ProposedMilestone};
+    use pallet_projects::traits::IntoProject;
+    use pallet_projects::{Contribution, ProposedMilestone};
     use sp_arithmetic::per_things::Percent;
     use sp_core::{Hasher, H256};
     use sp_runtime::traits::Zero;
@@ -75,8 +75,8 @@ pub mod pallet {
 
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// The type that allows for evolution from brief to proposal.
-        type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
+        /// The type that allows for evolution from brief to project.
+        type IntoProject: IntoProject<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
 
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
@@ -315,7 +315,7 @@ pub mod pallet {
 
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
 
-            <T as Config>::IntoProposal::convert_to_proposal(
+            <T as Config>::IntoProject::convert_to_project(
                 brief.currency_id,
                 contributions.into_inner(),
                 brief_id,

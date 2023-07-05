@@ -30,7 +30,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
-    use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
+    use pallet_projects::{traits::IntoProject, Contribution, ProposedMilestone};
     use sp_arithmetic::per_things::Percent;
     use sp_core::H256;
     use sp_runtime::Saturating;
@@ -64,8 +64,8 @@ pub mod pallet {
         type MaxApprovers: Get<u32>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-        /// The type that converts into a proposal for milestone submission.
-        type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
+        /// The type that converts into a project for milestone submission.
+        type IntoProject: IntoProject<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
         /// The authority allowed to cancel a pending grant.
         type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
 
@@ -80,7 +80,8 @@ pub mod pallet {
     /// Key 1: GrantId
     /// Value: Grant<T>
     #[pallet::storage]
-    pub type PendingGrants<T: Config> = StorageMap<_, Blake2_128Concat, GrantId, Grant<T>, OptionQuery>;
+    pub type PendingGrants<T: Config> =
+        StorageMap<_, Blake2_128Concat, GrantId, Grant<T>, OptionQuery>;
 
     /// Stores all the grants a user has submitted.
     /// Key 1: AccountId
@@ -305,7 +306,7 @@ pub mod pallet {
                 })
                 .collect::<Vec<_>>();
 
-            <T as Config>::IntoProposal::convert_to_proposal(
+            <T as Config>::IntoProject::convert_to_project(
                 grant.currency_id,
                 contributions,
                 grant_id,
@@ -328,7 +329,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-
         /// This is a hack for the demo, itll work but if we want to convert straight to a project
         /// it can be done ALOT more efficiently.
         #[pallet::call_index(4)]
@@ -341,7 +341,7 @@ pub mod pallet {
             currency_id: CurrencyId,
             amount_requested: BalanceOf<T>,
             treasury_origin: TreasuryOrigin,
-            grant_id: GrantId
+            grant_id: GrantId,
         ) -> DispatchResultWithPostInfo {
             Self::submit_initial_grant(
                 origin.clone(),
@@ -355,7 +355,6 @@ pub mod pallet {
             Self::convert_to_project(origin, grant_id)?;
             Ok(().into())
         }
-
 
         // TODO: runtime api to get the deposit address of the grants sovereign account.
     }

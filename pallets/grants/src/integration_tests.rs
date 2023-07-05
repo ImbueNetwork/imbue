@@ -3,10 +3,10 @@ use crate::test_utils::gen_grant_id;
 use crate::tests::{get_approvers, get_milestones};
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::assert_ok;
-use pallet_proposals::Projects;
+use pallet_projects::Projects;
 
 #[test]
-fn create_proposal_from_grant() {
+fn create_project_from_grant() {
     new_test_ext().execute_with(|| {
         let grant_id = gen_grant_id(100);
         let contribution_value: Balance = 10_000;

@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 #[allow(unused)]
 use crate::Config;
-use crate::Pallet as Proposals;
+use crate::Pallet as Projects;
 use crate::{
     AccountIdOf, BalanceOf, Contribution, ContributionsFor, Milestone, MilestoneKey, Project,
     ProjectKey, ProposedMilestone,
@@ -27,7 +27,7 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber) {
         block = block.saturating_add(1u32.into());
         frame_system::Pallet::<T>::set_block_number(block);
         frame_system::Pallet::<T>::on_initialize(block);
-        Proposals::<T>::on_initialize(block);
+        Projects::<T>::on_initialize(block);
     }
 }
 
@@ -64,7 +64,7 @@ pub fn get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
 }
 
 /// Create a project for test purposes, this will not test the paths coming into this pallet via
-/// the IntoProposal trait.
+/// the IntoProject trait.
 pub fn create_project<T: Config>(
     beneficiary: AccountIdOf<T>,
     contributions: ContributionsFor<T>,
@@ -82,7 +82,7 @@ pub fn create_project<T: Config>(
     let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
 
     let mut raised_funds: BalanceOf<T> = 0u32.into();
-    let project_account_id = Proposals::<T>::project_account_id(project_key);
+    let project_account_id = Projects::<T>::project_account_id(project_key);
 
     for (account, contribution) in contributions.iter() {
         let amount = contribution.value;

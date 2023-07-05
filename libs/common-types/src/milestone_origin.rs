@@ -47,7 +47,7 @@ pub enum TreasuryOriginError {
     Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
 )]
 pub enum FundingType {
-    Proposal,
+    Project,
     Brief,
     Grant(TreasuryOrigin),
 }

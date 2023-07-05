@@ -41,7 +41,7 @@ common-runtime = { path = "../common" }
 imbue-kusama-runtime = { path = "../imbue-kusama" }
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
-pallet-proposals = { path = "../../pallets/proposals", default-features = false }
+pallet-projects = { path = "../../pallets/projects", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
@@ -64,7 +64,7 @@ runtime-benchmarks = [
     "polkadot-parachain/runtime-benchmarks",
     "polkadot-primitives/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
-    "pallet-proposals/runtime-benchmarks",
+    "pallet-projects/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     
 ]

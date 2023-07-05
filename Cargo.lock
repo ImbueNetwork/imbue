@@ -3975,7 +3975,7 @@ dependencies = [
  "pallet-membership",
  "pallet-multisig",
  "pallet-preimage",
- "pallet-proposals",
+ "pallet-projects",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -6325,7 +6325,7 @@ dependencies = [
  "pallet-balances",
  "pallet-deposits",
  "pallet-identity",
- "pallet-proposals",
+ "pallet-projects",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-xcm",
@@ -6425,7 +6425,7 @@ dependencies = [
  "pallet-balances",
  "pallet-deposits",
  "pallet-identity",
- "pallet-proposals",
+ "pallet-projects",
  "pallet-timestamp",
  "pallet-xcm",
  "parity-scale-codec 3.6.2",
@@ -6584,7 +6584,7 @@ dependencies = [
  "pallet-balances",
  "pallet-deposits",
  "pallet-identity",
- "pallet-proposals",
+ "pallet-projects",
  "pallet-timestamp",
  "pallet-xcm",
  "parity-scale-codec 3.6.2",
@@ -6822,7 +6822,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-proposals"
+name = "pallet-projects"
 version = "3.0.0"
 dependencies = [
  "common-runtime",
@@ -9776,7 +9776,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-balances",
- "pallet-proposals",
+ "pallet-projects",
  "pallet-xcm",
  "parachain-info",
  "polkadot-parachain",

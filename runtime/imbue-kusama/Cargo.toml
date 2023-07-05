@@ -99,7 +99,7 @@ hex-literal = { version = "0.3.4", optional = true }
 
 # Local Dependencies
 common-runtime = { path = "../common", default-features = false }
-pallet-proposals = { path = '../../pallets/proposals', default-features = false }
+pallet-projects = { path = '../../pallets/projects', default-features = false }
 pallet-briefs = {path = '../../pallets/briefs', default-features = false }
 pallet-grants = {path = '../../pallets/grants', default-features = false }
 pallet-deposits = {path = '../../pallets/deposits', default-features = false }
@@ -175,7 +175,7 @@ std = [
 	'common-traits/std',
 	'common-types/std',
 
-	'pallet-proposals/std',
+	'pallet-projects/std',
 	'pallet-briefs/std',
 	'pallet-grants/std',
 ]
@@ -194,7 +194,7 @@ runtime-benchmarks = [
 	'xcm-builder/runtime-benchmarks',
 	"common-runtime/runtime-benchmarks",
 
-	'pallet-proposals/runtime-benchmarks',
+	'pallet-projects/runtime-benchmarks',
 	'pallet-briefs/runtime-benchmarks',
 	'pallet-grants/runtime-benchmarks',
 ]

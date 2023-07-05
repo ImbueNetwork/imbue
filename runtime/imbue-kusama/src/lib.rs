@@ -754,7 +754,7 @@ impl pallet_treasury::Config for Runtime {
 }
 
 parameter_types! {
-    pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
+    pub const ProjectsPalletId: PalletId = PalletId(*b"imbgrant");
     pub const MaxProjectsPerRound: u32 = 256;
     pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
     pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
@@ -769,18 +769,18 @@ parameter_types! {
     pub const MaxMilestonesPerProject: u32 = 50;
 }
 
-impl pallet_proposals::Config for Runtime {
+impl pallet_projects::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type PalletId = ProposalsPalletId;
+    type PalletId = ProjectsPalletId;
     type MultiCurrency = Currencies;
     type AuthorityOrigin = AdminOrigin;
     type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type WeightInfo = pallet_proposals::weights::SubstrateWeight<Self>;
+    type WeightInfo = pallet_projects::weights::SubstrateWeight<Self>;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
+    type RefundHandler = pallet_projects::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
@@ -801,7 +801,7 @@ impl pallet_grants::Config for Runtime {
     type RMultiCurrency = Currencies;
     type GrantStorageItem = GrantStorageItem;
     type DepositHandler = Deposits;
-    type IntoProposal = pallet_proposals::Pallet<Runtime>;
+    type IntoProject = pallet_projects::Pallet<Runtime>;
     type CancellingAuthority = AdminOrigin;
     type WeightInfo = pallet_grants::weights::SubstrateWeight<Self>;
 }
@@ -818,7 +818,7 @@ impl pallet_briefs::Config for Runtime {
     type RMultiCurrency = Currencies;
     type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type IntoProposal = pallet_proposals::Pallet<Runtime>;
+    type IntoProject = pallet_projects::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
     type WeightInfo = pallet_briefs::weights::SubstrateWeight<Self>;
@@ -907,7 +907,7 @@ construct_runtime! {
 
 
         // Imbue Pallets
-        ImbueProposals: pallet_proposals::{Pallet, Call, Storage, Event<T>} = 100,
+        ImbueProjects: pallet_projects::{Pallet, Call, Storage, Event<T>} = 100,
         ImbueBriefs: pallet_briefs::{Pallet, Call, Storage, Event<T>} = 101,
         ImbueGrants: pallet_grants::{Pallet, Call, Storage, Event<T>} = 102,
         Deposits: pallet_deposits::{Pallet, Storage, Event<T>} = 103,
@@ -953,7 +953,7 @@ mod benches {
         [frame_system, SystemBench::<Runtime>]
         [pallet_balances, Balances]
         [pallet_timestamp, Timestamp]
-        [pallet_proposals, ImbueProposals]
+        [pallet_projects, ImbueProjects]
         [pallet_briefs, ImbueBriefs]
         [pallet_grants, ImbueGrants]
     );
@@ -1094,9 +1094,9 @@ impl_runtime_apis! {
         }
     }
 
-    impl pallet_proposals::runtime_api::ProjectsApi<Block, AccountId> for Runtime {
+    impl pallet_projects::runtime_api::ProjectsApi<Block, AccountId> for Runtime {
         fn get_project_account_by_id(project_id: u32) -> AccountId {
-            ImbueProposals::project_account_id(project_id)
+            ImbueProjects::project_account_id(project_id)
         }
     }
 

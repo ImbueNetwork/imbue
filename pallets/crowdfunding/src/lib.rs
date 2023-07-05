@@ -21,8 +21,8 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_identity::Judgement;
-    use pallet_proposals::traits::IntoProposal;
-    use pallet_proposals::{Contribution, Milestone, ProposedMilestone};
+    use pallet_projects::traits::IntoProject;
+    use pallet_projects::{Contribution, Milestone, ProposedMilestone};
     use sp_arithmetic::per_things::Percent;
     use sp_core::H256;
     use sp_std::collections::btree_map::BTreeMap;
@@ -69,7 +69,7 @@ pub mod pallet {
         type MaxWhitelistPerCrowdFund: Get<u32>;
         type IsIdentityRequired: Get<bool>;
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-        type IntoProposals: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
+        type IntoProjects: IntoProject<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
         type WeightInfo: WeightInfo;
     }
 
@@ -545,13 +545,13 @@ pub mod pallet {
                 Error::<T>::RequiredFundsNotReached
             );
 
-            <T as Config>::IntoProposals::convert_to_proposal(
+            <T as Config>::IntoProjects::convert_to_project(
                 crowdfund.currency_id,
                 crowdfund.contributions.into_inner(),
                 crowdfund.agreement_hash,
                 crowdfund.initiator,
                 crowdfund.milestones.into_inner(),
-                FundingType::Proposal,
+                FundingType::Project,
             )
             .map_err(|_| Error::<T>::CrowdFundConversionFailedGeneric)?;
 

@@ -1,4 +1,4 @@
-use crate as pallet_proposals;
+use crate as pallet_projects;
 use frame_support::{
     parameter_types,
     traits::{ConstU32, Nothing},
@@ -60,7 +60,7 @@ frame_support::construct_runtime!(
         Currencies: orml_currencies::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-        Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
+        ImbueProjects: pallet_projects::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -176,7 +176,7 @@ impl pallet_timestamp::Config for Test {
 
 parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
-    pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
+    pub const ProjectsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
@@ -189,9 +189,9 @@ parameter_types! {
     pub ProjectStorageItem: StorageItems = StorageItems::Project;
 }
 
-impl pallet_proposals::Config for Test {
+impl pallet_projects::Config for Test {
     type RuntimeEvent = RuntimeEvent;
-    type PalletId = ProposalsPalletId;
+    type PalletId = ProjectsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = ();
@@ -201,7 +201,7 @@ impl pallet_proposals::Config for Test {
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type RefundHandler = pallet_projects::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;

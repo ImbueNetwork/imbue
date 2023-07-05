@@ -6,7 +6,7 @@ use crate::{
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
 use orml_traits::MultiReservableCurrency;
-use pallet_proposals::ProposedMilestone;
+use pallet_projects::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;

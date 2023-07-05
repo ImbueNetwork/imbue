@@ -4,11 +4,11 @@ use crate::test_utils::gen_hash;
 use crate::tests::{get_brief_owners, get_milestones};
 use common_types::CurrencyId;
 use frame_support::assert_ok;
-use pallet_proposals::Projects;
+use pallet_projects::Projects;
 
-// all the integration tests for a brief to proposal conversion
+// all the integration tests for a brief to project conversion
 #[test]
-fn create_proposal_from_brief() {
+fn create_project_from_brief() {
     build_test_externality().execute_with(|| {
         let brief_id = gen_hash(100);
         let contribution_value: Balance = 10000;

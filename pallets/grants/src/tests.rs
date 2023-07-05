@@ -2,7 +2,7 @@ use crate::mock::*;
 use crate::pallet::{BoundedApprovers, BoundedPMilestones, Config, Error, GrantId, PendingGrants};
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
-use pallet_proposals::ProposedMilestone;
+use pallet_projects::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::DispatchError::BadOrigin;
@@ -335,7 +335,7 @@ fn cancel_grant_not_submitter() {
 }
 
 #[test]
-fn convert_to_proposal_cancelled() {
+fn convert_to_project_cancelled() {
     new_test_ext().execute_with(|| {
         let grant_id = Default::default();
         create_native_default_grant(grant_id, *ALICE);
@@ -349,7 +349,7 @@ fn convert_to_proposal_cancelled() {
 }
 
 #[test]
-fn convert_to_proposal_not_submitter() {
+fn convert_to_project_not_submitter() {
     new_test_ext().execute_with(|| {
         let grant_id = Default::default();
         create_native_default_grant(grant_id, *ALICE);
@@ -361,7 +361,7 @@ fn convert_to_proposal_not_submitter() {
 }
 
 #[test]
-fn convert_to_proposal_already_converted() {
+fn convert_to_project_already_converted() {
     new_test_ext().execute_with(|| {
         let grant_id = Default::default();
         create_native_default_grant(grant_id, *ALICE);
@@ -407,7 +407,7 @@ pub(crate) fn _run_to_block(n: u64) {
     while System::block_number() < n {
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
-        Proposals::on_initialize(System::block_number());
+        Projects::on_initialize(System::block_number());
     }
 }
 

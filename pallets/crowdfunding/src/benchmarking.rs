@@ -10,7 +10,7 @@ use frame_benchmarking::v1::{account, benchmarks, impl_benchmark_test_suite, whi
 use frame_support::assert_ok;
 use frame_system::{EventRecord, RawOrigin};
 use orml_traits::MultiCurrency;
-use pallet_proposals::ProposedMilestone;
+use pallet_projects::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
 use sp_std::collections::btree_map::BTreeMap;

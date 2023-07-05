@@ -1,7 +1,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 use super::*;
 use crate::test_utils::*;
-use crate::Pallet as Proposals;
+use crate::Pallet as Projects;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
@@ -34,7 +34,7 @@ benchmarks! {
         let prop_milestones = get_max_milestones::<T>();
         let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
 
-        assert_ok!(Proposals::<T>::submit_milestone(RawOrigin::Signed(alice).into(), project_key, 0));
+        assert_ok!(Projects::<T>::submit_milestone(RawOrigin::Signed(alice).into(), project_key, 0));
         // Contributor, ProjectKey, MilestoneKey, ApproveMilestone
     }: _(RawOrigin::Signed(bob.clone()), project_key, 0, true)
     verify {
@@ -55,10 +55,10 @@ benchmarks! {
 
         for milestone_key in 0..milestone_count {
             // The initiator submits a milestone
-            assert_ok!(Proposals::<T>::submit_milestone(RawOrigin::Signed(alice.clone()).into(), project_key, milestone_key));
+            assert_ok!(Projects::<T>::submit_milestone(RawOrigin::Signed(alice.clone()).into(), project_key, milestone_key));
 
             // Contributors vote on the milestone
-            assert_ok!(Proposals::<T>::vote_on_milestone(RawOrigin::Signed(bob.clone()).into(), project_key, milestone_key, true));
+            assert_ok!(Projects::<T>::vote_on_milestone(RawOrigin::Signed(bob.clone()).into(), project_key, milestone_key, true));
         }
 
         // All the milestones are approved now
@@ -120,7 +120,7 @@ benchmarks! {
 }
 
 impl_benchmark_test_suite!(
-    Proposals,
+    Projects,
     crate::mock::build_test_externality(),
     crate::mock::Test
 );

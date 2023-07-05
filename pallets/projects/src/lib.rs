@@ -17,7 +17,7 @@ use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 
 pub mod traits;
-use traits::{IntoProposal, RefundHandler};
+use traits::{IntoProject, RefundHandler};
 
 pub mod runtime_api;
 pub use runtime_api::*;
@@ -209,7 +209,7 @@ pub mod pallet {
         ProjectDoesNotExist,
         /// Currently no active round to participate in.
         NoActiveRound,
-        /// There was an internal overflow prevented in pallet_proposals.
+        /// There was an internal overflow prevented in pallet_projects.
         Overflow,
         /// Only contributors can vote.
         OnlyContributorsCanVote,
@@ -386,14 +386,14 @@ pub mod pallet {
             )
         }
     }
-    impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
+    impl<T: crate::Config> IntoProject<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
         for crate::Pallet<T>
     where
         Project<T>: EncodeLike<Project<T>>,
     {
         /// The caller is used to take the storage deposit from.
         /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
-        fn convert_to_proposal(
+        fn convert_to_project(
             currency_id: CurrencyId,
             contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
             brief_hash: H256,
@@ -415,11 +415,11 @@ pub mod pallet {
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
                     acc.saturating_add(x.value)
                 });
-                
+
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
 
             match funding_type {
-                FundingType::Proposal | FundingType::Brief => {
+                FundingType::Project | FundingType::Brief => {
                     for (acc, cont) in contributions.iter() {
                         <T as Config>::MultiCurrency::repatriate_reserved(
                             currency_id,
@@ -448,8 +448,9 @@ pub mod pallet {
                 milestone_key = milestone_key.saturating_add(1);
             }
 
-            let bounded_contributions: ContributionsFor<T> =
-                contributions.try_into().map_err(|_| Error::<T>::TooManyContributions)?;
+            let bounded_contributions: ContributionsFor<T> = contributions
+                .try_into()
+                .map_err(|_| Error::<T>::TooManyContributions)?;
 
             let project: Project<T> = Project {
                 milestones,
@@ -559,7 +560,7 @@ pub struct Project<T: Config> {
     pub deposit_id: DepositIdOf<T>,
 }
 
-/// The contribution users made to a proposal project.
+/// The contribution users made to a project.
 /// TODO: Move to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Contribution<Balance, BlockNumber> {

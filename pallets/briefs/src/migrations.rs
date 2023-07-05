@@ -4,7 +4,7 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{pallet_prelude::*, storage_alias, traits::Get, weights::Weight};
 pub use pallet::*;
-use pallet_proposals::ProposedMilestone;
+use pallet_projects::ProposedMilestone;
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_std::convert::TryInto;
@@ -38,7 +38,7 @@ mod v0 {
 
 // Migrate the proposed milestones to use Percent over a u32.
 // Add a deposit id to BriefData.
-// Should be run with pallet_proposals::migrations::v3
+// Should be run with pallet_projects::migrations::v3
 mod v1 {
     use super::*;
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {

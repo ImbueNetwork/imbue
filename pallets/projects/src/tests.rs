@@ -10,7 +10,7 @@ fn submit_milestone_milestone_doesnt_exist() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 11),
+            ImbueProjects::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 11),
             Error::<Test>::MilestoneDoesNotExist
         );
     });
@@ -20,7 +20,7 @@ fn submit_milestone_milestone_doesnt_exist() {
 fn submit_milestone_no_project() {
     build_test_externality().execute_with(|| {
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), 0, 1),
+            ImbueProjects::submit_milestone(RuntimeOrigin::signed(*ALICE), 0, 1),
             Error::<Test>::ProjectDoesNotExist
         );
     });
@@ -33,11 +33,11 @@ fn submit_milestone_not_initiator() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*BOB), project_key, 1),
+            ImbueProjects::submit_milestone(RuntimeOrigin::signed(*BOB), project_key, 1),
             Error::<Test>::UserIsNotInitiator
         );
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*DAVE), project_key, 1),
+            ImbueProjects::submit_milestone(RuntimeOrigin::signed(*DAVE), project_key, 1),
             Error::<Test>::UserIsNotInitiator
         );
     });
@@ -58,14 +58,14 @@ fn submit_milestones_too_many_this_block() {
                 CurrencyId::Native,
             );
             if i != max {
-                assert_ok!(Proposals::submit_milestone(
+                assert_ok!(ImbueProjects::submit_milestone(
                     RuntimeOrigin::signed(*ALICE),
                     project_key,
                     1
                 ));
             } else {
                 assert_noop!(
-                    Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1),
+                    ImbueProjects::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1),
                     Error::<Test>::Overflow
                 );
             }
@@ -79,7 +79,7 @@ fn submit_milestone_creates_non_bias_vote() {
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             1
@@ -98,18 +98,18 @@ fn submit_milestone_can_resubmit_during_voting_round() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             milestone_key
         ));
-        assert_ok!(Proposals::vote_on_milestone(
+        assert_ok!(ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
             true
         ));
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             milestone_key
@@ -138,7 +138,7 @@ fn submit_milestone_can_submit_again_after_failed_vote() {
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             1
@@ -146,7 +146,7 @@ fn submit_milestone_can_submit_again_after_failed_vote() {
         let expiry_block = frame_system::Pallet::<Test>::block_number()
             + <Test as Config>::MilestoneVotingWindow::get() as u64;
         run_to_block::<Test>(expiry_block + 1);
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             1
@@ -161,18 +161,18 @@ fn submit_milestone_cannot_submit_again_after_success_vote() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             milestone_key
         ));
-        assert_ok!(Proposals::vote_on_milestone(
+        assert_ok!(ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
             true
         ));
-        assert_ok!(Proposals::vote_on_milestone(
+        assert_ok!(ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*CHARLIE),
             project_key,
             milestone_key,
@@ -183,7 +183,11 @@ fn submit_milestone_cannot_submit_again_after_success_vote() {
             + <Test as Config>::MilestoneVotingWindow::get() as u64;
         run_to_block::<Test>(expiry_block + 1);
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key),
+            ImbueProjects::submit_milestone(
+                RuntimeOrigin::signed(*ALICE),
+                project_key,
+                milestone_key
+            ),
             Error::<Test>::MilestoneAlreadyApproved
         );
     });
@@ -193,7 +197,7 @@ fn submit_milestone_cannot_submit_again_after_success_vote() {
 fn vote_on_milestone_no_project() {
     build_test_externality().execute_with(|| {
         assert_noop!(
-            Proposals::vote_on_milestone(RuntimeOrigin::signed(*ALICE), 0, 0, true),
+            ImbueProjects::vote_on_milestone(RuntimeOrigin::signed(*ALICE), 0, 0, true),
             Error::<Test>::ProjectDoesNotExist
         );
     });
@@ -207,7 +211,7 @@ fn vote_on_milestone_before_round_starts_fails() {
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
         assert_noop!(
-            Proposals::vote_on_milestone(
+            ImbueProjects::vote_on_milestone(
                 RuntimeOrigin::signed(*BOB),
                 project_key,
                 milestone_key,
@@ -227,14 +231,14 @@ fn vote_on_milestone_after_round_end_fails() {
         let milestone_key = 0;
         let expiring_block = frame_system::Pallet::<Test>::block_number()
             + <Test as Config>::MilestoneVotingWindow::get();
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             milestone_key
         ));
         run_to_block::<Test>(expiring_block);
         assert_noop!(
-            Proposals::vote_on_milestone(
+            ImbueProjects::vote_on_milestone(
                 RuntimeOrigin::signed(*BOB),
                 project_key,
                 milestone_key,
@@ -251,13 +255,13 @@ fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone(
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             0
         ));
         assert_noop!(
-            Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true),
+            ImbueProjects::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true),
             Error::<Test>::VotingRoundNotStarted
         );
     });
@@ -270,13 +274,13 @@ fn vote_on_milestone_not_contributor() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             milestone_key
         ));
         assert_noop!(
-            Proposals::vote_on_milestone(
+            ImbueProjects::vote_on_milestone(
                 RuntimeOrigin::signed(*DAVE),
                 project_key,
                 milestone_key,
@@ -294,12 +298,12 @@ fn vote_on_milestone_actually_adds_to_vote() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             milestone_key
         ));
-        assert_ok!(Proposals::vote_on_milestone(
+        assert_ok!(ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
@@ -309,7 +313,7 @@ fn vote_on_milestone_actually_adds_to_vote() {
             MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
         assert!(vote.yay == 100_000u64);
         assert!(vote.nay == 0u64);
-        assert_ok!(Proposals::vote_on_milestone(
+        assert_ok!(ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*CHARLIE),
             project_key,
             milestone_key,
@@ -329,18 +333,18 @@ fn withdraw_not_initiator() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        assert_ok!(Proposals::submit_milestone(
+        assert_ok!(ImbueProjects::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
             project_key,
             milestone_key
         ));
-        assert_ok!(Proposals::vote_on_milestone(
+        assert_ok!(ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
             true
         ));
-        assert_ok!(Proposals::vote_on_milestone(
+        assert_ok!(ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*CHARLIE),
             project_key,
             milestone_key,
@@ -348,11 +352,11 @@ fn withdraw_not_initiator() {
         ));
 
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*BOB), project_key),
+            ImbueProjects::withdraw(RuntimeOrigin::signed(*BOB), project_key),
             Error::<Test>::UserIsNotInitiator
         );
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*DAVE), project_key),
+            ImbueProjects::withdraw(RuntimeOrigin::signed(*DAVE), project_key),
             Error::<Test>::UserIsNotInitiator
         );
     });
@@ -366,17 +370,20 @@ fn withdraw_only_transfers_approved_milestones() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
-                .unwrap();
-        let _ = Proposals::vote_on_milestone(
+        let _ = ImbueProjects::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key,
+        )
+        .unwrap();
+        let _ = ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
             true,
         )
         .unwrap();
-        let _ = Proposals::vote_on_milestone(
+        let _ = ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*CHARLIE),
             project_key,
             milestone_key,
@@ -386,21 +393,22 @@ fn withdraw_only_transfers_approved_milestones() {
 
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        assert_ok!(Proposals::withdraw(
+        assert_ok!(ImbueProjects::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(per_contribution * 2 / 10);
-        // total_contribution / number of milestones - fee 
-        let alice_expected_balance = alice_before + ((per_contribution * 2 / 10) as u64) - expected_fee as u64;
+        // total_contribution / number of milestones - fee
+        let alice_expected_balance =
+            alice_before + ((per_contribution * 2 / 10) as u64) - expected_fee as u64;
         assert_eq!(
             alice_after, alice_expected_balance,
             "Alice account is not the expected balance"
         );
 
         let project_account = crate::Pallet::<Test>::project_account_id(project_key);
-        
+
         assert_eq!(
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &project_account),
             180_000,
@@ -416,10 +424,13 @@ fn withdraw_removes_project_after_all_funds_taken() {
         let prop_milestones = get_milestones(1);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
-                .unwrap();
-        let _ = Proposals::vote_on_milestone(
+        let _ = ImbueProjects::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key,
+        )
+        .unwrap();
+        let _ = ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
@@ -427,7 +438,7 @@ fn withdraw_removes_project_after_all_funds_taken() {
         )
         .unwrap();
         assert!(Projects::<Test>::get(project_key).is_some());
-        assert_ok!(Proposals::withdraw(
+        assert_ok!(ImbueProjects::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
@@ -446,17 +457,20 @@ fn withdraw_takes_imbue_fee() {
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
         let pallet_account = crate::Pallet::<Test>::account_id();
-        let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
-                .unwrap();
-        let _ = Proposals::vote_on_milestone(
+        let _ = ImbueProjects::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key,
+        )
+        .unwrap();
+        let _ = ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
             true,
         )
         .unwrap();
-        assert_ok!(Proposals::withdraw(
+        assert_ok!(ImbueProjects::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
@@ -476,22 +490,25 @@ fn withdraw_cannot_double_withdraw() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
-        let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
-                .unwrap();
-        let _ = Proposals::vote_on_milestone(
+        let _ = ImbueProjects::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key,
+        )
+        .unwrap();
+        let _ = ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
             true,
         )
         .unwrap();
-        assert_ok!(Proposals::withdraw(
+        assert_ok!(ImbueProjects::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            ImbueProjects::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
             Error::<Test>::NoAvailableFundsToWithdraw
         );
     });
@@ -503,16 +520,18 @@ fn withdraw_once_times_with_double_submissions() {
         let cont = get_contributions::<Test>(vec![*BOB], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
+        let _ =
+            ImbueProjects::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = ImbueProjects::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
             .unwrap();
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true)
+        let _ =
+            ImbueProjects::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
+        let _ = ImbueProjects::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true)
             .unwrap();
 
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        assert_ok!(Proposals::withdraw(
+        assert_ok!(ImbueProjects::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
@@ -535,12 +554,13 @@ fn withdraw_twice_with_intermitent_submission() {
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
 
         // The first submission and withdraw
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
+        let _ =
+            ImbueProjects::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = ImbueProjects::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
             .unwrap();
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        assert_ok!(Proposals::withdraw(
+        assert_ok!(ImbueProjects::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
@@ -553,12 +573,13 @@ fn withdraw_twice_with_intermitent_submission() {
         );
 
         // The second submission and withdraw
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true)
+        let _ =
+            ImbueProjects::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
+        let _ = ImbueProjects::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true)
             .unwrap();
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        assert_ok!(Proposals::withdraw(
+        assert_ok!(ImbueProjects::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
@@ -585,12 +606,13 @@ fn withdraw_with_variable_percentage() {
             },
         ];
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
+        let _ =
+            ImbueProjects::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = ImbueProjects::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
             .unwrap();
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        assert_ok!(Proposals::withdraw(
+        assert_ok!(ImbueProjects::withdraw(
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
@@ -612,14 +634,17 @@ fn withdraw_fails_before_approval() {
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            ImbueProjects::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
             Error::<Test>::NoAvailableFundsToWithdraw
         );
-        let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
-                .unwrap();
+        let _ = ImbueProjects::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key,
+        )
+        .unwrap();
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            ImbueProjects::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
             Error::<Test>::NoAvailableFundsToWithdraw
         );
     });
@@ -633,22 +658,25 @@ fn raise_no_confidence_round_already_started() {
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
 
-        let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
-                .unwrap();
-        let _ = Proposals::vote_on_milestone(
+        let _ = ImbueProjects::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key,
+        )
+        .unwrap();
+        let _ = ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
             true,
         )
         .unwrap();
-        assert_ok!(Proposals::raise_vote_of_no_confidence(
+        assert_ok!(ImbueProjects::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key
         ));
         assert_noop!(
-            Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key),
+            ImbueProjects::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key),
             Error::<Test>::RoundStarted
         );
     });
@@ -661,7 +689,10 @@ fn raise_no_confidence_round_not_contributor() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         assert_noop!(
-            Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), project_key),
+            ImbueProjects::raise_vote_of_no_confidence(
+                RuntimeOrigin::signed(*CHARLIE),
+                project_key
+            ),
             Error::<Test>::OnlyContributorsCanVote
         );
     });
@@ -671,7 +702,7 @@ fn raise_no_confidence_round_not_contributor() {
 fn raise_no_confidence_round_no_project() {
     build_test_externality().execute_with(|| {
         assert_noop!(
-            Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), 20),
+            ImbueProjects::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), 20),
             Error::<Test>::ProjectDoesNotExist
         );
     });
@@ -685,18 +716,21 @@ fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         let milestone_key = 0;
 
-        let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
-                .unwrap();
-        let _ = Proposals::vote_on_milestone(
+        let _ = ImbueProjects::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key,
+        )
+        .unwrap();
+        let _ = ImbueProjects::vote_on_milestone(
             RuntimeOrigin::signed(*BOB),
             project_key,
             milestone_key,
             true,
         )
         .unwrap();
-        
-        assert_ok!(Proposals::raise_vote_of_no_confidence(
+
+        assert_ok!(ImbueProjects::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key
         ));
@@ -723,7 +757,7 @@ fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
 fn vote_on_no_confidence_round_no_project() {
     build_test_externality().execute_with(|| {
         assert_noop!(
-            Proposals::finalise_no_confidence_round(RuntimeOrigin::signed(*CHARLIE), 20),
+            ImbueProjects::finalise_no_confidence_round(RuntimeOrigin::signed(*CHARLIE), 20),
             Error::<Test>::ProjectDoesNotExist
         );
     });
@@ -737,7 +771,7 @@ fn vote_on_no_confidence_round_not_in_round() {
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
 
         assert_noop!(
-            Proposals::vote_on_no_confidence_round(
+            ImbueProjects::vote_on_no_confidence_round(
                 RuntimeOrigin::signed(*CHARLIE),
                 project_key,
                 true
@@ -754,12 +788,12 @@ fn vote_on_no_confidence_round_not_contributor() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
 
-        assert_ok!(Proposals::raise_vote_of_no_confidence(
+        assert_ok!(ImbueProjects::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key
         ));
         assert_noop!(
-            Proposals::vote_on_no_confidence_round(
+            ImbueProjects::vote_on_no_confidence_round(
                 RuntimeOrigin::signed(*CHARLIE),
                 project_key,
                 true
@@ -776,17 +810,21 @@ fn vote_on_no_confidence_round_already_voted() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
 
-        assert_ok!(Proposals::raise_vote_of_no_confidence(
+        assert_ok!(ImbueProjects::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key
         ));
-        assert_ok!(Proposals::vote_on_no_confidence_round(
+        assert_ok!(ImbueProjects::vote_on_no_confidence_round(
             RuntimeOrigin::signed(*DAVE),
             project_key,
             true
         ));
         assert_noop!(
-            Proposals::vote_on_no_confidence_round(RuntimeOrigin::signed(*DAVE), project_key, true),
+            ImbueProjects::vote_on_no_confidence_round(
+                RuntimeOrigin::signed(*DAVE),
+                project_key,
+                true
+            ),
             Error::<Test>::VotesAreImmutable
         );
     });
@@ -799,11 +837,11 @@ fn vote_on_no_confidence_mutates_vote() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
 
-        assert_ok!(Proposals::raise_vote_of_no_confidence(
+        assert_ok!(ImbueProjects::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key
         ));
-        assert_ok!(Proposals::vote_on_no_confidence_round(
+        assert_ok!(ImbueProjects::vote_on_no_confidence_round(
             RuntimeOrigin::signed(*DAVE),
             project_key,
             true
