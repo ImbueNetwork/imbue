@@ -45,4 +45,4 @@ jobs:
         run: sudo apt install protobuf-compiler
 
       - name: Run tests with benchmarks
-        run: cargo test --features runtime-benchmarks
+        run: cargo +nightly test --features runtime-benchmarks
