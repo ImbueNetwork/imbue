@@ -1,12 +1,13 @@
+#[allow(unused)]
 use crate::mock::*;
-use crate::pallet::{BoundedApprovers, BoundedPMilestones, Config, Error, GrantId};
+use crate::pallet::{BoundedApprovers, BoundedPMilestones, Config, Error};
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
-use sp_runtime::DispatchError::BadOrigin;
 
+#[test]
 fn ensure_milestone_percent_equal_100() {
     new_test_ext().execute_with(|| {
         let milestones: BoundedPMilestones<Test> = vec![ProposedMilestone {

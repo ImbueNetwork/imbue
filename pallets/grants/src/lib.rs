@@ -27,16 +27,14 @@ pub use weights::*;
 pub mod pallet {
     use super::*;
     use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
-    use frame_support::{dispatch::fmt::Debug, pallet_prelude::*, BoundedVec};
+    use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use pallet_deposits::traits::DepositHandler;
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
-    use sp_arithmetic::{per_things::Percent, traits::{One, AtLeast32BitUnsigned}};
-    use sp_core::H256;
+    use sp_arithmetic::{per_things::Percent, traits::One};
     use sp_runtime::Saturating;
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
-    use codec::FullEncode;
+    use sp_core::H256;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -87,12 +85,6 @@ pub mod pallet {
             submitter: AccountIdOf<T>,
             grant_id: GrantId,
         },
-        GrantEdited {
-            grant_id: GrantId,
-        },
-        GrantCancelled {
-            grant_id: GrantId,
-        },
     }
 
     #[pallet::error]
@@ -105,13 +97,6 @@ pub mod pallet {
         GrantAlreadyExists,
         /// There are too many milestones.
         TooManyMilestones,
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
-            Weight::default()
-        }
     }
 
     #[pallet::call]
@@ -164,11 +149,10 @@ pub mod pallet {
                 FundingType::Grant(treasury_origin),
             )?;
 
-            GrantsSubmittedBy::<T>::insert(&submitter, grant_id, ());
-            GrantsSubmitted::<T>::insert(grant_id, ());
-
+            GrantsSubmittedBy::<T>::insert(&submitter, &grant_id, ());
+            GrantsSubmitted::<T>::insert(&grant_id, ());
+            Self::deposit_event(Event::<T>::GrantSubmitted{grant_id, submitter});
             Ok(().into())
         }
-        // TODO: runtime api to get the deposit address of the grants sovereign account.
     }
 }

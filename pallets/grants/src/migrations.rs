@@ -8,8 +8,6 @@ use frame_support::{
 };
 use common_types::{CurrencyId, TreasuryOrigin};
 use crate::mock::*;
-use sp_runtime::traits::Zero;
-use sp_core::H256;
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
