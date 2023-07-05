@@ -69,9 +69,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-        /// The hasher used to generate the brief id.
-        /// TODO: not in use;
-        type BriefHasher: Hasher;
 
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
@@ -339,8 +336,10 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
-            ensure!(brief.brief_owners.contains(&who), Error::<T>::NotAuthorised);
-            ensure!(who != brief.applicant, Error::<T>::NotAuthorised);
+            ensure!(
+                brief.brief_owners.contains(&who),
+                Error::<T>::MustBeBriefOwner
+            );
 
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
             let contributions = BriefContributions::<T>::get(brief_id);

@@ -62,7 +62,6 @@ pub use common_runtime::{
     common_xcm::general_key,
     constants::MAXIMUM_BLOCK_WEIGHT,
     xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
-    constants::MAXIMUM_BLOCK_WEIGHT
 };
 pub use common_types::{CurrencyId, CustomMetadata};
 pub use pallet_balances::Call as BalancesCall;
@@ -817,7 +816,6 @@ parameter_types! {
 impl pallet_briefs::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Currencies;
-    type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;

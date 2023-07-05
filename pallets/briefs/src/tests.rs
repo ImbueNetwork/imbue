@@ -364,7 +364,7 @@ fn cancel_brief_brief_not_found() {
 }
 
 #[test]
-fn cancel_brief_not_authorised() {
+fn cancel_brief_not_brief_owner() {
     build_test_externality().execute_with(|| {
         let brief_id = gen_hash(101);
         let contribution_value: Balance = 10000;
@@ -382,7 +382,7 @@ fn cancel_brief_not_authorised() {
 
         assert_noop!(
             BriefsMod::cancel_brief(RuntimeOrigin::signed(*ALICE), brief_id),
-            Error::<Test>::NotAuthorised
+            Error::<Test>::MustBeBriefOwner
         );
     });
 }
