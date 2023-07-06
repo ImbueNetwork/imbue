@@ -12,7 +12,7 @@ use sp_runtime::{
     BuildStorage, MultiSignature, Perbill,
 };
 pub use xcm;
-
+use core::default::Default;
 pub const XCM_V2: u32 = 3;
 pub const XCM_V3: u32 = 2;
 pub const REF_TIME_THRESHOLD: u64 = 33;
@@ -71,15 +71,15 @@ pub mod accounts {
 pub mod collators {
     use super::*;
 
-    pub fn invulnerables_statemint() -> Vec<(AccountId, StatemintAuraId)> {
+    pub fn invulnerables_statemint() -> Vec<(AccountId, AuraId)> {
         vec![
             (
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
-                get_from_seed::<StatemintAuraId>("Alice"),
+                get_from_seed::<AuraId>("Alice"),
             ),
             (
                 get_account_id_from_seed::<sr25519::Public>("Bob"),
-                get_from_seed::<StatemintAuraId>("Bob"),
+                get_from_seed::<AuraId>("Bob"),
             ),
         ]
     }
@@ -215,7 +215,7 @@ pub mod kusama {
 pub mod imbue {
     use super::*;
     pub const PARA_ID: u32 = 2000;
-    pub const ED: Balance = imbue_kusama_runtime::EXISTENTIAL_DEPOSIT;
+    pub const ED: Balance = imbue_kusama_runtime::currency::EXISTENTIAL_DEPOSIT;
 
     pub fn genesis(para_id: u32) -> Storage {
         let genesis_config = imbue_kusama_runtime::GenesisConfig {
@@ -232,15 +232,7 @@ pub mod imbue {
                     .collect(),
             },
             parachain_info: imbue_kusama_runtime::ParachainInfoConfig { parachain_id: para_id.into() },
-            collator_selection: imbue_kusama_runtime::CollatorSelectionConfig {
-                invulnerables: collators::invulnerables()
-                    .iter()
-                    .cloned()
-                    .map(|(acc, _)| acc)
-                    .collect(),
-                candidacy_bond: ED * 16,
-                ..Default::default()
-            },
+            // collator_selection: Default::default(),
             session: imbue_kusama_runtime::SessionConfig {
                 keys: collators::invulnerables()
                     .into_iter()
@@ -255,13 +247,19 @@ pub mod imbue {
             },
             aura: Default::default(),
             aura_ext: Default::default(),
+            council: Default::default(),
+            council_membership: Default::default(),
+            democracy: Default::default(),
+            treasury: Default::default(),
+            technical_committee: Default::default(),
             parachain_system: Default::default(),
-            polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig {
-                safe_xcm_version: Some(SAFE_XCM_VERSION),
-            },
+            // polkadot_xcm: imbue_kusama_runtime::xcm_config:: {
+            //     safe_xcm_version: Some(SAFE_XCM_VERSION),
+            // },
             sudo: imbue_kusama_runtime::SudoConfig {
                 key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
             },
+            ..Default::default()
         };
 
         genesis_config.build_storage().unwrap()
