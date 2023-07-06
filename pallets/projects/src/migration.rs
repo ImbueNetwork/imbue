@@ -206,7 +206,7 @@ mod v2 {
                 funding_threshold_met: project.funding_threshold_met,
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
-                funding_type: FundingType::Project,
+                funding_type: FundingType::Crowdfund,
             };
             Some(migrated_project)
         });
@@ -289,7 +289,7 @@ pub mod v3 {
                         agreement_hash: Default::default(),
                         cancelled: project.cancelled,
                         raised_funds: project.raised_funds,
-                        funding_type: FundingType::Project,
+                        funding_type: FundingType::Crowdfund,
                         // A deposit_id of u32::MAX is ignored.
                         deposit_id: u32::MAX.into(),
                     };
@@ -552,7 +552,7 @@ mod test {
             );
 
             assert_eq!(H256::default(), migrated_project.agreement_hash);
-            assert_eq!(FundingType::Project, migrated_project.funding_type);
+            assert_eq!(FundingType::Crowdfund, migrated_project.funding_type);
         })
     }
 

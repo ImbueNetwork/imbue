@@ -551,7 +551,7 @@ pub mod pallet {
                 crowdfund.agreement_hash,
                 crowdfund.initiator,
                 crowdfund.milestones.into_inner(),
-                FundingType::Project,
+                FundingType::Crowdfund,
             )
             .map_err(|_| Error::<T>::CrowdFundConversionFailedGeneric)?;
 

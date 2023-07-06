@@ -419,7 +419,7 @@ pub mod pallet {
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
 
             match funding_type {
-                FundingType::Project | FundingType::Brief => {
+                FundingType::Crowdfund | FundingType::Brief => {
                     for (acc, cont) in contributions.iter() {
                         <T as Config>::MultiCurrency::repatriate_reserved(
                             currency_id,

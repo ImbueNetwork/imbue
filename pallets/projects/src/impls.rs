@@ -309,7 +309,7 @@ impl<T: Config> Pallet<T> {
 
             // TODO: this should be generic and not bound to funding type..
             match project.funding_type {
-                FundingType::Brief | FundingType::Project => {
+                FundingType::Brief | FundingType::Crowdfund => {
                     // Handle refunds on native chain, there is no need to deal with xcm here.
                     // Todo: Batch call using pallet-utility?
                     for (acc_id, contribution) in project.contributions.iter() {
