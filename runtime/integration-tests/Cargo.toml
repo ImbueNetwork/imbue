@@ -45,7 +45,7 @@ pallet-proposals = { path = "../../pallets/proposals", default-features = false 
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-#xcm-emulator = { git = "https://github.com/imbuenetwork/xcm-simulator", branch = "polkadot-v0.9.43" }
+xcm-emulator = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.43" }
 
 
 [features]
