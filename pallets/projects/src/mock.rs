@@ -176,7 +176,7 @@ impl pallet_timestamp::Config for Test {
 
 parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
-    pub const ProjectsPalletId: PalletId = PalletId(*b"imbgrant");
+    pub const ProjectsPalletId: PalletId = PalletId(*b"project!");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
