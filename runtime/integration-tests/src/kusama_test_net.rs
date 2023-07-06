@@ -118,7 +118,7 @@ decl_test_parachains! {
 }
 
 decl_test_networks! {
-	pub struct KusamaMockNet {
+	pub struct TestNet {
 		relay_chain = Kusama,
 		parachains = vec![
 			Development,
