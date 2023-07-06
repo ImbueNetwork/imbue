@@ -10305,17 +10305,25 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-im-online",
  "pallet-proposals",
  "pallet-xcm",
  "parachain-info",
  "polkadot-parachain",
  "polkadot-primitives",
  "polkadot-runtime-parachains",
+ "polkadot-service",
+ "sc-consensus-grandpa",
+ "sp-authority-discovery",
+ "sp-consensus-babe",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "xcm",
  "xcm-builder",
  "xcm-emulator",
+ "xcm-executor",
+ "xcm-simulator",
 ]
 
 [[package]]
@@ -15307,6 +15315,24 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.18",
+]
+
+[[package]]
+name = "xcm-simulator"
+version = "0.9.43"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.43#ba42b9ce51d25bdaf52d2c61e0763a6e3da50d25"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec 3.5.0",
+ "paste 1.0.12",
+ "polkadot-core-primitives",
+ "polkadot-parachain",
+ "polkadot-runtime-parachains",
+ "sp-io",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
