@@ -34,7 +34,7 @@ pub mod pallet {
     use pallet_proposals::traits::IntoProposal;
     use pallet_proposals::{Contribution, ProposedMilestone};
     use sp_arithmetic::per_things::Percent;
-    use sp_core::{Hasher, H256};
+    use sp_core::H256;
     use sp_runtime::traits::Zero;
     use sp_std::convert::{From, TryInto};
 

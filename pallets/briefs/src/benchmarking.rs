@@ -94,11 +94,35 @@ benchmarks! {
         assert_last_event::<T>(Event::<T>::BriefEvolution(brief_id).into());
     }
 
+    cancel_brief {
+        let brief_owners = get_max_brief_owners::<T>();
+        let caller: T::AccountId = brief_owners[0].clone();
+        let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
+        let budget = 10_000_000_000_000u128.saturated_into();
+        let initial_contribution = 5_000_000_000_000u128.saturated_into();
+        let brief_id = gen_hash(1);
+        let max_milestones: u32 = <T as Config>::MaxMilestonesPerBrief::get();
+        let milestones = get_max_milestones::<T>();
+        assert_ok!(Briefs::<T>::create_brief(
+            RawOrigin::Signed(caller.clone()).into(),
+            brief_owners,
+            applicant.clone(),
+            budget,
+            initial_contribution,
+            brief_id.clone(),
+            CurrencyId::Native,
+            milestones
+        ));
+        // (origin, brief_id)
+    }: _(RawOrigin::Signed(caller), brief_id.clone())
+    verify {
+        assert_last_event::<T>(Event::<T>::BriefCanceled(brief_id).into());
+    }
 }
 
 fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
     let user = account(suri, n, SEED);
-    let initial_balance: _ = 10_000_000_000_000_000u128;
+    let initial_balance: _ = 1_000_000_000_000_000_000_000u128;
     assert_ok!(T::RMultiCurrency::deposit(
         CurrencyId::Native,
         &user,
