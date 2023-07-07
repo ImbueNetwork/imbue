@@ -262,9 +262,9 @@ pub mod imbue {
             treasury: Default::default(),
             technical_committee: Default::default(),
             parachain_system: Default::default(),
-            // polkadot_xcm: imbue_kusama_runtime::xcm_config:: {
-            //     safe_xcm_version: Some(SAFE_XCM_VERSION),
-            // },
+            polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig{
+                safe_xcm_version: Some(SAFE_XCM_VERSION),
+            },
             sudo: imbue_kusama_runtime::SudoConfig {
                 key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
             },

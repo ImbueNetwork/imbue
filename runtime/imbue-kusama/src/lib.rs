@@ -906,7 +906,7 @@ construct_runtime! {
 
         // XCM helpers.
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 26,
-        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 27,
+        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 27,
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 28,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 29,
 

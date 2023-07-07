@@ -134,6 +134,9 @@ parameter_types! {
 	// Imbue Kusama
 	pub ImbueKusamaSender: AccountId = Development::account_id_of(ALICE);
 	pub ImbueKusamaReceiver: AccountId = Development::account_id_of(BOB);
+	// Sibling Kusama
+	pub SiblingKusamaSender: AccountId = Sibling::account_id_of(ALICE);
+	pub SiblingKusamaReceiver: AccountId = Sibling::account_id_of(BOB);
 }
 
 
