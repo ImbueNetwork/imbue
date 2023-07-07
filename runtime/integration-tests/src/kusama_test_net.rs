@@ -26,11 +26,11 @@ use xcm_emulator::{
 };
 pub use sp_core::{sr25519, storage::Storage, Get};
 use xcm::prelude::*;
-use crate::constants::{imbue,kusama};
+use crate::constants::{imbue,kusama, accounts::{ALICE,BOB}};
 use imbue_kusama_runtime::CurrencyId;
 use frame_support::{parameter_types, sp_io, sp_tracing};
 use crate::setup::{
-    ksm_amount, native_amount, ExtBuilder, ALICE, BOB, PARA_ID_DEVELOPMENT, PARA_ID_KARURA,
+    ksm_amount, native_amount, ExtBuilder, PARA_ID_DEVELOPMENT, PARA_ID_KARURA,
     PARA_ID_SIBLING,
 };
 use xcm_executor::traits::Convert;
@@ -55,7 +55,6 @@ decl_test_relay_chains! {
 		}
 	}
 }
-
 
 decl_test_parachains! {
 	pub struct Development {
@@ -127,6 +126,16 @@ decl_test_networks! {
 		],
 	}
 }
+
+parameter_types! {
+	// Kusama
+	pub KusamaSender: AccountId = Kusama::account_id_of(ALICE);
+	pub KusamaReceiver: AccountId = Kusama::account_id_of(BOB);
+	// Imbue Kusama
+	pub ImbueKusamaSender: AccountId = Development::account_id_of(ALICE);
+	pub ImbueKusamaReceiver: AccountId = Development::account_id_of(BOB);
+}
+
 
 // decl_test_parachains! {
 //     pub struct Development {

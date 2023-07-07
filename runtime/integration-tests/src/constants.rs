@@ -13,6 +13,8 @@ use sp_runtime::{
 };
 pub use xcm;
 use core::default::Default;
+use frame_support::{parameter_types, sp_io, sp_tracing};
+
 pub const XCM_V2: u32 = 3;
 pub const XCM_V3: u32 = 2;
 pub const REF_TIME_THRESHOLD: u64 = 33;
@@ -210,8 +212,7 @@ pub mod kusama {
     }
 }
 
-
-// Penpal
+// Imbue
 pub mod imbue {
     use super::*;
     pub const PARA_ID: u32 = 2000;
@@ -228,11 +229,19 @@ pub mod imbue {
                 balances: accounts::init_balances()
                     .iter()
                     .cloned()
-                    .map(|k| (k, ED * 4096))
+                    .map(|k| (k, ED * 4096 * 1_000_000_000_000))
                     .collect(),
             },
             parachain_info: imbue_kusama_runtime::ParachainInfoConfig { parachain_id: para_id.into() },
-            // collator_selection: Default::default(),
+            collator_selection: imbue_kusama_runtime::CollatorSelectionConfig {
+                invulnerables: collators::invulnerables()
+                    .iter()
+                    .cloned()
+                    .map(|(acc, _)| acc)
+                    .collect(),
+                candidacy_bond: 1 * ED,
+                ..Default::default()
+            },
             session: imbue_kusama_runtime::SessionConfig {
                 keys: collators::invulnerables()
                     .into_iter()
@@ -265,4 +274,3 @@ pub mod imbue {
         genesis_config.build_storage().unwrap()
     }
 }
-
