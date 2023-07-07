@@ -73,7 +73,7 @@ pub mod pallet {
     /// Used to check wether a grant_id has already been submitted.
     #[pallet::storage]
     pub type GrantsSubmitted<T: Config> =
-        StorageMap<_, Blake2_128, GrantId, (), ValueQuery>;
+        StorageMap<_, Blake2_128Concat, GrantId, (), ValueQuery>;
 
     #[pallet::storage]
     pub type GrantCount<T: Config> = StorageValue<_, u32, ValueQuery>;
