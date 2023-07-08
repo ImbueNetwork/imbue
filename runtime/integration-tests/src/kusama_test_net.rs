@@ -75,45 +75,45 @@ decl_test_parachains! {
 		},
 		pallets_extra = {
 		}
-	},
-	pub struct Sibling {
-		genesis = imbue::genesis(PARA_ID_SIBLING),
-		on_init = (),
-		runtime = {
-			Runtime: imbue_kusama_runtime::Runtime,
-			RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
-			RuntimeCall: imbue_kusama_runtime::RuntimeCall,
-			RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
-			XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
-			DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
-			LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
-			System: imbue_kusama_runtime::System,
-			Balances: imbue_kusama_runtime::Balances,
-			ParachainSystem: imbue_kusama_runtime::ParachainSystem,
-			ParachainInfo: imbue_kusama_runtime::ParachainInfo,
-		},
-		pallets_extra = {
-		}
-	},
-	pub struct Karura {
-		genesis = imbue::genesis(PARA_ID_KARURA),
-		on_init = (),
-		runtime = {
-			Runtime: imbue_kusama_runtime::Runtime,
-			RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
-			RuntimeCall: imbue_kusama_runtime::RuntimeCall,
-			RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
-			XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
-			DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
-			LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
-			System: imbue_kusama_runtime::System,
-			Balances: imbue_kusama_runtime::Balances,
-			ParachainSystem: imbue_kusama_runtime::ParachainSystem,
-			ParachainInfo: imbue_kusama_runtime::ParachainInfo,
-		},
-		pallets_extra = {
-		}
 	}
+	// pub struct Sibling {
+	// 	genesis = imbue::genesis(PARA_ID_SIBLING),
+	// 	on_init = (),
+	// 	runtime = {
+	// 		Runtime: imbue_kusama_runtime::Runtime,
+	// 		RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
+	// 		RuntimeCall: imbue_kusama_runtime::RuntimeCall,
+	// 		RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
+	// 		XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
+	// 		DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
+	// 		LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
+	// 		System: imbue_kusama_runtime::System,
+	// 		Balances: imbue_kusama_runtime::Balances,
+	// 		ParachainSystem: imbue_kusama_runtime::ParachainSystem,
+	// 		ParachainInfo: imbue_kusama_runtime::ParachainInfo,
+	// 	},
+	// 	pallets_extra = {
+	// 	}
+	// }
+	// pub struct Karura {
+	// 	genesis = imbue::genesis(PARA_ID_KARURA),
+	// 	on_init = (),
+	// 	runtime = {
+	// 		Runtime: imbue_kusama_runtime::Runtime,
+	// 		RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
+	// 		RuntimeCall: imbue_kusama_runtime::RuntimeCall,
+	// 		RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
+	// 		XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
+	// 		DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
+	// 		LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
+	// 		System: imbue_kusama_runtime::System,
+	// 		Balances: imbue_kusama_runtime::Balances,
+	// 		ParachainSystem: imbue_kusama_runtime::ParachainSystem,
+	// 		ParachainInfo: imbue_kusama_runtime::ParachainInfo,
+	// 	},
+	// 	pallets_extra = {
+	// 	}
+	// }
 }
 
 decl_test_networks! {
@@ -121,8 +121,8 @@ decl_test_networks! {
 		relay_chain = Kusama,
 		parachains = vec![
 			Development,
-			Sibling,
-			Karura,
+			// Sibling,
+			// Karura,
 		],
 	}
 }
@@ -135,8 +135,8 @@ parameter_types! {
 	pub ImbueKusamaSender: AccountId = Development::account_id_of(ALICE);
 	pub ImbueKusamaReceiver: AccountId = Development::account_id_of(BOB);
 	// Sibling Kusama
-	pub SiblingKusamaSender: AccountId = Sibling::account_id_of(ALICE);
-	pub SiblingKusamaReceiver: AccountId = Sibling::account_id_of(BOB);
+	pub SiblingKusamaSender: AccountId = Development::account_id_of(ALICE);
+	pub SiblingKusamaReceiver: AccountId = Development::account_id_of(BOB);
 }
 
 

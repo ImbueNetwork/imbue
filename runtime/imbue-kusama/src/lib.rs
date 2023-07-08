@@ -244,7 +244,7 @@ impl pallet_balances::Config for Runtime {
     /// Handler for the unbalanced reduction when removing a dust account.
     type DustRemoval = ();
     /// The minimum amount required to keep an account open.
-    type ExistentialDeposit = NativeTokenTransferFee;
+    type ExistentialDeposit = ExistentialDeposit;
     /// The means of storing the balances of an account.
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Self>;

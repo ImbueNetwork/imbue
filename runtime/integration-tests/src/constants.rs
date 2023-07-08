@@ -214,6 +214,7 @@ pub mod kusama {
 
 // Imbue
 pub mod imbue {
+    use common_types::CurrencyId;
     use super::*;
     pub const PARA_ID: u32 = 2000;
     pub const ED: Balance = imbue_kusama_runtime::currency::EXISTENTIAL_DEPOSIT;
@@ -229,9 +230,25 @@ pub mod imbue {
                 balances: accounts::init_balances()
                     .iter()
                     .cloned()
-                    .map(|k| (k, ED * 4096 * 1_000_000_000_000))
+                    .map(|k| (k,  ED.saturating_add(10_000_000_000_000)))
                     .collect(),
             },
+            orml_tokens: orml_tokens::GenesisConfig {
+                balances: accounts::init_balances()
+                    .iter()
+                    .cloned()
+                    .map(|k| (k, CurrencyId::Native,  ED * 10_000))
+                    .collect(),
+            },
+            // orml_tokens::GenesisConfig::<Runtime> {
+            // balances: self
+            // .balances
+            // .into_iter()
+            // .filter(|(_, currency_id, _)| *currency_id != native_currency_id)
+            // .collect::<Vec<_>>(),
+            // }
+            // .assimilate_storage(&mut t)
+            // .unwrap();
             parachain_info: imbue_kusama_runtime::ParachainInfoConfig { parachain_id: para_id.into() },
             collator_selection: imbue_kusama_runtime::CollatorSelectionConfig {
                 invulnerables: collators::invulnerables()

@@ -53,7 +53,7 @@ use sp_runtime::DispatchError;
 
 parameter_types! {
     // One XCM operation is 100_000_000 weight - almost certainly a conservative estimate.
-    pub UnitWeightCost: XcmWeight = XcmWeight::from_parts(1_000_000_000, 1024);
+    pub UnitWeightCost: XcmWeight = XcmWeight::from_parts(1_000_000, 1024);
     pub const MaxInstructions: u32 = 100;
 
 }
