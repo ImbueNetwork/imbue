@@ -175,7 +175,7 @@ impl<T: Config> Pallet<T> {
                     // TODO: reinstate storage deposit
                     CompletedProjects::<T>::try_mutate(project_account, |completed_projects| -> DispatchResult {
                         if !completed_projects.iter().any(|&completed_project| completed_project == project_key) {
-                                completed_projects.try_push(project_key).expect("The maximum number of projects has been reached for an account");
+                                completed_projects.try_push(project_key).map_err(|_|, Error::<T>::TooManyProjects)?;
                         }
                         Ok(())
                     })?;
