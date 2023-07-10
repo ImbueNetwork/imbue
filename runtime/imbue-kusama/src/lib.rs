@@ -767,6 +767,7 @@ parameter_types! {
     pub const ExpiringProjectRoundsPerBlock: u32 = 50;
     pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
     pub const MaxMilestonesPerProject: u32 = 50;
+    pub const MaxProjectsPerAccount: u32 = 100;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -786,6 +787,7 @@ impl pallet_proposals::Config for Runtime {
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = Deposits;
+    type MaxProjectsPerAccount = MaxProjectsPerAccount;
 }
 
 parameter_types! {

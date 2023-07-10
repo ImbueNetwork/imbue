@@ -431,6 +431,12 @@ fn withdraw_removes_project_after_all_funds_taken() {
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
+
+        if let Some((account, projects)) = CompletedProjects::<Test>::iter().next() {
+             assert_eq!(projects.len(),1);
+            assert_eq!(projects.contains(&project_key),true);
+        }
+
         assert!(
             Projects::<Test>::get(project_key).is_none(),
             "Project should have been removed after funds withdrawn."

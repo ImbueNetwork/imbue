@@ -90,6 +90,7 @@ pub mod pallet {
         /// The type responisble for handling refunds.
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
         type MaxMilestonesPerProject: Get<u32>;
+        type MaxProjectsPerAccount: Get<u32>;
         /// Imbue fee in percent 0-99
         type ImbueFee: Get<Percent>;
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
@@ -129,6 +130,12 @@ pub mod pallet {
         Vote<BalanceOf<T>>,
         OptionQuery,
     >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn completed_projects)]
+    pub type CompletedProjects<T: Config> = StorageMap<_, Twox64Concat, AccountIdOf<T>, BoundedVec<ProjectKey,  <T as Config>::MaxProjectsPerAccount>, ValueQuery>;
+
+
 
     /// This holds the votes when a no confidence round is raised.
     #[pallet::storage]
