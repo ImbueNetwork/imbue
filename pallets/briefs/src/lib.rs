@@ -69,18 +69,15 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
         /// The type that allows for evolution from brief to proposal.
         type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
-
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
         type MaxBriefOwners: Get<u32>;
-
+        /// The maximum milestones avaliable in a given brief.
         type MaxMilestonesPerBrief: Get<u32>;
-
+        /// Storage deposits.
         type BriefStorageItem: Get<StorageItemOf<Self>>;
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
 
@@ -113,10 +110,14 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
+        /// A brief has been successfully submitted!
         BriefSubmitted(T::AccountId, BriefHash),
         AccountApproved(AccountIdOf<T>),
+        /// A brief has been converted to milestones.
         BriefEvolution(BriefHash),
+        /// A brief has been contributed to.
         BriefContribution(T::AccountId, BriefHash),
+        /// A brief has been cancelled.
         BriefCanceled(BriefHash),
     }
 
