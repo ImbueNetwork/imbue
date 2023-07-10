@@ -256,6 +256,8 @@ pub mod pallet {
         TooManyContributions,
         /// There are too many milestones.
         TooManyMilestones,
+
+        TooManyProjects,
     }
 
     #[pallet::hooks]

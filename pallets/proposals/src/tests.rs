@@ -445,6 +445,36 @@ fn withdraw_removes_project_after_all_funds_taken() {
 }
 
 #[test]
+fn store_project_info_after_project_is_completed() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(1);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+            .unwrap();
+        assert!(Projects::<Test>::get(project_key).is_some());
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+
+        if let Some((_account, projects)) = CompletedProjects::<Test>::iter().next() {
+            assert_eq!(projects.len(),1);
+            assert_eq!(projects.contains(&project_key),true);
+        }
+    });
+}
+
+#[test]
 fn withdraw_takes_imbue_fee() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB], 100_000);

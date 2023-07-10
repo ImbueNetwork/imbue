@@ -172,11 +172,8 @@ impl<T: Config> Pallet<T> {
                 p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
                 if p.withdrawn_funds == p.raised_funds {
                     <T as Config>::DepositHandler::return_deposit(p.deposit_id)?;
-                    // TODO: reinstate storage deposit
                     CompletedProjects::<T>::try_mutate(project_account, |completed_projects| -> DispatchResult {
-                        if !completed_projects.iter().any(|&completed_project| completed_project == project_key) {
-                                completed_projects.try_push(project_key).map_err(|_|, Error::<T>::TooManyProjects)?;
-                        }
+                                completed_projects.try_push(project_key).map_err(|_| Error::<T>::TooManyProjects)?;
                         Ok(())
                     })?;
                     *project = None;
