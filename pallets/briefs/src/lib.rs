@@ -60,9 +60,12 @@ pub mod pallet {
         <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
     pub type BriefHash = H256;
+   
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -154,6 +157,15 @@ pub mod pallet {
         /// Milestones total do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
     }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight: Weight = Zero::zero();
+            migration::v1::migrate_to_v1(&mut weight);
+        }
+    }
+
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
