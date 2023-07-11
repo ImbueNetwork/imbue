@@ -20,14 +20,14 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
-#[cfg(test)]
 mod migrations;
+use migrations::*;
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
     use common_types::{milestone_origin::FundingType, CurrencyId};
-    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
+    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::{Get}, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
@@ -60,6 +60,7 @@ pub mod pallet {
         <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
     pub type BriefHash = H256;
+   
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -106,6 +107,22 @@ pub mod pallet {
     #[pallet::getter(fn brief_contributions)]
     pub type BriefContributions<T> =
         StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
+
+    #[pallet::storage]
+    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+    }
+
+    impl Default for Release {
+        fn default() -> Release {
+            Release::V0
+        }
+    }
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -154,6 +171,16 @@ pub mod pallet {
         /// Milestones total do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
     }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight: Weight = Zero::zero();
+            migrations::v1::migrate_to_v1::<T>(&mut weight);
+            weight
+        }
+    }
+
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
