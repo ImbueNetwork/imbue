@@ -7,7 +7,7 @@ use frame_support::{
     traits::EnsureOrigin, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
 use scale_info::TypeInfo;

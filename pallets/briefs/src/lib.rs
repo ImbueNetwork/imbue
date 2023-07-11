@@ -21,7 +21,6 @@ mod benchmarking;
 mod test_utils;
 
 mod migrations;
-use migrations::*;
 
 #[frame_support::pallet]
 pub mod pallet {
