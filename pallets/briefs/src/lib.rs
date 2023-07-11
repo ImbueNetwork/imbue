@@ -216,7 +216,6 @@ pub mod pallet {
             let deposit_id = <T as Config>::DepositHandler::take_deposit(
                 who.clone(),
                 <T as Config>::BriefStorageItem::get(),
-                CurrencyId::Native,
             )?;
 
             // Now take the inital_contribution for the brief.

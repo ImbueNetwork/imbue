@@ -74,7 +74,6 @@ pub fn create_project<T: Config>(
     let deposit_id = <T as Config>::DepositHandler::take_deposit(
         beneficiary.clone(),
         <T as Config>::ProjectStorageItem::get(),
-        CurrencyId::Native,
     )
     .expect("this should work");
     let agreement_hash: H256 = Default::default();

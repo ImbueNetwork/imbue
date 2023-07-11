@@ -290,7 +290,6 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
     fn take_deposit(
         _who: crate::AccountIdOf<T>,
         _storage_item: Self::StorageItem,
-        _currency_id: CurrencyId,
     ) -> Result<Self::DepositId, DispatchError> {
         Ok(0u64)
     }

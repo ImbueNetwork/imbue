@@ -2,9 +2,8 @@ use crate as pallet_deposits;
 use crate::traits::{DepositCalculator, DepositHandler};
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
-use frame_support::traits::{ConstU16, ConstU64, Nothing};
+use frame_support::traits::{ConstU16, ConstU64};
 use frame_support::{pallet_prelude::*, parameter_types};
-use orml_traits::MultiCurrency;
 use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -24,7 +23,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system,
         Deposits: pallet_deposits,
-        Tokens: orml_tokens,
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<Test>, Event<Test>},
     }
 );
 
@@ -50,7 +49,7 @@ impl frame_system::Config for Test {
     type BlockHashCount = ConstU64<250>;
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = ();
+    type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
@@ -66,22 +65,21 @@ orml_traits::parameter_type_with_key! {
 }
 
 parameter_types! {
-    pub const MaxReserves: u32 = 50;
     pub MaxLocks: u32 = 2;
+    pub const ExistentialDeposit: u64 = 5;
+    pub const MaxReserves: u32 = 50;
 }
 
-impl orml_tokens::Config for Test {
+impl pallet_balances::Config for Test {
     type RuntimeEvent = RuntimeEvent;
-    type Balance = Balance;
-    type Amount = i128;
-    type CurrencyId = CurrencyId;
-    type CurrencyHooks = ();
-    type WeightInfo = ();
-    type ExistentialDeposits = ExistentialDeposits;
-    type MaxLocks = MaxLocks;
-    type DustRemovalWhitelist = Nothing;
-    type MaxReserves = MaxReserves;
+    type AccountStore = System;
+    type Balance = u64;
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type MaxLocks = ();
+    type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -101,7 +99,7 @@ pub(crate) type DepositId = u64;
 
 impl pallet_deposits::Config for Test {
     type RuntimeEvent = RuntimeEvent;
-    type MultiCurrency = Tokens;
+    type Currency = Balances;
     type StorageItem = StorageItem;
     type DepositId = DepositId;
     type DepositCalculator = MockDepositCalculator;
@@ -111,13 +109,7 @@ impl pallet_deposits::Config for Test {
 pub struct MockDepositCalculator;
 impl DepositCalculator<Balance> for MockDepositCalculator {
     type StorageItem = StorageItem;
-    fn calculate_deposit(
-        item: Self::StorageItem,
-        currency: CurrencyId,
-    ) -> Result<Balance, DispatchError> {
-        if currency != CurrencyId::Native {
-            return Err(crate::pallet::Error::<Test>::UnsupportedCurrencyType.into());
-        }
+    fn calculate_deposit(item: Self::StorageItem) -> Result<Balance, DispatchError> {
         if item == StorageItem::Unsupported {
             return Err(crate::pallet::Error::<Test>::UnsupportedStorageType.into());
         }
@@ -134,7 +126,6 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
     fn take_deposit(
         _who: crate::AccountIdOf<T>,
         _storage_item: Self::StorageItem,
-        _currency_id: CurrencyId,
     ) -> Result<T::DepositId, DispatchError> {
         todo!()
     }
@@ -151,17 +142,24 @@ pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
+    let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
 
+    let initial_balance = 10_000_000u64;
+    pallet_balances::GenesisConfig::<Test> {
+        balances: vec![
+            (*ALICE, initial_balance),
+            (*BOB, initial_balance),
+            (*CHARLIE, initial_balance),
+        ],
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
+
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
-        let initial_balance = 10_000_000u64;
         System::set_block_number(1);
-        let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
-        let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
-        let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
     });
     ext
 }
@@ -172,7 +170,6 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
     fn take_deposit(
         _who: crate::AccountIdOf<T>,
         _storage_item: Self::StorageItem,
-        _currency_id: CurrencyId,
     ) -> Result<Self::DepositId, DispatchError> {
         Ok(0u64)
     }

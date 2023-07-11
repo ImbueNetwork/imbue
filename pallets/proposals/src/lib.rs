@@ -407,7 +407,6 @@ pub mod pallet {
             let deposit_id = <T as Config>::DepositHandler::take_deposit(
                 benificiary.clone(),
                 <T as Config>::ProjectStorageItem::get(),
-                CurrencyId::Native,
             )?;
 
             let sum_of_contributions = contributions
@@ -415,7 +414,7 @@ pub mod pallet {
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
                     acc.saturating_add(x.value)
                 });
-                
+
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
 
             match funding_type {
@@ -448,8 +447,9 @@ pub mod pallet {
                 milestone_key = milestone_key.saturating_add(1);
             }
 
-            let bounded_contributions: ContributionsFor<T> =
-                contributions.try_into().map_err(|_| Error::<T>::TooManyContributions)?;
+            let bounded_contributions: ContributionsFor<T> = contributions
+                .try_into()
+                .map_err(|_| Error::<T>::TooManyContributions)?;
 
             let project: Project<T> = Project {
                 milestones,

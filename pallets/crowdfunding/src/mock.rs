@@ -212,7 +212,6 @@ impl DepositHandler<Balance, AccountId> for MockDepositHandler {
     fn take_deposit(
         _who: AccountId,
         _storage_item: Self::StorageItem,
-        _currency_id: CurrencyId,
     ) -> Result<Self::DepositId, DispatchError> {
         Ok(0u64)
     }

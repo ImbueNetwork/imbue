@@ -826,13 +826,7 @@ pub type DepositId = u64;
 pub struct ImbueDepositCalculator;
 impl DepositCalculator<Balance> for ImbueDepositCalculator {
     type StorageItem = StorageDepositItems;
-    fn calculate_deposit(
-        u: Self::StorageItem,
-        currency: CurrencyId,
-    ) -> Result<Balance, DispatchError> {
-        if currency != CurrencyId::Native {
-            return Err(pallet_deposits::pallet::Error::<Runtime>::UnsupportedCurrencyType.into());
-        }
+    fn calculate_deposit(u: Self::StorageItem) -> Result<Balance, DispatchError> {
         Ok(match u {
             StorageDepositItems::Project => DOLLARS.saturating_mul(500),
             StorageDepositItems::CrowdFund => DOLLARS.saturating_mul(550),
@@ -843,7 +837,7 @@ impl DepositCalculator<Balance> for ImbueDepositCalculator {
 }
 impl pallet_deposits::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type MultiCurrency = Currencies;
+    type Currency = Balances;
     type StorageItem = StorageDepositItems;
     type DepositId = DepositId;
     type DepositCalculator = ImbueDepositCalculator;
@@ -879,6 +873,7 @@ construct_runtime! {
         ParachainInfo: parachain_info::{Pallet, Storage, Config} = 18,
 
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 19,
+
         Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 20,
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>}  = 21,
         Utility: pallet_utility::{Pallet, Call, Event} = 22,
@@ -900,7 +895,6 @@ construct_runtime! {
         OrmlTokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 33,
         OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 34,
         UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 35,
-
 
         // Imbue Pallets
         ImbueProposals: pallet_proposals::{Pallet, Call, Storage, Event<T>} = 100,

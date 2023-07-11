@@ -6466,6 +6466,7 @@ dependencies = [
  "frame-system",
  "orml-tokens",
  "orml-traits",
+ "pallet-balances",
  "pallet-xcm",
  "parity-scale-codec 3.6.2",
  "scale-info 2.8.0",
