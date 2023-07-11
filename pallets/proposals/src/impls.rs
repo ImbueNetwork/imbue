@@ -172,7 +172,7 @@ impl<T: Config> Pallet<T> {
                 p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
                 if p.withdrawn_funds == p.raised_funds {
                     <T as Config>::DepositHandler::return_deposit(p.deposit_id)?;
-                    CompletedProjects::<T>::try_mutate(project_account, |completed_projects| -> DispatchResult {
+                    CompletedProjects::<T>::try_mutate(&p.initiator, |completed_projects| -> DispatchResult {
                                 completed_projects.try_push(project_key).map_err(|_| Error::<T>::TooManyProjects)?;
                         Ok(())
                     })?;

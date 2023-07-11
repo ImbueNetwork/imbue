@@ -475,6 +475,65 @@ fn store_project_info_after_project_is_completed() {
 }
 
 #[test]
+fn store_too_many_projects_for_account() {
+    build_test_externality().execute_with(|| {
+        let max = <Test as Config>::MaxProjectsPerAccount::get();
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(1);
+        let milestone_key = 0;
+        (0..=max).for_each(|i| {
+            if i != max {
+                let project_key = create_project::<Test>(
+                    *ALICE,
+                    cont.clone(),
+                    prop_milestones.clone(),
+                    CurrencyId::Native,
+                );
+                let _ =
+                    Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key.clone(), milestone_key)
+                        .unwrap();
+                let _ = Proposals::vote_on_milestone(
+                    RuntimeOrigin::signed(*BOB),
+                    project_key.clone(),
+                    milestone_key,
+                    true,
+                ).unwrap();
+                assert_ok!(Proposals::withdraw(
+              RuntimeOrigin::signed(*ALICE),
+               project_key.clone()
+        ));
+            } else {
+
+                let project_key = create_project::<Test>(
+                    *ALICE,
+                    cont.clone(),
+                    prop_milestones.clone(),
+                    CurrencyId::Native,
+                );
+                let _ =
+                    Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key.clone(), milestone_key)
+                        .unwrap();
+                let _ = Proposals::vote_on_milestone(
+                    RuntimeOrigin::signed(*BOB),
+                    project_key.clone(),
+                    milestone_key,
+                    true,
+                ).unwrap();
+
+                assert_noop!(
+                    Proposals::withdraw(
+                    RuntimeOrigin::signed(*ALICE),
+                    project_key.clone()
+                    ),
+                    Error::<Test>::TooManyProjects
+                );
+            }
+        })
+    });
+}
+
+
+#[test]
 fn withdraw_takes_imbue_fee() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB], 100_000);
