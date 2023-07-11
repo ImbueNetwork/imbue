@@ -1,4 +1,3 @@
-use crate::mock::*;
 #[allow(unused)]
 use crate::*;
 use common_types::CurrencyId;
@@ -39,10 +38,10 @@ mod v0 {
 // Migrate the proposed milestones to use Percent over a u32.
 // Add a deposit id to BriefData.
 // Should be run with pallet_proposals::migrations::v3
-mod v1 {
+pub(crate) mod v1 {
     use super::*;
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
-        if Pallet::<T>::on_chain_storage_version() == 0 {
+        if crate::StorageVersion::<T>::get() == Release::V0 {
             crate::Briefs::<T>::translate(|_, brief: v0::BriefDataV0<T>| {
                 *weight += T::DbWeight::get().reads_writes(2, 1);
                 let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief
@@ -81,7 +80,7 @@ mod v1 {
                 }
             })
         }
-	    StorageVersion::new(1).put::<Pallet::<T>>();
+	    crate::StorageVersion::<T>::put(Release::V1)
     }
 
     #[test]
