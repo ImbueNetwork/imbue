@@ -3,9 +3,9 @@ use common_types::CurrencyId;
 use frame_support::{pallet_prelude::*, storage_alias, traits::Get, weights::Weight};
 pub use pallet::*;
 use pallet_proposals::ProposedMilestone;
+use sp_arithmetic::Percent;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
-use sp_arithmetic::Percent;
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
@@ -79,16 +79,14 @@ pub(crate) mod v1 {
                 }
             })
         }
-	    crate::StorageVersion::<T>::put(Release::V1)
+        crate::StorageVersion::<T>::put(Release::V1)
     }
-
-
 }
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::mock::{build_test_externality, Test, ALICE, BOB, CHARLIE};
     use sp_arithmetic::Percent;
-    use crate::mock::{ALICE, BOB, CHARLIE, build_test_externality, Test};
     use sp_core::H256;
 
     #[test]
@@ -105,8 +103,8 @@ mod test {
                     percentage_to_unlock: 20u32,
                 },
             ]
-                .try_into()
-                .expect("2 should be lower than bound");
+            .try_into()
+            .expect("2 should be lower than bound");
 
             let old_brief = v0::BriefDataV0 {
                 brief_owners: vec![*ALICE, *BOB]

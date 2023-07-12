@@ -90,6 +90,7 @@ pub mod pallet {
         /// The type responisble for handling refunds.
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
         type MaxMilestonesPerProject: Get<u32>;
+        type MaxProjectsPerAccount: Get<u32>;
         /// Imbue fee in percent 0-99
         type ImbueFee: Get<Percent>;
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
@@ -128,6 +129,16 @@ pub mod pallet {
         MilestoneKey,
         Vote<BalanceOf<T>>,
         OptionQuery,
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn completed_projects)]
+    pub type CompletedProjects<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        AccountIdOf<T>,
+        BoundedVec<ProjectKey, <T as Config>::MaxProjectsPerAccount>,
+        ValueQuery,
     >;
 
     /// This holds the votes when a no confidence round is raised.
@@ -249,6 +260,8 @@ pub mod pallet {
         TooManyContributions,
         /// There are too many milestones.
         TooManyMilestones,
+        /// There are too many projects for a given account
+        TooManyProjects,
     }
 
     #[pallet::hooks]
@@ -415,13 +428,14 @@ pub mod pallet {
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
                     acc.saturating_add(x.value)
                 });
-                
+
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
 
             match funding_type {
                 FundingType::Proposal | FundingType::Brief => {
                     for (acc, cont) in contributions.iter() {
-                        let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
+                        let project_account_id =
+                            crate::Pallet::<T>::project_account_id(project_key);
                         <<T as Config>::MultiCurrency as MultiReservableCurrency<
                             AccountIdOf<T>,
                         >>::unreserve(currency_id, acc, cont.value);
@@ -451,8 +465,9 @@ pub mod pallet {
                 milestone_key = milestone_key.saturating_add(1);
             }
 
-            let bounded_contributions: ContributionsFor<T> =
-                contributions.try_into().map_err(|_| Error::<T>::TooManyContributions)?;
+            let bounded_contributions: ContributionsFor<T> = contributions
+                .try_into()
+                .map_err(|_| Error::<T>::TooManyContributions)?;
 
             let project: Project<T> = Project {
                 milestones,

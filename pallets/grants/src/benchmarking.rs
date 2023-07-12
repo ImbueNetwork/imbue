@@ -30,13 +30,15 @@ mod benchmarks {
         let amount_requested = 1_000_000u32.into();
 
         #[extrinsic_call]
-        create_and_convert(RawOrigin::Signed(submitter.clone()),
-        milestones,
-        approvers,
-        CurrencyId::Native,
-        amount_requested,
-        TreasuryOrigin::Kusama,
-        grant_id.clone());
+        create_and_convert(
+            RawOrigin::Signed(submitter.clone()),
+            milestones,
+            approvers,
+            CurrencyId::Native,
+            amount_requested,
+            TreasuryOrigin::Kusama,
+            grant_id.clone(),
+        );
     }
 
     impl_benchmark_test_suite!(Grants, crate::mock::new_test_ext(), crate::mock::Test);
@@ -83,4 +85,3 @@ fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
     ));
     user
 }
-

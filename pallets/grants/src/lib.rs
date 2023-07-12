@@ -31,10 +31,13 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
-    use sp_arithmetic::{per_things::Percent, traits::{One, Zero}};
+    use sp_arithmetic::{
+        per_things::Percent,
+        traits::{One, Zero},
+    };
+    use sp_core::H256;
     use sp_runtime::Saturating;
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
-    use sp_core::H256;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -69,11 +72,10 @@ pub mod pallet {
     #[pallet::storage]
     pub type GrantsSubmittedBy<T: Config> =
         StorageDoubleMap<_, Blake2_128, AccountIdOf<T>, Blake2_128, GrantId, (), ValueQuery>;
-    
+
     /// Used to check wether a grant_id has already been submitted.
     #[pallet::storage]
-    pub type GrantsSubmitted<T: Config> =
-        StorageMap<_, Blake2_128Concat, GrantId, (), ValueQuery>;
+    pub type GrantsSubmitted<T: Config> = StorageMap<_, Blake2_128Concat, GrantId, (), ValueQuery>;
 
     #[pallet::storage]
     pub type GrantCount<T: Config> = StorageValue<_, u32, ValueQuery>;
@@ -94,7 +96,7 @@ pub mod pallet {
             Release::V1
         }
     }
-    
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -147,22 +149,24 @@ pub mod pallet {
                     acc.saturating_add(x.percentage_to_unlock)
                 });
             ensure!(percentage_sum == One::one(), Error::<T>::MustSumTo100);
-            ensure!(!GrantsSubmitted::<T>::contains_key(grant_id), Error::<T>::GrantAlreadyExists);
+            ensure!(
+                !GrantsSubmitted::<T>::contains_key(grant_id),
+                Error::<T>::GrantAlreadyExists
+            );
 
             let mut contributions = BTreeMap::new();
-            let _ = 
-            assigned_approvers
-            .iter()
-            .map(|approver_id| {
-                contributions.insert(
-                    approver_id.clone(),
-                    Contribution {
-                        value: amount_requested / (assigned_approvers.len() as u32).into(),
-                        timestamp: frame_system::Pallet::<T>::block_number(),
-                    },
-                )
-            })
-            .collect::<Vec<_>>();
+            let _ = assigned_approvers
+                .iter()
+                .map(|approver_id| {
+                    contributions.insert(
+                        approver_id.clone(),
+                        Contribution {
+                            value: amount_requested / (assigned_approvers.len() as u32).into(),
+                            timestamp: frame_system::Pallet::<T>::block_number(),
+                        },
+                    )
+                })
+                .collect::<Vec<_>>();
 
             <T as Config>::IntoProposal::convert_to_proposal(
                 currency_id,
@@ -175,9 +179,12 @@ pub mod pallet {
                 FundingType::Grant(treasury_origin),
             )?;
 
-            GrantsSubmittedBy::<T>::insert(&submitter, &grant_id, ());
-            GrantsSubmitted::<T>::insert(&grant_id, ());
-            Self::deposit_event(Event::<T>::GrantSubmitted{grant_id, submitter});
+            GrantsSubmittedBy::<T>::insert(&submitter, grant_id, ());
+            GrantsSubmitted::<T>::insert(grant_id, ());
+            Self::deposit_event(Event::<T>::GrantSubmitted {
+                grant_id,
+                submitter,
+            });
             Ok(().into())
         }
     }

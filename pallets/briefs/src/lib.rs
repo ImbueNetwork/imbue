@@ -26,7 +26,7 @@ mod migrations;
 pub mod pallet {
     use super::*;
     use common_types::{milestone_origin::FundingType, CurrencyId};
-    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::{Get}, BoundedBTreeMap};
+    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
@@ -59,7 +59,6 @@ pub mod pallet {
         <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
     pub type BriefHash = H256;
-   
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -179,7 +178,6 @@ pub mod pallet {
             weight
         }
     }
-
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
