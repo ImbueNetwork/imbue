@@ -133,9 +133,13 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn completed_projects)]
-    pub type CompletedProjects<T: Config> = StorageMap<_, Twox64Concat, AccountIdOf<T>, BoundedVec<ProjectKey,  <T as Config>::MaxProjectsPerAccount>, ValueQuery>;
-
-
+    pub type CompletedProjects<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        AccountIdOf<T>,
+        BoundedVec<ProjectKey, <T as Config>::MaxProjectsPerAccount>,
+        ValueQuery,
+    >;
 
     /// This holds the votes when a no confidence round is raised.
     #[pallet::storage]
@@ -424,7 +428,7 @@ pub mod pallet {
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
                     acc.saturating_add(x.value)
                 });
-                
+
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
 
             match funding_type {
@@ -432,7 +436,7 @@ pub mod pallet {
                     for (acc, cont) in contributions.iter() {
                         <T as Config>::MultiCurrency::repatriate_reserved(
                             currency_id,
-                            &acc,
+                            acc,
                             &project_account_id,
                             cont.value,
                             BalanceStatus::Free,
@@ -457,8 +461,9 @@ pub mod pallet {
                 milestone_key = milestone_key.saturating_add(1);
             }
 
-            let bounded_contributions: ContributionsFor<T> =
-                contributions.try_into().map_err(|_| Error::<T>::TooManyContributions)?;
+            let bounded_contributions: ContributionsFor<T> = contributions
+                .try_into()
+                .map_err(|_| Error::<T>::TooManyContributions)?;
 
             let project: Project<T> = Project {
                 milestones,

@@ -1,13 +1,8 @@
-
-use crate::*;
-pub use pallet::*;
-use frame_support::{
-    pallet_prelude::*,
-    storage_alias,
-    weights::Weight
-};
-use common_types::{CurrencyId, TreasuryOrigin};
 use crate::mock::*;
+use crate::*;
+use common_types::{CurrencyId, TreasuryOrigin};
+use frame_support::{pallet_prelude::*, storage_alias, weights::Weight};
+pub use pallet::*;
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
@@ -35,7 +30,8 @@ mod v0 {
     }
 
     #[storage_alias]
-    pub type PendingGrants<T: Config> = StorageMap<Pallet<T>, Blake2_128, GrantId, GrantV0<T>, OptionQuery>;
+    pub type PendingGrants<T: Config> =
+        StorageMap<Pallet<T>, Blake2_128, GrantId, GrantV0<T>, OptionQuery>;
 }
 
 #[allow(unused)]
@@ -59,7 +55,8 @@ mod v1 {
     }
 
     #[storage_alias]
-    pub type PendingGrants<T: Config> = StorageMap<Pallet<T>, Blake2_128Concat, GrantId, v1::Grant<T>, OptionQuery>;
+    pub type PendingGrants<T: Config> =
+        StorageMap<Pallet<T>, Blake2_128Concat, GrantId, v1::Grant<T>, OptionQuery>;
 
     pub fn rococo_migrate_to_v1<T: Config>(weight: &mut Weight) {
         // This is only for rococo so just clear the lot, (there were only 4 at time of writing)

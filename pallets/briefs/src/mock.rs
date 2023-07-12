@@ -261,7 +261,6 @@ impl pallet_proposals::Config for Test {
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-
 }
 parameter_types! {
     pub const BasicDeposit: u64 = 10;

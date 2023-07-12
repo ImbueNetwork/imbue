@@ -118,7 +118,7 @@ pub mod constants {
     /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used by
     /// Operational  extrinsics.
     pub const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
-    
+
     /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
     /// by  Operational  extrinsics.
     /// We allow for .5 seconds of compute with a 12 second average block time.
@@ -126,7 +126,6 @@ pub mod constants {
         WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
         cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
     );
-
 }
 
 pub mod parachains {

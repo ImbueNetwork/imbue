@@ -392,15 +392,16 @@ fn withdraw_only_transfers_approved_milestones() {
         ));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(per_contribution * 2 / 10);
-        // total_contribution / number of milestones - fee 
-        let alice_expected_balance = alice_before + ((per_contribution * 2 / 10) as u64) - expected_fee as u64;
+        // total_contribution / number of milestones - fee
+        let alice_expected_balance =
+            alice_before + ((per_contribution * 2 / 10) as u64) - expected_fee as u64;
         assert_eq!(
             alice_after, alice_expected_balance,
             "Alice account is not the expected balance"
         );
 
         let project_account = crate::Pallet::<Test>::project_account_id(project_key);
-        
+
         assert_eq!(
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &project_account),
             180_000,
@@ -455,7 +456,7 @@ fn store_project_info_after_project_is_completed() {
             milestone_key,
             true,
         )
-            .unwrap();
+        .unwrap();
         assert!(Projects::<Test>::get(project_key).is_some());
         assert_ok!(Proposals::withdraw(
             RuntimeOrigin::signed(*ALICE),
@@ -463,8 +464,8 @@ fn store_project_info_after_project_is_completed() {
         ));
 
         if let Some((_account, projects)) = CompletedProjects::<Test>::iter().next() {
-            assert_eq!(projects.len(),1);
-            assert_eq!(projects.contains(&project_key),true);
+            assert_eq!(projects.len(), 1);
+            assert_eq!(projects.contains(&project_key), true);
         }
     });
 }
@@ -483,34 +484,34 @@ fn store_too_many_projects_for_account() {
                 prop_milestones.clone(),
                 CurrencyId::Native,
             );
-            let _ =
-                Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key.clone(), milestone_key)
-                    .unwrap();
+            let _ = Proposals::submit_milestone(
+                RuntimeOrigin::signed(*ALICE),
+                project_key.clone(),
+                milestone_key,
+            )
+            .unwrap();
             let _ = Proposals::vote_on_milestone(
                 RuntimeOrigin::signed(*BOB),
                 project_key.clone(),
                 milestone_key,
                 true,
-            ).unwrap();
+            )
+            .unwrap();
 
             if i != max {
                 assert_ok!(Proposals::withdraw(
-              RuntimeOrigin::signed(*ALICE),
-               project_key.clone()
-        ));
-            } else {
-                assert_noop!(
-                    Proposals::withdraw(
                     RuntimeOrigin::signed(*ALICE),
                     project_key.clone()
-                    ),
+                ));
+            } else {
+                assert_noop!(
+                    Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key.clone()),
                     Error::<Test>::TooManyProjects
                 );
             }
         })
     });
 }
-
 
 #[test]
 fn withdraw_takes_imbue_fee() {
@@ -769,7 +770,7 @@ fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
             true,
         )
         .unwrap();
-        
+
         assert_ok!(Proposals::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key

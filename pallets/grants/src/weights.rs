@@ -30,5 +30,5 @@ impl WeightInfo for () {
             .saturating_add(Weight::from_proof_size(10360))
             .saturating_add(RocksDbWeight::get().reads(5))
             .saturating_add(RocksDbWeight::get().writes(7))
-        }
+    }
 }
