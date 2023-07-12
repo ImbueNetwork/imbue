@@ -187,7 +187,7 @@ parameter_types! {
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItems = StorageItems::Project;
-    pub MaxProjectsPerAccount: u32 = 50;
+    pub MaxProjectsPerAccount: u16 = 50;
 }
 
 impl pallet_proposals::Config for Test {
