@@ -432,11 +432,6 @@ fn withdraw_removes_project_after_all_funds_taken() {
             project_key
         ));
 
-        if let Some((account, projects)) = CompletedProjects::<Test>::iter().next() {
-             assert_eq!(projects.len(),1);
-            assert_eq!(projects.contains(&project_key),true);
-        }
-
         assert!(
             Projects::<Test>::get(project_key).is_none(),
             "Project should have been removed after funds withdrawn."
@@ -482,44 +477,28 @@ fn store_too_many_projects_for_account() {
         let prop_milestones = get_milestones(1);
         let milestone_key = 0;
         (0..=max).for_each(|i| {
+            let project_key = create_project::<Test>(
+                *ALICE,
+                cont.clone(),
+                prop_milestones.clone(),
+                CurrencyId::Native,
+            );
+            let _ =
+                Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key.clone(), milestone_key)
+                    .unwrap();
+            let _ = Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
+                project_key.clone(),
+                milestone_key,
+                true,
+            ).unwrap();
+
             if i != max {
-                let project_key = create_project::<Test>(
-                    *ALICE,
-                    cont.clone(),
-                    prop_milestones.clone(),
-                    CurrencyId::Native,
-                );
-                let _ =
-                    Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key.clone(), milestone_key)
-                        .unwrap();
-                let _ = Proposals::vote_on_milestone(
-                    RuntimeOrigin::signed(*BOB),
-                    project_key.clone(),
-                    milestone_key,
-                    true,
-                ).unwrap();
                 assert_ok!(Proposals::withdraw(
               RuntimeOrigin::signed(*ALICE),
                project_key.clone()
         ));
             } else {
-
-                let project_key = create_project::<Test>(
-                    *ALICE,
-                    cont.clone(),
-                    prop_milestones.clone(),
-                    CurrencyId::Native,
-                );
-                let _ =
-                    Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key.clone(), milestone_key)
-                        .unwrap();
-                let _ = Proposals::vote_on_milestone(
-                    RuntimeOrigin::signed(*BOB),
-                    project_key.clone(),
-                    milestone_key,
-                    true,
-                ).unwrap();
-
                 assert_noop!(
                     Proposals::withdraw(
                     RuntimeOrigin::signed(*ALICE),

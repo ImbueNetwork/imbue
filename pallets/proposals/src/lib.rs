@@ -256,7 +256,7 @@ pub mod pallet {
         TooManyContributions,
         /// There are too many milestones.
         TooManyMilestones,
-
+        /// There are too many projects for a given account
         TooManyProjects,
     }
 
