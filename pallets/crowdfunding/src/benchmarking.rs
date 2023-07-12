@@ -1,4 +1,4 @@
-//! Benchmarking setup for pallet-template
+//! Benchmarking setup for pallet-crowdfunding
 
 use super::*;
 use crate::Pallet as CrowdFunding;
