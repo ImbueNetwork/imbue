@@ -13,6 +13,7 @@ pub trait WeightInfo {
     fn create_brief() -> Weight;
     fn contribute_to_brief() -> Weight;
     fn commence_work() -> Weight;
+    fn cancel_brief() -> Weight;
 }
 
 /// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
@@ -41,6 +42,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(9))
             .saturating_add(T::DbWeight::get().writes(11))
     }
+    fn cancel_brief() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+    }
 }
 
 // For backwards compatibility and tests
@@ -67,5 +73,10 @@ impl WeightInfo for () {
             .saturating_add(Weight::from_proof_size(25420))
             .saturating_add(RocksDbWeight::get().reads(9))
             .saturating_add(RocksDbWeight::get().writes(11))
+    }
+    fn cancel_brief() -> Weight {
+        Weight::from_ref_time(49_000_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(2_u64))
+            .saturating_add(RocksDbWeight::get().writes(2_u64))
     }
 }

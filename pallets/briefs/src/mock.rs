@@ -215,7 +215,6 @@ parameter_types! {
 impl pallet_briefs::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Tokens;
-    type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;

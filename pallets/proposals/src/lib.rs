@@ -434,12 +434,15 @@ pub mod pallet {
             match funding_type {
                 FundingType::Proposal | FundingType::Brief => {
                     for (acc, cont) in contributions.iter() {
-                        <T as Config>::MultiCurrency::repatriate_reserved(
+                        let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
+                        <<T as Config>::MultiCurrency as MultiReservableCurrency<
+                            AccountIdOf<T>,
+                        >>::unreserve(currency_id, acc, cont.value);
+                        <T as Config>::MultiCurrency::transfer(
                             currency_id,
                             acc,
                             &project_account_id,
                             cont.value,
-                            BalanceStatus::Free,
                         )?;
                     }
                 }

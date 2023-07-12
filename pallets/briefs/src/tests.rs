@@ -5,7 +5,7 @@ use crate::*;
 
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::DispatchError::BadOrigin;
@@ -290,6 +290,100 @@ fn reserved_funds_are_transferred_to_project_kitty() {
         let project_id: AccountId = Proposals::project_account_id(1);
         let project_balance = Tokens::free_balance(CurrencyId::Native, &project_id);
         assert_eq!(project_balance, contribution_value);
+    });
+}
+
+#[test]
+fn cancel_brief_works() {
+    build_test_externality().execute_with(|| {
+        let brief_id = gen_hash(101);
+        let budget: Balance = 10000;
+        let initial_contribution: Balance = 5000;
+        let contribution: Balance = 1000;
+        let owners: BoundedVec<AccountId, MaxBriefOwners> =
+            vec![*ALICE, *CHARLIE].try_into().unwrap();
+
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*ALICE),
+            owners.clone(),
+            *BOB,
+            budget,
+            initial_contribution,
+            brief_id.clone(),
+            CurrencyId::Native,
+            get_milestones(10),
+        ));
+
+        assert_ok!(BriefsMod::contribute_to_brief(
+            RuntimeOrigin::signed(*CHARLIE),
+            brief_id,
+            contribution
+        ));
+
+        let alice_reserve_before =
+            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &*ALICE);
+        let charlie_reserve_before =
+            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &*CHARLIE);
+
+        assert_ok!(BriefsMod::cancel_brief(
+            RuntimeOrigin::signed(*CHARLIE),
+            brief_id
+        ));
+
+        let latest_event = <frame_system::Pallet<Test>>::events()
+            .pop()
+            .expect("Expected at least one RuntimeEventRecord to be found")
+            .event;
+
+        assert_eq!(
+            latest_event,
+            mock::RuntimeEvent::from(briefs::Event::BriefCanceled(brief_id))
+        );
+
+        let alice_reserve_after =
+            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &*ALICE);
+        let charlie_reserve_after =
+            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &*CHARLIE);
+
+        assert_eq!(
+            alice_reserve_after + initial_contribution,
+            alice_reserve_before
+        );
+        assert_eq!(charlie_reserve_after + contribution, charlie_reserve_before);
+    });
+}
+
+#[test]
+fn cancel_brief_brief_not_found() {
+    build_test_externality().execute_with(|| {
+        assert_noop!(
+            BriefsMod::cancel_brief(RuntimeOrigin::signed(*ALICE), gen_hash(2)),
+            Error::<Test>::BriefNotFound
+        );
+    });
+}
+
+#[test]
+fn cancel_brief_not_brief_owner() {
+    build_test_externality().execute_with(|| {
+        let brief_id = gen_hash(101);
+        let contribution_value: Balance = 10000;
+
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(*BOB),
+            tests::get_brief_owners(1),
+            *ALICE,
+            contribution_value,
+            contribution_value,
+            brief_id.clone(),
+            CurrencyId::Native,
+            get_milestones(10),
+        ));
+
+        assert_noop!(
+            BriefsMod::cancel_brief(RuntimeOrigin::signed(*ALICE), brief_id),
+            Error::<Test>::MustBeBriefOwner
+        );
     });
 }
 
