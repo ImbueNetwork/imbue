@@ -1,13 +1,11 @@
-use crate::mock::*;
-#[allow(unused)]
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::{pallet_prelude::*, storage_alias, traits::Get, weights::Weight};
 pub use pallet::*;
 use pallet_proposals::ProposedMilestone;
-use sp_arithmetic::Percent;
-use sp_core::H256;
 use sp_std::convert::TryInto;
+use sp_std::vec::Vec;
+use sp_arithmetic::Percent;
 
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
@@ -39,47 +37,59 @@ mod v0 {
 // Migrate the proposed milestones to use Percent over a u32.
 // Add a deposit id to BriefData.
 // Should be run with pallet_proposals::migrations::v3
-mod v1 {
+pub(crate) mod v1 {
     use super::*;
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
-        crate::Briefs::<T>::translate(|_, brief: v0::BriefDataV0<T>| {
-            *weight += T::DbWeight::get().reads_writes(2, 1);
-            let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief
-                .milestones
-                .iter()
-                .map(|ms| {
-                    let convert: Result<u8, _> = ms.percentage_to_unlock.try_into();
-                    if let Ok(n) = convert {
-                        Some(ProposedMilestone {
-                            percentage_to_unlock: Percent::from_percent(n),
-                        })
-                    } else {
-                        None
-                    }
-                })
-                .flatten()
-                .collect::<Vec<ProposedMilestone>>()
-                .try_into();
+        if crate::StorageVersion::<T>::get() == Release::V0 {
+            crate::Briefs::<T>::translate(|_, brief: v0::BriefDataV0<T>| {
+                *weight += T::DbWeight::get().reads_writes(2, 1);
+                let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief
+                    .milestones
+                    .iter()
+                    .map(|ms| {
+                        let convert: Result<u8, _> = ms.percentage_to_unlock.try_into();
+                        if let Ok(n) = convert {
+                            Some(ProposedMilestone {
+                                percentage_to_unlock: Percent::from_percent(n),
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                    .flatten()
+                    .collect::<Vec<ProposedMilestone>>()
+                    .try_into();
 
-            if let Ok(milestones) = maybe_milestones {
-                if milestones.len() != brief.milestones.len() {
-                    return None;
+                if let Ok(milestones) = maybe_milestones {
+                    if milestones.len() != brief.milestones.len() {
+                        return None;
+                    }
+                    Some(crate::BriefData {
+                        brief_owners: brief.brief_owners,
+                        budget: brief.budget,
+                        currency_id: brief.currency_id,
+                        created_at: brief.created_at,
+                        applicant: brief.applicant,
+                        milestones,
+                        // A deposit_id of U32::Max is skipped and not returned.
+                        deposit_id: u32::MAX.into(),
+                    })
+                } else {
+                    None
                 }
-                Some(crate::BriefData {
-                    brief_owners: brief.brief_owners,
-                    budget: brief.budget,
-                    currency_id: brief.currency_id,
-                    created_at: brief.created_at,
-                    applicant: brief.applicant,
-                    milestones,
-                    // A deposit_id of U32::Max is skipped and not returned.
-                    deposit_id: u32::MAX.into(),
-                })
-            } else {
-                None
-            }
-        })
+            })
+        }
+	    crate::StorageVersion::<T>::put(Release::V1)
     }
+
+
+}
+#[cfg(test)]
+mod test {
+    use super::*;
+    use sp_arithmetic::Percent;
+    use crate::mock::{ALICE, BOB, CHARLIE, build_test_externality, Test};
+    use sp_core::H256;
 
     #[test]
     fn migrate_v0_to_v1() {
@@ -95,8 +105,8 @@ mod v1 {
                     percentage_to_unlock: 20u32,
                 },
             ]
-            .try_into()
-            .expect("2 should be lower than bound");
+                .try_into()
+                .expect("2 should be lower than bound");
 
             let old_brief = v0::BriefDataV0 {
                 brief_owners: vec![*ALICE, *BOB]
