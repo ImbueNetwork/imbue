@@ -1,5 +1,5 @@
 [package]
-name = "runtime-api"
+name = "pallet-proposals-rpc-runtime-api"
 version = "0.1.0"
 edition = "2021"
 
