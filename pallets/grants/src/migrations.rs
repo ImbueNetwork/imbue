@@ -1,4 +1,3 @@
-use crate::mock::*;
 use crate::*;
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::{pallet_prelude::*, storage_alias, weights::Weight};
@@ -60,27 +59,25 @@ mod v1 {
 
     pub fn rococo_migrate_to_v1<T: Config>(weight: &mut Weight) {
         // This is only for rococo so just clear the lot, (there were only 4 at time of writing)
-        let limit: u32 = 10;
-        *weight += T::DbWeight::get().reads_writes(limit.into(), limit.into());
-        let _ = v0::PendingGrants::<T>::clear(limit, None);
+        if crate::StorageVersion::<T>::get() == Release::V0 {
+            let limit: u32 = 10;
+            *weight += T::DbWeight::get().reads_writes(limit.into(), limit.into());
+            let _ = v0::PendingGrants::<T>::clear(limit, None);
+            crate::StorageVersion::<T>::put(Release::V1);
+        }
     }
 }
 
 #[allow(unused)]
 #[allow(dead_code)]
-mod v2 {
+pub(crate) mod v2 {
     use super::*;
     // We are not storing pending grants anymore and grants are going directly into projects.
-    pub fn remove_all_grants<T: Config>(weight: &mut Weight, limit: u32) {
-        *weight += T::DbWeight::get().reads_writes(limit.into(), limit.into());
-        let _ = v1::PendingGrants::<T>::clear(limit, None);
-    }
-
-    #[test]
-    fn migrate_converted() {
-        new_test_ext().execute_with(|| {
-            //insert a grant.
-            // ensure its been removed.
-        })
+    pub fn migrate_to_v2<T: Config>(weight: &mut Weight, limit: u32) {
+        if crate::StorageVersion::<T>::get() == Release::V1 {
+            *weight += T::DbWeight::get().reads_writes(limit.into(), limit.into());
+            let _ = v1::PendingGrants::<T>::clear(limit, None);
+            crate::StorageVersion::<T>::put(Release::V2);
+        }
     }
 }

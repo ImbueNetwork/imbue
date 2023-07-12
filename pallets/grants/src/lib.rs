@@ -17,8 +17,8 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
-#[cfg(test)]
 mod migrations;
+pub use migrations::v2::*;
 
 pub mod weights;
 pub use weights::*;
@@ -31,7 +31,10 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
-    use sp_arithmetic::{per_things::Percent, traits::One};
+    use sp_arithmetic::{
+        per_things::Percent,
+        traits::{One, Zero},
+    };
     use sp_core::H256;
     use sp_runtime::Saturating;
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
@@ -77,6 +80,23 @@ pub mod pallet {
     #[pallet::storage]
     pub type GrantCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
+    #[pallet::storage]
+    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+        V2,
+    }
+
+    impl Default for Release {
+        fn default() -> Release {
+            Release::V1
+        }
+    }
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -96,6 +116,15 @@ pub mod pallet {
         GrantAlreadyExists,
         /// There are too many milestones.
         TooManyMilestones,
+    }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight: Weight = Zero::zero();
+            crate::migrations::v2::migrate_to_v2::<T>(&mut weight, 50);
+            weight
+        }
     }
 
     #[pallet::call]

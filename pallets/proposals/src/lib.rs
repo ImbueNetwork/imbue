@@ -7,7 +7,7 @@ use frame_support::{
     traits::EnsureOrigin, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
 use scale_info::TypeInfo;
@@ -434,7 +434,8 @@ pub mod pallet {
             match funding_type {
                 FundingType::Proposal | FundingType::Brief => {
                     for (acc, cont) in contributions.iter() {
-                        let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
+                        let project_account_id =
+                            crate::Pallet::<T>::project_account_id(project_key);
                         <<T as Config>::MultiCurrency as MultiReservableCurrency<
                             AccountIdOf<T>,
                         >>::unreserve(currency_id, acc, cont.value);

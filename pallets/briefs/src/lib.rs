@@ -20,7 +20,6 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
-#[cfg(test)]
 mod migrations;
 
 #[frame_support::pallet]
@@ -107,6 +106,22 @@ pub mod pallet {
     pub type BriefContributions<T> =
         StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
 
+    #[pallet::storage]
+    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+    }
+
+    impl Default for Release {
+        fn default() -> Release {
+            Release::V0
+        }
+    }
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -153,6 +168,15 @@ pub mod pallet {
         FreelancerApprovalRequired,
         /// Milestones total do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
+    }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight: Weight = Zero::zero();
+            migrations::v1::migrate_to_v1::<T>(&mut weight);
+            weight
+        }
     }
 
     #[pallet::call]
