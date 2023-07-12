@@ -76,13 +76,13 @@ pub mod pallet {
         type MaxMilestonesPerCrowdFund: Get<u32>;
         /// The maximum number of whitelist spots in a crowdfund.
         type MaxWhitelistPerCrowdFund: Get<u32>;
-        /// Define wether a decent identity is required when creating a crowdfund.
+        /// Define whether a decent identity is required when creating a crowdfund.
         type IsIdentityRequired: Get<bool>;
-        /// The authority responisble for governance actions.
+        /// The authority responsible for governance actions.
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// The type that converts a crowdfund into a project and allows milestone submission.
         type IntoProposals: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
-        /// The type reponsible for handling storage deposits.
+        /// The type responsible for handling storage deposits.
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that the deposit fee will be calculated from.
         type CrowdFundStorageItem: Get<StorageItemOf<Self>>;
