@@ -42,11 +42,12 @@ where
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
     C::Api: BlockBuilder<Block>,
+    C::Api: pallet_proposals_rpc::ProposalsRuntimeApi<AccountId>,
     P: TransactionPool + Sync + Send + 'static,
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
     use substrate_frame_rpc_system::{System, SystemApiServer};
-    
+    use pallet_proposals_rpc::{Proposals, ProposalsApiServer};
 
     let mut module = RpcExtension::new(());
     let FullDeps {
@@ -57,5 +58,6 @@ where
 
     module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
     module.merge(TransactionPayment::new(client).into_rpc())?;
+    module.merge(Proposals::new(client).into_rpc())?;
     Ok(module)
 }

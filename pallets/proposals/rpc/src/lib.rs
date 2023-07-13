@@ -1,28 +1,28 @@
 
+use pallet_proposals_runtime_api::ProposalsApi as ProposalsRuntimeApi; 
 use codec::{Codec, Decode};
 use jsonrpsee::{
 	core::{Error as JsonRpseeError, RpcResult},
 	proc_macros::rpc,
-	types::error::{CallError, ErrorCode, ErrorObject},
+	types::error::{CallError, ErrorObject},
 };
-use pallet_transaction_payment_rpc_runtime_api::{FeeDetails, InclusionFee, RuntimeDispatchInfo};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_core::Bytes;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::traits::{Block as BlockT, MaybeDisplay};
+use sp_runtime::traits::{Block as BlockT};
+use frame_system::Config;
+use std::sync::Arc;
 
 #[rpc(client, server)]
 pub trait ProposalsApi<AccountId> {
-	#[method(name = "getProjectKitty")]
-	fn get_project_account_by_id(project_id: u32) -> AccountId;
+	#[method(name = "proposals_getProjectKitty")]
+	fn get_project_account_by_id(project_id: u32) -> RpcResult<AccountId>;
 }
 
-/// Provides RPC methods to query a dispatchable's class, weight and fee.
-pub struct Proposals<C, P> {
+pub struct Proposals<C, B> {
 	/// Shared reference to the client.
 	client: Arc<C>,
-	_marker: std::marker::PhantomData<P>,
+	_marker: std::marker::PhantomData<B>,
 }
 
 impl<C, P> Proposals<C, P> {
@@ -48,14 +48,29 @@ impl From<Error> for i32 {
 	}
 }
 
-impl<C, AccountId>
-	ProposalsApiServer<
-		AccountId,
-	> for Proposals<C, Block>
-where
-	Block: BlockT,
-	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + Send + Sync + 'static,
+#[async_trait]
+impl<C, B, AccountId>
+	ProposalsApiServer<AccountId> for Proposals<C, B>
+where 
+	C: sp_api::ProvideRuntimeApi<B>,
+	C: HeaderBackend<B>,
+	C: Send + Sync + 'static,
 	C::Api: ProposalsRuntimeApi<AccountId>,
+	Block: BlockT,
+	AccountId: Clone + Display + Codec + Send + 'static,
 {
+	fn get_project_account_by_id(&self, project_id: u32) -> RpcResult<AccountId> {
+		let api = self.client.runtime_api();
+		api.get_project_account_by_id(project_id).map_err(runtime_error_into_rpc_err)
+	}
+}
 
+/// Converts a runtime trap into an RPC error.
+fn runtime_error_into_rpc_err(err: impl std::fmt::Debug) -> JsonRpseeError {
+	CallError::Custom(ErrorObject::owned(
+		Error::RuntimeError,
+		"Could not generate the account_id for the given project_id",
+		Some(format!("{:?}", err)),
+	))
+	.into()
 }
