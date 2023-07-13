@@ -10,7 +10,6 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 
-use crate::xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 use common_runtime::storage_deposits::StorageDepositItems;
 use pallet_collective::EnsureProportionAtLeast;
 use pallet_deposits::traits::DepositCalculator;
@@ -19,8 +18,7 @@ use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, Perbill, Permill,
-    DispatchError,
+    ApplyExtrinsicResult, DispatchError, Perbill, Permill,
 };
 use sp_std::{
     cmp::Ordering,
@@ -62,6 +60,7 @@ use orml_traits::parameter_type_with_key;
 pub use common_runtime::{
     asset_registry::AuthorityOrigin,
     common_xcm::general_key,
+    constants::MAXIMUM_BLOCK_WEIGHT,
     xcm_fees::{default_per_second, ksm_per_second, native_per_second, WeightToFee},
 };
 pub use common_types::{CurrencyId, CustomMetadata};
@@ -96,7 +95,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 1037,
+    spec_version: 1038,
     impl_version: 2,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -111,14 +110,6 @@ pub fn native_version() -> NativeVersion {
         can_author_with: Default::default(),
     }
 }
-
-/// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
-/// by  Operational  extrinsics.
-/// We allow for .5 seconds of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
-    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-    cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
-);
 
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
@@ -243,6 +234,8 @@ impl pallet_balances::Config for Runtime {
     type Balance = Balance;
     /// Handler for the unbalanced reduction when removing a dust account.
     type DustRemoval = ();
+    /// The overarching event type.
+
     /// The minimum amount required to keep an account open.
     type ExistentialDeposit = NativeTokenTransferFee;
     /// The means of storing the balances of an account.
@@ -782,6 +775,7 @@ parameter_types! {
     pub const ExpiringProjectRoundsPerBlock: u32 = 50;
     pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
     pub const MaxMilestonesPerProject: u32 = 50;
+    pub const MaxProjectsPerAccount: u16 = u16::MAX;
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -793,7 +787,7 @@ impl pallet_proposals::Config for Runtime {
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type WeightInfo = ();
+    type WeightInfo = pallet_proposals::weights::SubstrateWeight<Self>;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
@@ -801,6 +795,7 @@ impl pallet_proposals::Config for Runtime {
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = Deposits;
+    type MaxProjectsPerAccount = MaxProjectsPerAccount;
 }
 
 parameter_types! {
@@ -814,11 +809,8 @@ impl pallet_grants::Config for Runtime {
     type MaxMilestonesPerGrant = MaxMilestonesPerProject;
     type MaxApprovers = MaxApprovers;
     type RMultiCurrency = Currencies;
-    type GrantStorageItem = GrantStorageItem;
-    type DepositHandler = Deposits;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
-    type CancellingAuthority = AdminOrigin;
-    type WeightInfo = ();
+    type WeightInfo = pallet_grants::weights::SubstrateWeight<Self>;
 }
 
 parameter_types! {
@@ -831,12 +823,11 @@ parameter_types! {
 impl pallet_briefs::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Currencies;
-    type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
-    type WeightInfo = ();
+    type WeightInfo = pallet_briefs::weights::SubstrateWeight<Self>;
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = Deposits;
 }
@@ -845,9 +836,12 @@ pub type DepositId = u64;
 pub struct ImbueDepositCalculator;
 impl DepositCalculator<Balance> for ImbueDepositCalculator {
     type StorageItem = StorageDepositItems;
-    fn calculate_deposit(u: Self::StorageItem, currency: CurrencyId) -> Result<Balance, DispatchError> {
+    fn calculate_deposit(
+        u: Self::StorageItem,
+        currency: CurrencyId,
+    ) -> Result<Balance, DispatchError> {
         if currency != CurrencyId::Native {
-            return Err(pallet_deposits::pallet::Error::<Runtime>::UnsupportedCurrencyType.into())
+            return Err(pallet_deposits::pallet::Error::<Runtime>::UnsupportedCurrencyType.into());
         }
         Ok(match u {
             StorageDepositItems::Project => DOLLARS.saturating_mul(500),
@@ -1009,7 +1003,7 @@ impl_runtime_apis! {
         }
     }
 
-   impl sp_api::Metadata<Block> for Runtime {
+    impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
             OpaqueMetadata::new(Runtime::metadata().into())
         }
@@ -1114,6 +1108,11 @@ impl_runtime_apis! {
         }
     }
 
+    impl pallet_proposals::runtime_api::ProjectsApi<Block, AccountId> for Runtime {
+        fn get_project_account_by_id(project_id: u32) -> AccountId {
+            ImbueProposals::project_account_id(project_id)
+        }
+    }
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
@@ -1165,9 +1164,6 @@ impl_runtime_apis! {
             Ok(batches)
         }
     }
-
-
-
 }
 
 struct CheckInherents;

@@ -1,4 +1,3 @@
-
 use crate::*;
 use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
 pub use pallet::*;
@@ -84,7 +83,6 @@ mod v1 {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
 
         v1::Projects::<T>::translate(|_project_key, project: v0::ProjectV0Of<T>| {
-
             weight += T::DbWeight::get().reads_writes(1, 1);
 
             let mut migrated_contributions: BTreeMap<
@@ -140,6 +138,7 @@ mod v1 {
     }
 }
 
+#[allow(unused)]
 mod v2 {
     use super::*;
 
@@ -212,7 +211,7 @@ mod v2 {
             Some(migrated_project)
         });
         weight
-    }   
+    }
 }
 
 // 1. --DONE Use blocknumber instead of timestamp for contribution.
@@ -221,9 +220,10 @@ mod v2 {
 // 4. --DONE Milestone votes is now a double map (project_key, milestone_key) +
 // 5. --DONE Rounds is also a DoubleMap
 // 6. --DONE Round type has had contribution_round removed
-// 7, --DONE percent_to_unlock changed from u32 to Percent. (cuteolaf) 
-// 8  --DONE Project new field deposit_id 
-pub mod v3 {    
+// 7, --DONE percent_to_unlock changed from u32 to Percent. (cuteolaf)
+// 8  --DONE Project new field deposit_id
+// 9, --DONE Binding Contrbutions and milestones in project.
+pub mod v3 {
     use super::*;
 
     #[derive(Encode, Decode, Clone)]
@@ -243,7 +243,7 @@ pub mod v3 {
     pub fn migrate_contribution_and_project<T: Config + pallet_timestamp::Config>(
         weight: &mut Weight,
     ) {
-        // Migration #1 + #2 + #7
+        // Migration #1 + #2 + #7 + #8 + #9
         let mut migrated_contributions = BTreeMap::new();
         let mut migrated_milestones = BTreeMap::new();
 
@@ -261,7 +261,7 @@ pub mod v3 {
             project.milestones.iter().for_each(|(key, milestone)| {
                 *weight += T::DbWeight::get().reads_writes(1, 1);
                 migrated_milestones.insert(
-                    key.clone(),
+                    *key,
                     Milestone {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,
@@ -272,22 +272,34 @@ pub mod v3 {
                     },
                 );
             });
-            *weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: Project<T> =
-                Project {
-                    milestones: migrated_milestones.clone(),
-                    contributions: migrated_contributions.clone(),
-                    currency_id: project.currency_id,
-                    withdrawn_funds: project.withdrawn_funds,
-                    initiator: project.initiator,
-                    created_on: project.created_on,
-                    agreement_hash: Default::default(),
-                    cancelled: project.cancelled,
-                    raised_funds: project.raised_funds,
-                    funding_type: FundingType::Proposal,
-                    deposit_id: Zero::zero(),
-                };
-            Some(migrated_project)
+            let bounded_milestone: Result<BoundedBTreeMilestones<T>, _> =
+                migrated_milestones.clone().try_into();
+            let bounded_contributions: Result<ContributionsFor<T>, _> =
+                migrated_contributions.clone().try_into();
+            if let Ok(ms) = bounded_milestone {
+                if let Ok(cont) = bounded_contributions {
+                    *weight += T::DbWeight::get().reads_writes(1, 1);
+                    let migrated_project: Project<T> = Project {
+                        milestones: ms,
+                        contributions: cont,
+                        currency_id: project.currency_id,
+                        withdrawn_funds: project.withdrawn_funds,
+                        initiator: project.initiator,
+                        created_on: project.created_on,
+                        agreement_hash: Default::default(),
+                        cancelled: project.cancelled,
+                        raised_funds: project.raised_funds,
+                        funding_type: FundingType::Proposal,
+                        // A deposit_id of u32::MAX is ignored.
+                        deposit_id: u32::MAX.into(),
+                    };
+                    Some(migrated_project)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
         });
     }
 
@@ -325,15 +337,14 @@ pub mod v3 {
     #[storage_alias]
     pub type OldMilestoneVotes<T: Config> =
         StorageMap<Pallet<T>, Identity, (ProjectKey, MilestoneKey), Vote<BalanceOf<T>>, ValueQuery>;
-    
-        fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
+
+    fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
         v3::OldMilestoneVotes::<T>::drain().for_each(|(old_key, vote)| {
             *weight += T::DbWeight::get().reads(1);
             let (project_key, milestone_key) = old_key;
             crate::MilestoneVotes::<T>::insert(project_key, milestone_key, vote);
             *weight += T::DbWeight::get().reads_writes(1, 1);
         });
-
     }
 
     //Migration #5 + #6
@@ -365,7 +376,6 @@ pub mod v3 {
     pub type OldRounds<T: pallet::Config> =
         StorageMap<Pallet<T>, Identity, u32, Option<Round<BlockNumberFor<T>>>, ValueQuery>;
     fn migrate_rounds_and_round_type<T: Config>(weight: &mut Weight) {
-        
         OldRounds::<T>::translate(|_, r: Option<Round<BlockNumberFor<T>>>| {
             if let Some(round) = r {
                 if !round.is_canceled
@@ -557,22 +567,29 @@ mod test {
             // 4. -- TESTED - Milestone votes is now a double map (project_key, milestone_key) +
             // 5. -- TESTED - Rounds is also a DoubleMap
             // 6. -- UNTESTED: Round type has had contribution_round removed. Cannot test as the contribution rounds dont exist anymore.
-            // 7. -- TESTED - percent_to_unlock changed from u32 to Percent. (cuteolaf) 
-            // 8. -- TESTED - Project new field deposit_id 
+            // 7. -- TESTED - percent_to_unlock changed from u32 to Percent. (cuteolaf)
+            // 8. -- TESTED - Project new field deposit_id
+            // 9. -- // - milestones and contributions have been bound, on overflow the project is removed.
             let mut old_milestones = BTreeMap::new();
-               old_milestones.insert(0,v2::MilestoneV1 {
+            old_milestones.insert(
+                0,
+                v2::MilestoneV1 {
                     project_key: 0,
                     milestone_key: 0,
                     percentage_to_unlock: 40u32,
                     is_approved: true,
-                });
-                old_milestones.insert(1, v2::MilestoneV1 {
+                },
+            );
+            old_milestones.insert(
+                1,
+                v2::MilestoneV1 {
                     project_key: 0,
                     milestone_key: 1,
                     percentage_to_unlock: 60u32,
                     is_approved: true,
-                });
-            let mut contributions: ContributionsFor<Test> = BTreeMap::new();
+                },
+            );
+            let mut contributions = BTreeMap::new();
             contributions.insert(
                 *CHARLIE,
                 Contribution {
@@ -590,9 +607,9 @@ mod test {
             let project = v2::ProjectV2 {
                 agreement_hash: Default::default(),
                 milestones: old_milestones,
-                contributions: contributions ,
+                contributions: contributions,
                 currency_id: CurrencyId::Native,
-                required_funds: 1_000_000 ,
+                required_funds: 1_000_000,
                 withdrawn_funds: 0,
                 raised_funds: 1_000_000,
                 initiator: *ALICE,
@@ -604,7 +621,10 @@ mod test {
             };
             v2::Projects::<Test>::insert(0, &project);
             v3::UserVotes::<Test>::insert((*ALICE, 10u32, 10u32, v3::RoundType::VotingRound), true);
-            v3::UserVotes::<Test>::insert((*ALICE, 10u32, 10u32, v3::RoundType::VoteOfNoConfidence), true);
+            v3::UserVotes::<Test>::insert(
+                (*ALICE, 10u32, 10u32, v3::RoundType::VoteOfNoConfidence),
+                true,
+            );
             let v = Vote {
                 yay: 100_000u64,
                 nay: 50_000u64,
@@ -615,33 +635,53 @@ mod test {
             let old_round: v3::Round<BlockNumberFor<Test>> = v3::Round {
                 start: frame_system::Pallet::<Test>::block_number() - 1,
                 end: end_block_number,
-                project_keys: vec![1,2,3],
+                project_keys: vec![1, 2, 3],
                 round_type: v3::RoundType::VotingRound,
                 is_canceled: false,
             };
             v3::OldRounds::<Test>::insert(0, Some(old_round));
 
-            let w = v3::migrate_all::<Test>();
+            let _w = v3::migrate_all::<Test>();
 
             let project_apres = crate::Projects::<Test>::get(0).unwrap();
             // #1, 2, 7 & 8
             assert_eq!(project.agreement_hash, project_apres.agreement_hash);
-            assert_eq!(project.contributions[&CHARLIE].value, project_apres.contributions[&CHARLIE].value);
-            assert_eq!(project.contributions[&BOB].value, project_apres.contributions[&BOB].value);
+            assert_eq!(
+                project.contributions[&CHARLIE].value,
+                project_apres.contributions[&CHARLIE].value
+            );
+            assert_eq!(
+                project.contributions[&BOB].value,
+                project_apres.contributions[&BOB].value
+            );
             assert_eq!(project_apres.contributions.iter().len(), 2usize);
-            assert_eq!(project.milestones[&0].milestone_key, project_apres.milestones[&0].milestone_key);
-            assert_eq!(project.milestones[&0].project_key, project_apres.milestones[&0].project_key);
-            assert_eq!(Percent::from_percent(project.milestones[&0].percentage_to_unlock as u8), project_apres.milestones[&0].percentage_to_unlock);
-            assert_eq!(project_apres.deposit_id, <crate::DepositIdOf<Test> as Default>::default());
+            assert_eq!(
+                project.milestones[&0].milestone_key,
+                project_apres.milestones[&0].milestone_key
+            );
+            assert_eq!(
+                project.milestones[&0].project_key,
+                project_apres.milestones[&0].project_key
+            );
+            assert_eq!(
+                Percent::from_percent(project.milestones[&0].percentage_to_unlock as u8),
+                project_apres.milestones[&0].percentage_to_unlock
+            );
+            assert_eq!(project_apres.deposit_id, u32::MAX as u64);
 
             // #3
-            let new_votes = UserHasVoted::<Test>::get((10u32, crate::RoundType::VotingRound, 10u32));
+            let new_votes =
+                UserHasVoted::<Test>::get((10u32, crate::RoundType::VotingRound, 10u32));
             assert!(new_votes[&ALICE]);
-            let new_votes = UserHasVoted::<Test>::get((10u32, crate::RoundType::VoteOfNoConfidence, 10u32));
+            let new_votes =
+                UserHasVoted::<Test>::get((10u32, crate::RoundType::VoteOfNoConfidence, 10u32));
             assert!(new_votes[&ALICE]);
 
             // #4
-            assert_eq!(v3::OldMilestoneVotes::<Test>::get((10, 10)), Default::default());
+            assert_eq!(
+                v3::OldMilestoneVotes::<Test>::get((10, 10)),
+                Default::default()
+            );
             assert!(crate::MilestoneVotes::<Test>::contains_key(10, 10));
             let v = crate::MilestoneVotes::<Test>::get(10, 10).unwrap();
             assert_eq!(v.yay, 100_000);
@@ -650,8 +690,7 @@ mod test {
 
             // #5
             assert!(OldRounds::<Test>::get(0).is_none());
-            [1,2,3].iter().for_each(|k| {
-
+            [1, 2, 3].iter().for_each(|k| {
                 let end = crate::Rounds::<Test>::get(k, crate::RoundType::VotingRound).unwrap();
                 assert_eq!(end, end_block_number);
             });

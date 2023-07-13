@@ -3,8 +3,8 @@ use crate::test_utils::gen_hash;
 
 use crate::tests::{get_brief_owners, get_milestones};
 use common_types::CurrencyId;
-use frame_support::{assert_ok};
-use pallet_proposals::{Projects};
+use frame_support::assert_ok;
+use pallet_proposals::Projects;
 
 // all the integration tests for a brief to proposal conversion
 #[test]
@@ -31,6 +31,5 @@ fn create_proposal_from_brief() {
 
         // TODO: integration tests
         assert!(Projects::<Test>::get(1).is_some());
-        
     });
 }

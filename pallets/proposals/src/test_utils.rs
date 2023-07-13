@@ -1,3 +1,5 @@
+#[allow(dead_code)]
+#[allow(unused)]
 use crate::Config;
 use crate::Pallet as Proposals;
 use crate::{
@@ -9,10 +11,12 @@ use frame_benchmarking::{account, Vec};
 use frame_support::{assert_ok, traits::Hooks};
 use frame_system::EventRecord;
 use orml_traits::MultiCurrency;
-use sp_arithmetic::{per_things::Percent, traits::Zero};
+use pallet_deposits::traits::DepositHandler;
+use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
+use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
-use sp_std::collections::btree_map::BTreeMap;
+use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber) {
     loop {
@@ -29,15 +33,20 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber) {
 
 pub fn get_contributions<T: Config>(
     accounts: Vec<AccountIdOf<T>>,
-    total_amount: u32,
+    contribution: u128,
 ) -> ContributionsFor<T> {
-    let value: BalanceOf<T> = (total_amount / accounts.len() as u32).into();
+    let value: BalanceOf<T> = contribution.saturated_into();
     let timestamp = frame_system::Pallet::<T>::block_number();
     let mut contributions: ContributionsFor<T> = Default::default();
 
     accounts.iter().for_each(|account| {
-        let contribution = Contribution { value, timestamp };
-        contributions.insert(account.clone(), contribution);
+        let contribution = Contribution {
+            value: value,
+            timestamp,
+        };
+        contributions
+            .try_insert(account.clone(), contribution)
+            .expect("bound should be ensured");
     });
     contributions
 }
@@ -62,6 +71,12 @@ pub fn create_project<T: Config>(
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
 ) -> ProjectKey {
+    let deposit_id = <T as Config>::DepositHandler::take_deposit(
+        beneficiary.clone(),
+        <T as Config>::ProjectStorageItem::get(),
+        CurrencyId::Native,
+    )
+    .expect("this should work");
     let agreement_hash: H256 = Default::default();
 
     let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
@@ -95,8 +110,8 @@ pub fn create_project<T: Config>(
     }
 
     let project = Project {
-        milestones,
-        contributions,
+        milestones: milestones.try_into().expect("too many milestones"),
+        contributions: contributions.try_into().expect("too many contributions"),
         currency_id,
         withdrawn_funds: 0u32.into(),
         raised_funds,
@@ -105,7 +120,7 @@ pub fn create_project<T: Config>(
         cancelled: false,
         agreement_hash,
         funding_type: FundingType::Brief,
-        deposit_id: Zero::zero(),
+        deposit_id,
     };
 
     crate::Projects::<T>::insert(project_key, project);
@@ -117,13 +132,14 @@ pub fn create_project<T: Config>(
 pub fn create_funded_user<T: Config>(
     seed: &'static str,
     n: u32,
-    balance_factor: u32,
+    balance_factor: u128,
 ) -> T::AccountId {
     let user = account(seed, n, 0);
-    let balance: BalanceOf<T> = balance_factor.into();
     assert_ok!(<T::MultiCurrency as MultiCurrency<
         <T as frame_system::Config>::AccountId,
-    >>::deposit(CurrencyId::Native, &user, balance,));
+    >>::deposit(
+        CurrencyId::Native, &user, balance_factor.saturated_into()
+    ));
     user
 }
 

@@ -2,8 +2,6 @@
 
 use super::*;
 
-#[allow(unused)]
-use crate::Pallet as Template;
 use crate::Pallet as CrowdFunding;
 use common_types::CurrencyId;
 use frame_benchmarking::v1::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};

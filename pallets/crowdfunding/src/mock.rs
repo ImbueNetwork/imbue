@@ -68,8 +68,8 @@ parameter_types! {
     pub RoundExpiry: BlockNumber = 100;
     pub MaxKeysPerRound: u32 = 50;
     pub MaxContributionsPerCrowdFund: u32 = 1000;
-    pub MaxMilestonesPerCrowdFund: u32 = 100;
-    pub MaxWhitelistPerCrowdFund: u32 = 100;
+    pub MaxMilestonesPerCrowdFund: u32 = 50;
+    pub MaxWhitelistPerCrowdFund: u32 = 50;
     pub MinimumRequiredFunds: Balance = 2000;
     pub MinimumContribution: Balance = 5;
 }
@@ -179,6 +179,7 @@ parameter_types! {
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
+    pub MaxProjectsPerAccount: u16 = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -199,6 +200,7 @@ impl pallet_proposals::Config for Test {
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler;
+    type MaxProjectsPerAccount = MaxProjectsPerAccount;
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]

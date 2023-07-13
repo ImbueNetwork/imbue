@@ -219,7 +219,6 @@ parameter_types! {
 impl pallet_briefs::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Tokens;
-    type BriefHasher = BlakeTwo256;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
@@ -243,6 +242,7 @@ parameter_types! {
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
+    pub MaxProjectsPerAccount: u16 = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -263,6 +263,7 @@ impl pallet_proposals::Config for Test {
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler;
+    type MaxProjectsPerAccount = MaxProjectsPerAccount;
 }
 parameter_types! {
     pub const BasicDeposit: u64 = 10;
