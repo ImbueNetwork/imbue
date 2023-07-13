@@ -1,22 +1,20 @@
 
-use pallet_proposals_rpc_runtime_api::runtime_decl_for_ProposalsApi::ProposalsApi as ProposalsRuntimeApi;
-use codec::{Codec, Decode};
+pub use pallet_proposals_rpc_runtime_api::ProposalsApi as ProposalsRuntimeApi;
+use codec::{Codec};
 use jsonrpsee::{
 	core::{Error as JsonRpseeError, RpcResult},
 	proc_macros::rpc,
 	types::error::{CallError, ErrorObject},
 };
-use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_rpc::number::NumberOrHex;
 use sp_runtime::traits::Block as BlockT;
 use std::sync::Arc;
 use std::fmt::Display;
 
 #[rpc(client, server)]
-pub trait ProposalsApi<AccountId> {
+pub trait ProposalsApi<BlockHash, AccountId> {
 	#[method(name = "proposals_getProjectKitty")]
-	fn get_project_account_by_id(&self, project_id: u32) -> RpcResult<AccountId>;
+	fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId>;
 }
 
 pub struct Proposals<C, B> {
@@ -49,7 +47,7 @@ impl From<Error> for i32 {
 }
 
 impl<C, B, AccountId>
-	ProposalsApiServer<AccountId> for Proposals<C, B>
+	ProposalsApiServer<<B as BlockT>::Hash, AccountId> for Proposals<C, B>
 where 
 	C: sp_api::ProvideRuntimeApi<B>,
 	C: HeaderBackend<B>,
@@ -58,9 +56,11 @@ where
 	B: BlockT,
 	AccountId: Clone + Display + Codec + Send + 'static,
 {
-	fn get_project_account_by_id(&self, project_id: u32) -> RpcResult<AccountId> {
+	fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId> {
 		let api = self.client.runtime_api();
-		api.get_project_account_by_id(project_id).map_err(runtime_error_into_rpc_err)
+		let at = self.client.info().best_hash;
+
+		api.get_project_account_by_id(at, project_id).map_err(runtime_error_into_rpc_err)
 	}
 }
 
