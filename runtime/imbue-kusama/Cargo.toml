@@ -105,7 +105,7 @@ pallet-grants = {path = '../../pallets/grants', default-features = false }
 pallet-deposits = {path = '../../pallets/deposits', default-features = false }
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
-pallet-proposals-runtime-api = {path = "../pallets/proposals/rpc/runtime-api", default-features = false}
+pallet-proposals-rpc-runtime-api = {path = "../../pallets/proposals/rpc/runtime-api", default-features = false}
 
 
 [dev-dependencies]
@@ -179,7 +179,6 @@ std = [
 	'pallet-proposals/std',
 	'pallet-briefs/std',
 	'pallet-grants/std',
-	'pallet-proposals-runtime-api/std',
 ]
 
 runtime-benchmarks = [

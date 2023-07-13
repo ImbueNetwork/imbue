@@ -1090,7 +1090,7 @@ impl_runtime_apis! {
         }
     }
 
-    impl pallet_proposals::runtime_api::ProjectsApi<Block, AccountId> for Runtime {
+    impl pallet_proposals_rpc_runtime_api::ProposalsApi<Block, AccountId> for Runtime {
         fn get_project_account_by_id(project_id: u32) -> AccountId {
             ImbueProposals::project_account_id(project_id)
         }

@@ -1,5 +1,5 @@
 
-use pallet_proposals_runtime_api::ProposalsApi as ProposalsRuntimeApi; 
+use pallet_proposals_rpc_runtime_api::runtime_decl_for_ProposalsApi::ProposalsApi as ProposalsRuntimeApi;
 use codec::{Codec, Decode};
 use jsonrpsee::{
 	core::{Error as JsonRpseeError, RpcResult},
@@ -9,14 +9,14 @@ use jsonrpsee::{
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::traits::{Block as BlockT};
-use frame_system::Config;
+use sp_runtime::traits::Block as BlockT;
 use std::sync::Arc;
+use std::fmt::Display;
 
 #[rpc(client, server)]
 pub trait ProposalsApi<AccountId> {
 	#[method(name = "proposals_getProjectKitty")]
-	fn get_project_account_by_id(project_id: u32) -> RpcResult<AccountId>;
+	fn get_project_account_by_id(&self, project_id: u32) -> RpcResult<AccountId>;
 }
 
 pub struct Proposals<C, B> {
@@ -48,15 +48,14 @@ impl From<Error> for i32 {
 	}
 }
 
-#[async_trait]
 impl<C, B, AccountId>
 	ProposalsApiServer<AccountId> for Proposals<C, B>
 where 
 	C: sp_api::ProvideRuntimeApi<B>,
 	C: HeaderBackend<B>,
 	C: Send + Sync + 'static,
-	C::Api: ProposalsRuntimeApi<AccountId>,
-	Block: BlockT,
+	C::Api: ProposalsRuntimeApi<B, AccountId>,
+	B: BlockT,
 	AccountId: Clone + Display + Codec + Send + 'static,
 {
 	fn get_project_account_by_id(&self, project_id: u32) -> RpcResult<AccountId> {
@@ -68,7 +67,7 @@ where
 /// Converts a runtime trap into an RPC error.
 fn runtime_error_into_rpc_err(err: impl std::fmt::Debug) -> JsonRpseeError {
 	CallError::Custom(ErrorObject::owned(
-		Error::RuntimeError,
+		Error::RuntimeError.into(),
 		"Could not generate the account_id for the given project_id",
 		Some(format!("{:?}", err)),
 	))
