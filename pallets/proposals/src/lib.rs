@@ -7,7 +7,7 @@ use frame_support::{
     traits::EnsureOrigin, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
 use scale_info::TypeInfo;
@@ -87,6 +87,7 @@ pub mod pallet {
         /// The type responisble for handling refunds.
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
         type MaxMilestonesPerProject: Get<u32>;
+        type MaxProjectsPerAccount: Get<u32>;
         /// Imbue fee in percent 0-99
         type ImbueFee: Get<Percent>;
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
@@ -125,6 +126,16 @@ pub mod pallet {
         MilestoneKey,
         Vote<BalanceOf<T>>,
         OptionQuery,
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn completed_projects)]
+    pub type CompletedProjects<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        AccountIdOf<T>,
+        BoundedVec<ProjectKey, <T as Config>::MaxProjectsPerAccount>,
+        ValueQuery,
     >;
 
     /// This holds the votes when a no confidence round is raised.
@@ -206,7 +217,7 @@ pub mod pallet {
         ProjectDoesNotExist,
         /// Currently no active round to participate in.
         NoActiveRound,
-        /// There was an overflow in pallet_proposals.
+        /// There was an internal overflow prevented in pallet_proposals.
         Overflow,
         /// Only contributors can vote.
         OnlyContributorsCanVote,
@@ -242,6 +253,12 @@ pub mod pallet {
         MilestoneAlreadyApproved,
         /// Error with a mathematical operation
         MathError,
+        /// There are too many contributions.
+        TooManyContributions,
+        /// There are too many milestones.
+        TooManyMilestones,
+        /// There are too many projects for a given account
+        TooManyProjects,
     }
 
     #[pallet::hooks]
@@ -395,7 +412,6 @@ pub mod pallet {
             funding_type: FundingType,
         ) -> Result<(), DispatchError> {
             let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
-            crate::ProjectCount::<T>::put(project_key);
 
             // Take storage deposit only for a Project.
             let deposit_id = <T as Config>::DepositHandler::take_deposit(
@@ -410,17 +426,21 @@ pub mod pallet {
                     acc.saturating_add(x.value)
                 });
 
+            let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
+
             match funding_type {
                 FundingType::Proposal | FundingType::Brief => {
                     for (acc, cont) in contributions.iter() {
                         let project_account_id =
                             crate::Pallet::<T>::project_account_id(project_key);
-                        <T as Config>::MultiCurrency::repatriate_reserved(
+                        <<T as Config>::MultiCurrency as MultiReservableCurrency<
+                            AccountIdOf<T>,
+                        >>::unreserve(currency_id, acc, cont.value);
+                        <T as Config>::MultiCurrency::transfer(
                             currency_id,
-                            &acc,
+                            acc,
                             &project_account_id,
                             cont.value,
-                            BalanceStatus::Free,
                         )?;
                     }
                 }
@@ -438,12 +458,13 @@ pub mod pallet {
                 };
                 milestones
                     .try_insert(milestone_key, milestone)
-                    .map_err(|_| Error::<T>::Overflow)?;
+                    .map_err(|_| Error::<T>::TooManyMilestones)?;
                 milestone_key = milestone_key.saturating_add(1);
             }
 
-            let bounded_contributions: ContributionsFor<T> =
-                contributions.try_into().map_err(|_| Error::<T>::Overflow)?;
+            let bounded_contributions: ContributionsFor<T> = contributions
+                .try_into()
+                .map_err(|_| Error::<T>::TooManyContributions)?;
 
             let project: Project<T> = Project {
                 milestones,
@@ -460,15 +481,16 @@ pub mod pallet {
             };
 
             Projects::<T>::insert(project_key, project);
-            let project_account = Self::project_account_id(project_key);
+
             ProjectCount::<T>::mutate(|c| *c = c.saturating_add(1));
+
             Self::deposit_event(Event::ProjectCreated(
                 benificiary,
                 brief_hash,
                 project_key,
                 sum_of_contributions,
                 currency_id,
-                project_account,
+                project_account_id,
             ));
             Ok(())
         }

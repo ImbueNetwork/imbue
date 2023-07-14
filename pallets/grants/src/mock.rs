@@ -148,9 +148,6 @@ impl pallet_grants::Config for Test {
     type MaxMilestonesPerGrant = MaxMilestonesPerGrant;
     type MaxApprovers = MaxApprovers;
     type IntoProposal = pallet_proposals::Pallet<Test>;
-    type CancellingAuthority = EnsureRoot<AccountId>;
-    type GrantStorageItem = GrantStorageItem;
-    type DepositHandler = MockDepositHandler;
     type WeightInfo = ();
 }
 
@@ -178,6 +175,7 @@ parameter_types! {
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
+    pub MaxProjectsPerAccount: u16 = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -198,6 +196,7 @@ impl pallet_proposals::Config for Test {
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type DepositHandler = MockDepositHandler;
     type ProjectStorageItem = ProjectStorageItem;
+    type MaxProjectsPerAccount = MaxProjectsPerAccount;
 }
 
 parameter_types! {

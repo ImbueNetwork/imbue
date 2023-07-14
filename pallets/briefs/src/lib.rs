@@ -20,7 +20,6 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
-#[cfg(test)]
 mod migrations;
 
 #[frame_support::pallet]
@@ -34,7 +33,7 @@ pub mod pallet {
     use pallet_proposals::traits::IntoProposal;
     use pallet_proposals::{Contribution, ProposedMilestone};
     use sp_arithmetic::per_things::Percent;
-    use sp_core::{Hasher, H256};
+    use sp_core::H256;
     use sp_runtime::traits::Zero;
     use sp_std::convert::{From, TryInto};
 
@@ -69,21 +68,15 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-        /// The hasher used to generate the brief id.
-        /// TODO: not in use;
-        type BriefHasher: Hasher;
-
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
         /// The type that allows for evolution from brief to proposal.
         type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
-
         /// The maximum amount of owners to a brief.
         /// Also used to define the maximum contributions.
         type MaxBriefOwners: Get<u32>;
-
+        /// The maximum milestones avaliable in a given brief.
         type MaxMilestonesPerBrief: Get<u32>;
-
+        /// Storage deposits.
         type BriefStorageItem: Get<StorageItemOf<Self>>;
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
 
@@ -113,13 +106,34 @@ pub mod pallet {
     pub type BriefContributions<T> =
         StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
 
+    #[pallet::storage]
+    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+    }
+
+    impl Default for Release {
+        fn default() -> Release {
+            Release::V0
+        }
+    }
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
+        /// A brief has been successfully submitted!
         BriefSubmitted(T::AccountId, BriefHash),
         AccountApproved(AccountIdOf<T>),
+        /// A brief has been converted to milestones.
         BriefEvolution(BriefHash),
+        /// A brief has been contributed to.
         BriefContribution(T::AccountId, BriefHash),
+        /// A brief has been cancelled.
+        BriefCanceled(BriefHash),
     }
 
     #[pallet::error]
@@ -146,14 +160,23 @@ pub mod pallet {
         BriefCurrencyNotSet,
         /// Too many brief owners.
         TooManyBriefOwners,
-        /// Not authorized to do this.
-        NotAuthorised,
-        /// The brief conversion failed.
-        BriefConversionFailedGeneric,
+        /// You must be a brief owner to do this.
+        MustBeBriefOwner,
+        /// You must be the brief applicant to do this.
+        MustBeApplicant,
         /// The brief has not yet been approved to commence by the freelancer.
         FreelancerApprovalRequired,
         /// Milestones total do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
+    }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight: Weight = Zero::zero();
+            migrations::v1::migrate_to_v1::<T>(&mut weight);
+            weight
+        }
     }
 
     #[pallet::call]
@@ -274,7 +297,7 @@ pub mod pallet {
 
             ensure!(
                 brief_record.brief_owners.contains(&who),
-                Error::<T>::NotAuthorised
+                Error::<T>::MustBeBriefOwner
             );
 
             <T as Config>::RMultiCurrency::reserve(brief_record.currency_id, &who, amount)?;
@@ -309,7 +332,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
 
-            ensure!(who == brief.applicant, Error::<T>::NotAuthorised);
+            ensure!(who == brief.applicant, Error::<T>::MustBeApplicant);
 
             let contributions = BriefContributions::<T>::get(brief_id);
 
@@ -322,13 +345,37 @@ pub mod pallet {
                 brief.applicant,
                 brief.milestones.into(),
                 FundingType::Brief,
-            )
-            .map_err(|_| Error::<T>::BriefConversionFailedGeneric)?;
+            )?;
 
             BriefContributions::<T>::remove(brief_id);
             Briefs::<T>::remove(brief_id);
 
             Self::deposit_event(Event::<T>::BriefEvolution(brief_id));
+            Ok(())
+        }
+
+        /// Extrinsic to cancel a brief
+        #[pallet::call_index(5)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_brief())]
+        pub fn cancel_brief(origin: OriginFor<T>, brief_id: BriefHash) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            let brief = Briefs::<T>::get(brief_id).ok_or(Error::<T>::BriefNotFound)?;
+
+            ensure!(
+                brief.brief_owners.contains(&who),
+                Error::<T>::MustBeBriefOwner
+            );
+
+            <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
+            let contributions = BriefContributions::<T>::get(brief_id);
+            for (who, c) in contributions.iter() {
+                <T as Config>::RMultiCurrency::unreserve(brief.currency_id, &who, c.value);
+            }
+
+            BriefContributions::<T>::remove(brief_id);
+            Briefs::<T>::remove(brief_id);
+
+            Self::deposit_event(Event::<T>::BriefCanceled(brief_id));
             Ok(())
         }
     }

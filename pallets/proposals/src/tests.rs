@@ -392,15 +392,16 @@ fn withdraw_only_transfers_approved_milestones() {
         ));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(per_contribution * 2 / 10);
-        // total_contribution / number of milestones - fee 
-        let alice_expected_balance = alice_before + ((per_contribution * 2 / 10) as u64) - expected_fee as u64;
+        // total_contribution / number of milestones - fee
+        let alice_expected_balance =
+            alice_before + ((per_contribution * 2 / 10) as u64) - expected_fee as u64;
         assert_eq!(
             alice_after, alice_expected_balance,
             "Alice account is not the expected balance"
         );
 
         let project_account = crate::Pallet::<Test>::project_account_id(project_key);
-        
+
         assert_eq!(
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &project_account),
             180_000,
@@ -431,10 +432,84 @@ fn withdraw_removes_project_after_all_funds_taken() {
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
+
         assert!(
             Projects::<Test>::get(project_key).is_none(),
             "Project should have been removed after funds withdrawn."
         )
+    });
+}
+
+#[test]
+fn store_project_info_after_project_is_completed() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(1);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+        assert!(Projects::<Test>::get(project_key).is_some());
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+
+        if let Some((_account, projects)) = CompletedProjects::<Test>::iter().next() {
+            assert_eq!(projects.len(), 1);
+            assert_eq!(projects.contains(&project_key), true);
+        }
+    });
+}
+
+#[test]
+fn store_too_many_projects_for_account() {
+    build_test_externality().execute_with(|| {
+        let max = <Test as Config>::MaxProjectsPerAccount::get();
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(1);
+        let milestone_key = 0;
+        (0..=max).for_each(|i| {
+            let project_key = create_project::<Test>(
+                *ALICE,
+                cont.clone(),
+                prop_milestones.clone(),
+                CurrencyId::Native,
+            );
+            let _ = Proposals::submit_milestone(
+                RuntimeOrigin::signed(*ALICE),
+                project_key.clone(),
+                milestone_key,
+            )
+            .unwrap();
+            let _ = Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
+                project_key.clone(),
+                milestone_key,
+                true,
+            )
+            .unwrap();
+
+            if i != max {
+                assert_ok!(Proposals::withdraw(
+                    RuntimeOrigin::signed(*ALICE),
+                    project_key.clone()
+                ));
+            } else {
+                assert_noop!(
+                    Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key.clone()),
+                    Error::<Test>::TooManyProjects
+                );
+            }
+        })
     });
 }
 
@@ -695,7 +770,7 @@ fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
             true,
         )
         .unwrap();
-        
+
         assert_ok!(Proposals::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key

@@ -5,7 +5,7 @@ split-debuginfo = "unpacked"
 
 [workspace]
 members = [
-    'node',
+	'node',
 	"pallets/proposals",
 	"pallets/briefs",
   	"pallets/grants",
