@@ -72,7 +72,7 @@ fn test_xcm_refund_handler_to_kusama() {
     });
 
     KusamaNet::execute_with(|| {
-        let expected_balance = 499_999_904_479_336;
+        let expected_balance = 499999909994200;
         assert_eq!(
             kusama_runtime::Balances::free_balance(kusama_treasury_address),
             expected_balance
@@ -151,7 +151,7 @@ fn transfer_ksm_to_relay_chain() {
     KusamaNet::execute_with(|| {
         assert_eq!(
             kusama_runtime::Balances::free_balance(&CHARLIE.into()),
-            499_999_904_479_336
+            499999909994200
         );
     });
 }
