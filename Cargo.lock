@@ -3874,6 +3874,7 @@ dependencies = [
  "log",
  "nix 0.17.0",
  "pallet-collective",
+ "pallet-proposals-rpc",
  "pallet-transaction-payment-rpc",
  "pallet-xcm",
  "parachains-common",
@@ -3976,6 +3977,7 @@ dependencies = [
  "pallet-multisig",
  "pallet-preimage",
  "pallet-proposals",
+ "pallet-proposals-rpc-runtime-api",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -6857,6 +6859,27 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+]
+
+[[package]]
+name = "pallet-proposals-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpsee",
+ "pallet-proposals-rpc-runtime-api",
+ "parity-scale-codec 3.6.2",
+ "sp-api",
+ "sp-blockchain",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-proposals-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec 3.6.2",
+ "sp-api",
 ]
 
 [[package]]
