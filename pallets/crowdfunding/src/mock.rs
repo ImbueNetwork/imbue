@@ -67,11 +67,12 @@ impl frame_system::Config for Test {
 parameter_types! {
     pub RoundExpiry: BlockNumber = 100;
     pub MaxKeysPerRound: u32 = 50;
-    pub MaxContributionsPerCrowdFund: u32 = 1000;
+    pub MaxContributionsPerCrowdFund: u32 = 127;
     pub MaxMilestonesPerCrowdFund: u32 = 50;
     pub MaxWhitelistPerCrowdFund: u32 = 50;
     pub MinimumRequiredFunds: Balance = 2000;
     pub MinimumContribution: Balance = 5;
+    pub CrowdFundStorageItem: StorageItem = StorageItem::CrowdFund;
 }
 
 impl pallet_crowdfunding::Config for Test {
@@ -85,6 +86,8 @@ impl pallet_crowdfunding::Config for Test {
     type IsIdentityRequired = IsIdentityRequired;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposals = pallet_proposals::Pallet<Test>;
+    type CrowdFundStorageItem = CrowdFundStorageItem;
+    type DepositHandler = MockDepositHandler;
     type WeightInfo = ();
 }
 
@@ -237,7 +240,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
-        let initial_balance = 10_000_000u64;
+        let initial_balance = 100_000_000_000_000u64;
         System::set_block_number(1);
         let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);

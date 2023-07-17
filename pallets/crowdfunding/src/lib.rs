@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
 
-mod weights;
+pub mod weights;
 
 #[cfg(test)]
 mod mock;
@@ -26,6 +26,7 @@ pub mod pallet {
     use sp_arithmetic::per_things::Percent;
     use sp_core::H256;
     use sp_std::collections::btree_map::BTreeMap;
+    use pallet_deposits::traits::DepositHandler;
 
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub type BalanceOf<T> =
@@ -46,6 +47,9 @@ pub mod pallet {
     pub type BoundedProposedMilestones<T> =
         BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerCrowdFund>;
 
+    type StorageItemOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
+    type DepositIdOf<T> = <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
+
     pub type CrowdFundKey = u32;
     pub type MilestoneKey = u32;
 
@@ -62,14 +66,26 @@ pub mod pallet {
     pub trait Config: frame_system::Config + pallet_identity::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+        /// The length of a round in the system.
         type RoundExpiry: Get<BlockNumberFor<Self>>;
+        /// The maximum number of crowdfund keys in a given round.
         type MaxKeysPerRound: Get<u32>;
+        /// The maximum number of contributors possible in a crowdfund.
         type MaxContributionsPerCrowdFund: Get<u32>;
+        /// The maximum number of milestones that is possible in a crowdfund.
         type MaxMilestonesPerCrowdFund: Get<u32>;
+        /// The maximum number of whitelist spots in a crowdfund.
         type MaxWhitelistPerCrowdFund: Get<u32>;
+        /// Define whether a decent identity is required when creating a crowdfund.
         type IsIdentityRequired: Get<bool>;
+        /// The authority responsible for governance actions.
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        /// The type that converts a crowdfund into a project and allows milestone submission.
         type IntoProposals: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
+        /// The type responsible for handling storage deposits.
+        type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
+        /// The type that the deposit fee will be calculated from.
+        type CrowdFundStorageItem: Get<StorageItemOf<Self>>;
         type WeightInfo: WeightInfo;
     }
 
@@ -79,13 +95,13 @@ pub mod pallet {
 
     /// Stores a list of crowdfunds.
     #[pallet::storage]
-    pub type CrowdFunds<T> = StorageMap<_, Blake2_128, CrowdFundKey, CrowdFund<T>, OptionQuery>;
+    pub type CrowdFunds<T> = StorageMap<_, Blake2_128Concat, CrowdFundKey, CrowdFund<T>, OptionQuery>;
 
     /// Stores the crowdfund keys that are expiring on a given block.
     /// Handled in the hooks,
     #[pallet::storage]
     pub type RoundsExpiring<T> =
-        StorageMap<_, Blake2_128, BlockNumberFor<T>, BoundedKeysPerRound<T>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, BoundedKeysPerRound<T>, ValueQuery>;
 
     /// Tracks wether CrowdFunds are in a given round type.
     /// Key 1 : CrowdFundID
@@ -94,15 +110,17 @@ pub mod pallet {
     #[pallet::storage]
     pub type CrowdFundsInRound<T> = StorageDoubleMap<
         _,
-        Blake2_128,
+        Blake2_128Concat,
         CrowdFundKey,
-        Blake2_128,
+        Blake2_128Concat,
         RoundType,
         BlockNumberFor<T>,
         ValueQuery,
     >;
 
     /// Tracks the whitelists of a given crowdfund.
+    /// MIGRATION FROM PROPOSALS REFACTOR?
+    /// PALLET PREFIX HAS CHANGED
     #[pallet::storage]
     #[pallet::getter(fn whitelist_spots)]
     pub type WhitelistSpots<T: Config> =
@@ -167,12 +185,14 @@ pub mod pallet {
         IdentityNeeded,
         /// Below the minimum required funds.
         BelowMinimumRequiredFunds,
-        /// The crowdfund as already been converted to milestones.
-        CrowdFundAlreadyConverted,
         /// The crowdfund has already been cancelled.
         CrowdFundCancelled,
         /// The conversion to a Project has failed.
         CrowdFundConversionFailedGeneric,
+        /// You are trying to add too many whitelist spots.
+        WhiteListSpotLimitReached,
+        /// There are too many rounds inserted this block, please wait for the next on (6s)
+        TooManyRoundsInBlock,
     }
 
     #[pallet::call]
@@ -217,17 +237,10 @@ pub mod pallet {
             agreement_hash: Option<H256>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            if <T as Config>::IsIdentityRequired::get() {
-                Self::ensure_identity_is_decent(&who)?;
-            }
-
+            
             let crowdfund =
                 CrowdFunds::<T>::get(crowdfund_key).ok_or(Error::<T>::CrowdFundDoesNotExist)?;
             ensure!(crowdfund.initiator == who, Error::<T>::UserIsNotInitiator);
-            ensure!(
-                !crowdfund.is_converted,
-                Error::<T>::CrowdFundAlreadyConverted
-            );
             ensure!(
                 !crowdfund.approved_for_funding,
                 Error::<T>::CrowdFundAlreadyApproved
@@ -259,16 +272,15 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             Self::ensure_initiator(who, crowdfund_key)?;
             let crowdfund_whitelist_spots = WhitelistSpots::<T>::get(crowdfund_key).unwrap_or(
-                BTreeMap::new()
-                    .try_into()
-                    .expect("Empty BTree is always smaller than bound; qed"),
+                BoundedBTreeMap::new()
             );
 
             let mut unbounded = crowdfund_whitelist_spots.into_inner();
             unbounded.extend(new_whitelist_spots);
 
             let bounded: BoundedWhitelistSpots<T> =
-                unbounded.try_into().map_err(|_| Error::<T>::Overflow)?;
+                unbounded.try_into().map_err(|_| Error::<T>::WhiteListSpotLimitReached)?;
+
             <WhitelistSpots<T>>::insert(crowdfund_key, bounded);
             let now = <frame_system::Pallet<T>>::block_number();
             Self::deposit_event(Event::WhitelistAdded(crowdfund_key, now));
@@ -385,6 +397,11 @@ pub mod pallet {
             let crowdfund_key = CrowdFundCount::<T>::get();
 
             // Todo: Take storage deposit>
+            let deposit_id = <T as Config>::DepositHandler::take_deposit(
+                who.clone(),
+                <T as Config>::CrowdFundStorageItem::get(),
+                CurrencyId::Native,
+            )?;
 
             // For now we keep them as proposed milestones until the project is able to submit.
             let crowdfund = CrowdFund {
@@ -400,7 +417,7 @@ pub mod pallet {
                 created_on: <frame_system::Pallet<T>>::block_number(),
                 approved_for_funding: false,
                 cancelled: false,
-                is_converted: false,
+                deposit_id
             };
 
             // Add crowdfund to list
@@ -459,7 +476,7 @@ pub mod pallet {
                 .saturating_add(<T as Config>::RoundExpiry::get());
             RoundsExpiring::<T>::try_mutate(expiry_block, |list| -> DispatchResult {
                 list.try_push(crowdfund_key)
-                    .map_err(|_| Error::<T>::Overflow)?;
+                    .map_err(|_| Error::<T>::TooManyRoundsInBlock)?;
                 Ok(())
             })?;
             CrowdFundsInRound::<T>::insert(
@@ -552,19 +569,16 @@ pub mod pallet {
                 crowdfund.initiator,
                 crowdfund.milestones.into_inner(),
                 FundingType::Proposal,
-            )
-            .map_err(|_| Error::<T>::CrowdFundConversionFailedGeneric)?;
+            )?;
 
-            CrowdFunds::<T>::mutate(crowdfund_key, |crowdfund| {
-                if let Some(cf) = crowdfund {
-                    cf.is_converted = true
-                }
-                Ok::<(), DispatchError>(())
-            })?;
+            <T as Config>::DepositHandler::return_deposit(crowdfund.deposit_id)?;
+            CrowdFunds::<T>::remove(crowdfund_key);
+
             Self::deposit_event(Event::CrowdFundApproved(crowdfund_key));
             Ok(().into())
         }
 
+        /// Actually calls storage. Could be improved.
         pub fn ensure_initiator(
             who: T::AccountId,
             crowdfund_key: CrowdFundKey,
@@ -577,6 +591,7 @@ pub mod pallet {
             }
         }
 
+        /// Ensure the identity of an account is either Reasonable or KnownGood.
         fn ensure_identity_is_decent(who: &T::AccountId) -> Result<(), Error<T>> {
             let identity =
                 pallet_identity::Pallet::<T>::identity(who).ok_or(Error::<T>::IdentityNeeded)?;
@@ -605,10 +620,8 @@ pub mod pallet {
         pub agreement_hash: H256,
         pub initiator: AccountIdOf<T>,
         pub created_on: BlockNumberFor<T>,
-        pub is_converted: bool,
+        pub deposit_id: DepositIdOf<T>,
     }
-
-    // Called to ensure that an account is is a contributor to a crowdfund.
 }
 
 // Warning: This will allow the withdrawal of funds, approve is a governance action so should not be a problem.

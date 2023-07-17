@@ -62,7 +62,7 @@ common-runtime = { path = "../../runtime/common"}
 
 [features]
 default = ['std']
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks"]
+runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks", "common-runtime/runtime-benchmarks"]
 std = [
 	"codec/std",
 	"serde/std",

@@ -761,7 +761,6 @@ parameter_types! {
     pub const PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub const MaximumContributorsPerProject: u32 = 5000;
     pub const RefundsPerBlock: u8 = 20;
-    pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
     pub const ImbueFee: Percent = Percent::from_percent(5_u8);
     pub const ExpiringProjectRoundsPerBlock: u32 = 50;
@@ -832,6 +831,7 @@ impl DepositCalculator<Balance> for ImbueDepositCalculator {
         u: Self::StorageItem,
         currency: CurrencyId,
     ) -> Result<Balance, DispatchError> {
+        // A safe guard as Imbue only takes deposits in the $IMBU
         if currency != CurrencyId::Native {
             return Err(pallet_deposits::pallet::Error::<Runtime>::UnsupportedCurrencyType.into());
         }
@@ -843,6 +843,7 @@ impl DepositCalculator<Balance> for ImbueDepositCalculator {
         })
     }
 }
+
 impl pallet_deposits::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type MultiCurrency = Currencies;
@@ -850,6 +851,34 @@ impl pallet_deposits::Config for Runtime {
     type DepositId = DepositId;
     type DepositCalculator = ImbueDepositCalculator;
     type DepositSlashAccount = TreasuryAccount;
+}
+
+parameter_types! {
+    // SAFETY: This is iterated in the hooks of linear complexity (O(n) + 1)r/w. 
+    pub MaxKeysPerRound: u32 = 100;
+    // (?)
+    pub MaxContributionsPerCrowdFund: u32 = 300;
+    // (?)
+    pub MaxWhitelistPerCrowdFund: u32 = 300;
+    pub IsIdentityRequired: bool = false;
+    pub TwoWeeks: BlockNumber = DAYS * 14; 
+    pub CrowdFundStorageItem: StorageDepositItems = StorageDepositItems::CrowdFund; 
+}   
+
+impl pallet_crowdfunding::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MultiCurrency = Currencies;
+    type RoundExpiry = TwoWeeks;
+    type MaxKeysPerRound = MaxKeysPerRound;
+    type MaxMilestonesPerCrowdFund = MaxMilestonesPerProject;
+    type MaxWhitelistPerCrowdFund = MaxWhitelistPerCrowdFund;
+    type MaxContributionsPerCrowdFund = MaxContributionsPerCrowdFund;
+    type IsIdentityRequired = IsIdentityRequired;
+    type AuthorityOrigin = EnsureRoot<AccountId>;
+    type IntoProposals = pallet_proposals::Pallet<Runtime>;
+    type DepositHandler = Deposits;
+    type CrowdFundStorageItem = CrowdFundStorageItem;
+    type WeightInfo = pallet_crowdfunding::weights::SubstrateWeight<Self>;
 }
 
 construct_runtime! {
@@ -909,6 +938,7 @@ construct_runtime! {
         ImbueBriefs: pallet_briefs::{Pallet, Call, Storage, Event<T>} = 101,
         ImbueGrants: pallet_grants::{Pallet, Call, Storage, Event<T>} = 102,
         Deposits: pallet_deposits::{Pallet, Storage, Event<T>} = 103,
+        ImbueCrowdfunding: pallet_crowdfunding::{Pallet, Call, Storage, Event<T>} = 104,
     }
 }
 
@@ -954,6 +984,7 @@ mod benches {
         [pallet_proposals, ImbueProposals]
         [pallet_briefs, ImbueBriefs]
         [pallet_grants, ImbueGrants]
+        [pallet_crowdfunding, ImbueCrowdfunding]
     );
 }
 
