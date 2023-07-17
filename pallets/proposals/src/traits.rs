@@ -39,6 +39,7 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
         -> Result<AccountId, DispatchError>;
 }
 
+
 // Some implementations used in Imbue of the traits above.
 type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 // For test purposes

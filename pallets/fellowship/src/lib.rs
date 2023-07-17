@@ -2,6 +2,7 @@
 pub use pallet::*;
 
 pub mod traits;
+pub mod impls;
 
 #[cfg(test)]
 mod mock;
@@ -23,9 +24,10 @@ pub mod pallet {
 	use crate::traits::{EnsureRole, FellowshipHandle, DemocracyHandle};
 
 	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+	type VetterIdOf<T> = AccountIdOf<T>; 
 	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 	type ShortlistRoundKey = u32;
-	type BoundedShortlistPlaces<T> = BoundedBTreeMap<AccountIdOf<T>, Role, <T as Config>::MaxCandidatesPerShortlist>;
+	type BoundedShortlistPlaces<T> = BoundedBTreeMap<AccountIdOf<T>, (Role, VetterIdOf<T>), <T as Config>::MaxCandidatesPerShortlist>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -75,6 +77,12 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type FellowshipReserves<T> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, OptionQuery>;
+
+	/// Keeps track of the accounts a fellow has recruited.
+	/// Can be used to pay out completion fees.
+	#[pallet::storage]
+	pub type FellowToVetter<T> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, VetterIdOf<T>, OptionQuery>;
 	
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -115,10 +123,12 @@ pub mod pallet {
 				let round_key = ShortlistRound::<T>::get();
 				let shortlist =  CandidateShortlist::<T>::get(round_key);
 				// TODO: benchmark add_to_fellowship and add the according weight.
-				shortlist.iter().for_each(|(acc, role)| {
-					Self::add_to_fellowship(acc, *role);
+				shortlist.iter().for_each(|(acc, (vetter, role))| {
+					weight.saturating_add(T::WeightInfo::add_to_fellowship());
+					Self::add_to_fellowship(acc, *role, *vetter);
 				});
 
+				CandidateShortlist::<T>::remove(round_key);
 				ShortlistRound::<T>::put(round_key.saturating_add(1));
 			}
 			weight
@@ -172,7 +182,7 @@ pub mod pallet {
 			ensure!(T::MultiCurrency::can_reserve(CurrencyId::Native, &candidate, <T as Config>::MembershipDeposit::get()), Error::<T>::CandidateDepositRequired);
 			let _ = CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {
 				ensure!(!m_shortlist.contains_key(&candidate), Error::<T>::CandidateAlreadyOnShortlist);
-				m_shortlist.try_insert(candidate.clone(), role).map_err(|_| Error::<T>::TooManyCandidates)?;
+				m_shortlist.try_insert(candidate.clone(), (role. who)).map_err(|_| Error::<T>::TooManyCandidates)?;
 				Ok::<(), DispatchError>(())
 			})?;
 
@@ -223,11 +233,12 @@ pub mod pallet {
 		/// enough native token for the deposit, this candidate is then added to PendingFellows where they
 		/// can pay the deposit later to accept the membership.
 		/// The deposit amount is defined in the Config.
-		fn add_to_fellowship(who: &AccountIdOf<T>, role: Role) -> Result<(), DispatchError> {
+		fn add_to_fellowship(who: &AccountIdOf<T>, role: Role, vetter: &VetterIdOf<T>) -> Result<(), DispatchError> {
 			// If they aleady have a role then dont reserve as the reservation has already been taken.
 			// This would only happen if a role was changed.
 			if !Roles::<T>::contains_key(who) {
 				let membership_deposit = <T as Config>::MembershipDeposit::get();
+				// TODO: is this can_reserve needed? 
 				if <T as Config>::MultiCurrency::can_reserve(CurrencyId::Native, who, membership_deposit) {
 					let _ = <T as Config>::MultiCurrency::reserve(CurrencyId::Native, who, membership_deposit);
 					FellowshipReserves::<T>::insert(who, membership_deposit);
@@ -236,6 +247,7 @@ pub mod pallet {
 					PendingFellows::<T>::insert(who, role);
 					Self::deposit_event(Event::<T>::MemberAddedToPendingFellows(who.clone()));
 				}
+				FellowToVetter::<T>::insert(who, vetter);
 			} else {
 				Roles::<T>::insert(who, role);
 			}
@@ -251,6 +263,7 @@ pub mod pallet {
 			ensure!(PendingFellows::<T>::contains_key(who) || has_role, Error::<T>::NotAFellow);
 			PendingFellows::<T>::remove(who);
 			Roles::<T>::remove(who);
+			FellowToVetter::<T>::remove(who)
 			// Essentially you can only slash a deposit if it has been taken
 			// Deposits are only taken when a role is assigned
 			if has_role {
@@ -267,29 +280,6 @@ pub mod pallet {
 					<T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, deposit_amount);
 				}
 			}
-
-			Ok(())
-		}
-	}
-
-	/// Ensure that a account is of a given role.
-	/// Used in other pallets like an ensure origin.
-	pub struct EnsureFellowshipRole<T>(T);
-	impl<T: Config> EnsureRole<AccountIdOf<T>, Role> for EnsureFellowshipRole<T> {
-		type Success = ();
-		
-		fn ensure_role(acc: &AccountIdOf<T>, role: Role) -> Result<Self::Success, BadOrigin> {
-			let actual = Roles::<T>::get(acc).ok_or(BadOrigin)?;
-			if role == actual {
-				Ok(())
-			} else {
-				Err(BadOrigin)
-			}
-		}
-
-		fn ensure_role_in(acc: &AccountIdOf<T>, roles: Vec<Role>) -> Result<Self::Success, BadOrigin> {
-			let role = Roles::<T>::get(acc).ok_or(BadOrigin)?;
-			ensure!(roles.contains(&role), BadOrigin);
 			Ok(())
 		}
 	}

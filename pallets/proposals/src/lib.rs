@@ -13,7 +13,7 @@ use pallet_deposits::traits::DepositHandler;
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
-use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
+use sp_runtime::traits::{AccountIdConversion, Saturating, Zero, TryConvert};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 
 pub mod traits;
@@ -38,9 +38,12 @@ pub mod migration;
 
 pub mod impls;
 pub use impls::*;
+
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+type VetterIdOf<T> = AccountIdOf<T>;
+
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 pub type StorageItemOf<T> =
     <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
@@ -96,6 +99,8 @@ pub mod pallet {
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
+        /// If possible find the vetter responsible for the freelancer.
+        type ProjectToVetter: TryConvert<AccountIdOf<Self>, VetterIdOf<Self>>;
     }
 
     #[pallet::pallet]
