@@ -2,7 +2,7 @@ version: "3.2"
 services:
   imbue-1:
     container_name: imbue-1
-    image: samelamin/imbue:polkadot-v0.9.37-v2
+    image: samelamin/imbue:polkadot-v0.9.37-v3
     ports:
       - "9615:9615"
       - "9616:9616"
