@@ -199,11 +199,11 @@ pub mod pallet {
         /// A milestone has been approved.
         MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, T::BlockNumber),
         /// You have created a vote of no confidence.
-        NoConfidenceRoundCreated(ProjectKey),
+        NoConfidenceRoundCreated(T::AccountId, ProjectKey),
         /// You have voted upon a round of no confidence.
-        NoConfidenceRoundVotedUpon(ProjectKey),
+        NoConfidenceRoundVotedUpon(T::AccountId, ProjectKey),
         /// You have finalised a vote of no confidence.
-        NoConfidenceRoundFinalised(ProjectKey),
+        NoConfidenceRoundFinalised(T::AccountId, ProjectKey),
     }
 
     // Errors inform users that something went wrong.
