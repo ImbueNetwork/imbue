@@ -157,8 +157,7 @@ impl<T: Config> Pallet<T> {
         let project_account = Self::project_account_id(project_key);
         let pallet_account = Self::account_id();
 
-
-        distribute_fees(project.funding_type, fee, project.currency_id, &project_account, &project.initiator);
+        Self::distribute_fees(project.funding_type, fee, project.currency_id, &project_account, &project.initiator)?;
         
         // Transfer to initiator
         T::MultiCurrency::transfer(
@@ -359,32 +358,34 @@ impl<T: Config> Pallet<T> {
         }
         Ok(().into())
     }
-}
 
-pub fn distribute_fees<'a, T: Config>(
-    funding_type: FundingType, 
-    fee: BalanceOf<T>, 
-    currency_id: CurrencyId, 
-    pallet_account: &'a AccountIdOf<T>, 
-    intitator: &'a AccountIdOf<T>
-) -> Result<(), DispatchError> {
-    match funding_type {
-        FundingType::Brief => {
-            if let Ok(vetter) = <T as Config>::ProjectToVetter::try_convert(&initiator) {
-                // Send part to vetter part to treasury
-            } else {
-                // Oops we dont have a vetter here, lets just send the rest to treasury.
-
-            }
-        },
-        FundingType::Grant => {
-            // Send part to the approvers, part to treasury.
-
-        },
-        FundingType::Proposal => {
-            // Send the full amount to treasury.
+    pub fn distribute_fees<'a, T: Config>(
+        funding_type: FundingType, 
+        fee: BalanceOf<T>, 
+        currency_id: CurrencyId, 
+        pallet_account: &'a AccountIdOf<T>, 
+        intitator: &'a AccountIdOf<T>
+    ) -> Result<(), DispatchError> {
+        match funding_type {
+            FundingType::Brief => {
+                if let Ok(vetter) = <T as Config>::ProjectToVetter::try_convert(&initiator) {
+                
+                    // Send part to vetter part to treasury
+                } else {
+                    // Oops we dont have a vetter here, lets just send the rest to treasury.
+                
+                }
+            },
+            FundingType::Grant => {
+                // Send part to the approvers, part to treasury.
             
+            },
+            FundingType::Proposal => {
+                // Send the full amount to treasury.
+                
+            }
         }
+    
     }
-
 }
+
