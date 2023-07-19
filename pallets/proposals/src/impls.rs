@@ -238,7 +238,7 @@ impl<T: Config> Pallet<T> {
         })?;
 
         NoConfidenceVotes::<T>::insert(project_key, vote);
-        Self::deposit_event(Event::NoConfidenceRoundCreated(project_key));
+        Self::deposit_event(Event::NoConfidenceRoundCreated(who, project_key));
         Ok(())
     }
 
@@ -273,12 +273,12 @@ impl<T: Config> Pallet<T> {
         UserHasVoted::<T>::try_mutate((project_key, RoundType::VoteOfNoConfidence, 0), |votes| {
             ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
             votes
-                .try_insert(who, false)
+                .try_insert(who.clone(), false)
                 .map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
 
-        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(project_key));
+        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(who, project_key));
         Ok(())
     }
 
@@ -352,7 +352,7 @@ impl<T: Config> Pallet<T> {
 
             Projects::<T>::remove(project_key);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
-            Self::deposit_event(Event::NoConfidenceRoundFinalised(project_key));
+            Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into());
         }

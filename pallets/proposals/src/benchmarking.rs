@@ -82,7 +82,7 @@ benchmarks! {
         // (Contributor, ProjectKey)
     }: _(RawOrigin::Signed(bob.clone()), project_key)
     verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundCreated(project_key).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundCreated(bob, project_key).into());
     }
 
     vote_on_no_confidence_round {
@@ -96,9 +96,9 @@ benchmarks! {
 
         assert_ok!(Pallet::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(bob).into(), project_key));
         // (Contributor, ProjectKey, IsYay)
-    }: _(RawOrigin::Signed(charlie), project_key, true)
+    }: _(RawOrigin::Signed(charlie.clone()), project_key, true)
     verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(project_key).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(charlie, project_key).into());
     }
 
     finalise_no_confidence_round {
@@ -113,9 +113,9 @@ benchmarks! {
         assert_ok!(Pallet::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(bob.clone()).into(), project_key));
         assert_ok!(Pallet::<T>::vote_on_no_confidence_round(RawOrigin::Signed(charlie).into(), project_key, false));
         // (Contributor, ProjectKey)
-    }: _(RawOrigin::Signed(bob), project_key)
+    }: _(RawOrigin::Signed(bob.clone()), project_key)
     verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(project_key).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(bob, project_key).into());
     }
 }
 
