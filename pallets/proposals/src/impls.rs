@@ -114,8 +114,7 @@ impl<T: Config> Pallet<T> {
                 milestone_key,
                 <frame_system::Pallet<T>>::block_number(),
             ));
-            //TODO: Set vote as approved.
-            // set the vote as approved, set the milestone as approved.
+            Rounds::<T>::remove(project_key, RoundType::VotingRound);
         }
 
         Self::deposit_event(Event::VoteSubmitted(
