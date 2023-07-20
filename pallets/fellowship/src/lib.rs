@@ -289,6 +289,7 @@ pub mod pallet {
 		Vetter, 
 		Freelancer,
 		BusinessDev,
+		Approver,
 	}
 
  }

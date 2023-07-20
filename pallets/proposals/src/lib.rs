@@ -15,6 +15,7 @@ use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Saturating, Zero, TryConvert};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
+use pallet_fellowship::Role;
 
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
@@ -76,8 +77,11 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type PalletId: Get<PalletId>;
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        /// The currency type.
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+        /// Weight info for pallet benchmarks.
         type WeightInfo: WeightInfo;
+        /// TODO: Not in use
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
         /// The amount of time given, up to point of decision, when a vote of no confidence is held.
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
@@ -89,7 +93,9 @@ pub mod pallet {
         type MilestoneVotingWindow: Get<Self::BlockNumber>;
         /// The type responisble for handling refunds.
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+        /// Maximum milestones allowed in a project.
         type MaxMilestonesPerProject: Get<u32>;
+        /// Maximum project a user can submit, make sure its pretty big.
         type MaxProjectsPerAccount: Get<u32>;
         /// Imbue fee in percent 0-99
         type ImbueFee: Get<Percent>;
@@ -101,6 +107,10 @@ pub mod pallet {
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
         /// If possible find the vetter responsible for the freelancer.
         type ProjectToVetter: TryConvert<AccountIdOf<Self>, VetterIdOf<Self>>;
+        /// Turn an account role into a fee percentage. Handled in the fellowship pallet usually.
+        type RoleToPercentFee: Convert<Role, Percent>;
+        /// Ensure that an accountId is in a given role.
+        type EnsureRole: pallet_fellowship::EnsureRole<AccountIdOf<T>>;
     }
 
     #[pallet::pallet]
@@ -264,6 +274,8 @@ pub mod pallet {
         TooManyMilestones,
         /// There are too many projects for a given account
         TooManyProjects,
+        /// Not enough funds in project account to distribute fees.
+        NotEnoughFundsForFees,
     }
 
     #[pallet::hooks]

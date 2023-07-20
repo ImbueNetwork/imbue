@@ -75,11 +75,6 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
 
-        ensure!(
-            MilestoneVotes::<T>::contains_key(project_key, milestone_key),
-            Error::<T>::VotingRoundNotStarted
-        );
-
         let yay_vote = MilestoneVotes::<T>::try_mutate(project_key, milestone_key, |vote| {
             if let Some(v) = vote {
                 if approve_milestone {
@@ -157,7 +152,11 @@ impl<T: Config> Pallet<T> {
         let project_account = Self::project_account_id(project_key);
         let pallet_account = Self::account_id();
 
-        Self::distribute_fees(project.funding_type, fee, project.currency_id, &project_account, &project.initiator)?;
+        let mut approvers: Option<&Vec<AccountIdOf<T>>> = None;
+        if project.funding_type = FundingType::Grant {
+            approvers = Some(project.contributors.to_vec());
+        }
+        Self::distribute_fees(project.funding_type, fee, project.currency_id, &project_account, &pallet_account,  &project.initiator, approvers)?;
         
         // Transfer to initiator
         T::MultiCurrency::transfer(
@@ -363,26 +362,36 @@ impl<T: Config> Pallet<T> {
         funding_type: FundingType, 
         fee: BalanceOf<T>, 
         currency_id: CurrencyId, 
-        pallet_account: &'a AccountIdOf<T>, 
+        pallet_account: &'a AccountIdOf<T>,
+        project_account: &'a AccountIdOf<T>, 
         intitator: &'a AccountIdOf<T>
+        approvers: Option<&Vec<AccountIdOf<T>>>
     ) -> Result<(), DispatchError> {
         match funding_type {
             FundingType::Brief => {
                 if let Ok(vetter) = <T as Config>::ProjectToVetter::try_convert(&initiator) {
-                
-                    // Send part to vetter part to treasury
+                    let vetter_percent: Percent = <T as Config>::RoleToPercentFee::convert(Role::Vetter);
+                    let vetter_fee = vetter_percent.mul_floor(fee);
+                    let treasury_fee = fee.saturating_sub(vetter_fee);
+
+                    <T as Config>::MultiCurrency::transfer(currency_id, project_account, &vetter, vetter_fee).map_err(Error::<T>::NotEnoughFundsForFees)?;
+                    <T as Config>::MultiCurrency::transfer(currency_id, project_account, &pallet_account, treasury_fee).map_err(Error::<T>::NotEnoughFundsForFees)?;
                 } else {
                     // Oops we dont have a vetter here, lets just send the rest to treasury.
-                
+                    <T as Config>::MultiCurrency::transfer(currency_id, project_account, &pallet_account, fee).map_err(Error::<T>::NotEnoughFundsForFees)?;
                 }
             },
             FundingType::Grant => {
                 // Send part to the approvers, part to treasury.
+                let approver_percent: Percent = <T as Config>::RoleToPercentFee::convert(Role::Approver);
+                let approver_fee = vetter_percent.mul_floor(fee);
+                let treasury_fee = fee.saturating_sub(vetter_fee);
+
+                <T as Config>::MultiCurrency::transfer(currency_id, project_account, &vetter, vetter_fee).map_err(Error::<T>::NotEnoughFundsForFees)?;
             
             },
             FundingType::Proposal => {
-                // Send the full amount to treasury.
-                
+                <T as Config>::MultiCurrency::transfer(currency_id, project_account, &pallet_account, fee).map_err(Error::<T>::NotEnoughFundsForFees)?;
             }
         }
     

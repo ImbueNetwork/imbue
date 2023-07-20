@@ -32,3 +32,10 @@ impl<T: Config> TryConvert<&AccountIdOf<T>, VetterIdOf<T>> for Pallet<T> {
 		}
 	}
 }
+
+pub struct RoleToPercent;
+impl<Role> Convert<Role, Percent> for Pallet<T> {
+	fn convert(role: &AccountIdOf<T>) -> Result<VetterIdOf<T>, &AccountIdOf<T>> {
+		
+	}
+}
