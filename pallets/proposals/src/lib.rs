@@ -96,6 +96,8 @@ pub mod pallet {
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
+        /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
+        type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
     }
 
     #[pallet::pallet]
@@ -392,7 +394,7 @@ pub mod pallet {
             Self::call_finalise_no_confidence_vote(
                 who,
                 project_key,
-                T::PercentRequiredForVoteToPass::get(),
+                T::PercentRequiredForVoteNoConfidenceToPass::get(),
             )
         }
     }

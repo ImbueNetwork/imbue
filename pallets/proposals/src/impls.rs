@@ -269,6 +269,7 @@ impl<T: Config> Pallet<T> {
                 Err(Error::<T>::VotingRoundNotStarted.into())
             }
         })?;
+
         UserHasVoted::<T>::try_mutate((project_key, RoundType::VoteOfNoConfidence, 0), |votes| {
             ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
             votes
@@ -277,7 +278,61 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
 
-        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(who, project_key));
+        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(who.clone(), project_key));
+
+        //once the voting is complete check if the milestone is eligible for auto approval
+        //Getting the total threshold required for the milestone to be approved based on the raised funds
+        let voting_no_confidence_threshold: BalanceOf<T> =
+            T::PercentRequiredForVoteNoConfidenceToPass::get().mul_floor(project.raised_funds);
+        let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
+
+        if vote.nay >= voting_no_confidence_threshold {
+            let locked_milestone_percentage =
+                project.milestones.iter().fold(Percent::zero(), |acc, ms| {
+                    if !ms.1.is_approved {
+                        acc.saturating_add(ms.1.percentage_to_unlock)
+                    } else {
+                        acc
+                    }
+                });
+
+            let project_account_id = Self::project_account_id(project_key);
+
+            match project.funding_type {
+                FundingType::Brief | FundingType::Proposal => {
+                    // Handle refunds on native chain, there is no need to deal with xcm here.
+                    for (acc_id, contribution) in project.contributions.iter() {
+                        let refund_amount =
+                            locked_milestone_percentage.mul_floor(contribution.value);
+                        <T as Config>::MultiCurrency::transfer(
+                            project.currency_id,
+                            &project_account_id,
+                            acc_id,
+                            refund_amount,
+                        )?;
+                    }
+                }
+                // Must a grant be treasury funded?
+                FundingType::Grant(_) => {
+                    let mut refund_amount: BalanceOf<T> = Zero::zero();
+                    // Sum the contributions and send a single xcm.
+                    for (_acc_id, contribution) in project.contributions.iter() {
+                        let per_contributor =
+                            locked_milestone_percentage.mul_floor(contribution.value);
+                        refund_amount = refund_amount.saturating_add(per_contributor);
+                    }
+                    <T as Config>::RefundHandler::send_refund_message_to_treasury(
+                        project_account_id,
+                        refund_amount,
+                        project.currency_id,
+                        project.funding_type,
+                    )?;
+                }
+            }
+            Projects::<T>::remove(project_key);
+            <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
+            Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
+        }
         Ok(())
     }
 
