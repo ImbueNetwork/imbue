@@ -257,14 +257,14 @@ impl<T: Config> Pallet<T> {
             .get(&who)
             .ok_or(Error::<T>::OnlyContributorsCanVote)?;
 
-        NoConfidenceVotes::<T>::try_mutate(project_key, |maybe_vote| {
+        let nay_vote = NoConfidenceVotes::<T>::try_mutate(project_key, |maybe_vote| {
             if let Some(v) = maybe_vote {
                 if is_yay {
                     v.yay = v.yay.saturating_add(contribution.value);
                 } else {
                     v.nay = v.nay.saturating_add(contribution.value);
                 }
-                Ok::<(), DispatchError>(())
+                Ok::<BalanceOf<T>, DispatchError>(v.nay)
             } else {
                 Err(Error::<T>::VotingRoundNotStarted.into())
             }
@@ -280,13 +280,14 @@ impl<T: Config> Pallet<T> {
 
         Self::deposit_event(Event::NoConfidenceRoundVotedUpon(who.clone(), project_key));
 
-        //once the voting is complete check if the milestone is eligible for auto approval
-        //Getting the total threshold required for the milestone to be approved based on the raised funds
+
+        //once the voting is complete check if the confidence vote could be auto finalized
+        //getting the total threshold required for the total confidence
         let voting_no_confidence_threshold: BalanceOf<T> =
             T::PercentRequiredForVoteNoConfidenceToPass::get().mul_floor(project.raised_funds);
-        let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
 
-        if vote.nay >= voting_no_confidence_threshold {
+        //verifying whether the no confidence vote has passed the threshold if so then auto finalize it
+        if nay_vote >= voting_no_confidence_threshold {
             let locked_milestone_percentage =
                 project.milestones.iter().fold(Percent::zero(), |acc, ms| {
                     if !ms.1.is_approved {
