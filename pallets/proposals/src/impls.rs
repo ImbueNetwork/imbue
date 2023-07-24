@@ -300,7 +300,7 @@ impl<T: Config> Pallet<T> {
             let project_account_id = Self::project_account_id(project_key);
 
             match project.funding_type {
-                FundingType::Brief | FundingType::Proposal => {
+                FundingType::Proposal => {
                     // Handle refunds on native chain, there is no need to deal with xcm here.
                     for (acc_id, contribution) in project.contributions.iter() {
                         let refund_amount =
@@ -313,6 +313,11 @@ impl<T: Config> Pallet<T> {
                         )?;
                     }
                 }
+
+                FundingType::Brief =>{
+                    //Have to handle it in the dispute pallet
+                }
+
                 // Must a grant be treasury funded?
                 FundingType::Grant(_) => {
                     let mut refund_amount: BalanceOf<T> = Zero::zero();
@@ -331,6 +336,7 @@ impl<T: Config> Pallet<T> {
                 }
             }
             Projects::<T>::remove(project_key);
+            Rounds::<T>::remove(project_key,RoundType::VoteOfNoConfidence);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
             Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
         }
