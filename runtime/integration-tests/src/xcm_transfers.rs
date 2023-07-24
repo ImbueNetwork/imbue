@@ -160,8 +160,6 @@ fn transfer_ksm_to_relay_chain() {
 
 #[test]
 fn transfer_native_to_sibling() {
-    let transfer_amount: Balance = native_amount(10);
-    let sibling_balance_before: Balance = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
     Development::execute_with(|| {
         assert_ok!(PolkadotXcm::force_default_xcm_version(RuntimeOrigin::root(), Some(3)));
         assert_ok!(PolkadotXcm::force_xcm_version(RuntimeOrigin::root(),
@@ -172,6 +170,8 @@ fn transfer_native_to_sibling() {
                     ),
             )),3));
     });
+    let transfer_amount: Balance = native_amount(10);
+    let sibling_balance_before: Balance = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
 
     Sibling::execute_with(|| {
         assert_ok!(PolkadotXcm::force_default_xcm_version(RuntimeOrigin::root(), Some(3)));
