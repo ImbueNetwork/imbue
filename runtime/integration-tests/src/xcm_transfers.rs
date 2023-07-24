@@ -17,7 +17,7 @@ use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId,
 
 use common_runtime::{common_xcm::general_key, parachains};
 
-use crate::kusama_test_net::{Development,  Kusama,  TestNet, KusamaSender, KusamaReceiver, ImbueKusamaSender, ImbueKusamaReceiver, SiblingKusamaSender,SiblingKusamaReceiver};
+use crate::kusama_test_net::{Development,  Sibling, Kusama,  TestNet, KusamaSender, KusamaReceiver, ImbueKusamaSender, ImbueKusamaReceiver, SiblingKusamaSender,SiblingKusamaReceiver};
 use crate::setup::{
     ausd_amount, development_account, kar_amount, karura_account, ksm_amount, native_amount,
     sibling_account, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
@@ -32,7 +32,7 @@ use orml_traits::MultiCurrency;
 use pallet_proposals::traits::RefundHandler;
 use crate::constants::kusama;
 use xcm_emulator::{assert_expected_events, Parachain as Para};
-
+use imbue_kusama_runtime::PolkadotXcm;
 #[test]
 fn test_xcm_refund_handler_to_kusama() {
     TestNet::reset();
@@ -160,34 +160,47 @@ fn transfer_ksm_to_relay_chain() {
 
 #[test]
 fn transfer_native_to_sibling() {
-    TestNet::reset();
-    // let transfer_amount: Balance = native_amount(1);
-    // let sibling_balance_before = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
-    // Development::execute_with(|| {
-    //     assert_ok!(XTokens::transfer(
-    //         RuntimeOrigin::signed(ImbueKusamaSender::get().into()),
-    //         CurrencyId::Native,
-    //         transfer_amount,
-    //         Box::new(
-    //             MultiLocation::new(
-    //                 1,
-    //                 X2(
-    //                     Parachain(PARA_ID_SIBLING),
-    //                     Junction::AccountId32 {
-    //                         network: Some(NetworkId::Kusama),
-    //                         id: SiblingKusamaReceiver::get().into(),
-    //                     }
-    //                 )
-    //             )
-    //             .into()
-    //         ),
-    //         xcm_emulator::Limited(4_000_000_000.into())
-    //     ));
-    //
-    // });
-    // let sibling_balance_after = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
+    let transfer_amount: Balance = native_amount(10);
+    let sibling_balance_before: Balance = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
+    Development::execute_with(|| {
+        assert_ok!(PolkadotXcm::force_default_xcm_version(RuntimeOrigin::root(), Some(3)));
+        assert_ok!(PolkadotXcm::force_xcm_version(RuntimeOrigin::root(),
+             Box::new(MultiLocation::new(
+                    1,
+                    X1(
+                        Parachain(PARA_ID_SIBLING)
+                    ),
+            )),3));
+    });
 
-    // assert!(sibling_balance_after > sibling_balance_before);
+    Sibling::execute_with(|| {
+        assert_ok!(PolkadotXcm::force_default_xcm_version(RuntimeOrigin::root(), Some(3)));
+    });
+
+
+    Development::execute_with(|| {
+        assert_ok!(XTokens::transfer(
+            RuntimeOrigin::signed(ImbueKusamaSender::get().into()),
+            CurrencyId::Native,
+            transfer_amount,
+            Box::new(
+                MultiLocation::new(
+                    1,
+                    X2(
+                        Parachain(PARA_ID_SIBLING),
+                        Junction::AccountId32 {
+                            network: Some(NetworkId::Kusama),
+                            id: SiblingKusamaReceiver::get().into(),
+                        }
+                    )
+                )
+                .into()
+            ),
+            xcm_emulator::Limited(8_000_000_000.into())
+        ));
+    });
+    let sibling_balance_after = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
+    assert!(sibling_balance_after > sibling_balance_before);
 }
 
 

@@ -230,14 +230,14 @@ pub mod imbue {
                 balances: accounts::init_balances()
                     .iter()
                     .cloned()
-                    .map(|k| (k,  ED.saturating_add(10_000_000_000_000)))
+                    .map(|k| (k,  ED.saturating_add(10_000_000_000_000_000)))
                     .collect(),
             },
             orml_tokens: orml_tokens::GenesisConfig {
                 balances: accounts::init_balances()
                     .iter()
                     .cloned()
-                    .map(|k| (k, CurrencyId::Native,  ED * 10_000))
+                    .map(|k| (k, CurrencyId::Native,  ED.saturating_add(10_000_000_000_000_000)))
                     .collect(),
             },
             // orml_tokens::GenesisConfig::<Runtime> {
@@ -280,7 +280,7 @@ pub mod imbue {
             technical_committee: Default::default(),
             parachain_system: Default::default(),
             polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig{
-                safe_xcm_version: Some(SAFE_XCM_VERSION),
+                safe_xcm_version: Some(2),
             },
             sudo: imbue_kusama_runtime::SudoConfig {
                 key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),

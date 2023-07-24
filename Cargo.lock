@@ -4245,6 +4245,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "trie-root 0.15.2",
+ "xcm",
  "xcm-builder",
 ]
 
