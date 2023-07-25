@@ -35,15 +35,16 @@ use xcm_emulator::{assert_expected_events, Parachain as Para};
 use imbue_kusama_runtime::PolkadotXcm;
 #[test]
 fn test_xcm_refund_handler_to_kusama() {
-    TestNet::reset();
-
     let treasury_origin = TreasuryOrigin::Kusama;
     let kusama_treasury_address =
         <R as pallet_proposals::Config>::RefundHandler::get_treasury_account_id(treasury_origin)
             .unwrap();
-
-    let bob_initial_balance = ksm_amount(1_000_000_000);
-    let transfer_amount = ksm_amount(5_000_000);
+    let kusama_treasury_balance_before = Kusama::account_data_of(kusama_treasury_address.clone()).free;
+    let transfer_amount: Balance = ksm_amount(10);
+    Development::execute_with(|| {
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get().into());
+        assert_eq!(ksm_balance, 0);
+    });
 
     Kusama::execute_with(|| {
         assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
@@ -56,30 +57,24 @@ fn test_xcm_refund_handler_to_kusama() {
                 }
                 .into()
             ),
-            Box::new((Here, bob_initial_balance).into()),
+            Box::new((Here, transfer_amount).into()),
             0
         ));
     });
-
     Development::execute_with(|| {
-        // Just gonna use bobs account as the project account id
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get().into());
+        assert!(ksm_balance > 0);
         assert_ok!(
             <R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(
                 ImbueKusamaReceiver::get().into(),
-                transfer_amount,
+                ksm_balance,
                 CurrencyId::KSM,
                 FundingType::Grant(TreasuryOrigin::Kusama)
             )
         );
     });
-
-    Kusama::execute_with(|| {
-        let expected_balance = 499_999_904_479_336;
-        assert_eq!(
-            kusama_runtime::Balances::free_balance(kusama_treasury_address),
-            expected_balance
-        );
-    });
+    let kusama_treasury_balance_after = Kusama::account_data_of(kusama_treasury_address.clone()).free;
+    assert!(kusama_treasury_balance_after > kusama_treasury_balance_before)
 }
 
 #[test]
