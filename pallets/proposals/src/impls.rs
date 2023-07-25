@@ -343,10 +343,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    /// Collect the vote, if the vote is above the threshold, refund.
-    /// Currently this must be called before the round is over to refund.
-    // TODO: Move to pallet-dispute and test there, this pallet should not know what a funding type is.
-    // Instead it should be dealt with in Refund handler trait.
+    #[deprecated(since = "3.1.0", note = "autofinalisation has been implemented.")]
     pub fn call_finalise_no_confidence_vote(
         who: T::AccountId,
         project_key: ProjectKey,
@@ -380,6 +377,7 @@ impl<T: Config> Pallet<T> {
             // TODO: this should be generic and not bound to funding type..
             match project.funding_type {
                 FundingType::Brief | FundingType::Proposal => {
+                    //
                     // Handle refunds on native chain, there is no need to deal with xcm here.
                     // Todo: Batch call using pallet-utility?
                     for (acc_id, contribution) in project.contributions.iter() {

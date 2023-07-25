@@ -371,6 +371,7 @@ pub mod pallet {
         /// Vote on an already existing "Vote of no condidence" round.
         /// is_yay is FOR the project's continuation.
         /// so is_yay == false == against the project from continuing.
+        /// This autofinalises like in the milestone voting.
         #[pallet::call_index(13)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         pub fn vote_on_no_confidence_round(
@@ -380,22 +381,6 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             Self::add_vote_no_confidence(who, project_key, is_yay)
-        }
-
-        /// Finalise a "vote of no condidence" round.
-        /// Votes must pass a threshold as defined in the config trait for the vote to succeed.
-        #[pallet::call_index(14)]
-        #[pallet::weight(<T as Config>::WeightInfo::finalise_no_confidence_round())]
-        pub fn finalise_no_confidence_round(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-        ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            Self::call_finalise_no_confidence_vote(
-                who,
-                project_key,
-                T::PercentRequiredForVoteNoConfidenceToPass::get(),
-            )
         }
     }
     impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
