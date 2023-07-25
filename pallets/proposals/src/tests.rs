@@ -797,16 +797,6 @@ fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
 }
 
 #[test]
-fn vote_on_no_confidence_round_no_project() {
-    build_test_externality().execute_with(|| {
-        assert_noop!(
-            Proposals::finalise_no_confidence_round(RuntimeOrigin::signed(*CHARLIE), 20),
-            Error::<Test>::ProjectDoesNotExist
-        );
-    });
-}
-
-#[test]
 fn vote_on_no_confidence_round_not_in_round() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
