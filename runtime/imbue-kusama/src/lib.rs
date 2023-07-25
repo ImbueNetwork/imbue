@@ -808,8 +808,6 @@ impl pallet_grants::Config for Runtime {
     type MaxMilestonesPerGrant = MaxMilestonesPerProject;
     type MaxApprovers = MaxApprovers;
     type RMultiCurrency = Currencies;
-    type GrantStorageItem = GrantStorageItem;
-    type DepositHandler = Deposits;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type WeightInfo = pallet_grants::weights::SubstrateWeight<Self>;
 }
