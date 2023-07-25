@@ -1,7 +1,7 @@
 use crate::{AllPalletsWithSystem, Balances, ConstU32};
 use frame_system::EnsureRoot;
 use sp_runtime::traits::{Convert, Zero};
-use sp_std::{marker::PhantomData, prelude::*};
+use sp_std::marker::PhantomData;
 
 // A few exports that help ease life for downstream crates.
 pub use common_runtime::{
@@ -309,7 +309,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
             return Some(CurrencyId::KSM);
         }
 
-        match location.clone() {
+        match location {
             MultiLocation {
                 parents: 0,
                 interior: X1(GeneralKey { data, length }),

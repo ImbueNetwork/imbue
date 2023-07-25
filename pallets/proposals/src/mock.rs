@@ -162,10 +162,6 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-    type HoldIdentifier = ();
-    type FreezeIdentifier = ();
-    type MaxHolds = ConstU32<0>;
-    type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
@@ -191,6 +187,7 @@ parameter_types! {
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItems = StorageItems::Project;
+    pub MaxProjectsPerAccount: u16 = 50;
 }
 
 impl pallet_proposals::Config for Test {
@@ -211,6 +208,7 @@ impl pallet_proposals::Config for Test {
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler<Test>;
+    type MaxProjectsPerAccount = MaxProjectsPerAccount;
 }
 
 parameter_types! {
@@ -269,7 +267,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
-        let initial_balance = 10_000_000u64;
+        let initial_balance = 100_000_000u64;
         System::set_block_number(1);
         let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);

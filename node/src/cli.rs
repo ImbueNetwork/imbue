@@ -66,6 +66,7 @@ pub struct Cli {
 }
 
 #[derive(Debug, Parser)]
+#[group(skip)]
 pub struct RunCmd {
     #[clap(flatten)]
     pub base: cumulus_client_cli::RunCmd,

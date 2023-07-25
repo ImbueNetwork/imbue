@@ -21,19 +21,13 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install minimal stable Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
       - name: Install minimal nightly Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
           target: wasm32-unknown-unknown
+          override: true
 
       - name: Update submodules
         run: git submodule update --recursive --remote
@@ -43,9 +37,6 @@ jobs:
 
       - name: Install Protobuf
         run: sudo apt install protobuf-compiler
-
-      - name: Build imbue collator
-        run: cargo +nightly build --release
 
       - name: Run tests with benchmarks
         run: cargo +nightly test --features runtime-benchmarks

@@ -54,10 +54,6 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-    type HoldIdentifier = ();
-    type FreezeIdentifier = ();
-    type MaxHolds = ConstU32<0>;
-    type MaxFreezes = ConstU32<0>;
 }
 
 impl frame_system::Config for Test {
@@ -152,9 +148,6 @@ impl pallet_grants::Config for Test {
     type MaxMilestonesPerGrant = MaxMilestonesPerGrant;
     type MaxApprovers = MaxApprovers;
     type IntoProposal = pallet_proposals::Pallet<Test>;
-    type CancellingAuthority = EnsureRoot<AccountId>;
-    type GrantStorageItem = GrantStorageItem;
-    type DepositHandler = MockDepositHandler;
     type WeightInfo = ();
 }
 
@@ -182,6 +175,7 @@ parameter_types! {
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
+    pub MaxProjectsPerAccount: u16 = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -202,6 +196,7 @@ impl pallet_proposals::Config for Test {
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type DepositHandler = MockDepositHandler;
     type ProjectStorageItem = ProjectStorageItem;
+    type MaxProjectsPerAccount = MaxProjectsPerAccount;
 }
 
 parameter_types! {

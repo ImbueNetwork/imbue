@@ -1,7 +1,7 @@
 use crate::*;
 use common_types::milestone_origin::FundingType;
-use sp_runtime::traits::{Saturating, Zero};
 use scale_info::prelude::format;
+use sp_runtime::traits::{Saturating, Zero};
 
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
@@ -89,7 +89,7 @@ impl<T: Config> Pallet<T> {
                 }
                 Ok::<BalanceOf<T>, DispatchError>(v.yay)
             } else {
-                return Err(Error::<T>::VotingRoundNotStarted.into())
+                Err(Error::<T>::VotingRoundNotStarted.into())
             }
         })?;
 
@@ -106,16 +106,15 @@ impl<T: Config> Pallet<T> {
                         ms.is_approved = true
                     }
                 }
-            });            
-            
+            });
+
             Self::deposit_event(Event::MilestoneApproved(
-                project.initiator.clone(),
+                project.initiator,
                 project_key,
                 milestone_key,
                 <frame_system::Pallet<T>>::block_number(),
             ));
-            //TODO: Set vote as approved.
-            // set the vote as approved, set the milestone as approved.
+            Rounds::<T>::remove(project_key, RoundType::VotingRound);
         }
 
         Self::deposit_event(Event::VoteSubmitted(
@@ -125,54 +124,6 @@ impl<T: Config> Pallet<T> {
             approve_milestone,
             now,
         ));
-        Ok(().into())
-    }
-
-    #[deprecated(since="0.9.39", note="milestone voting is auto approved now")]
-    fn do_finalise_milestone_voting(
-        who: T::AccountId,
-        project_key: ProjectKey,
-        milestone_key: MilestoneKey,
-    ) -> DispatchResultWithPostInfo {
-        let mut project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        ensure!(
-            project.initiator == who,
-            Error::<T>::InvalidAccount
-        );
-        // TODO: this is also messy with the mut reference, clean up
-        let mut milestone = project.milestones.get_mut(&milestone_key).ok_or(Error::<T>::MilestoneDoesNotExist)?;
-
-        // set is_approved
-        let vote = Self::milestone_votes(project_key, milestone_key).ok_or(Error::<T>::KeyNotFound)?;
-
-        // let the 100 x threshold required = total_votes * majority required
-        let threshold_votes: BalanceOf<T> =
-            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
-        let percent_multiple: BalanceOf<T> = 100u32.into();
-
-        // TODO: use mutate.
-        ensure!(
-            percent_multiple.saturating_mul(vote.yay.saturating_add(vote.nay)) >= threshold_votes,
-            Error::<T>::MilestoneVotingNotComplete
-        );
-        if vote.yay > vote.nay {
-            milestone.is_approved = true;
-            let updated_vote = Vote {
-                yay: vote.yay,
-                nay: vote.nay,
-                is_approved: true,
-            };
-            let now = <frame_system::Pallet<T>>::block_number();
-            Self::deposit_event(Event::MilestoneApproved(
-                project.initiator.clone(),
-                project_key,
-                milestone_key,
-                <frame_system::Pallet<T>>::block_number(),
-            ));
-            <MilestoneVotes<T>>::insert(project_key, milestone_key, updated_vote);
-        }
-        <Projects<T>>::insert(project_key, project);
-
         Ok(().into())
     }
 
@@ -219,7 +170,16 @@ impl<T: Config> Pallet<T> {
             if let Some(p) = project {
                 p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
                 if p.withdrawn_funds == p.raised_funds {
-                    // TODO: reinstate storage deposit
+                    <T as Config>::DepositHandler::return_deposit(p.deposit_id)?;
+                    CompletedProjects::<T>::try_mutate(
+                        &p.initiator,
+                        |completed_projects| -> DispatchResult {
+                            completed_projects
+                                .try_push(project_key)
+                                .map_err(|_| Error::<T>::TooManyProjects)?;
+                            Ok(())
+                        },
+                    )?;
                     *project = None;
                 }
             }
@@ -277,7 +237,7 @@ impl<T: Config> Pallet<T> {
         })?;
 
         NoConfidenceVotes::<T>::insert(project_key, vote);
-        Self::deposit_event(Event::NoConfidenceRoundCreated(project_key));
+        Self::deposit_event(Event::NoConfidenceRoundCreated(who, project_key));
         Ok(())
     }
 
@@ -312,12 +272,12 @@ impl<T: Config> Pallet<T> {
         UserHasVoted::<T>::try_mutate((project_key, RoundType::VoteOfNoConfidence, 0), |votes| {
             ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
             votes
-                .try_insert(who, false)
+                .try_insert(who.clone(), false)
                 .map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
 
-        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(project_key));
+        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(who, project_key));
         Ok(())
     }
 
@@ -391,7 +351,7 @@ impl<T: Config> Pallet<T> {
 
             Projects::<T>::remove(project_key);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
-            Self::deposit_event(Event::NoConfidenceRoundFinalised(project_key));
+            Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into());
         }

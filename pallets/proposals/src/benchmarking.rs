@@ -6,6 +6,7 @@ use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use sp_core::Get;
+use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
 
 benchmarks! {
@@ -14,9 +15,9 @@ benchmarks! {
     }
 
     submit_milestone {
-        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000);
-        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
-        let contributions = get_contributions::<T>(vec![alice], 100_000);
+        let alice: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let contributions = get_contributions::<T>(vec![alice], 100_000_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
         let project_key = create_project::<T>(bob.clone(), contributions, prop_milestones, CurrencyId::Native);
         // (Initiator, ProjectKey, MilestoneKey)
@@ -26,10 +27,10 @@ benchmarks! {
     }
 
     vote_on_milestone {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
         // TODO: should update the contributors list to have maximum available length
-        let contributions = get_contributions::<T>(vec![bob.clone()], 500);
+        let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
         let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
 
@@ -42,10 +43,10 @@ benchmarks! {
     }
 
     withdraw {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
-        let contributions = get_contributions::<T>(vec![bob.clone()], 500);
-        let raised_funds:BalanceOf<T> = 500u32.into();
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
+        let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
+        let raised_funds:BalanceOf<T> = 100_000_000_000_000_000u128.saturated_into();
 
         let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
         let prop_milestones = get_milestones(milestone_count as u8);
@@ -71,50 +72,50 @@ benchmarks! {
     }
 
     raise_vote_of_no_confidence {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
         // TODO: should update the contributors list to have maximum available length
-        let contributions = get_contributions::<T>(vec![bob.clone()], 500);
+        let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
         let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
 
         // (Contributor, ProjectKey)
     }: _(RawOrigin::Signed(bob.clone()), project_key)
     verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundCreated(project_key).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundCreated(bob, project_key).into());
     }
 
     vote_on_no_confidence_round {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
-        let charlie: T::AccountId = create_funded_user::<T>("contributor", 2, 1_000);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
+        let charlie: T::AccountId = create_funded_user::<T>("contributor", 2, 1_000_000_000_000_000_000u128);
         // TODO: should update the contributors list to have maximum available length
-        let contributions = get_contributions::<T>(vec![bob.clone(), charlie.clone()], 500);
+        let contributions = get_contributions::<T>(vec![bob.clone(), charlie.clone()], 100_000_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
         let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
 
         assert_ok!(Pallet::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(bob).into(), project_key));
         // (Contributor, ProjectKey, IsYay)
-    }: _(RawOrigin::Signed(charlie), project_key, true)
+    }: _(RawOrigin::Signed(charlie.clone()), project_key, true)
     verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(project_key).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(charlie, project_key).into());
     }
 
     finalise_no_confidence_round {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000);
-        let charlie: T::AccountId = create_funded_user::<T>("contributor", 2, 1_000);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
+        let charlie: T::AccountId = create_funded_user::<T>("contributor", 2, 1_000_000_000_000_000_000u128);
         // TODO: should update the contributors list to have maximum available length
-        let contributions = get_contributions::<T>(vec![bob.clone(), charlie.clone()], 500);
+        let contributions = get_contributions::<T>(vec![bob.clone(), charlie.clone()], 100_000_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
         let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
 
         assert_ok!(Pallet::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(bob.clone()).into(), project_key));
         assert_ok!(Pallet::<T>::vote_on_no_confidence_round(RawOrigin::Signed(charlie).into(), project_key, false));
         // (Contributor, ProjectKey)
-    }: _(RawOrigin::Signed(bob), project_key)
+    }: _(RawOrigin::Signed(bob.clone()), project_key)
     verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(project_key).into());
+        assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(bob, project_key).into());
     }
 }
 
