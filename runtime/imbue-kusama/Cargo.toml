@@ -177,6 +177,7 @@ std = [
 	'common-types/std',
 
 	'pallet-proposals/std',
+	'pallet-proposals-rpc-runtime-api/std',
 	'pallet-briefs/std',
 	'pallet-grants/std',
 ]

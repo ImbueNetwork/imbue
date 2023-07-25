@@ -10373,6 +10373,7 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-runtime-parachains",
  "polkadot-service",
+ "polkadot-test-service",
  "sc-consensus-grandpa",
  "sp-authority-discovery",
  "sp-consensus-babe",
