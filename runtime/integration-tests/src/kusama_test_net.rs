@@ -26,7 +26,7 @@ use xcm_emulator::{
 };
 pub use sp_core::{sr25519, storage::Storage, Get};
 use xcm::prelude::*;
-use crate::constants::{imbue,kusama, accounts::{ALICE,BOB}};
+use crate::constants::{imbue,kusama, accounts::{ALICE,BOB, CHARLIE, DAVE, EVE, FERDIE}};
 use imbue_kusama_runtime::CurrencyId;
 use frame_support::{parameter_types, sp_io, sp_tracing};
 use crate::setup::{
@@ -55,8 +55,6 @@ decl_test_relay_chains! {
 		}
 	}
 }
-const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
-
 decl_test_parachains! {
 	pub struct Development {
 		genesis = imbue::genesis(PARA_ID_DEVELOPMENT),
@@ -76,6 +74,7 @@ decl_test_parachains! {
 		},
 		pallets_extra = {
 			PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,
+			XTokens: imbue_kusama_runtime::XTokens,
 		}
 	},
 	pub struct Sibling {
@@ -96,27 +95,9 @@ decl_test_parachains! {
 		},
 		pallets_extra = {
 			PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,
+			XTokens: imbue_kusama_runtime::XTokens,
 		}
 	}
-	// pub struct Karura {
-	// 	genesis = imbue::genesis(PARA_ID_KARURA),
-	// 	on_init = (),
-	// 	runtime = {
-	// 		Runtime: imbue_kusama_runtime::Runtime,
-	// 		RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
-	// 		RuntimeCall: imbue_kusama_runtime::RuntimeCall,
-	// 		RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
-	// 		XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
-	// 		DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
-	// 		LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
-	// 		System: imbue_kusama_runtime::System,
-	// 		Balances: imbue_kusama_runtime::Balances,
-	// 		ParachainSystem: imbue_kusama_runtime::ParachainSystem,
-	// 		ParachainInfo: imbue_kusama_runtime::ParachainInfo,
-	// 	},
-	// 	pallets_extra = {
-	// 	}
-	// }
 }
 
 decl_test_networks! {
@@ -135,11 +116,11 @@ parameter_types! {
 	pub KusamaSender: AccountId = Kusama::account_id_of(ALICE);
 	pub KusamaReceiver: AccountId = Kusama::account_id_of(BOB);
 	// Imbue Kusama
-	pub ImbueKusamaSender: AccountId = Development::account_id_of(ALICE);
-	pub ImbueKusamaReceiver: AccountId = Development::account_id_of(BOB);
+	pub ImbueKusamaSender: AccountId = Development::account_id_of(CHARLIE);
+	pub ImbueKusamaReceiver: AccountId = Development::account_id_of(DAVE);
 	// Sibling Kusama
-	pub SiblingKusamaSender: AccountId = Sibling::account_id_of(ALICE);
-	pub SiblingKusamaReceiver: AccountId = Sibling::account_id_of(BOB);
+	pub SiblingKusamaSender: AccountId = Sibling::account_id_of(EVE);
+	pub SiblingKusamaReceiver: AccountId = Sibling::account_id_of(FERDIE);
 }
 
 

@@ -115,7 +115,7 @@ pub mod validators {
 }
 
 /// The default XCM version to set in genesis config.
-const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+pub const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 // Kusama
 pub mod kusama {
@@ -240,15 +240,6 @@ pub mod imbue {
                     .map(|k| (k, CurrencyId::Native,  ED.saturating_add(10_000_000_000_000_000)))
                     .collect(),
             },
-            // orml_tokens::GenesisConfig::<Runtime> {
-            // balances: self
-            // .balances
-            // .into_iter()
-            // .filter(|(_, currency_id, _)| *currency_id != native_currency_id)
-            // .collect::<Vec<_>>(),
-            // }
-            // .assimilate_storage(&mut t)
-            // .unwrap();
             parachain_info: imbue_kusama_runtime::ParachainInfoConfig { parachain_id: para_id.into() },
             collator_selection: imbue_kusama_runtime::CollatorSelectionConfig {
                 invulnerables: collators::invulnerables()
@@ -280,7 +271,7 @@ pub mod imbue {
             technical_committee: Default::default(),
             parachain_system: Default::default(),
             polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig{
-                safe_xcm_version: Some(2),
+                safe_xcm_version: Some(SAFE_XCM_VERSION),
             },
             sudo: imbue_kusama_runtime::SudoConfig {
                 key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),

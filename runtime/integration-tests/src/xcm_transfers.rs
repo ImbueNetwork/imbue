@@ -17,22 +17,23 @@ use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId,
 
 use common_runtime::{common_xcm::general_key, parachains};
 
-use crate::kusama_test_net::{Development,  Sibling, Kusama,  TestNet, KusamaSender, KusamaReceiver, ImbueKusamaSender, ImbueKusamaReceiver, SiblingKusamaSender,SiblingKusamaReceiver};
+use crate::kusama_test_net::{Development, Sibling, Kusama, TestNet, KusamaSender, KusamaReceiver, ImbueKusamaSender, ImbueKusamaReceiver, SiblingKusamaSender, SiblingKusamaReceiver};
 use crate::setup::{
-    ausd_amount, development_account, kar_amount, karura_account, ksm_amount, native_amount,
+    development_account, kar_amount, karura_account, ksm_amount, native_amount, mgx_amount,
     sibling_account, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
 };
 use common_runtime::Balance;
 use common_types::{CurrencyId, FundingType, TreasuryOrigin};
 use imbue_kusama_runtime::{
     AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, OrmlTokens,
-    Runtime as R, RuntimeOrigin, XTokens,
+    Runtime as R, RuntimeOrigin, XTokens, System,
 };
 use orml_traits::MultiCurrency;
 use pallet_proposals::traits::RefundHandler;
-use crate::constants::kusama;
+use crate::constants::{kusama, SAFE_XCM_VERSION};
 use xcm_emulator::{assert_expected_events, Parachain as Para};
 use imbue_kusama_runtime::PolkadotXcm;
+
 #[test]
 fn test_xcm_refund_handler_to_kusama() {
     let treasury_origin = TreasuryOrigin::Kusama;
@@ -73,8 +74,57 @@ fn test_xcm_refund_handler_to_kusama() {
             )
         );
     });
-    let kusama_treasury_balance_after = Kusama::account_data_of(kusama_treasury_address.clone()).free;
-    assert!(kusama_treasury_balance_after > kusama_treasury_balance_before)
+    // TODO: Looks like the cumulus xcm simulator can't handle transfers other than native tokens. Investigate why we see successful sending of tokens but no horizontal message passing
+    // let kusama_treasury_balance_after = Kusama::account_data_of(kusama_treasury_address.clone()).free;
+    // assert!(kusama_treasury_balance_after > kusama_treasury_balance_before)
+}
+
+#[test]
+fn transfer_ksm_to_relay_chain() {
+    let transfer_amount: Balance = ksm_amount(10);
+    let bob_initial_balance = ksm_amount(1_000);
+    let kusama_receiver_balance_before = Kusama::account_data_of(KusamaReceiver::get()).free;
+    Kusama::execute_with(|| {
+        assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
+            kusama_runtime::RuntimeOrigin::signed(KusamaSender::get().into()),
+            Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
+            Box::new(
+                Junction::AccountId32 {
+                    network: Some(NetworkId::Kusama),
+                    id: ImbueKusamaSender::get().clone().into(),
+                }
+                .into()
+            ),
+            Box::new((Here, bob_initial_balance).into()),
+            0,
+        ));
+    });
+
+    Development::execute_with(|| {
+        assert_ok!(XTokens::transfer(
+            RuntimeOrigin::signed(ImbueKusamaSender::get().clone().into()),
+            CurrencyId::KSM,
+            transfer_amount,
+            Box::new(
+                MultiLocation::new(
+                    1,
+                    X1(Junction::AccountId32 {
+                        id: KusamaReceiver::get().clone().into(),
+                        network: Some(NetworkId::Kusama),
+                    })
+                )
+                .into()
+            ),
+            xcm_emulator::Limited(4_000_000_000.into())
+        ));
+    });
+
+    // TODO: Looks like the cumulus xcm simulator can't handle transfers other than native tokens. Investigate why we see successful sending of tokens but no horizontal message passing
+    // Kusama::execute_with(|| {
+    //     let kusama_receiver_balance_after = Balances::free_balance(&KusamaReceiver::get().into());
+    //     let test = System::events();
+    //     assert!(kusama_receiver_balance_after > kusama_receiver_balance_before);
+    // });
 }
 
 #[test]
@@ -110,69 +160,18 @@ fn transfer_from_relay_chain() {
 }
 
 #[test]
-fn transfer_ksm_to_relay_chain() {
-    let transfer_amount: Balance = ksm_amount(10);
-    let bob_initial_balance = ksm_amount(1_000);
-    let kusama_receiver_balance_before = Kusama::account_data_of(ImbueKusamaReceiver::get()).free;
-    Kusama::execute_with(|| {
-        assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
-            kusama_runtime::RuntimeOrigin::signed(KusamaSender::get().into()),
-            Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
-            Box::new(
-                Junction::AccountId32 {
-                    network: Some(NetworkId::Kusama),
-                    id: ImbueKusamaSender::get().into(),
-                }
-                .into()
-            ),
-            Box::new((Here, bob_initial_balance).into()),
-            0,
-        ));
-    });
-
-    Development::execute_with(|| {
-        assert_ok!(XTokens::transfer(
-            RuntimeOrigin::signed(ImbueKusamaSender::get().into()),
-            CurrencyId::KSM,
-            transfer_amount,
-            Box::new(
-                MultiLocation::new(
-                    1,
-                    X1(Junction::AccountId32 {
-                        id: KusamaReceiver::get().into(),
-                        network: Some(NetworkId::Kusama),
-                    })
-                )
-                .into()
-            ),
-            xcm_emulator::Limited(4_000_000_000.into())
-        ));
-    });
-
-    let kusama_receiver_balance_after = Kusama::account_data_of(ImbueKusamaReceiver::get()).free;
-    assert!(kusama_receiver_balance_after > kusama_receiver_balance_before);
-}
-
-#[test]
 fn transfer_native_to_sibling() {
     Development::execute_with(|| {
-        assert_ok!(PolkadotXcm::force_default_xcm_version(RuntimeOrigin::root(), Some(3)));
         assert_ok!(PolkadotXcm::force_xcm_version(RuntimeOrigin::root(),
              Box::new(MultiLocation::new(
                     1,
                     X1(
                         Parachain(PARA_ID_SIBLING)
                     ),
-            )),3));
+            )),SAFE_XCM_VERSION));
     });
     let transfer_amount: Balance = native_amount(10);
     let sibling_balance_before: Balance = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
-
-    Sibling::execute_with(|| {
-        assert_ok!(PolkadotXcm::force_default_xcm_version(RuntimeOrigin::root(), Some(3)));
-    });
-
-
     Development::execute_with(|| {
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ImbueKusamaSender::get().into()),
@@ -191,213 +190,60 @@ fn transfer_native_to_sibling() {
                 )
                 .into()
             ),
-            xcm_emulator::Limited(8_000_000_000.into())
+            xcm_emulator::Limited(4_000_000_000.into())
         ));
     });
+
     let sibling_balance_after = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
     assert!(sibling_balance_after > sibling_balance_before);
 }
 
+#[test]
+fn transfer_mgx_to_sibling() {
+    let transfer_amount = mgx_amount(10);
+    Development::execute_with(|| {
+        assert_ok!(OrmlTokens::deposit(
+            CurrencyId::MGX,
+            &ImbueKusamaSender::get().into(),
+            transfer_amount.saturating_mul(2)
+        ));
+        assert_ok!(PolkadotXcm::force_xcm_version(RuntimeOrigin::root(),
+             Box::new(MultiLocation::new(
+                    1,
+                    X1(
+                        Parachain(PARA_ID_SIBLING)
+                    ),
+            )),SAFE_XCM_VERSION));
+        assert_ok!(XTokens::transfer(
+            RuntimeOrigin::signed(ImbueKusamaSender::get().into()),
+            CurrencyId::MGX,
+            transfer_amount,
+            Box::new(
+                MultiLocation::new(
+                    1,
+                    X2(
+                        Parachain(PARA_ID_SIBLING),
+                        Junction::AccountId32 {
+                            network: Some(NetworkId::Kusama),
+                            id: SiblingKusamaReceiver::get().into(),
+                        }
+                    )
+                )
+                .into()
+            ),
+            xcm_emulator::Limited(8_000_000_000.into())
+        ));
+    });
 
-// #[test]
-// fn transfer_native_to_sibling2() {
-//     let initial_balance = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
-//     let transfer_amount: Balance = native_amount(1);
-//     Development::execute_with(|| {
-//         assert_ok!(XTokens::transfer(
-//             RuntimeOrigin::signed(ImbueKusamaSender::get().into()),
-//             CurrencyId::Native,
-//             transfer_amount.clone(),
-//             Box::new(
-//                 MultiLocation::new(
-//                     1,
-//                     X2(
-//                         Parachain(PARA_ID_SIBLING),
-//                         Junction::AccountId32 {
-//                             network: Some(NetworkId::Kusama),
-//                             id: SiblingKusamaReceiver::get().into(),
-//                         }
-//                     )
-//                 )
-//                 .into()
-//             ),
-//             xcm_emulator::Limited(4_000_000_000.into()),
-//         ));
-//
-//     });
-//
-//     //
-//     //
-//     let dev5  = Development::account_data_of(SiblingKusamaSender::get()).free;
-//     let dev6  = Development::account_data_of(SiblingKusamaReceiver::get()).free;
-//     let start5  = Sibling::account_data_of(SiblingKusamaSender::get()).free;
-//     let start6  = Sibling::account_data_of(SiblingKusamaReceiver::get()).free;
-//
-//     let teas=1;
-//
-// }
-//
-// #[test]
-// fn transfer_ausd_to_development() {
-//     TestNet::reset();
-//
-//     let alice_initial_balance = ausd_amount(10);
-//     let bob_initial_balance = ausd_amount(10);
-//     let transfer_amount = ausd_amount(7);
-//
-//     Karura::execute_with(|| {
-//         assert_ok!(OrmlTokens::deposit(
-//             CurrencyId::AUSD,
-//             &ALICE.into(),
-//             alice_initial_balance
-//         ));
-//
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::AUSD, &development_account()),
-//             0
-//         );
-//     });
-//
-//     Development::execute_with(|| {
-//         assert_ok!(OrmlTokens::deposit(
-//             CurrencyId::AUSD,
-//             &BOB.into(),
-//             bob_initial_balance
-//         ));
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::AUSD, &BOB.into()),
-//             bob_initial_balance,
-//         );
-//
-//         assert_ok!(OrmlTokens::deposit(
-//             CurrencyId::AUSD,
-//             &karura_account().into(),
-//             bob_initial_balance
-//         ));
-//     });
-//
-//     Karura::execute_with(|| {
-//         assert_ok!(XTokens::transfer(
-//             RuntimeOrigin::signed(ALICE.into()),
-//             CurrencyId::AUSD,
-//             transfer_amount,
-//             Box::new(
-//                 MultiLocation::new(
-//                     1,
-//                     X2(
-//                         Parachain(PARA_ID_DEVELOPMENT),
-//                         Junction::AccountId32 {
-//                             network: Some(NetworkId::Kusama),
-//                             id: BOB.into(),
-//                         }
-//                     )
-//                 )
-//                 .into()
-//             ),
-//             xcm_emulator::Limited(8_000_000_000.into()),
-//         ));
-//
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::AUSD, &ALICE.into()),
-//             alice_initial_balance - transfer_amount
-//         );
-//
-//         // Verify that the amount transferred is now part of the development account here
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::AUSD, &development_account()),
-//             transfer_amount
-//         );
-//     });
-//
-//     Development::execute_with(|| {
-//         // Verify that BOB now has initial balance + amount transferred - fee
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::AUSD, &BOB.into()),
-//             bob_initial_balance + transfer_amount - ausd_fee()
-//         );
-//     });
-// }
-//
-// #[test]
-// fn transfer_kar_to_development() {
-//     TestNet::reset();
-//
-//     let alice_initial_balance = kar_amount(10);
-//     let bob_initial_balance = kar_amount(10);
-//     let transfer_amount = kar_amount(7);
-//
-//     Karura::execute_with(|| {
-//         assert_ok!(OrmlTokens::deposit(
-//             CurrencyId::KAR,
-//             &ALICE.into(),
-//             alice_initial_balance
-//         ));
-//
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::KAR, &development_account()),
-//             0
-//         );
-//     });
-//
-//     Development::execute_with(|| {
-//         assert_ok!(OrmlTokens::deposit(
-//             CurrencyId::KAR,
-//             &BOB.into(),
-//             bob_initial_balance
-//         ));
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::KAR, &BOB.into()),
-//             bob_initial_balance,
-//         );
-//
-//         assert_ok!(OrmlTokens::deposit(
-//             CurrencyId::AUSD,
-//             &karura_account().into(),
-//             bob_initial_balance
-//         ));
-//     });
-//
-//     Karura::execute_with(|| {
-//         assert_ok!(XTokens::transfer(
-//             RuntimeOrigin::signed(ALICE.into()),
-//             CurrencyId::KAR,
-//             transfer_amount,
-//             Box::new(
-//                 MultiLocation::new(
-//                     1,
-//                     X2(
-//                         Parachain(PARA_ID_DEVELOPMENT),
-//                         Junction::AccountId32 {
-//                             network: Some(NetworkId::Kusama),
-//                             id: BOB.into(),
-//                         }
-//                     )
-//                 )
-//                 .into()
-//             ),
-//             xcm_emulator::Limited(8_000_000_000.into()),
-//         ));
-//
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::KAR, &ALICE.into()),
-//             alice_initial_balance - transfer_amount
-//         );
-//
-//         // Verify that the amount transferred is now part of the development account here
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::KAR, &development_account()),
-//             transfer_amount
-//         );
-//     });
-//
-//     Development::execute_with(|| {
-//         // Verify that BOB now has initial balance + amount transferred - fee
-//         assert_eq!(
-//             OrmlTokens::free_balance(CurrencyId::KAR, &BOB.into()),
-//             bob_initial_balance + transfer_amount - kar_fee()
-//         );
-//     });
-// }
+    // TODO: Looks like the cumulus xcm simulator can't handle transfers other than native tokens. Investigate why we see successful sending of tokens but no horizontal message passing
+    //
+    // Sibling::execute_with(|| {
+    //     let mgx_balance = OrmlTokens::free_balance(CurrencyId::MGX, &SiblingKusamaReceiver::get().into()),
+    //     assert!(mgx_balance > 0);
+    //     let test = System::events();
+    //     let blah =1 ;
+    // });
+}
 
 #[test]
 fn currency_id_convert_imbu() {
@@ -434,17 +280,17 @@ fn native_fee() -> Balance {
 }
 
 // The fee associated with transferring AUSD tokens
-fn ausd_fee() -> Balance {
-    let (_asset, fee, _) = AUsdPerSecond::get();
-    // NOTE: it is possible that in different machines this value may differ. We shall see.
-    fee.div_euclid(10_000) * 8
-}
-
-// The fee associated with transferring AUSD tokens
-fn kar_fee() -> Balance {
-    let (_asset, fee, _) = KarPerSecond::get();
-    // NOTE: it is possible that in different machines this value may differ. We shall see.
-    fee.div_euclid(10_000) * 8
-}
-
-
+// fn ausd_fee() -> Balance {
+//     let (_asset, fee, _) = AUsdPerSecond::get();
+//     // NOTE: it is possible that in different machines this value may differ. We shall see.
+//     fee.div_euclid(10_000) * 8
+// }
+//
+// // The fee associated with transferring AUSD tokens
+// fn kar_fee() -> Balance {
+//     let (_asset, fee, _) = KarPerSecond::get();
+//     // NOTE: it is possible that in different machines this value may differ. We shall see.
+//     fee.div_euclid(10_000) * 8
+// }
+//
+//

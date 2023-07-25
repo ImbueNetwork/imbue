@@ -10384,7 +10384,6 @@ dependencies = [
  "xcm-builder",
  "xcm-emulator",
  "xcm-executor",
- "xcm-simulator",
 ]
 
 [[package]]
@@ -15401,24 +15400,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.23",
-]
-
-[[package]]
-name = "xcm-simulator"
-version = "0.9.43"
-source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.43#ba42b9ce51d25bdaf52d2c61e0763a6e3da50d25"
-dependencies = [
- "frame-support",
- "parity-scale-codec 3.6.2",
- "paste 1.0.12",
- "polkadot-core-primitives",
- "polkadot-parachain",
- "polkadot-runtime-parachains",
- "sp-io",
- "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]

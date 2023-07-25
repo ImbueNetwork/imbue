@@ -4,7 +4,7 @@ use frame_support::traits::GenesisBuild;
 pub use imbue_kusama_runtime::{AccountId, CurrencyId, Runtime, RuntimeOrigin, System};
 /// Parachain Ids
 pub const PARA_ID_DEVELOPMENT: u32 = 2121;
-pub const PARA_ID_SIBLING: u32 = 3000;
+pub const PARA_ID_SIBLING: u32 = 2110;
 pub const PARA_ID_KARURA: u32 = 2000;
 
 pub struct ExtBuilder {
@@ -85,8 +85,8 @@ pub fn native_amount(amount: Balance) -> Balance {
     amount * dollar(currency_decimals::NATIVE)
 }
 
-pub fn ausd_amount(amount: Balance) -> Balance {
-    amount * dollar(currency_decimals::AUSD)
+pub fn mgx_amount(amount: Balance) -> Balance {
+    amount * dollar(currency_decimals::MGX)
 }
 
 pub fn kar_amount(amount: Balance) -> Balance {

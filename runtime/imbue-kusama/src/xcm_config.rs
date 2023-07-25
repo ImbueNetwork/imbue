@@ -315,6 +315,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
                 interior: X1(GeneralKey { data, length }),
             } => match &data[..(length as usize)] {
                 parachains::kusama::imbue::IMBU_KEY => Some(CurrencyId::Native),
+                parachains::kusama::mangata::MGX_KEY => Some(CurrencyId::MGX),
                 _ => OrmlAssetRegistry::location_to_asset_id(location),
             },
             MultiLocation {
