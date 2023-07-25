@@ -14,7 +14,6 @@ pub trait WeightInfo {
     fn withdraw() -> Weight;
     fn raise_vote_of_no_confidence() -> Weight;
     fn vote_on_no_confidence_round() -> Weight;
-    fn finalise_no_confidence_round() -> Weight;
 }
 
 /// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
