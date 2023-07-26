@@ -3,6 +3,7 @@ pub use pallet::*;
 
 pub mod traits;
 pub mod impls;
+pub mod weights;
 
 #[cfg(test)]
 mod mock;
@@ -19,15 +20,18 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiReservableCurrency, MultiCurrency, BalanceStatus};
 	use common_types::CurrencyId;
-	use sp_runtime::traits::{BadOrigin, Zero};
-	use sp_std::convert::TryInto;
-	use crate::traits::{EnsureRole, FellowshipHandle, DemocracyHandle};
+	use sp_runtime::traits::{Zero};
+	use sp_std::{convert::TryInto, vec};
 
-	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	type VetterIdOf<T> = AccountIdOf<T>; 
+	use crate::traits::{EnsureRole, FellowshipHandle, DemocracyHandle};
+	use crate::impls::EnsureFellowshipRole;
+	use crate::weights::WeightInfo;
+
+	pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+	pub(crate) type VetterIdOf<T> = AccountIdOf<T>; 
 	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 	type ShortlistRoundKey = u32;
-	type BoundedShortlistPlaces<T> = BoundedBTreeMap<AccountIdOf<T>, (Role, VetterIdOf<T>), <T as Config>::MaxCandidatesPerShortlist>;
+	type BoundedShortlistPlaces<T> = BoundedBTreeMap<AccountIdOf<T>, (Role, Option<VetterIdOf<T>>), <T as Config>::MaxCandidatesPerShortlist>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -50,6 +54,7 @@ pub mod pallet {
 		/// Currently just send all slash deposits to a single account.
 		/// TODO: use OnUnbalanced.
 		type SlashAccount: Get<AccountIdOf<Self>>;
+        type WeightInfo: WeightInfo;
 	}
 
 	/// Used to map who is a part of the fellowship.
@@ -123,9 +128,9 @@ pub mod pallet {
 				let round_key = ShortlistRound::<T>::get();
 				let shortlist =  CandidateShortlist::<T>::get(round_key);
 				// TODO: benchmark add_to_fellowship and add the according weight.
-				shortlist.iter().for_each(|(acc, (vetter, role))| {
+				shortlist.iter().for_each(|(acc, (role, maybe_vetter))| {
 					weight.saturating_add(T::WeightInfo::add_to_fellowship());
-					Self::add_to_fellowship(acc, *role, *vetter);
+					Self::add_to_fellowship(acc, *role, maybe_vetter.as_ref());
 				});
 
 				CandidateShortlist::<T>::remove(round_key);
@@ -143,7 +148,7 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn force_add_fellowship(origin: OriginFor<T>, who: AccountIdOf<T>, role: Role) -> DispatchResult {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
-			<Self as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&who, role)?;
+			<Self as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&who, role, None)?;
 			Self::deposit_event(Event::<T>::FellowshipAdded(who));
 			Ok(().into())
 		}
@@ -182,7 +187,7 @@ pub mod pallet {
 			ensure!(T::MultiCurrency::can_reserve(CurrencyId::Native, &candidate, <T as Config>::MembershipDeposit::get()), Error::<T>::CandidateDepositRequired);
 			let _ = CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {
 				ensure!(!m_shortlist.contains_key(&candidate), Error::<T>::CandidateAlreadyOnShortlist);
-				m_shortlist.try_insert(candidate.clone(), (role. who)).map_err(|_| Error::<T>::TooManyCandidates)?;
+				m_shortlist.try_insert(candidate.clone(), (role, Some(who))).map_err(|_| Error::<T>::TooManyCandidates)?;
 				Ok::<(), DispatchError>(())
 			})?;
 
@@ -233,7 +238,7 @@ pub mod pallet {
 		/// enough native token for the deposit, this candidate is then added to PendingFellows where they
 		/// can pay the deposit later to accept the membership.
 		/// The deposit amount is defined in the Config.
-		fn add_to_fellowship(who: &AccountIdOf<T>, role: Role, vetter: &VetterIdOf<T>) -> Result<(), DispatchError> {
+		fn add_to_fellowship(who: &AccountIdOf<T>, role: Role, vetter: Option<&VetterIdOf<T>>) -> Result<(), DispatchError> {
 			// If they aleady have a role then dont reserve as the reservation has already been taken.
 			// This would only happen if a role was changed.
 			if !Roles::<T>::contains_key(who) {
@@ -247,7 +252,9 @@ pub mod pallet {
 					PendingFellows::<T>::insert(who, role);
 					Self::deposit_event(Event::<T>::MemberAddedToPendingFellows(who.clone()));
 				}
-				FellowToVetter::<T>::insert(who, vetter);
+				if let Some(v) = vetter {
+					FellowToVetter::<T>::insert(who, v);
+				}
 			} else {
 				Roles::<T>::insert(who, role);
 			}
@@ -263,7 +270,7 @@ pub mod pallet {
 			ensure!(PendingFellows::<T>::contains_key(who) || has_role, Error::<T>::NotAFellow);
 			PendingFellows::<T>::remove(who);
 			Roles::<T>::remove(who);
-			FellowToVetter::<T>::remove(who)
+			FellowToVetter::<T>::remove(who);
 			// Essentially you can only slash a deposit if it has been taken
 			// Deposits are only taken when a role is assigned
 			if has_role {

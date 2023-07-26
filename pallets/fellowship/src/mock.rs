@@ -78,6 +78,7 @@ impl pallet_fellowship::Config for Test {
 	type ShortlistPeriod = ShortlistPeriod;
 	type MembershipDeposit = MembershipDeposit;
 	type SlashAccount = SlashAccount;
+    type WeightInfo = ();
 }
 
 impl crate::traits::DemocracyHandle<AccountId> for () {

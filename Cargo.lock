@@ -6552,14 +6552,15 @@ dependencies = [
 name = "pallet-fellowship"
 version = "0.1.0"
 dependencies = [
+ "common-traits",
  "common-types",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-tokens",
  "orml-traits",
- "parity-scale-codec 3.4.0",
- "scale-info 2.5.0",
+ "parity-scale-codec 3.6.2",
+ "scale-info 2.8.0",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -6862,6 +6863,7 @@ dependencies = [
  "orml-xtokens",
  "pallet-balances",
  "pallet-deposits",
+ "pallet-fellowship",
  "pallet-identity",
  "pallet-timestamp",
  "pallet-transaction-payment",

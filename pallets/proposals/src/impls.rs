@@ -153,8 +153,8 @@ impl<T: Config> Pallet<T> {
         let pallet_account = Self::account_id();
 
         let mut approvers: Option<&Vec<AccountIdOf<T>>> = None;
-        if project.funding_type = FundingType::Grant {
-            approvers = Some(project.contributors.to_vec());
+        if project.funding_type == FundingType::Grant(_) {
+            approvers = Some(project.contributions.to_vec());
         }
         Self::distribute_fees(project.funding_type, fee, project.currency_id, &project_account, &pallet_account,  &project.initiator, approvers)?;
         
@@ -358,18 +358,18 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn distribute_fees<'a, T: Config>(
+    pub fn distribute_fees<'a>(
         funding_type: FundingType, 
         fee: BalanceOf<T>, 
         currency_id: CurrencyId, 
         pallet_account: &'a AccountIdOf<T>,
         project_account: &'a AccountIdOf<T>, 
-        intitator: &'a AccountIdOf<T>
-        approvers: Option<&Vec<AccountIdOf<T>>>
+        initiator: &'a AccountIdOf<T>,
+        approvers: Option<&Vec<AccountIdOf<T>>>,
     ) -> Result<(), DispatchError> {
         match funding_type {
             FundingType::Brief => {
-                if let Ok(vetter) = <T as Config>::ProjectToVetter::try_convert(&initiator) {
+                if let Some(vetter) = <T as Config>::ProjectToVetter::maybe_convert(&initiator) {
                     let vetter_percent: Percent = <T as Config>::RoleToPercentFee::convert(Role::Vetter);
                     let vetter_fee = vetter_percent.mul_floor(fee);
                     let treasury_fee = fee.saturating_sub(vetter_fee);
@@ -381,13 +381,14 @@ impl<T: Config> Pallet<T> {
                     <T as Config>::MultiCurrency::transfer(currency_id, project_account, &pallet_account, fee).map_err(Error::<T>::NotEnoughFundsForFees)?;
                 }
             },
-            FundingType::Grant => {
+            FundingType::Grant(_) => {
                 // Send part to the approvers, part to treasury.
                 let approver_percent: Percent = <T as Config>::RoleToPercentFee::convert(Role::Approver);
-                let approver_fee = vetter_percent.mul_floor(fee);
-                let treasury_fee = fee.saturating_sub(vetter_fee);
+                let approver_fee = approver_percent.mul_floor(fee);
+                let treasury_fee = fee.saturating_sub(approver_fee);
 
-                <T as Config>::MultiCurrency::transfer(currency_id, project_account, &vetter, vetter_fee).map_err(Error::<T>::NotEnoughFundsForFees)?;
+                // TODO: foreach approver send fee
+                //<T as Config>::MultiCurrency::transfer(currency_id, project_account, &vetter, vetter_fee).map_err(Error::<T>::NotEnoughFundsForFees)?;
             
             },
             FundingType::Proposal => {

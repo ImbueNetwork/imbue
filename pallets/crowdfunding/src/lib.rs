@@ -26,6 +26,7 @@ pub mod pallet {
     use sp_arithmetic::per_things::Percent;
     use sp_core::H256;
     use sp_std::collections::btree_map::BTreeMap;
+    use sp_runtime::traits::MaybeConvert;
 
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub type BalanceOf<T> =

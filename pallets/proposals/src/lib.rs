@@ -2,6 +2,7 @@
 
 use codec::{Decode, Encode};
 use common_types::{CurrencyId, FundingType};
+use common_traits::MaybeConvert;
 use frame_support::{
     dispatch::EncodeLike, pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap,
     traits::EnsureOrigin, PalletId,
@@ -13,9 +14,9 @@ use pallet_deposits::traits::DepositHandler;
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
-use sp_runtime::traits::{AccountIdConversion, Saturating, Zero, TryConvert};
+use sp_runtime::traits::{AccountIdConversion, Saturating, Zero, Convert};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
-use pallet_fellowship::Role;
+use pallet_fellowship::{Role, traits::EnsureRole};
 
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
@@ -106,11 +107,11 @@ pub mod pallet {
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
         /// If possible find the vetter responsible for the freelancer.
-        type ProjectToVetter: TryConvert<AccountIdOf<Self>, VetterIdOf<Self>>;
+        type ProjectToVetter: MaybeConvert<AccountIdOf<Self>, VetterIdOf<Self>>;
         /// Turn an account role into a fee percentage. Handled in the fellowship pallet usually.
         type RoleToPercentFee: Convert<Role, Percent>;
         /// Ensure that an accountId is in a given role.
-        type EnsureRole: pallet_fellowship::EnsureRole<AccountIdOf<T>>;
+        type EnsureRole: EnsureRole<AccountIdOf<Self>, Role>;
     }
 
     #[pallet::pallet]
