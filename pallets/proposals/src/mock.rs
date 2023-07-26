@@ -62,6 +62,7 @@ frame_support::construct_runtime!(
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
+        Fellowship: pallet_fellowship,
     }
 );
 
@@ -209,6 +210,9 @@ impl pallet_proposals::Config for Test {
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler<Test>;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
+    type ProjectToVetter = Fellowship;
+    type RoleToPercentFee = Fellowship;
+    type EnsureRole = pallet_fellowship::impls::EnsureFellowshipRole<Test>;
 }
 
 parameter_types! {
@@ -236,9 +240,29 @@ impl pallet_identity::Config for Test {
 }
 
 parameter_types! {
+	pub MaxCandidatesPerShortlist: u32 = 100;
+	pub ShortlistPeriod: BlockNumber = 100;
+	pub MembershipDeposit: Balance = 50_000_000;
+	pub SlashAccount: AccountId = sr25519::Public::from_raw([1u8; 32]);
+}
+
+impl pallet_fellowship::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Tokens;
+	type ForceAuthority = EnsureRoot<AccountId>;
+	type DemocracyHandle = Test;
+	type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
+	type ShortlistPeriod = ShortlistPeriod;
+	type MembershipDeposit = MembershipDeposit;
+	type SlashAccount = SlashAccount;
+    type WeightInfo = ();
+}
+
+parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
+
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
@@ -302,4 +326,13 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
     fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
         Ok(().into())
     }
+}
+
+impl pallet_fellowship::traits::DemocracyHandle<AccountId> for Test {
+	fn initiate_shortlist_vote() -> () {
+		()
+	}
+	fn cancel_shortlist_vote() -> () {
+		()
+	}
 }

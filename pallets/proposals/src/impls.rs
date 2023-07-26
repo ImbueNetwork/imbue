@@ -152,7 +152,7 @@ impl<T: Config> Pallet<T> {
         let project_account = Self::project_account_id(project_key);
         let pallet_account = Self::account_id();
 
-        let mut approvers: Option<&Vec<AccountIdOf<T>>> = None;
+        let mut approvers: Option<Vec<&AccountIdOf<T>>> = None;
         if let FundingType::Grant(_) = project.funding_type {
             approvers = Some(project.contributions.keys().collect());
         }
@@ -365,11 +365,11 @@ impl<T: Config> Pallet<T> {
         pallet_account: &'a AccountIdOf<T>,
         project_account: &'a AccountIdOf<T>, 
         initiator: &'a AccountIdOf<T>,
-        approvers: Option<&Vec<AccountIdOf<T>>>,
+        approvers: Option<Vec<&AccountIdOf<T>>>,
     ) -> Result<(), DispatchError> {
         match funding_type {
             FundingType::Brief => {
-                if let Some(vetter) = <T as Config>::ProjectToVetter::maybe_convert(*initiator) {
+                if let Some(vetter) = <T as Config>::ProjectToVetter::maybe_convert(initiator) {
                     let vetter_percent: Percent = <T as Config>::RoleToPercentFee::convert(Role::Vetter);
                     let vetter_fee = vetter_percent.mul_floor(fee);
                     let treasury_fee = fee.saturating_sub(vetter_fee);

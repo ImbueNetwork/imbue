@@ -107,7 +107,7 @@ pub mod pallet {
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
         /// If possible find the vetter responsible for the freelancer.
-        type ProjectToVetter: MaybeConvert<AccountIdOf<Self>, VetterIdOf<Self>>;
+        type ProjectToVetter: for<'a> MaybeConvert<&'a AccountIdOf<Self>, VetterIdOf<Self>>;
         /// Turn an account role into a fee percentage. Handled in the fellowship pallet usually.
         type RoleToPercentFee: Convert<Role, Percent>;
         /// Ensure that an accountId is in a given role.
