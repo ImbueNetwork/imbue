@@ -775,6 +775,7 @@ parameter_types! {
     pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
     pub const MaxMilestonesPerProject: u32 = 50;
     pub const MaxProjectsPerAccount: u16 = u16::MAX;
+    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -795,6 +796,7 @@ impl pallet_proposals::Config for Runtime {
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = Deposits;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
+    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
 }
 
 parameter_types! {

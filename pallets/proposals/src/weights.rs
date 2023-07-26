@@ -14,7 +14,6 @@ pub trait WeightInfo {
     fn withdraw() -> Weight;
     fn raise_vote_of_no_confidence() -> Weight;
     fn vote_on_no_confidence_round() -> Weight;
-    fn finalise_no_confidence_round() -> Weight;
 }
 
 /// Weights for pallet_proposals using the Substrate node, recommended hardware should be used.
@@ -45,11 +44,6 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }
-    fn finalise_no_confidence_round() -> Weight {
-        Weight::from_parts(2_454_429_000, 281282)
-            .saturating_add(T::DbWeight::get().reads(8_u64))
-            .saturating_add(T::DbWeight::get().writes(6_u64))
-    }
 }
 
 // For backwards compatibility and tests
@@ -78,10 +72,5 @@ impl WeightInfo for () {
         Weight::from_parts(686_616_000, 435819)
             .saturating_add(RocksDbWeight::get().reads(4_u64))
             .saturating_add(RocksDbWeight::get().writes(2_u64))
-    }
-    fn finalise_no_confidence_round() -> Weight {
-        Weight::from_parts(2_454_429_000, 281282)
-            .saturating_add(RocksDbWeight::get().reads(8_u64))
-            .saturating_add(RocksDbWeight::get().writes(6_u64))
     }
 }

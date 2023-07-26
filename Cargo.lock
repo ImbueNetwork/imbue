@@ -7179,7 +7179,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-proposals"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "common-runtime",
  "common-traits",

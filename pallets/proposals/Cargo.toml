@@ -2,7 +2,7 @@
 name = "pallet-proposals"
 authors = ['Imbue <https://github.com/ImbueNetwork>']
 description = "Proposals pallet is used for creating on chain funding propositions"
-version = '3.0.0'
+version = '3.1.0'
 license = 'Apache 2.0'
 homepage = 'https://substrate.dev'
 repository = "https://github.com/ImbueNetwork/imbue"

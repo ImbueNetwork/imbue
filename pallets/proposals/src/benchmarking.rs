@@ -1,13 +1,16 @@
 #![cfg(feature = "runtime-benchmarks")]
-use super::*;
-use crate::test_utils::*;
-use crate::Pallet as Proposals;
+
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use sp_core::Get;
 use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
+
+use crate::Pallet as Proposals;
+use crate::test_utils::*;
+
+use super::*;
 
 benchmarks! {
     where_clause {
@@ -101,22 +104,6 @@ benchmarks! {
         assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(charlie, project_key).into());
     }
 
-    finalise_no_confidence_round {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
-        let charlie: T::AccountId = create_funded_user::<T>("contributor", 2, 1_000_000_000_000_000_000u128);
-        // TODO: should update the contributors list to have maximum available length
-        let contributions = get_contributions::<T>(vec![bob.clone(), charlie.clone()], 100_000_000_000_000_000u128);
-        let prop_milestones = get_max_milestones::<T>();
-        let project_key = create_project::<T>(alice.clone(), contributions, prop_milestones, CurrencyId::Native);
-
-        assert_ok!(Pallet::<T>::raise_vote_of_no_confidence(RawOrigin::Signed(bob.clone()).into(), project_key));
-        assert_ok!(Pallet::<T>::vote_on_no_confidence_round(RawOrigin::Signed(charlie).into(), project_key, false));
-        // (Contributor, ProjectKey)
-    }: _(RawOrigin::Signed(bob.clone()), project_key)
-    verify {
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundFinalised(bob, project_key).into());
-    }
 }
 
 impl_benchmark_test_suite!(
