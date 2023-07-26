@@ -30,6 +30,8 @@ pub fn imbue_properties() -> Properties {
 pub type ImbueKusamaChainSpec = sc_service::GenericChainSpec<imbue_kusama_runtime::GenesisConfig>;
 
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+/// The default XCM version to set in genesis config.
+const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -292,5 +294,8 @@ fn development_genesis(
         treasury: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
+        polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig {
+            safe_xcm_version: Some(SAFE_XCM_VERSION),
+        },
     }
 }

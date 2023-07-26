@@ -25,7 +25,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: nightly-2023-05-22
           target: wasm32-unknown-unknown
           override: true
 
@@ -39,4 +39,4 @@ jobs:
         run: sudo apt install protobuf-compiler
 
       - name: Run tests with benchmarks
-        run: cargo +nightly test --features runtime-benchmarks
+        run: cargo test --features runtime-benchmarks

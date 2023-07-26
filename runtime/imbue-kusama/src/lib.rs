@@ -137,6 +137,7 @@ parameter_types! {
         .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
         .build_or_panic();
     pub const SS58Prefix: u8 = 42;
+    pub MaxCollectivesProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 }
 
 pub struct BaseCallFilter;
@@ -151,6 +152,7 @@ impl Contains<RuntimeCall> for BaseCallFilter {
                 | pallet_xcm::Call::teleport_assets { .. }
                 | pallet_xcm::Call::reserve_transfer_assets { .. }
                 | pallet_xcm::Call::limited_reserve_transfer_assets { .. }
+                | pallet_xcm::Call::force_suspension { .. }
                 | pallet_xcm::Call::limited_teleport_assets { .. } => false,
                 pallet_xcm::Call::__Ignore { .. } => {
                     unimplemented!()
@@ -231,17 +233,19 @@ impl pallet_balances::Config for Runtime {
     /// The type for recording an account's balance.
     type Balance = Balance;
     /// Handler for the unbalanced reduction when removing a dust account.
-    type DustRemoval = Treasury;
-    /// The overarching event type.
-
+    type DustRemoval = ();
     /// The minimum amount required to keep an account open.
-    type ExistentialDeposit = NativeTokenTransferFee;
+    type ExistentialDeposit = ExistentialDeposit;
     /// The means of storing the balances of an account.
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Self>;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type HoldIdentifier = ();
+    type FreezeIdentifier = ();
+    type MaxHolds = ConstU32<0>;
+    type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
@@ -260,6 +264,7 @@ impl pallet_transaction_payment::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
     type RuntimeCall = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -433,6 +438,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
     type SetMembersOrigin = MoreThanHalfCouncil;
+    type MaxProposalWeight = MaxCollectivesProposalWeight;
 }
 
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
@@ -445,6 +451,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
     type SetMembersOrigin = MoreThanHalfCouncil;
+    type MaxProposalWeight = MaxCollectivesProposalWeight;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
@@ -893,7 +900,7 @@ construct_runtime! {
 
         // XCM helpers.
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 26,
-        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 27,
+        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 27,
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 28,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 29,
 
@@ -997,9 +1004,17 @@ impl_runtime_apis! {
         }
     }
 
-    impl sp_api::Metadata<Block> for Runtime {
+   impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
             OpaqueMetadata::new(Runtime::metadata().into())
+        }
+
+        fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+            Runtime::metadata_at_version(version)
+        }
+
+        fn metadata_versions() -> sp_std::vec::Vec<u32> {
+            Runtime::metadata_versions()
         }
     }
 
