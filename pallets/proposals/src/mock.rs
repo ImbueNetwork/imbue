@@ -197,7 +197,6 @@ impl pallet_proposals::Config for Test {
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = ();
-    // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
@@ -211,7 +210,7 @@ impl pallet_proposals::Config for Test {
     type DepositHandler = MockDepositHandler<Test>;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
     type ProjectToVetter = Fellowship;
-    type RoleToPercentFee = Fellowship;
+    type RoleToPercentFee = pallet_fellowship::impls::RoleToPercentFee;
     type EnsureRole = pallet_fellowship::impls::EnsureFellowshipRole<Test>;
 }
 

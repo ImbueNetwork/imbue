@@ -35,7 +35,8 @@ impl<T: Config> MaybeConvert<&AccountIdOf<T>, VetterIdOf<T>> for Pallet<T> {
 	}
 }
 
-impl<T: Config> Convert<crate::Role, Percent> for Pallet<T> {
+pub struct RoleToPercentFee;
+impl Convert<crate::Role, Percent> for RoleToPercentFee {
 	fn convert(role: Role) -> Percent {
 		match role {
 			Role::Vetter =>  Percent::from_percent(50u8),

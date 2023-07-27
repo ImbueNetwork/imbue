@@ -234,6 +234,7 @@ pub mod pallet {
 	impl<T: crate::Config> FellowshipHandle<AccountIdOf<T>> for Pallet<T> {
 		type Role = crate::pallet::Role;
 
+		/// Does no check on the Origin of the call.
 		/// Add someone to the fellowship the only way this "fails" is when the candidate does not have
 		/// enough native token for the deposit, this candidate is then added to PendingFellows where they
 		/// can pay the deposit later to accept the membership.
@@ -243,9 +244,7 @@ pub mod pallet {
 			// This would only happen if a role was changed.
 			if !Roles::<T>::contains_key(who) {
 				let membership_deposit = <T as Config>::MembershipDeposit::get();
-				// TODO: is this can_reserve needed? 
-				if <T as Config>::MultiCurrency::can_reserve(CurrencyId::Native, who, membership_deposit) {
-					let _ = <T as Config>::MultiCurrency::reserve(CurrencyId::Native, who, membership_deposit);
+				if let Ok(_) = <T as Config>::MultiCurrency::reserve(CurrencyId::Native, who, membership_deposit) {
 					FellowshipReserves::<T>::insert(who, membership_deposit);
 					Roles::<T>::insert(who, role);
 				} else {
@@ -262,6 +261,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Does no check on the Origin of the call.
 		/// Revoke the fellowship from an account.
 		/// If they have not paid the deposit but are eligable then they can still be revoked
 		/// using this method.
@@ -287,7 +287,7 @@ pub mod pallet {
 					<T as Config>::MultiCurrency::unreserve(CurrencyId::Native, who, deposit_amount);
 				}
 			}
-			Ok(())
+			Ok(())	 
 		}
 	}
 
