@@ -65,3 +65,69 @@ fn add_to_fellowship_edits_role_if_exists_already() {
 fn revoke_fellowship_not_a_fellow() {
     new_test_ext().execute_with(|| {});
 }
+
+#[test]
+fn revoke_fellowship_unreserves_if_deposit_taken_no_slash() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn revoke_fellowship_slashes_if_deposit_taken_no_slash() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn add_candidate_to_shortlist_not_a_vetter() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn add_candidate_to_shortlist_already_fellow() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn add_candidate_to_shortlist_candidate_lacks_deposit() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn add_candidate_to_shortlist_candidate_already_on_shortlist() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn add_candidate_to_shortlist_too_many_candidates() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn add_candidate_to_shortlist_works_assert_event() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn remove_candidate_from_shortlist_not_a_vetter() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn remove_candidate_from_shortlist_works_assert_event() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn pay_deposit_and_remove_pending_status_not_pending() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn pay_deposit_and_remove_pending_status_not_enough_funds_to_reserve() {
+    new_test_ext().execute_with(|| {});
+}
+
+#[test]
+fn pay_deposit_and_remove_pending_status_works_assert_event() {
+    new_test_ext().execute_with(|| {});
+}
+

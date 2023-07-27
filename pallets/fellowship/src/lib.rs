@@ -51,7 +51,7 @@ pub mod pallet {
         type DemocracyHandle: DemocracyHandle<AccountIdOf<Self>>;
         /// The max number of candidates per wave.
         type MaxCandidatesPerShortlist: Get<u32>;
-        /// The amount of time before a shortlist is moved to be voted on.
+        /// The amount of time before a shortlist is processed.
         type ShortlistPeriod: Get<BlockNumberFor<Self>>;
         /// The minimum deposit required for a freelancer to hold fellowship status.
         type MembershipDeposit: Get<BalanceOf<Self>>;
@@ -94,11 +94,17 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
+		/// A member has been added to the fellowship.
         FellowshipAdded(AccountIdOf<T>),
+		/// A member has been removed from the fellowship.
         FellowshipRemoved(AccountIdOf<T>),
+		/// A member has been removed from the fellowship and their deposit slashes. 
         FellowshipSlashed(AccountIdOf<T>),
+		/// A member has been added to pending fellows awaiting deposit payment.
         MemberAddedToPendingFellows(AccountIdOf<T>),
+		/// A candidate has been added to the shortlist.
         CandidateAddedToShortlist(AccountIdOf<T>),
+		/// A candidate has been removed from the shortlist.
         CandidateRemovedFromShortlist(AccountIdOf<T>),
     }
 
@@ -129,12 +135,14 @@ pub mod pallet {
             if n % T::ShortlistPeriod::get() == Zero::zero() {
                 let round_key = ShortlistRound::<T>::get();
                 let shortlist = CandidateShortlist::<T>::get(round_key);
-                // TODO: benchmark add_to_fellowship and add the according weight.
-                shortlist.iter().for_each(|(acc, (role, maybe_vetter))| {
+				*weight += T::DbWeight::get().reads(2);
+
+				shortlist.iter().for_each(|(acc, (role, maybe_vetter))| {
                     weight.saturating_add(T::WeightInfo::add_to_fellowship());
                     Self::add_to_fellowship(acc, *role, maybe_vetter.as_ref());
                 });
 
+				*weight += T::DbWeight::get().reads_writes(2, 2);
                 CandidateShortlist::<T>::remove(round_key);
                 ShortlistRound::<T>::put(round_key.saturating_add(1));
             }
