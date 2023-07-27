@@ -12,22 +12,36 @@ use frame_system::Pallet as System;
 #[test]
 fn ensure_role_in_works() {
     new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(*ALICE, Role::Vetter);
-        Roles::<Test>::insert(*BOB, Role::Freelancer);
+        Roles::<Test>::insert(*ALICE, (Role::Vetter, 10));
+        Roles::<Test>::insert(*BOB, (Role::Freelancer, 10));
         
-        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(&ALICE, vec![Role::Vetter, Role::Freelancer]));
-        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(&BOB, vec![Role::Vetter, Role::Freelancer]));
-        assert!(EnsureFellowshipRole::<Test>::ensure_role_in(&BOB, vec![Role::Approver]).is_err(), "BOB is not of this Role.");
-        assert!(EnsureFellowshipRole::<Test>::ensure_role_in(&ALICE, vec![Role::Freelancer]).is_err(), "ALICE is not of this Role.");
+        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(&ALICE, vec![Role::Vetter, Role::Freelancer], None));
+        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(&BOB, vec![Role::Vetter, Role::Freelancer], None));
+        assert!(EnsureFellowshipRole::<Test>::ensure_role_in(&BOB, vec![Role::Approver], None).is_err(), "BOB is not of this Role.");
+        assert!(EnsureFellowshipRole::<Test>::ensure_role_in(&ALICE, vec![Role::Freelancer], None).is_err(), "ALICE is not of this Role.");
+    });
+}
+
+#[test]
+fn ensure_role_in_works_with_rank() {
+    new_test_ext().execute_with(|| {
+        assert!(false);
     });
 }
 
 #[test]
 fn ensure_role_works() {
     new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(*ALICE, Role::Vetter);
-        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role(&ALICE, Role::Vetter));
-        assert!(EnsureFellowshipRole::<Test>::ensure_role(&ALICE, Role::Freelancer).is_err());
+        Roles::<Test>::insert(*ALICE, (Role::Vetter, 0));
+        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role(&ALICE, Role::Vetter, None));
+        assert!(EnsureFellowshipRole::<Test>::ensure_role(&ALICE, Role::Freelancer, None).is_err());
+    });
+}
+
+#[test]
+fn ensure_role_works_with_rank() {
+    new_test_ext().execute_with(|| {
+        assert!(false);
     });
 }
 
@@ -44,14 +58,14 @@ fn freelancer_to_vetter_works() {
 #[test]
 fn force_add_fellowship_only_force_permitted() {
     new_test_ext().execute_with(|| {
-        assert_noop!(Fellowship::<Test>::force_add_fellowship(RuntimeOrigin::signed(*ALICE), *BOB, Role::Freelancer), BadOrigin);
+        assert_noop!(Fellowship::<Test>::force_add_fellowship(RuntimeOrigin::signed(*ALICE), *BOB, Role::Freelancer, 10), BadOrigin);
     });
 }
 
 #[test]
 fn force_add_fellowship_ok_event_assert() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Fellowship::<Test>::force_add_fellowship(RuntimeOrigin::root(), *BOB, Role::Freelancer));
+        assert_ok!(Fellowship::<Test>::force_add_fellowship(RuntimeOrigin::root(), *BOB, Role::Freelancer, 10));
         System::<Test>::assert_last_event(Event::<Test>::FellowshipAdded{who: *BOB, role: Role::Freelancer}.into());
     });
 }

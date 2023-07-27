@@ -29,11 +29,13 @@ pub mod pallet {
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type VetterIdOf<T> = AccountIdOf<T>;
+	pub(crate) type Rank = u16;
+
     type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     type ShortlistRoundKey = u32;
     type BoundedShortlistPlaces<T> = BoundedBTreeMap<
         AccountIdOf<T>,
-        (Role, Option<VetterIdOf<T>>),
+        ((Role, Rank), Option<VetterIdOf<T>>),
         <T as Config>::MaxCandidatesPerShortlist,
     >;
 
@@ -64,7 +66,7 @@ pub mod pallet {
     /// Used to map who is a part of the fellowship.
     /// Returns the role of the account
     #[pallet::storage]
-    pub type Roles<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, Role, OptionQuery>;
+    pub type Roles<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (Role, Rank), OptionQuery>;
 
     /// Contains the shortlist of candidates to be sent for approval.
     #[pallet::storage]
@@ -77,7 +79,7 @@ pub mod pallet {
 
     #[pallet::storage]
     /// Holds all the accounts that are able to become fellows that have not given their deposit for membership.
-    pub type PendingFellows<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, Role, OptionQuery>;
+    pub type PendingFellows<T> = StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (Role, Rank), OptionQuery>;
 
     /// Keeps track of the deposits taken from a fellow.
     /// Needed incase the reserve amount will change.
@@ -137,9 +139,9 @@ pub mod pallet {
                 let shortlist = CandidateShortlist::<T>::get(round_key);
 				weight.saturating_add(T::DbWeight::get().reads(2));
 
-				shortlist.iter().for_each(|(acc, (role, maybe_vetter))| {
+				shortlist.iter().for_each(|(acc, ((role, rank), maybe_vetter))| {
                     weight.saturating_add(T::WeightInfo::add_to_fellowship());
-                    Self::add_to_fellowship(acc, *role, maybe_vetter.as_ref());
+                    Self::add_to_fellowship(acc, *role, *rank, maybe_vetter.as_ref());
                 });
 
 				weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
@@ -160,9 +162,10 @@ pub mod pallet {
             origin: OriginFor<T>,
             who: AccountIdOf<T>,
             role: Role,
+			rank: Rank,
         ) -> DispatchResult {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
-            <Self as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&who, role, None)?;
+            <Self as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&who, role, rank, None)?;
             Self::deposit_event(Event::<T>::FellowshipAdded{who, role});
             Ok(().into())
         }
@@ -201,12 +204,14 @@ pub mod pallet {
             origin: OriginFor<T>,
             candidate: AccountIdOf<T>,
             role: Role,
+			rank: Rank,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(
                 EnsureFellowshipRole::<T>::ensure_role_in(
                     &who,
-                    vec![Role::Freelancer, Role::Vetter]
+                    vec![Role::Freelancer, Role::Vetter],
+					None
                 )
                 .is_ok(),
                 Error::<T>::NotAVetter
@@ -230,7 +235,7 @@ pub mod pallet {
                         Error::<T>::CandidateAlreadyOnShortlist
                     );
                     m_shortlist
-                        .try_insert(candidate.clone(), (role, Some(who)))
+                        .try_insert(candidate.clone(), ((role, rank), Some(who)))
                         .map_err(|_| Error::<T>::TooManyCandidates)?;
                     Ok::<(), DispatchError>(())
                 })?;
@@ -251,7 +256,8 @@ pub mod pallet {
             ensure!(
                 EnsureFellowshipRole::<T>::ensure_role_in(
                     &who,
-                    vec![Role::Freelancer, Role::Vetter]
+                    vec![Role::Freelancer, Role::Vetter],
+					None
                 )
                 .is_ok(),
                 Error::<T>::NotAVetter
@@ -273,13 +279,13 @@ pub mod pallet {
         #[pallet::weight(10_000)]
         pub fn pay_deposit_to_remove_pending_status(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let role = PendingFellows::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
+            let (role, rank) = PendingFellows::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
             let membership_deposit = <T as Config>::MembershipDeposit::get();
 
             <T as Config>::MultiCurrency::reserve(CurrencyId::Native, &who, membership_deposit)?;
             FellowshipReserves::<T>::insert(&who, membership_deposit);
             PendingFellows::<T>::remove(&who);
-            Roles::<T>::insert(&who, role);
+            Roles::<T>::insert(&who, (role, rank));
 
             Self::deposit_event(Event::<T>::FellowshipAdded{who, role});
             Ok(().into())
@@ -288,6 +294,7 @@ pub mod pallet {
 
     impl<T: crate::Config> FellowshipHandle<AccountIdOf<T>> for Pallet<T> {
         type Role = crate::pallet::Role;
+		type Rank = crate::pallet::Rank;
 
         /// Does no check on the Origin of the call.
         /// Add someone to the fellowship the only way this "fails" is when the candidate does not have
@@ -297,6 +304,7 @@ pub mod pallet {
         fn add_to_fellowship(
             who: &AccountIdOf<T>,
             role: Role,
+			rank: Rank,
             vetter: Option<&VetterIdOf<T>>,
         ) -> Result<(), DispatchError> {
             // If they aleady have a role then dont reserve as the reservation has already been taken.
@@ -309,16 +317,16 @@ pub mod pallet {
                     membership_deposit,
                 ) {
                     FellowshipReserves::<T>::insert(who, membership_deposit);
-                    Roles::<T>::insert(who, role);
+                    Roles::<T>::insert(who, (role, rank));
                 } else {
-                    PendingFellows::<T>::insert(who, role);
+                    PendingFellows::<T>::insert(who, (role, rank));
                     Self::deposit_event(Event::<T>::MemberAddedToPendingFellows{who: who.clone()});
                 }
                 if let Some(v) = vetter {
                     FellowToVetter::<T>::insert(who, v);
                 }
             } else {
-                Roles::<T>::insert(who, role);
+                Roles::<T>::insert(who, (role, rank));
             }
 
             Ok(())
@@ -367,9 +375,11 @@ pub mod pallet {
 
     #[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, MaxEncodedLen, TypeInfo)]
     pub enum Role {
-        Vetter{rank: u16},
-        Freelancer{rank: u16},
-        BusinessDev{rank: u16},
-        Approver{rank: u16},
+        Vetter,
+        Freelancer,
+        BusinessDev,
+        Approver,
     }
+
+	
 }
