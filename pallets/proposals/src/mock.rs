@@ -239,21 +239,21 @@ impl pallet_identity::Config for Test {
 }
 
 parameter_types! {
-	pub MaxCandidatesPerShortlist: u32 = 100;
-	pub ShortlistPeriod: BlockNumber = 100;
-	pub MembershipDeposit: Balance = 50_000_000;
-	pub SlashAccount: AccountId = sr25519::Public::from_raw([1u8; 32]);
+    pub MaxCandidatesPerShortlist: u32 = 100;
+    pub ShortlistPeriod: BlockNumber = 100;
+    pub MembershipDeposit: Balance = 50_000_000;
+    pub SlashAccount: AccountId = sr25519::Public::from_raw([1u8; 32]);
 }
 
 impl pallet_fellowship::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type MultiCurrency = Tokens;
-	type ForceAuthority = EnsureRoot<AccountId>;
-	type DemocracyHandle = Test;
-	type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
-	type ShortlistPeriod = ShortlistPeriod;
-	type MembershipDeposit = MembershipDeposit;
-	type SlashAccount = SlashAccount;
+    type RuntimeEvent = RuntimeEvent;
+    type MultiCurrency = Tokens;
+    type ForceAuthority = EnsureRoot<AccountId>;
+    type DemocracyHandle = Test;
+    type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
+    type ShortlistPeriod = ShortlistPeriod;
+    type MembershipDeposit = MembershipDeposit;
+    type SlashAccount = SlashAccount;
     type WeightInfo = ();
 }
 
@@ -328,10 +328,10 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
 }
 
 impl pallet_fellowship::traits::DemocracyHandle<AccountId> for Test {
-	fn initiate_shortlist_vote() -> () {
-		()
-	}
-	fn cancel_shortlist_vote() -> () {
-		()
-	}
+    fn initiate_shortlist_vote() -> () {
+        ()
+    }
+    fn cancel_shortlist_vote() -> () {
+        ()
+    }
 }

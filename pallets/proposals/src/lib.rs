@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use common_types::{CurrencyId, FundingType};
 use common_traits::MaybeConvert;
+use common_types::{CurrencyId, FundingType};
 use frame_support::{
     dispatch::EncodeLike, pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap,
     traits::EnsureOrigin, PalletId,
@@ -11,12 +11,12 @@ use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
+use pallet_fellowship::{traits::EnsureRole, Role};
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
-use sp_runtime::traits::{AccountIdConversion, Saturating, Zero, Convert};
+use sp_runtime::traits::{AccountIdConversion, Convert, Saturating, Zero};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
-use pallet_fellowship::{Role, traits::EnsureRole};
 
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};

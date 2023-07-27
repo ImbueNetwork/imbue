@@ -1,5 +1,5 @@
-use frame_support::pallet_prelude::*;
 use codec::{FullCodec, FullEncode};
+use frame_support::pallet_prelude::*;
 use sp_runtime::traits::BadOrigin;
 use sp_std::vec::Vec;
 
@@ -12,14 +12,13 @@ pub trait DemocracyHandle<AccountId> {
 /// Used by external pallets that decide when to add and remove members from the fellowship.
 /// Makes a ying/yang with the democracy handle :)
 pub trait FellowshipHandle<AccountId> {
-    type Role: Member
-    + TypeInfo
-    + MaxEncodedLen
-    + FullCodec
-    + FullEncode
-    + Copy;
+    type Role: Member + TypeInfo + MaxEncodedLen + FullCodec + FullEncode + Copy;
 
-    fn add_to_fellowship(who: &AccountId, role: Self::Role, vetter: Option<&AccountId>) -> Result<(), DispatchError>;
+    fn add_to_fellowship(
+        who: &AccountId,
+        role: Self::Role,
+        vetter: Option<&AccountId>,
+    ) -> Result<(), DispatchError>;
     fn revoke_fellowship(who: &AccountId, slash_deposit: bool) -> Result<(), DispatchError>;
 }
 
@@ -28,4 +27,3 @@ pub trait EnsureRole<AccountId, Role> {
     fn ensure_role(acc: &AccountId, role: Role) -> Result<Self::Success, BadOrigin>;
     fn ensure_role_in(acc: &AccountId, roles: Vec<Role>) -> Result<Self::Success, BadOrigin>;
 }
-

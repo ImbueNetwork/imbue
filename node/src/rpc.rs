@@ -45,9 +45,9 @@ where
     C::Api: pallet_proposals_rpc::ProposalsRuntimeApi<Block, AccountId>,
     P: TransactionPool + Sync + Send + 'static,
 {
+    use pallet_proposals_rpc::{Proposals, ProposalsApiServer};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
     use substrate_frame_rpc_system::{System, SystemApiServer};
-    use pallet_proposals_rpc::{Proposals, ProposalsApiServer};
 
     let mut module = RpcExtension::new(());
     let FullDeps {
