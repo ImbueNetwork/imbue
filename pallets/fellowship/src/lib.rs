@@ -95,17 +95,17 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
 		/// A member has been added to the fellowship.
-        FellowshipAdded(AccountIdOf<T>),
+        FellowshipAdded{who: AccountIdOf<T>, role: Role},
 		/// A member has been removed from the fellowship.
-        FellowshipRemoved(AccountIdOf<T>),
+        FellowshipRemoved{who: AccountIdOf<T>},
 		/// A member has been removed from the fellowship and their deposit slashes. 
-        FellowshipSlashed(AccountIdOf<T>),
+        FellowshipSlashed{who: AccountIdOf<T>},
 		/// A member has been added to pending fellows awaiting deposit payment.
-        MemberAddedToPendingFellows(AccountIdOf<T>),
+        MemberAddedToPendingFellows{who: AccountIdOf<T>},
 		/// A candidate has been added to the shortlist.
-        CandidateAddedToShortlist(AccountIdOf<T>),
+        CandidateAddedToShortlist{who: AccountIdOf<T>},
 		/// A candidate has been removed from the shortlist.
-        CandidateRemovedFromShortlist(AccountIdOf<T>),
+        CandidateRemovedFromShortlist{who: AccountIdOf<T>},
     }
 
     #[pallet::error]
@@ -135,14 +135,14 @@ pub mod pallet {
             if n % T::ShortlistPeriod::get() == Zero::zero() {
                 let round_key = ShortlistRound::<T>::get();
                 let shortlist = CandidateShortlist::<T>::get(round_key);
-				*weight += T::DbWeight::get().reads(2);
+				weight.saturating_add(T::DbWeight::get().reads(2));
 
 				shortlist.iter().for_each(|(acc, (role, maybe_vetter))| {
                     weight.saturating_add(T::WeightInfo::add_to_fellowship());
                     Self::add_to_fellowship(acc, *role, maybe_vetter.as_ref());
                 });
 
-				*weight += T::DbWeight::get().reads_writes(2, 2);
+				weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
                 CandidateShortlist::<T>::remove(round_key);
                 ShortlistRound::<T>::put(round_key.saturating_add(1));
             }
@@ -163,7 +163,7 @@ pub mod pallet {
         ) -> DispatchResult {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
             <Self as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&who, role, None)?;
-            Self::deposit_event(Event::<T>::FellowshipAdded(who));
+            Self::deposit_event(Event::<T>::FellowshipAdded{who, role});
             Ok(().into())
         }
 
@@ -175,7 +175,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             // TODO: ensure that the fellow is not currently in a dispute.
             <Self as FellowshipHandle<AccountIdOf<T>>>::revoke_fellowship(&who, false)?;
-            Self::deposit_event(Event::<T>::FellowshipRemoved(who));
+            Self::deposit_event(Event::<T>::FellowshipRemoved{who});
             Ok(().into())
         }
 
@@ -188,7 +188,7 @@ pub mod pallet {
         ) -> DispatchResult {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
             <Self as FellowshipHandle<AccountIdOf<T>>>::revoke_fellowship(&who, true)?;
-            Self::deposit_event(Event::<T>::FellowshipSlashed(who));
+            Self::deposit_event(Event::<T>::FellowshipSlashed{who: who});
             Ok(().into())
         }
 
@@ -235,7 +235,7 @@ pub mod pallet {
                     Ok::<(), DispatchError>(())
                 })?;
 
-            Self::deposit_event(Event::<T>::CandidateAddedToShortlist(candidate));
+            Self::deposit_event(Event::<T>::CandidateAddedToShortlist{who: candidate});
             Ok(())
         }
 
@@ -262,7 +262,7 @@ pub mod pallet {
                     Ok::<(), DispatchError>(())
                 })?;
 
-            Self::deposit_event(Event::<T>::CandidateRemovedFromShortlist(candidate));
+            Self::deposit_event(Event::<T>::CandidateRemovedFromShortlist{who: candidate});
             Ok(().into())
         }
 
@@ -281,7 +281,7 @@ pub mod pallet {
             PendingFellows::<T>::remove(&who);
             Roles::<T>::insert(&who, role);
 
-            Self::deposit_event(Event::<T>::FellowshipAdded(who));
+            Self::deposit_event(Event::<T>::FellowshipAdded{who, role});
             Ok(().into())
         }
     }
@@ -312,7 +312,7 @@ pub mod pallet {
                     Roles::<T>::insert(who, role);
                 } else {
                     PendingFellows::<T>::insert(who, role);
-                    Self::deposit_event(Event::<T>::MemberAddedToPendingFellows(who.clone()));
+                    Self::deposit_event(Event::<T>::MemberAddedToPendingFellows{who: who.clone()});
                 }
                 if let Some(v) = vetter {
                     FellowToVetter::<T>::insert(who, v);
@@ -367,9 +367,9 @@ pub mod pallet {
 
     #[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, MaxEncodedLen, TypeInfo)]
     pub enum Role {
-        Vetter,
-        Freelancer,
-        BusinessDev,
-        Approver,
+        Vetter{rank: u16},
+        Freelancer{rank: u16},
+        BusinessDev{rank: u16},
+        Approver{rank: u16},
     }
 }
