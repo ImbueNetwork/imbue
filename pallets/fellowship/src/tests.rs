@@ -1,12 +1,19 @@
 use crate::impls::*;
 use crate::traits::*;
-use crate::Pallet as Fellowship;
+use crate::Pallet as FellowshipI;
 use crate::*;
 use crate::{mock::*, Error, Event, FellowToVetter, Role, Roles};
 use common_traits::MaybeConvert;
-use frame_support::{assert_err, assert_noop, assert_ok};
+use common_types::CurrencyId;
+use frame_support::{assert_err, assert_noop, assert_ok, once_cell::sync::Lazy};
 use frame_system::Pallet as System;
 use sp_std::{vec, vec::Vec};
+use sp_runtime::traits::{BadOrigin};
+use orml_traits::MultiReservableCurrency;
+
+// Saves a bit of typing.
+type Fellowship = FellowshipI<Test>;
+pub(crate) static dep_currency: Lazy<CurrencyId> = Lazy::new(|| <Test as Config>::DepositCurrencyId::get());
 
 #[test]
 fn ensure_role_in_works() {
@@ -48,7 +55,7 @@ fn ensure_role_in_works_with_rank() {
 
         assert_noop!(
             EnsureFellowshipRole::<Test>::ensure_role_in(&ALICE, vec![Role::Vetter], Some(vec![9])),
-            Error::<Test>::BadOrigin
+            BadOrigin
         );
     });
 }
@@ -69,7 +76,18 @@ fn ensure_role_works() {
 #[test]
 fn ensure_role_works_with_rank() {
     new_test_ext().execute_with(|| {
-        assert!(false);
+        Roles::<Test>::insert(*ALICE, (Role::Vetter, 10));
+        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role(
+            &ALICE,
+            Role::Vetter,
+            Some(10)
+        ));
+        
+        assert_noop!(EnsureFellowshipRole::<Test>::ensure_role(
+            &ALICE,
+            Role::Vetter,
+            Some(9)
+        ), BadOrigin);
     });
 }
 
@@ -77,9 +95,9 @@ fn ensure_role_works_with_rank() {
 fn freelancer_to_vetter_works() {
     new_test_ext().execute_with(|| {
         FellowToVetter::<Test>::insert(*ALICE, *BOB);
-        let v = <Fellowship<Test> as MaybeConvert<&AccountIdOf<Test>, VetterIdOf<Test>>>::maybe_convert(&ALICE).expect("we just inserted so should be there.");
+        let v = <Fellowship as MaybeConvert<&AccountIdOf<Test>, VetterIdOf<Test>>>::maybe_convert(&ALICE).expect("we just inserted so should be there.");
         assert_eq!(v, *BOB);
-        assert!(<Fellowship<Test> as MaybeConvert<&AccountIdOf<Test>, VetterIdOf<Test>>>::maybe_convert(&BOB).is_none());
+        assert!(<Fellowship as MaybeConvert<&AccountIdOf<Test>, VetterIdOf<Test>>>::maybe_convert(&BOB).is_none());
     });
 }
 
@@ -87,13 +105,13 @@ fn freelancer_to_vetter_works() {
 fn force_add_fellowship_only_force_permitted() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            Fellowship::<Test>::force_add_fellowship(
+            Fellowship::force_add_fellowship(
                 RuntimeOrigin::signed(*ALICE),
                 *BOB,
                 Role::Freelancer,
                 10
             ),
-            Error::<Test>::BadOrigin
+            BadOrigin
         );
     });
 }
@@ -101,7 +119,7 @@ fn force_add_fellowship_only_force_permitted() {
 #[test]
 fn force_add_fellowship_ok_event_assert() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Fellowship::<Test>::force_add_fellowship(
+        assert_ok!(Fellowship::force_add_fellowship(
             RuntimeOrigin::root(),
             *BOB,
             Role::Freelancer,
@@ -119,12 +137,29 @@ fn force_add_fellowship_ok_event_assert() {
 
 #[test]
 fn leave_fellowship_not_fellow() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(|| {
+        assert_noop!(Fellowship::leave_fellowship(RuntimeOrigin::signed(*ALICE)), Error::<Test>::NotAFellow);
+    });  
+}
+
+#[test]
+fn force_add_fellowship_then_leave_fellowship_maintains_reserve_amount() {
+    new_test_ext().execute_with(|| {
+        let alice_reserved_before = <Test as Config>::MultiCurrency::reserved_balance(*dep_currency, &ALICE);
+        let _ = Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10).expect("qed");
+        let alice_reserved_after = <Test as Config>::MultiCurrency::reserved_balance(*dep_currency, &ALICE);
+        assert_eq!(alice_reserved_before, alice_reserved_after);
+    });
 }
 
 #[test]
 fn leave_fellowship_assert_event() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(|| {
+        let _ = Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10).expect("qed");
+
+
+
+    });
 }
 
 #[test]

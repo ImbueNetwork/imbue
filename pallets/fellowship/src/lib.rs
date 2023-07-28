@@ -57,6 +57,8 @@ pub mod pallet {
         type ShortlistPeriod: Get<BlockNumberFor<Self>>;
         /// The minimum deposit required for a freelancer to hold fellowship status.
         type MembershipDeposit: Get<BalanceOf<Self>>;
+        /// The deposit currency id that is taken
+        type DepositCurrencyId: Get<CurrencyId>;
         /// Currently just send all slash deposits to a single account.
         /// TODO: use OnUnbalanced.
         type SlashAccount: Get<AccountIdOf<Self>>;
@@ -129,8 +131,6 @@ pub mod pallet {
         TooManyCandidates,
         /// The fellowship deposit has could not be found, contact development.
         FellowshipReserveDisapeared,
-        /// Bad origin.
-        BadOrigin,
     }
 
     #[pallet::hooks]
@@ -227,7 +227,7 @@ pub mod pallet {
             );
             ensure!(
                 T::MultiCurrency::can_reserve(
-                    CurrencyId::Native,
+                    T::DepositCurrencyId::get(),
                     &candidate,
                     <T as Config>::MembershipDeposit::get()
                 ),
@@ -287,7 +287,7 @@ pub mod pallet {
             let (role, rank) = PendingFellows::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
             let membership_deposit = <T as Config>::MembershipDeposit::get();
 
-            <T as Config>::MultiCurrency::reserve(CurrencyId::Native, &who, membership_deposit)?;
+            <T as Config>::MultiCurrency::reserve(T::DepositCurrencyId::get(), &who, membership_deposit)?;
             FellowshipReserves::<T>::insert(&who, membership_deposit);
             PendingFellows::<T>::remove(&who);
             Roles::<T>::insert(&who, (role, rank));
@@ -317,7 +317,7 @@ pub mod pallet {
             if !Roles::<T>::contains_key(who) {
                 let membership_deposit = <T as Config>::MembershipDeposit::get();
                 if let Ok(_) = <T as Config>::MultiCurrency::reserve(
-                    CurrencyId::Native,
+                    T::DepositCurrencyId::get(),
                     who,
                     membership_deposit,
                 ) {
