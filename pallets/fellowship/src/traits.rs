@@ -3,6 +3,7 @@ use codec::{FullCodec, FullEncode};
 use frame_support::pallet_prelude::*;
 use sp_runtime::traits::BadOrigin;
 use sp_std::vec::Vec;
+use sp_runtime::DispatchError;
 
 /// The democracy handle is used to inititate the regular referenda for new applicants into the fellowship.
 pub trait DemocracyHandle<AccountId> {
@@ -31,10 +32,10 @@ pub trait EnsureRole<AccountId, Role> {
         acc: &AccountId,
         role: Role,
         maybe_rank: Option<Rank>,
-    ) -> Result<Self::Success, BadOrigin>;
+    ) -> Result<Self::Success, DispatchError>;
     fn ensure_role_in(
         acc: &AccountId,
         roles: Vec<Role>,
         maybe_rank: Option<Vec<Rank>>,
-    ) -> Result<Self::Success, BadOrigin>;
+    ) -> Result<Self::Success, DispatchError>;
 }

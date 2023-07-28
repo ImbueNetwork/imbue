@@ -4,9 +4,8 @@ use crate::Pallet as Fellowship;
 use crate::*;
 use crate::{mock::*, Error, Event, FellowToVetter, Role, Roles};
 use common_traits::MaybeConvert;
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, assert_err};
 use frame_system::Pallet as System;
-use sp_runtime::traits::BadOrigin;
 use sp_std::{vec, vec::Vec};
 
 #[test]
@@ -40,7 +39,17 @@ fn ensure_role_in_works() {
 #[test]
 fn ensure_role_in_works_with_rank() {
     new_test_ext().execute_with(|| {
-        assert!(false);
+        Roles::<Test>::insert(*ALICE, (Role::Vetter, 10));
+        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(
+            &ALICE,
+            vec![Role::Vetter],
+            Some(vec![10, 9])
+        ));
+
+        assert_noop!(EnsureFellowshipRole::<Test>::ensure_role_in(
+            &ALICE,
+            vec![Role::Vetter],
+            Some(vec![9])), Error::<Test>::BadOrigin);
     });
 }
 
@@ -84,7 +93,7 @@ fn force_add_fellowship_only_force_permitted() {
                 Role::Freelancer,
                 10
             ),
-            BadOrigin
+            Error::<Test>::BadOrigin
         );
     });
 }

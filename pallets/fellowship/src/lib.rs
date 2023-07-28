@@ -129,6 +129,8 @@ pub mod pallet {
         TooManyCandidates,
         /// The fellowship deposit has could not be found, contact development.
         FellowshipReserveDisapeared,
+        /// Bad origin.
+        BadOrigin,
     }
 
     #[pallet::hooks]

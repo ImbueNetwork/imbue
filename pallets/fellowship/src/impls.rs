@@ -3,8 +3,9 @@ use crate::*;
 use common_traits::MaybeConvert;
 use frame_support::ensure;
 use sp_runtime::{
-    traits::{BadOrigin, Convert},
+    traits::{Convert},
     Percent,
+    DispatchError,
 };
 use sp_std::vec::Vec;
 
@@ -18,11 +19,11 @@ impl<T: Config> EnsureRole<AccountIdOf<T>, Role> for EnsureFellowshipRole<T> {
         acc: &AccountIdOf<T>,
         role: Role,
         rank: Option<Rank>,
-    ) -> Result<Self::Success, BadOrigin> {
-        let (actual_role, actual_rank) = Roles::<T>::get(acc).ok_or(BadOrigin)?;
-        ensure!(actual_role == role, BadOrigin);
+    ) -> Result<Self::Success, DispatchError> {
+        let (actual_role, actual_rank) = Roles::<T>::get(acc).ok_or(Error::<T>::BadOrigin)?;
+        ensure!(actual_role == role, Error::<T>::BadOrigin);
         if let Some(r) = rank {
-            ensure!(r == actual_rank, BadOrigin);
+            ensure!(r == actual_rank, Error::<T>::BadOrigin);
         }
         Ok(())
     }
@@ -30,11 +31,11 @@ impl<T: Config> EnsureRole<AccountIdOf<T>, Role> for EnsureFellowshipRole<T> {
         acc: &AccountIdOf<T>,
         roles: Vec<Role>,
         ranks: Option<Vec<Rank>>,
-    ) -> Result<Self::Success, BadOrigin> {
-        let (actual_role, actual_rank) = Roles::<T>::get(acc).ok_or(BadOrigin)?;
-        ensure!(roles.contains(&actual_role), BadOrigin);
+    ) -> Result<Self::Success, DispatchError> {
+        let (actual_role, actual_rank) = Roles::<T>::get(acc).ok_or(Error::<T>::BadOrigin)?;
+        ensure!(roles.contains(&actual_role), Error::<T>::BadOrigin);
         if let Some(r) = ranks {
-            ensure!(r.contains(&actual_rank), BadOrigin);
+            ensure!(r.contains(&actual_rank), Error::<T>::BadOrigin);
         }
         Ok(())
     }
