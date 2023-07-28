@@ -2,8 +2,8 @@ use crate::Rank;
 use codec::{FullCodec, FullEncode};
 use frame_support::pallet_prelude::*;
 use sp_runtime::traits::BadOrigin;
-use sp_std::vec::Vec;
 use sp_runtime::DispatchError;
+use sp_std::vec::Vec;
 
 /// The democracy handle is used to inititate the regular referenda for new applicants into the fellowship.
 pub trait DemocracyHandle<AccountId> {

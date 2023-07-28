@@ -4,7 +4,7 @@ use crate::Pallet as Fellowship;
 use crate::*;
 use crate::{mock::*, Error, Event, FellowToVetter, Role, Roles};
 use common_traits::MaybeConvert;
-use frame_support::{assert_noop, assert_ok, assert_err};
+use frame_support::{assert_err, assert_noop, assert_ok};
 use frame_system::Pallet as System;
 use sp_std::{vec, vec::Vec};
 
@@ -46,10 +46,10 @@ fn ensure_role_in_works_with_rank() {
             Some(vec![10, 9])
         ));
 
-        assert_noop!(EnsureFellowshipRole::<Test>::ensure_role_in(
-            &ALICE,
-            vec![Role::Vetter],
-            Some(vec![9])), Error::<Test>::BadOrigin);
+        assert_noop!(
+            EnsureFellowshipRole::<Test>::ensure_role_in(&ALICE, vec![Role::Vetter], Some(vec![9])),
+            Error::<Test>::BadOrigin
+        );
     });
 }
 
