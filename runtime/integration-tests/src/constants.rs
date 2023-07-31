@@ -1,20 +1,21 @@
+use core::default::Default;
+
 use grandpa::AuthorityId as GrandpaId;
-use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
+use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use polkadot_primitives::{AssignmentId, ValidatorId};
 pub use polkadot_runtime_parachains::configuration::HostConfiguration;
 use polkadot_service::chain_spec::get_authority_keys_from_seed_no_beefy;
+use polkadot_service::ParaId;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{sr25519, storage::Storage, Pair, Public};
+use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     BuildStorage, MultiSignature, Perbill,
 };
 pub use xcm;
-use core::default::Default;
-use frame_support::{parameter_types, sp_io, sp_tracing};
-
 pub const XCM_V2: u32 = 3;
 pub const XCM_V3: u32 = 2;
 pub const REF_TIME_THRESHOLD: u64 = 33;
@@ -31,11 +32,15 @@ fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public
 
 /// Helper function to generate an account ID from seed.
 fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-    where
-        AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+where
+    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
+
+pub const PARA_ID_DEVELOPMENT: u32 = 2121;
+pub const PARA_ID_SIBLING: u32 = 2110;
+pub const PARA_ID_KARURA: u32 = 2000;
 
 pub mod accounts {
     use super::*;
@@ -52,6 +57,14 @@ pub mod accounts {
     pub const EVE_STASH: &str = "Eve//stash";
     pub const FERDIE_STASH: &str = "Ferdie//stash";
 
+    pub fn get_para_id_development_account() -> AccountId {
+        ParaId::from(PARA_ID_DEVELOPMENT).into_account_truncating()
+    }
+
+    pub fn get_para_id_sibling_account() -> AccountId {
+        ParaId::from(PARA_ID_SIBLING).into_account_truncating()
+    }
+
     pub fn init_balances() -> Vec<AccountId> {
         vec![
             get_account_id_from_seed::<sr25519::Public>(ALICE),
@@ -66,6 +79,8 @@ pub mod accounts {
             get_account_id_from_seed::<sr25519::Public>(DAVE_STASH),
             get_account_id_from_seed::<sr25519::Public>(EVE_STASH),
             get_account_id_from_seed::<sr25519::Public>(FERDIE_STASH),
+            get_para_id_development_account(),
+            get_para_id_sibling_account(),
         ]
     }
 }
@@ -92,7 +107,10 @@ pub mod collators {
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 get_from_seed::<AuraId>("Alice"),
             ),
-            (get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+            (
+                get_account_id_from_seed::<sr25519::Public>("Bob"),
+                get_from_seed::<AuraId>("Bob"),
+            ),
         ]
     }
 }
@@ -190,7 +208,12 @@ pub mod kusama {
                 stakers: validators::initial_authorities()
                     .iter()
                     .map(|x| {
-                        (x.0.clone(), x.1.clone(), STASH, kusama_runtime::StakerStatus::Validator)
+                        (
+                            x.0.clone(),
+                            x.1.clone(),
+                            STASH,
+                            kusama_runtime::StakerStatus::Validator,
+                        )
                     })
                     .collect(),
                 invulnerables: validators::initial_authorities()
@@ -204,7 +227,12 @@ pub mod kusama {
                 authorities: Default::default(),
                 epoch_config: Some(kusama_runtime::BABE_GENESIS_EPOCH_CONFIG),
             },
-            configuration: kusama_runtime::ConfigurationConfig { config: get_host_config() },
+            xcm_pallet: kusama_runtime::XcmPalletConfig {
+                safe_xcm_version: Some(SAFE_XCM_VERSION),
+            },
+            configuration: kusama_runtime::ConfigurationConfig {
+                config: get_host_config(),
+            },
             ..Default::default()
         };
 
@@ -214,8 +242,8 @@ pub mod kusama {
 
 // Imbue
 pub mod imbue {
-    use common_types::CurrencyId;
     use super::*;
+    use common_types::CurrencyId;
     pub const PARA_ID: u32 = 2000;
     pub const ED: Balance = imbue_kusama_runtime::currency::EXISTENTIAL_DEPOSIT;
 
@@ -230,17 +258,25 @@ pub mod imbue {
                 balances: accounts::init_balances()
                     .iter()
                     .cloned()
-                    .map(|k| (k,  ED.saturating_add(10_000_000_000_000_000)))
+                    .map(|k| (k, ED.saturating_add(10_000_000_000_000_000)))
                     .collect(),
             },
             orml_tokens: orml_tokens::GenesisConfig {
                 balances: accounts::init_balances()
                     .iter()
                     .cloned()
-                    .map(|k| (k, CurrencyId::Native,  ED.saturating_add(10_000_000_000_000_000)))
+                    .map(|k| {
+                        (
+                            k,
+                            CurrencyId::Native,
+                            ED.saturating_add(10_000_000_000_000_000),
+                        )
+                    })
                     .collect(),
             },
-            parachain_info: imbue_kusama_runtime::ParachainInfoConfig { parachain_id: para_id.into() },
+            parachain_info: imbue_kusama_runtime::ParachainInfoConfig {
+                parachain_id: para_id.into(),
+            },
             collator_selection: imbue_kusama_runtime::CollatorSelectionConfig {
                 invulnerables: collators::invulnerables()
                     .iter()
@@ -255,8 +291,8 @@ pub mod imbue {
                     .into_iter()
                     .map(|(acc, aura)| {
                         (
-                            acc.clone(),                          // account id
-                            acc,                                  // validator id
+                            acc.clone(),                                // account id
+                            acc,                                        // validator id
                             imbue_kusama_runtime::SessionKeys { aura }, // session keys
                         )
                     })
@@ -270,7 +306,7 @@ pub mod imbue {
             treasury: Default::default(),
             technical_committee: Default::default(),
             parachain_system: Default::default(),
-            polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig{
+            polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig {
                 safe_xcm_version: Some(SAFE_XCM_VERSION),
             },
             sudo: imbue_kusama_runtime::SudoConfig {
