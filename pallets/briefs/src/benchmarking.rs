@@ -5,7 +5,7 @@ use crate::test_utils::gen_hash;
 use crate::Pallet as Briefs;
 use crate::{BoundedBriefOwners, BoundedProposedMilestones};
 use common_types::CurrencyId;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
+use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, RawOrigin};
 use orml_traits::MultiCurrency;
@@ -16,20 +16,23 @@ use sp_std::{convert::TryInto, str, vec::Vec};
 
 const SEED: u32 = 0;
 
-benchmarks! {
-    where_clause {
-        where T::AccountId: AsRef<[u8]>,
-    }
+#[benchmarks( where<T as frame_system::Config>::AccountId: AsRef<[u8]>,)]
+mod benchmarks {
+    use super::*;
 
-    add_to_fellowship {
+    #[benchmark]
+    fn add_to_fellowship() {
         let account_id = create_account_id::<T>("user", 1);
         // (origin, account_id)
-    }: _(RawOrigin::Root, account_id.clone())
-    verify {
+
+
+        #[extrinsic_call]
+        add_to_fellowship(RawOrigin::Root, account_id.clone());
         assert_last_event::<T>(Event::<T>::AccountApproved(account_id).into());
     }
 
-    create_brief {
+    #[benchmark]
+    fn create_brief() {
         let brief_owners = get_max_brief_owners::<T>();
         let caller: T::AccountId = brief_owners[0].clone();
         let applicant = create_account_id::<T>("applicant", 1);
@@ -38,12 +41,14 @@ benchmarks! {
         let brief_id = gen_hash(1);
         let milestones = get_max_milestones::<T>();
         // (origin, brief_owners, applicant, budget, initial_contribution, brief_id, currency_id, milestones)
-    }: _(RawOrigin::Signed(caller.clone()), brief_owners, applicant, budget, initial_contribution, brief_id.clone(), CurrencyId::Native, milestones)
-    verify {
+
+        #[extrinsic_call]
+        create_brief(RawOrigin::Signed(caller.clone()), brief_owners, applicant, budget, initial_contribution, brief_id.clone(), CurrencyId::Native, milestones);
         assert_last_event::<T>(Event::<T>::BriefSubmitted(caller, brief_id).into());
     }
 
-    contribute_to_brief {
+    #[benchmark]
+    fn contribute_to_brief() {
         let brief_owners = get_max_brief_owners::<T>();
         let caller: T::AccountId = brief_owners[0].clone();
         let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
@@ -64,12 +69,13 @@ benchmarks! {
         ));
         let brief_owner: T::AccountId = brief_owners[0].clone();
         // (brief_owner, brief_id, contribution)
-    }: _(RawOrigin::Signed(brief_owner.clone()), brief_id.clone(), contribution)
-    verify {
+        #[extrinsic_call]
+        contribute_to_brief(RawOrigin::Signed(brief_owner.clone()), brief_id.clone(), contribution);
         assert_last_event::<T>(Event::<T>::BriefContribution(brief_owner, brief_id).into());
     }
 
-    commence_work {
+    #[benchmark]
+    fn commence_work() {
         let brief_owners = get_max_brief_owners::<T>();
         let caller: T::AccountId = brief_owners[0].clone();
         let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
@@ -89,12 +95,13 @@ benchmarks! {
             milestones
         ));
         // (origin, brief_id)
-    }: _(RawOrigin::Signed(applicant), brief_id.clone())
-    verify {
+        #[extrinsic_call]
+        commence_work(RawOrigin::Signed(applicant), brief_id.clone());
         assert_last_event::<T>(Event::<T>::BriefEvolution(brief_id).into());
     }
 
-    cancel_brief {
+    #[benchmark]
+    fn cancel_brief() {
         let brief_owners = get_max_brief_owners::<T>();
         let caller: T::AccountId = brief_owners[0].clone();
         let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
@@ -114,10 +121,12 @@ benchmarks! {
             milestones
         ));
         // (origin, brief_id)
-    }: _(RawOrigin::Signed(caller), brief_id.clone())
-    verify {
+        #[extrinsic_call]
+        cancel_brief(RawOrigin::Signed(caller), brief_id.clone());
         assert_last_event::<T>(Event::<T>::BriefCanceled(brief_id).into());
     }
+
+    impl_benchmark_test_suite!(Briefs,crate::mock::build_test_externality(),crate::mock::Test);
 }
 
 fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
@@ -180,8 +189,4 @@ fn get_max_milestones<T: Config>() -> BoundedProposedMilestones<T> {
     get_milestones::<T>(max_milestones)
 }
 
-impl_benchmark_test_suite!(
-    Briefs,
-    crate::mock::build_test_externality(),
-    crate::mock::Test
-);
+
