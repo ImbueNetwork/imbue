@@ -79,8 +79,8 @@ pub mod pallet {
     #[pallet::storage]
     pub type ShortlistRound<T> = StorageValue<_, ShortlistRoundKey, ValueQuery>;
 
-    #[pallet::storage]
     /// Holds all the accounts that are able to become fellows that have not given their deposit for membership.
+    #[pallet::storage]
     pub type PendingFellows<T> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (Role, Rank), OptionQuery>;
 
@@ -161,6 +161,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// An origin check wrapping the standard add_to_fellowship call.
         /// Force add someone to the fellowship. This is required to be called by the ForceOrigin
+        /// No deposit will be taken for this.
         #[pallet::call_index(0)]
         #[pallet::weight(10_000)]
         pub fn force_add_fellowship(
