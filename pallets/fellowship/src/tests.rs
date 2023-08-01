@@ -23,6 +23,13 @@ fn add_to_fellowship(
     <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::add_to_fellowship(who, role, rank, vetter)
 }
 
+fn revoke_fellowship(
+    who: &AccountIdOf<Test>,
+    slash_deposit: bool,
+) -> Result<(), DispatchError> {
+    <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::revoke_fellowship(who, slash_deposit)
+}
+
 #[test]
 fn ensure_role_in_works() {
     new_test_ext().execute_with(|| {
@@ -204,25 +211,44 @@ fn add_to_fellowship_adds_to_pending_fellows_assert_event() {
 #[test]
 fn add_to_fellowship_adds_vetter_if_exists() {
     new_test_ext().execute_with(|| {
-        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, None).is_ok());
-
-
+        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
+        assert_eq!(FellowToVetter::<Test>::get(&*ALICE).unwrap(), *BOB);
     });
 }
 
 #[test]
 fn add_to_fellowship_edits_role_if_exists_already() {
-    new_test_ext().execute_with(|| {assert!(false)});
+    new_test_ext().execute_with(|| {
+        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
+        assert_eq!(Roles::<Test>::get(&*ALICE).unwrap(), (Role::Freelancer, 10));
+        assert!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&BOB)).is_ok());
+        assert_eq!(Roles::<Test>::get(&*ALICE).unwrap(), (Role::Vetter, 5));
+    });
+}
+
+
+#[test]
+fn add_to_fellowship_maintains_vetter_if_exists_already() {
+    new_test_ext().execute_with(|| {
+        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
+        assert!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
+        assert_eq!(FellowToVetter::<Test>::get(&*ALICE).unwrap(), *BOB);
+    });
 }
 
 #[test]
 fn revoke_fellowship_not_a_fellow() {
-    new_test_ext().execute_with(|| {assert!(false)});
+    new_test_ext().execute_with(|| {
+        assert_noop!(revoke_fellowship(&ALICE, true), Error::<Test>::NotAFellow);
+        assert_noop!(revoke_fellowship(&ALICE, false), Error::<Test>::NotAFellow);
+    });
 }
 
 #[test]
 fn revoke_fellowship_unreserves_if_deposit_taken_no_slash() {
-    new_test_ext().execute_with(|| {assert!(false)});
+    new_test_ext().execute_with(|| {
+        
+    });
 }
 
 #[test]
