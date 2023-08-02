@@ -21,17 +21,6 @@ mod benchmarks {
     use super::*;
 
     #[benchmark]
-    fn add_to_fellowship() {
-        let account_id = create_account_id::<T>("user", 1);
-        // (origin, account_id)
-
-
-        #[extrinsic_call]
-        add_to_fellowship(RawOrigin::Root, account_id.clone());
-        assert_last_event::<T>(Event::<T>::AccountApproved(account_id).into());
-    }
-
-    #[benchmark]
     fn create_brief() {
         let brief_owners = get_max_brief_owners::<T>();
         let caller: T::AccountId = brief_owners[0].clone();
@@ -82,7 +71,6 @@ mod benchmarks {
         let budget = 10_000_000_000_000u128.saturated_into();
         let initial_contribution = 5_000_000_000_000u128.saturated_into();
         let brief_id = gen_hash(1);
-        let max_milestones: u32 = <T as Config>::MaxMilestonesPerBrief::get();
         let milestones = get_max_milestones::<T>();
         assert_ok!(Briefs::<T>::create_brief(
             RawOrigin::Signed(caller.clone()).into(),
@@ -108,7 +96,6 @@ mod benchmarks {
         let budget = 10_000_000_000_000u128.saturated_into();
         let initial_contribution = 5_000_000_000_000u128.saturated_into();
         let brief_id = gen_hash(1);
-        let max_milestones: u32 = <T as Config>::MaxMilestonesPerBrief::get();
         let milestones = get_max_milestones::<T>();
         assert_ok!(Briefs::<T>::create_brief(
             RawOrigin::Signed(caller.clone()).into(),

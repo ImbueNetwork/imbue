@@ -35,10 +35,11 @@
 
 use frame_support::{traits::Get, weights::Weight};
 use core::marker::PhantomData;
+use crate::WeightInfoT;
 
 /// Weight functions for `pallet_proposals`.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> pallet_proposals::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> WeightInfoT for WeightInfo<T> {
 	/// Storage: ImbueProposals Projects (r:1 w:0)
 	/// Proof: ImbueProposals Projects (max_values: None, max_size: Some(260823), added: 263298, mode: MaxEncodedLen)
 	/// Storage: ImbueProposals RoundsExpiring (r:1 w:1)

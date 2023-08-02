@@ -38,18 +38,7 @@ use core::marker::PhantomData;
 
 /// Weight functions for `pallet_briefs`.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> pallet_briefs::WeightInfo for WeightInfo<T> {
-	/// Storage: ImbueBriefs FreelanceFellowship (r:0 w:1)
-	/// Proof: ImbueBriefs FreelanceFellowship (max_values: None, max_size: Some(48), added: 2523, mode: MaxEncodedLen)
-	fn add_to_fellowship() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `0`
-		//  Estimated: `0`
-		// Minimum execution time: 7_010_000 picoseconds.
-		Weight::from_parts(7_390_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
+impl<T: frame_system::Config> crate::WeightInfoT for WeightInfo<T> {
 	/// Storage: ImbueBriefs Briefs (r:1 w:1)
 	/// Proof: ImbueBriefs Briefs (max_values: None, max_size: Some(3366), added: 5841, mode: MaxEncodedLen)
 	/// Storage: Deposits TicketId (r:1 w:1)
