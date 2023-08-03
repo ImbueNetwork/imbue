@@ -14,7 +14,9 @@ use sp_runtime::Saturating;
 use sp_std::{convert::TryInto, str, vec::Vec};
 
 #[benchmarks( where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,)]
+    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
+    <T as frame_system::Config>::BlockNumber: From<u32>,
+)]
 mod benchmarks {
     use super::*;
 
@@ -167,6 +169,20 @@ mod benchmarks {
         #[extrinsic_call]
         vote_on_no_confidence_round(RawOrigin::Signed(charlie.clone()), project_key, true);
         assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(charlie, project_key).into());
+    }
+
+    // Benchmark for a single loop of on_initialise as a voting round (most expensive).
+    #[benchmark]
+    fn on_initialize()
+    {
+        let block_number: <T as frame_system::Config>::BlockNumber = 100u32.into();
+        let keys: BoundedVec<(ProjectKey, RoundType, MilestoneKey), <T as Config>::ExpiringProjectRoundsPerBlock>  = vec![(0, RoundType::VotingRound, 0)].try_into().expect("bound will be larger than 1;");
+
+        RoundsExpiring::<T>::insert(block_number, keys);
+        #[block]
+		{
+            crate::Pallet::<T>::on_initialize(block_number);
+		}
     }
 
     impl_benchmark_test_suite!(

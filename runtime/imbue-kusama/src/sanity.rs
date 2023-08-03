@@ -1,5 +1,8 @@
 
 use crate::Runtime;
+use common_runtime::MAXIMUM_BLOCK_WEIGHT;
+use pallet_proposals::WeightInfo as PWeightInfo;
+use sp_arithmetic::Percent;
 
 #[test]
 fn ensure_maximum_milestones_are_consistent_grants() {
@@ -32,5 +35,18 @@ fn ensure_max_contributors_equal_max_brief_owners() {
     assert!(max_contributors_proposals >= max_brief_owners, "Max brief owners must be less than or equal to the the max contributors");
 }
 
+// A brief owner is used as the contibutors to a project so the maximums must be equal.
+#[test]
+fn ensure_proposals_initialize_is_less_than_10_percent_block() {
+    let multiplier = <Runtime as pallet_proposals::Config>::ExpiringProjectRoundsPerBlock::get();
+    let ref_time = PWeightInfo::on_initialise().ref_time() * multiplier as u64;
+    let proof_size = PWeightInfo::on_initialise().proof_size() * multiplier as u64;
+
+    let max_ref_time = MAXIMUM_BLOCK_WEIGHT.ref_time() * Percent::from_percent(10u8);
+    let max_proof_size = MAXIMUM_BLOCK_WEIGHT.proof_size() * Percent::from_percent(10u8);
+
+    assert!(ref_time <= max_ref_time, "ExpiringProjectRoundsPerBlock is exceeding ref time limits.");
+    assert!(proof_size <= max_proof_size, "ExpiringProjectRoundsPerBlock is exceeding proof size limits.");
+}
 
 
