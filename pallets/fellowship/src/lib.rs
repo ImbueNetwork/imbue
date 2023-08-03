@@ -288,7 +288,11 @@ pub mod pallet {
             let (role, rank) = PendingFellows::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
             let membership_deposit = <T as Config>::MembershipDeposit::get();
 
-            <T as Config>::MultiCurrency::reserve(T::DepositCurrencyId::get(), &who, membership_deposit)?;
+            <T as Config>::MultiCurrency::reserve(
+                T::DepositCurrencyId::get(),
+                &who,
+                membership_deposit,
+            )?;
             FellowshipReserves::<T>::insert(&who, membership_deposit);
             PendingFellows::<T>::remove(&who);
             Roles::<T>::insert(&who, (role, rank));

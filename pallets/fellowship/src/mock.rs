@@ -1,16 +1,19 @@
 use crate as pallet_fellowship;
-use frame_support::{traits::{ConstU16, ConstU64, Nothing}, pallet_prelude::*};
+use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
+use frame_support::{
+    pallet_prelude::*,
+    traits::{ConstU16, ConstU64, Nothing},
+};
 use frame_system::EnsureRoot;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, IdentifyAccount, parameter_types, Verify},
+    testing::Header,
+    traits::{parameter_types, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
-use sp_core::sr25519::{Public, Signature};
-use sp_std::convert::{TryInto, TryFrom};
-use common_types::CurrencyId;
-use orml_traits::{MultiReservableCurrency, MultiCurrency};
+use sp_std::convert::{TryFrom, TryInto};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -18,19 +21,17 @@ type BlockNumber = u64;
 pub type Balance = u64;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
- 
-
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system,
-		Fellowship: pallet_fellowship,
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system,
+        Fellowship: pallet_fellowship,
         Tokens: orml_tokens,
-	}
+    }
 );
 
 impl frame_system::Config for Test {
@@ -61,34 +62,34 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub MaxCandidatesPerShortlist: u32 = 100;
-	pub ShortlistPeriod: BlockNumber = 100;
-	pub MembershipDeposit: Balance = 50_000_000;
-	pub SlashAccount: AccountId = Public::from_raw([1u8; 32]);
-	pub BlockHashCount: BlockNumber = 250;
+    pub MaxCandidatesPerShortlist: u32 = 100;
+    pub ShortlistPeriod: BlockNumber = 100;
+    pub MembershipDeposit: Balance = 50_000_000;
+    pub SlashAccount: AccountId = Public::from_raw([1u8; 32]);
+    pub BlockHashCount: BlockNumber = 250;
     pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
 }
 
 impl pallet_fellowship::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type MultiCurrency = Tokens;
-	type ForceAuthority = EnsureRoot<AccountId>;
-	type DemocracyHandle = ();
-	type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
-	type ShortlistPeriod = ShortlistPeriod;
-	type MembershipDeposit = MembershipDeposit;
+    type RuntimeEvent = RuntimeEvent;
+    type MultiCurrency = Tokens;
+    type ForceAuthority = EnsureRoot<AccountId>;
+    type DemocracyHandle = ();
+    type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
+    type ShortlistPeriod = ShortlistPeriod;
+    type MembershipDeposit = MembershipDeposit;
     type DepositCurrencyId = DepositCurrencyId;
-	type SlashAccount = SlashAccount;
+    type SlashAccount = SlashAccount;
     type WeightInfo = ();
 }
 
 impl crate::traits::DemocracyHandle<AccountId> for () {
-	fn initiate_shortlist_vote() -> () {
-		()
-	}
-	fn cancel_shortlist_vote() -> () {
-		()
-	}
+    fn initiate_shortlist_vote() -> () {
+        ()
+    }
+    fn cancel_shortlist_vote() -> () {
+        ()
+    }
 }
 
 orml_traits::parameter_type_with_key! {

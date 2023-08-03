@@ -2,7 +2,10 @@ use crate::traits::EnsureRole;
 use crate::*;
 use common_traits::MaybeConvert;
 use frame_support::ensure;
-use sp_runtime::{traits::{Convert, BadOrigin}, DispatchError, Percent};
+use sp_runtime::{
+    traits::{BadOrigin, Convert},
+    DispatchError, Percent,
+};
 use sp_std::vec::Vec;
 
 /// Ensure that a account is of a given role.
