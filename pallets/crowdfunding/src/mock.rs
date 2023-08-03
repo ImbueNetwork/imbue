@@ -188,8 +188,7 @@ impl pallet_proposals::Config for Test {
     type PalletId = ProposalsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
-    type WeightInfo = ();
-    // Adding 2 weeks as th expiration time
+    type WeightInfo = pallet_proposals::WeightInfo<Self>;
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
