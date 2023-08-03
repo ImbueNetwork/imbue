@@ -51,7 +51,7 @@ pallet-proposals = {path= "../proposals"}
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}
 pallet-deposits = {path= "../deposits"}
-
+common-runtime = { path = "../../runtime/common"}
 
 [features]
 default = ['std']
@@ -70,11 +70,13 @@ std = [
 	"pallet-proposals/std",
 	"pallet-identity/std",
 	"pallet-timestamp/std",
+	"common-runtime/std",
 ]
 	
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
+	"common-runtime/runtime-benchmarks",
 ]
 
 try-runtime = ["frame-support/try-runtime"]

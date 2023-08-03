@@ -49,7 +49,6 @@ pub mod pallet {
     pub type GrantId = H256;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -62,7 +61,7 @@ pub mod pallet {
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         /// The type that converts into a proposal for milestone submission.
         type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
-        type WeightInfo: WeightInfo;
+        type WeightInfo: WeightInfoT;
     }
 
     /// Stores all the grants a user has submitted.
@@ -188,4 +187,9 @@ pub mod pallet {
             Ok(().into())
         }
     }
+
+    pub trait WeightInfoT {
+        fn create_and_convert() -> Weight;
+    }
 }
+

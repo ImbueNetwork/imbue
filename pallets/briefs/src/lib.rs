@@ -24,9 +24,8 @@ mod migrations;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use super::*;
     use common_types::{milestone_origin::FundingType, CurrencyId};
-    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap};
+    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap, weights::Weight};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
@@ -61,8 +60,7 @@ pub mod pallet {
     pub type BriefHash = H256;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
-    pub struct Pallet<T>(_);
+       pub struct Pallet<T>(_);
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -80,21 +78,13 @@ pub mod pallet {
         type BriefStorageItem: Get<StorageItemOf<Self>>;
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
 
-        type WeightInfo: WeightInfo;
+        type WeightInfo: WeightInfoT;
     }
 
     #[pallet::storage]
     #[pallet::getter(fn briefs)]
     pub type Briefs<T> =
         CountedStorageMap<_, Blake2_128Concat, BriefHash, BriefData<T>, OptionQuery>;
-
-    /// The list of accounts approved to apply for work.
-    /// Key: AccountId
-    /// Value: Unit
-    #[pallet::storage]
-    #[pallet::getter(fn approved_accounts)]
-    pub type FreelanceFellowship<T> =
-        StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (), ValueQuery>;
 
     /// The contributions to a brief, in a single currency.
     /// It's in a BTree to reduce storage call when we have to inevitably iterate the keys.
@@ -174,30 +164,13 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
             let mut weight: Weight = Zero::zero();
-            migrations::v1::migrate_to_v1::<T>(&mut weight);
+            crate::migrations::v1::migrate_to_v1::<T>(&mut weight);
             weight
         }
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Approve an account so that they can be accepted as an applicant.
-        #[pallet::call_index(1)]
-        #[pallet::weight(<T as Config>::WeightInfo::add_to_fellowship())]
-        pub fn add_to_fellowship(
-            origin: OriginFor<T>,
-            account_id: AccountIdOf<T>,
-        ) -> DispatchResult {
-            <T as Config>::AuthorityOrigin::ensure_origin(origin)?;
-
-            // Or if they are not voted by governance, be voted in by another approved freelancer?
-            // TODO:
-            FreelanceFellowship::<T>::insert(&account_id, ());
-            Self::deposit_event(Event::<T>::AccountApproved(account_id));
-
-            Ok(())
-        }
-
         /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
         #[pallet::call_index(2)]
@@ -429,4 +402,14 @@ pub mod pallet {
             }
         }
     }
+
+    pub trait WeightInfoT {
+        fn create_brief() -> Weight;
+        fn contribute_to_brief() -> Weight;
+        fn commence_work() -> Weight;
+        fn cancel_brief() -> Weight;
+    }
+    
 }
+
+

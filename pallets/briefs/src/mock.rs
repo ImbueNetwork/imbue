@@ -225,7 +225,7 @@ impl pallet_briefs::Config for Test {
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = MockDepositHandler;
-    type WeightInfo = ();
+    type WeightInfo = pallet_briefs::WeightInfo<Self>;
 }
 
 parameter_types! {
@@ -251,7 +251,7 @@ impl pallet_proposals::Config for Test {
     type PalletId = ProposalsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
-    type WeightInfo = ();
+    type WeightInfo = pallet_proposals::WeightInfo<Self>;
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
