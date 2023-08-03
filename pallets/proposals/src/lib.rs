@@ -74,7 +74,7 @@ pub mod pallet {
         type PalletId: Get<PalletId>;
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-        type WeightInfo: WeightInfo;
+        type WeightInfo: WeightInfoT;
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
         /// The amount of time given, up to point of decision, when a vote of no confidence is held.
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
@@ -101,7 +101,6 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
@@ -575,4 +574,12 @@ pub struct Contribution<Balance, BlockNumber> {
 pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,
+}
+
+pub trait WeightInfoT {
+    fn submit_milestone() -> Weight;
+    fn vote_on_milestone() -> Weight;
+    fn withdraw() -> Weight;
+    fn raise_vote_of_no_confidence() -> Weight;
+    fn vote_on_no_confidence_round() -> Weight;
 }

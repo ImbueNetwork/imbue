@@ -6651,6 +6651,7 @@ dependencies = [
 name = "pallet-briefs"
 version = "0.1.0"
 dependencies = [
+ "common-runtime",
  "common-traits",
  "common-types",
  "frame-benchmarking",
@@ -6753,6 +6754,7 @@ dependencies = [
 name = "pallet-crowdfunding"
 version = "0.1.0"
 dependencies = [
+ "common-runtime",
  "common-types",
  "frame-benchmarking",
  "frame-support",

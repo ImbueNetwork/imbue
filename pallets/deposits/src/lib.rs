@@ -30,7 +30,6 @@ pub mod pallet {
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]

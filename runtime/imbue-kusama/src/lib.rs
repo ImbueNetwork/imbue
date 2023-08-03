@@ -789,7 +789,7 @@ impl pallet_proposals::Config for Runtime {
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type WeightInfo = pallet_proposals::weights::SubstrateWeight<Self>;
+    type WeightInfo = pallet_proposals::weights::WeightInfo<Self>;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
@@ -813,7 +813,7 @@ impl pallet_grants::Config for Runtime {
     type MaxApprovers = MaxApprovers;
     type RMultiCurrency = Currencies;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
-    type WeightInfo = pallet_grants::weights::SubstrateWeight<Self>;
+    type WeightInfo = pallet_grants::weights::WeightInfo<Self>;
 }
 
 parameter_types! {
@@ -830,7 +830,7 @@ impl pallet_briefs::Config for Runtime {
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
-    type WeightInfo = pallet_briefs::weights::SubstrateWeight<Self>;
+    type WeightInfo = pallet_briefs::weights::WeightInfo<Self>;
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = Deposits;
 }
