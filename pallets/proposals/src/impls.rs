@@ -109,7 +109,7 @@ impl<T: Config> Pallet<T> {
             });
 
             Self::deposit_event(Event::MilestoneApproved(
-                project.initiator,
+                who.clone(),
                 project_key,
                 milestone_key,
                 <frame_system::Pallet<T>>::block_number(),
@@ -280,7 +280,6 @@ impl<T: Config> Pallet<T> {
 
         Self::deposit_event(Event::NoConfidenceRoundVotedUpon(who.clone(), project_key));
 
-
         //once the voting is complete check if the confidence vote could be auto finalized
         //getting the total threshold required for the total confidence
         let voting_no_confidence_threshold: BalanceOf<T> =
@@ -314,7 +313,7 @@ impl<T: Config> Pallet<T> {
                     }
                 }
 
-                FundingType::Brief =>{
+                FundingType::Brief => {
                     //Have to handle it in the dispute pallet
                 }
 
@@ -336,7 +335,7 @@ impl<T: Config> Pallet<T> {
                 }
             }
             Projects::<T>::remove(project_key);
-            Rounds::<T>::remove(project_key,RoundType::VoteOfNoConfidence);
+            Rounds::<T>::remove(project_key, RoundType::VoteOfNoConfidence);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
             Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
         }
