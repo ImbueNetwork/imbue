@@ -288,7 +288,7 @@ fn revoke_fellowship_slashes_if_deposit_taken() {
         assert!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
         assert_ok!(revoke_fellowship(&ALICE, true));
         let alice_reserved_after = <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
-        assert_eq!(alice_reserved_before, alice_reserved_after - <Test as Config>::MembershipDeposit:;get(), "deposit should have been taken since slash has occurred");
+        assert_eq!(alice_reserved_before, alice_reserved_after - <Test as Config>::MembershipDeposit::get(), "deposit should have been taken since slash has occurred");
     });
 }
 
@@ -315,17 +315,29 @@ fn revoke_fellowship_with_slash_goes_to_slash_account() {
 
 #[test]
 fn add_candidate_to_shortlist_not_a_vetter() {
-    new_test_ext().execute_with(|| {});
+    new_test_ext().execute_with(|| {
+        assert_noop!(add_candidate_to_shortlist(RuntimeOrigin::signed(*ALICE), *BOB, Role::Freelancer, 10), Error::<Test>::NotAVetter);
+    });
 }
 
 #[test]
 fn add_candidate_to_shortlist_already_fellow() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(|| 
+        assert_ok!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)));
+        assert_ok!(add_to_fellowship(&BOB, Role::Freelancer, 5, Some(&CHARLIE)));
+        assert_noop!(add_candidate_to_shortlist(RuntimeOrigin::signed(*ALICE), *BOB, Role::Freelancer, 10), Error::<Test>::AlreadyAFellow);
+    );
 }
 
 #[test]
 fn add_candidate_to_shortlist_candidate_lacks_deposit() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(|| 
+        assert_ok!(add_to_fellowship(&BOB, Role::Freelancer, 5, Some(&CHARLIE)));
+        let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
+        <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, minimum + minimum);
+        
+
+    );
 }
 
 #[test]
