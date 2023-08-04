@@ -14,13 +14,9 @@ use sp_runtime::Saturating;
 use sp_std::{convert::TryInto, str, vec::Vec};
 
 #[benchmarks( where
-<<<<<<< HEAD
     <T as frame_system::Config>::AccountId: AsRef<[u8]>,
     <T as frame_system::Config>::BlockNumber: From<u32>,
 )]
-=======
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,)]
->>>>>>> 12694603b58fb2b4f4da461bc937aae467bb0237
 mod benchmarks {
     use super::*;
 
