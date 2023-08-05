@@ -330,44 +330,74 @@ fn add_candidate_to_shortlist_already_fellow() {
 }
 
 #[test]
-fn add_candidate_to_shortlist_candidate_lacks_deposit() {
+fn add_candidate_to_shortlist_candidate_lacks_deposit_fails() {
     new_test_ext().execute_with(|| 
-        assert_ok!(add_to_fellowship(&BOB, Role::Freelancer, 5, Some(&CHARLIE)));
+        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
         <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, minimum + minimum);
-        
-
+        assert_noop!(Fellowship::add_candidate_to_shortlist(RuntimOrigin::Signed(*BOB), *ALICE, Role::Freelancer, 10), Error::<Test>::CandidateDepositRequired);
     );
 }
 
 #[test]
 fn add_candidate_to_shortlist_candidate_already_on_shortlist() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(|| {
+        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
+        assert_ok!(Fellowship::add_candidate_to_shortlist(RuntimOrigin::Signed(*BOB), *ALICE, Role::Freelancer, 10));
+        assert_noop!(Fellowship::add_candidate_to_shortlist(RuntimOrigin::Signed(*BOB), *ALICE, Role::Freelancer, 10), Error::<Test>::CandidateAlreadyOnShortlist);
+    });
 }
 
 #[test]
 fn add_candidate_to_shortlist_too_many_candidates() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(|| {
+        assert_ok!(add_to_fellowship(&CHARLIE, Role::Vetter, 5, None));
+        let mut shortlist: BoundedShortlistPlaces<Test> = BoundedBTreeMap::new();
+        (0.. <Test as Config>::MaxCandidatesPerShortlist::get()).for_each(|i| {
+            shortlist.try_insert([i; 32].into(), (Role::Vetter, 10)).unwrap();
+        })
+        CandidateShortlist::<Test>::mutate(ShortlistRound::<Test>::get(), |m_shortlist| {
+            *m_shortlist = shortlist
+        });
+        assert_noop!(Fellowship::add_candidate_to_shortlist(RuntimOrigin::Signed(*CHARLIE), *BOB, Role::Freelancer, 10), Error::<Test>::TooManyCandidates);
+    })
 }
 
 #[test]
 fn add_candidate_to_shortlist_works_assert_event() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(|| {
+        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
+        assert_ok!(Fellowship::add_candidate_to_shortlist(RuntimOrigin::Signed(*BOB), *ALICE, Role::Freelancer, 10));
+        System::<Test>::assert_last_event(Event::<Test>::CandidateAddedToShortlist {who: *ALICE}.into());        
+    });
 }
 
 #[test]
 fn remove_candidate_from_shortlist_not_a_vetter() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(|| {
+        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
+        assert_ok!(Fellowship::add_candidate_to_shortlist(RuntimOrigin::Signed(*BOB), *ALICE, Role::Freelancer, 10));
+
+        assert_noop!(Fellowship::remove_candidate_from_shortlist(RuntimeOrigin::signed(*CHARLIE), *ALICE), Error::<Test>::NotAVetter);
+    });
 }
 
 #[test]
 fn remove_candidate_from_shortlist_works_assert_event() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(|| {
+        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
+        assert_ok!(Fellowship::add_candidate_to_shortlist(RuntimOrigin::Signed(*BOB), *ALICE, Role::Freelancer, 10));
+        assert_ok!(Fellowship::remove_candidate_from_shortlist(RuntimeOrigin::signed(*BOB), *ALICE));
+        assert!(CandidateShortlist::<Test>::get(ShortlistRound::<Test>::get()).get(&ALICE).is_none());
+        System::<Test>::assert_last_event(Event::<Test>::CandidateRemovedFromShortlist{who: *ALICE});
+    });
 }
 
 #[test]
 fn pay_deposit_and_remove_pending_status_not_pending() {
-    new_test_ext().execute_with(|| assert!(false));
+    new_test_ext().execute_with(||{
+        
+    });
 }
 
 #[test]
