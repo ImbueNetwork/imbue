@@ -35,7 +35,6 @@ fn ensure_max_contributors_equal_max_brief_owners() {
     assert!(max_contributors_proposals >= max_brief_owners, "Max brief owners must be less than or equal to the the max contributors");
 }
 
-// A brief owner is used as the contibutors to a project so the maximums must be equal.
 #[test]
 fn ensure_proposals_initialize_is_less_than_10_percent_block() {
     let multiplier = <Runtime as pallet_proposals::Config>::ExpiringProjectRoundsPerBlock::get();
