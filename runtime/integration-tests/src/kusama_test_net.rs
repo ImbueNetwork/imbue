@@ -175,11 +175,11 @@ parameter_types! {
 	pub KusamaSender: AccountId = Kusama::account_id_of(ALICE);
 	pub KusamaReceiver: AccountId = Kusama::account_id_of(BOB);
 	// Imbue Kusama
-	pub ImbueKusamaSender: AccountId = Development::account_id_of(ALICE);
-	pub ImbueKusamaReceiver: AccountId = Development::account_id_of(BOB);
+	pub ImbueKusamaSender: AccountId = Development::account_id_of(CHARLIE);
+	pub ImbueKusamaReceiver: AccountId = Development::account_id_of(DAVE);
 	// Sibling Kusama
-	pub SiblingKusamaSender: AccountId = Sibling::account_id_of(ALICE);
-	pub SiblingKusamaReceiver: AccountId = Sibling::account_id_of(BOB);
+	pub SiblingKusamaSender: AccountId = Sibling::account_id_of(EVE);
+	pub SiblingKusamaReceiver: AccountId = Sibling::account_id_of(FERDIE);
 }
 
 
