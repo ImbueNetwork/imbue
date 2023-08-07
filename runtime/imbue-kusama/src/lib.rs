@@ -6,6 +6,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+#[cfg(test)]
+mod sanity;
+
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
@@ -767,7 +770,6 @@ parameter_types! {
     pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
     pub const PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub const MaximumContributorsPerProject: u32 = 5000;
-    pub const RefundsPerBlock: u8 = 20;
     pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
     pub const ImbueFee: Percent = Percent::from_percent(5_u8);

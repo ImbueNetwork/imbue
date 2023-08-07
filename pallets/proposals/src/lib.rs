@@ -582,4 +582,5 @@ pub trait WeightInfoT {
     fn withdraw() -> Weight;
     fn raise_vote_of_no_confidence() -> Weight;
     fn vote_on_no_confidence_round() -> Weight;
+    fn on_initialize() -> Weight;
 }
