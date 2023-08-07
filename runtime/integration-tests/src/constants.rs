@@ -1,4 +1,5 @@
 use core::default::Default;
+use polkadot_primitives::v4::{ MAX_CODE_SIZE, MAX_POV_SIZE};
 
 use grandpa::AuthorityId as GrandpaId;
 pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
@@ -16,8 +17,6 @@ use sp_runtime::{
     BuildStorage, MultiSignature, Perbill,
 };
 pub use xcm;
-pub const XCM_V2: u32 = 3;
-pub const XCM_V3: u32 = 2;
 pub const REF_TIME_THRESHOLD: u64 = 33;
 pub const PROOF_SIZE_THRESHOLD: u64 = 33;
 
@@ -88,18 +87,6 @@ pub mod accounts {
 pub mod collators {
     use super::*;
 
-    pub fn invulnerables_statemint() -> Vec<(AccountId, AuraId)> {
-        vec![
-            (
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
-                get_from_seed::<AuraId>("Alice"),
-            ),
-            (
-                get_account_id_from_seed::<sr25519::Public>("Bob"),
-                get_from_seed::<AuraId>("Bob"),
-            ),
-        ]
-    }
 
     pub fn invulnerables() -> Vec<(AccountId, AuraId)> {
         vec![
@@ -134,6 +121,7 @@ pub mod validators {
 
 /// The default XCM version to set in genesis config.
 pub const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+// pub const SAFE_XCM_VERSION: u32 = 2;
 
 // Kusama
 pub mod kusama {
@@ -145,11 +133,43 @@ pub mod kusama {
 
     pub fn get_host_config() -> HostConfiguration<BlockNumber> {
         HostConfiguration {
-            max_upward_queue_count: 10,
-            max_upward_queue_size: 51200,
-            max_upward_message_size: 51200,
-            max_upward_message_num_per_candidate: 10,
-            max_downward_message_size: 51200,
+            // max_upward_queue_count: 10,
+            // max_upward_queue_size: 51200,
+            // max_upward_message_size: 51200,
+            // max_upward_message_num_per_candidate: 10,
+            // max_downward_message_size: 51200,
+            // ..Default::default()
+            minimum_validation_upgrade_delay: 5,
+            validation_upgrade_cooldown: 5u32,
+            validation_upgrade_delay: 5,
+            code_retention_period: 1200,
+            max_code_size: MAX_CODE_SIZE,
+            max_pov_size: MAX_POV_SIZE,
+            max_head_data_size: 32 * 1024,
+            group_rotation_frequency: 20,
+            chain_availability_period: 4,
+            thread_availability_period: 4,
+            max_upward_queue_count: 8,
+            max_upward_queue_size: 1024 * 1024,
+            max_downward_message_size: 1024,
+            max_upward_message_size: 50 * 1024,
+            max_upward_message_num_per_candidate: 5,
+            hrmp_sender_deposit: 0,
+            hrmp_recipient_deposit: 0,
+            hrmp_channel_max_capacity: 8,
+            hrmp_channel_max_total_size: 8 * 1024,
+            hrmp_max_parachain_inbound_channels: 4,
+            hrmp_max_parathread_inbound_channels: 4,
+            hrmp_channel_max_message_size: 1024 * 1024,
+            hrmp_max_parachain_outbound_channels: 4,
+            hrmp_max_parathread_outbound_channels: 4,
+            hrmp_max_message_num_per_candidate: 5,
+            dispute_period: 6,
+            no_show_slots: 2,
+            n_delay_tranches: 25,
+            needed_approvals: 2,
+            relay_vrf_modulo_samples: 2,
+            zeroth_delay_tranche_width: 0,
             ..Default::default()
         }
     }
@@ -227,9 +247,9 @@ pub mod kusama {
                 authorities: Default::default(),
                 epoch_config: Some(kusama_runtime::BABE_GENESIS_EPOCH_CONFIG),
             },
-            xcm_pallet: kusama_runtime::XcmPalletConfig {
-                safe_xcm_version: Some(SAFE_XCM_VERSION),
-            },
+            // xcm_pallet: kusama_runtime::XcmPalletConfig {
+            //     safe_xcm_version: Some(SAFE_XCM_VERSION),
+            // },
             configuration: kusama_runtime::ConfigurationConfig {
                 config: get_host_config(),
             },
