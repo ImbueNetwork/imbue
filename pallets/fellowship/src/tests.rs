@@ -7,11 +7,14 @@ use common_traits::MaybeConvert;
 use common_types::CurrencyId;
 use frame_support::{assert_err, assert_noop, assert_ok, once_cell::sync::Lazy, BoundedBTreeMap};
 use frame_system::Pallet as System;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::{traits::{BadOrigin, Saturating}, DispatchError};
-use sp_std::{vec, vec::Vec, convert::TryInto};
-use sp_core::sr25519::Public;
 use orml_tokens::Error as TokensError;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use sp_core::sr25519::Public;
+use sp_runtime::{
+    traits::{BadOrigin, Saturating},
+    DispatchError,
+};
+use sp_std::{convert::TryInto, vec, vec::Vec};
 
 // Saves a bit of typing.
 type Fellowship = FellowshipI<Test>;
@@ -210,10 +213,15 @@ fn add_to_fellowship_adds_to_pending_fellows_where_deposit_fails() {
     new_test_ext().execute_with(|| {
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
-        assert_ok!(<Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, free - minimum + minimum));
+        assert_ok!(<Test as Config>::MultiCurrency::withdraw(
+            *DEP_CURRENCY,
+            &ALICE,
+            free - minimum + minimum
+        ));
         assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, None).is_ok());
         assert_eq!(
-            PendingFellows::<Test>::get(*ALICE).expect("Pending fellows should have the account inserted."),
+            PendingFellows::<Test>::get(*ALICE)
+                .expect("Pending fellows should have the account inserted."),
             (Role::Freelancer, 10)
         );
     });
@@ -224,7 +232,12 @@ fn add_to_fellowship_adds_to_pending_fellows_assert_event() {
     new_test_ext().execute_with(|| {
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
-        let _ = <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, free - minimum + minimum).unwrap();
+        let _ = <Test as Config>::MultiCurrency::withdraw(
+            *DEP_CURRENCY,
+            &ALICE,
+            free - minimum + minimum,
+        )
+        .unwrap();
         assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, None).is_ok());
         System::<Test>::assert_last_event(
             Event::<Test>::MemberAddedToPendingFellows { who: *ALICE }.into(),
@@ -286,11 +299,17 @@ fn revoke_fellowship_unreserves_if_deposit_taken_no_slash() {
 #[test]
 fn revoke_fellowship_slashes_if_deposit_taken() {
     new_test_ext().execute_with(|| {
-        let alice_reserved_before = <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
+        let alice_reserved_before =
+            <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
         assert!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
         assert_ok!(revoke_fellowship(&ALICE, true));
-        let alice_reserved_after = <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
-        assert_eq!(alice_reserved_before, alice_reserved_after.saturating_sub(<Test as Config>::MembershipDeposit::get()), "deposit should have been taken since slash has occurred");
+        let alice_reserved_after =
+            <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
+        assert_eq!(
+            alice_reserved_before,
+            alice_reserved_after.saturating_sub(<Test as Config>::MembershipDeposit::get()),
+            "deposit should have been taken since slash has occurred"
+        );
     });
 }
 
@@ -318,19 +337,33 @@ fn revoke_fellowship_with_slash_goes_to_slash_account() {
 #[test]
 fn add_candidate_to_shortlist_not_a_vetter() {
     new_test_ext().execute_with(|| {
-        assert_noop!(Fellowship::add_candidate_to_shortlist(RuntimeOrigin::signed(*ALICE), *BOB, Role::Freelancer, 10), Error::<Test>::NotAVetter);
+        assert_noop!(
+            Fellowship::add_candidate_to_shortlist(
+                RuntimeOrigin::signed(*ALICE),
+                *BOB,
+                Role::Freelancer,
+                10
+            ),
+            Error::<Test>::NotAVetter
+        );
     });
 }
 
 #[test]
 fn add_candidate_to_shortlist_already_fellow() {
     new_test_ext().execute_with(|| {
-
         assert_ok!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)));
         assert_ok!(add_to_fellowship(&BOB, Role::Freelancer, 5, Some(&CHARLIE)));
-        assert_noop!(Fellowship::add_candidate_to_shortlist(RuntimeOrigin::signed(*ALICE), *BOB, Role::Freelancer, 10), Error::<Test>::AlreadyAFellow);
-    }
-);
+        assert_noop!(
+            Fellowship::add_candidate_to_shortlist(
+                RuntimeOrigin::signed(*ALICE),
+                *BOB,
+                Role::Freelancer,
+                10
+            ),
+            Error::<Test>::AlreadyAFellow
+        );
+    });
 }
 
 #[test]
@@ -339,18 +372,43 @@ fn add_candidate_to_shortlist_candidate_lacks_deposit_fails() {
         assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
-        let _ = <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, free - minimum + minimum).unwrap();
-        assert_noop!(Fellowship::add_candidate_to_shortlist(RuntimeOrigin::signed(*BOB), *ALICE, Role::Freelancer, 10), Error::<Test>::CandidateDepositRequired);
-    }
-);
+        let _ = <Test as Config>::MultiCurrency::withdraw(
+            *DEP_CURRENCY,
+            &ALICE,
+            free - minimum + minimum,
+        )
+        .unwrap();
+        assert_noop!(
+            Fellowship::add_candidate_to_shortlist(
+                RuntimeOrigin::signed(*BOB),
+                *ALICE,
+                Role::Freelancer,
+                10
+            ),
+            Error::<Test>::CandidateDepositRequired
+        );
+    });
 }
 
 #[test]
 fn add_candidate_to_shortlist_candidate_already_on_shortlist() {
     new_test_ext().execute_with(|| {
         assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
-        assert_ok!(Fellowship::add_candidate_to_shortlist(RuntimeOrigin::signed(*BOB), *ALICE, Role::Freelancer, 10));
-        assert_noop!(Fellowship::add_candidate_to_shortlist(RuntimeOrigin::signed(*BOB), *ALICE, Role::Freelancer, 10), Error::<Test>::CandidateAlreadyOnShortlist);
+        assert_ok!(Fellowship::add_candidate_to_shortlist(
+            RuntimeOrigin::signed(*BOB),
+            *ALICE,
+            Role::Freelancer,
+            10
+        ));
+        assert_noop!(
+            Fellowship::add_candidate_to_shortlist(
+                RuntimeOrigin::signed(*BOB),
+                *ALICE,
+                Role::Freelancer,
+                10
+            ),
+            Error::<Test>::CandidateAlreadyOnShortlist
+        );
     });
 }
 
@@ -359,13 +417,23 @@ fn add_candidate_to_shortlist_too_many_candidates() {
     new_test_ext().execute_with(|| {
         assert_ok!(add_to_fellowship(&CHARLIE, Role::Vetter, 5, None));
         let mut shortlist: BoundedShortlistPlaces<Test> = BoundedBTreeMap::new();
-        (0.. <Test as Config>::MaxCandidatesPerShortlist::get()).for_each(|i| {
-            shortlist.try_insert(Public::from_raw([i as u8; 32]), ((Role::Vetter, 10), None)).unwrap();
+        (0..<Test as Config>::MaxCandidatesPerShortlist::get()).for_each(|i| {
+            shortlist
+                .try_insert(Public::from_raw([i as u8; 32]), ((Role::Vetter, 10), None))
+                .unwrap();
         });
         CandidateShortlist::<Test>::mutate(ShortlistRound::<Test>::get(), |m_shortlist| {
             *m_shortlist = shortlist
         });
-        assert_noop!(Fellowship::add_candidate_to_shortlist(RuntimeOrigin::signed(*CHARLIE), *BOB, Role::Freelancer, 10), Error::<Test>::TooManyCandidates);
+        assert_noop!(
+            Fellowship::add_candidate_to_shortlist(
+                RuntimeOrigin::signed(*CHARLIE),
+                *BOB,
+                Role::Freelancer,
+                10
+            ),
+            Error::<Test>::TooManyCandidates
+        );
     })
 }
 
@@ -373,8 +441,15 @@ fn add_candidate_to_shortlist_too_many_candidates() {
 fn add_candidate_to_shortlist_works_assert_event() {
     new_test_ext().execute_with(|| {
         assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
-        assert_ok!(Fellowship::add_candidate_to_shortlist(RuntimeOrigin::signed(*BOB), *ALICE, Role::Freelancer, 10));
-        System::<Test>::assert_last_event(Event::<Test>::CandidateAddedToShortlist {who: *ALICE}.into());        
+        assert_ok!(Fellowship::add_candidate_to_shortlist(
+            RuntimeOrigin::signed(*BOB),
+            *ALICE,
+            Role::Freelancer,
+            10
+        ));
+        System::<Test>::assert_last_event(
+            Event::<Test>::CandidateAddedToShortlist { who: *ALICE }.into(),
+        );
     });
 }
 
@@ -382,9 +457,17 @@ fn add_candidate_to_shortlist_works_assert_event() {
 fn remove_candidate_from_shortlist_not_a_vetter() {
     new_test_ext().execute_with(|| {
         assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
-        assert_ok!(Fellowship::add_candidate_to_shortlist(RuntimeOrigin::signed(*BOB), *ALICE, Role::Freelancer, 10));
+        assert_ok!(Fellowship::add_candidate_to_shortlist(
+            RuntimeOrigin::signed(*BOB),
+            *ALICE,
+            Role::Freelancer,
+            10
+        ));
 
-        assert_noop!(Fellowship::remove_candidate_from_shortlist(RuntimeOrigin::signed(*CHARLIE), *ALICE), Error::<Test>::NotAVetter);
+        assert_noop!(
+            Fellowship::remove_candidate_from_shortlist(RuntimeOrigin::signed(*CHARLIE), *ALICE),
+            Error::<Test>::NotAVetter
+        );
     });
 }
 
@@ -392,17 +475,34 @@ fn remove_candidate_from_shortlist_not_a_vetter() {
 fn remove_candidate_from_shortlist_works_assert_event() {
     new_test_ext().execute_with(|| {
         assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
-        assert_ok!(Fellowship::add_candidate_to_shortlist(RuntimeOrigin::signed(*BOB), *ALICE, Role::Freelancer, 10));
-        assert_ok!(Fellowship::remove_candidate_from_shortlist(RuntimeOrigin::signed(*BOB), *ALICE));
-        assert!(CandidateShortlist::<Test>::get(ShortlistRound::<Test>::get()).get(&ALICE).is_none());
-        System::<Test>::assert_last_event(Event::<Test>::CandidateRemovedFromShortlist{who: *ALICE}.into());
+        assert_ok!(Fellowship::add_candidate_to_shortlist(
+            RuntimeOrigin::signed(*BOB),
+            *ALICE,
+            Role::Freelancer,
+            10
+        ));
+        assert_ok!(Fellowship::remove_candidate_from_shortlist(
+            RuntimeOrigin::signed(*BOB),
+            *ALICE
+        ));
+        assert!(
+            CandidateShortlist::<Test>::get(ShortlistRound::<Test>::get())
+                .get(&ALICE)
+                .is_none()
+        );
+        System::<Test>::assert_last_event(
+            Event::<Test>::CandidateRemovedFromShortlist { who: *ALICE }.into(),
+        );
     });
 }
 
 #[test]
 fn pay_deposit_and_remove_pending_status_not_pending() {
-    new_test_ext().execute_with(||{
-        assert_noop!(Fellowship::pay_deposit_to_remove_pending_status(RuntimeOrigin::signed(*ALICE)), Error::<Test>::NotAFellow);
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            Fellowship::pay_deposit_to_remove_pending_status(RuntimeOrigin::signed(*ALICE)),
+            Error::<Test>::NotAFellow
+        );
     });
 }
 
@@ -411,9 +511,17 @@ fn pay_deposit_and_remove_pending_status_not_enough_funds_to_reserve() {
     new_test_ext().execute_with(|| {
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
-        let _ = <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, free - minimum + minimum).unwrap();
+        let _ = <Test as Config>::MultiCurrency::withdraw(
+            *DEP_CURRENCY,
+            &ALICE,
+            free - minimum + minimum,
+        )
+        .unwrap();
         assert_ok!(add_to_fellowship(&ALICE, Role::Freelancer, 5, None));
-        assert_noop!(Fellowship::pay_deposit_to_remove_pending_status(RuntimeOrigin::signed(*ALICE)), TokensError::<Test>::BalanceTooLow);
+        assert_noop!(
+            Fellowship::pay_deposit_to_remove_pending_status(RuntimeOrigin::signed(*ALICE)),
+            TokensError::<Test>::BalanceTooLow
+        );
     });
 }
 
@@ -422,10 +530,28 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
     new_test_ext().execute_with(|| {
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
-        let _ = <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, free - minimum + minimum).unwrap();
+        let _ = <Test as Config>::MultiCurrency::withdraw(
+            *DEP_CURRENCY,
+            &ALICE,
+            free - minimum + minimum,
+        )
+        .unwrap();
         assert_ok!(add_to_fellowship(&ALICE, Role::Freelancer, 5, None));
-        let _ = <Test as Config>::MultiCurrency::deposit(*DEP_CURRENCY, &ALICE, <Test as Config>::MembershipDeposit::get() + 100_000).unwrap();
-        assert_ok!(Fellowship::pay_deposit_to_remove_pending_status(RuntimeOrigin::signed(*ALICE)));
-        System::<Test>::assert_last_event(Event::<Test>::FellowshipAdded {who: *ALICE, role: Role::Freelancer}.into());
+        let _ = <Test as Config>::MultiCurrency::deposit(
+            *DEP_CURRENCY,
+            &ALICE,
+            <Test as Config>::MembershipDeposit::get() + 100_000,
+        )
+        .unwrap();
+        assert_ok!(Fellowship::pay_deposit_to_remove_pending_status(
+            RuntimeOrigin::signed(*ALICE)
+        ));
+        System::<Test>::assert_last_event(
+            Event::<Test>::FellowshipAdded {
+                who: *ALICE,
+                role: Role::Freelancer,
+            }
+            .into(),
+        );
     });
 }
