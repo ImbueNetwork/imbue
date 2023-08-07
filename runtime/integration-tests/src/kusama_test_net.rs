@@ -39,19 +39,19 @@ decl_test_relay_chains! {
 	pub struct Kusama {
 		genesis = kusama::genesis(),
 		on_init = (
-			kusama_runtime::XcmPallet::force_default_xcm_version(
-            kusama_runtime::RuntimeOrigin::root(),
-            Some(SAFE_XCM_VERSION)),
-
-			kusama_runtime::XcmPallet::force_xcm_version(
-            kusama_runtime::RuntimeOrigin::root(),
-            Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_SIBLING)))),
-            SAFE_XCM_VERSION),
-
-			kusama_runtime::XcmPallet::force_xcm_version(
-            kusama_runtime::RuntimeOrigin::root(),
-            Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_DEVELOPMENT)))),
-            SAFE_XCM_VERSION),
+			// kusama_runtime::XcmPallet::force_default_xcm_version(
+            // kusama_runtime::RuntimeOrigin::root(),
+            // Some(SAFE_XCM_VERSION)),
+			//
+			// kusama_runtime::XcmPallet::force_xcm_version(
+            // kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_SIBLING)))),
+            // SAFE_XCM_VERSION),
+			//
+			// kusama_runtime::XcmPallet::force_xcm_version(
+            // kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_DEVELOPMENT)))),
+            // SAFE_XCM_VERSION),
 		),
 		runtime = {
 			Runtime: kusama_runtime::Runtime,
@@ -74,24 +74,24 @@ decl_test_parachains! {
 		genesis = imbue::genesis(PARA_ID_DEVELOPMENT),
 		on_init = (
 
-			imbue_kusama_runtime::PolkadotXcm::force_default_xcm_version(
-            imbue_kusama_runtime::RuntimeOrigin::root(),
-            Some(SAFE_XCM_VERSION)),
-
-			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
-            imbue_kusama_runtime::RuntimeOrigin::root(),
-            Box::new(MultiLocation::new(0, Here)),
-            SAFE_XCM_VERSION),
-
-			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
-            imbue_kusama_runtime::RuntimeOrigin::root(),
-            Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_SIBLING)))),
-            SAFE_XCM_VERSION),
-
-			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
-            imbue_kusama_runtime::RuntimeOrigin::root(),
-            Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_DEVELOPMENT)))),
-            SAFE_XCM_VERSION),
+			// imbue_kusama_runtime::PolkadotXcm::force_default_xcm_version(
+            // imbue_kusama_runtime::RuntimeOrigin::root(),
+            // Some(SAFE_XCM_VERSION)),
+			//
+			// imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+            // imbue_kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(0, Here)),
+            // SAFE_XCM_VERSION),
+			//
+			// imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+            // imbue_kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_SIBLING)))),
+            // SAFE_XCM_VERSION),
+			//
+			// imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+            // imbue_kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_DEVELOPMENT)))),
+            // SAFE_XCM_VERSION),
 
 			//
 			// imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
@@ -120,24 +120,24 @@ decl_test_parachains! {
 	pub struct Sibling {
 		genesis = imbue::genesis(PARA_ID_SIBLING),
 		on_init = (
-			imbue_kusama_runtime::PolkadotXcm::force_default_xcm_version(
-            imbue_kusama_runtime::RuntimeOrigin::root(),
-            Some(SAFE_XCM_VERSION)),
-
-			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
-            imbue_kusama_runtime::RuntimeOrigin::root(),
-            Box::new(MultiLocation::new(0, Here)),
-            SAFE_XCM_VERSION),
-
-			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
-            imbue_kusama_runtime::RuntimeOrigin::root(),
-            Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_SIBLING)))),
-            SAFE_XCM_VERSION),
-
-			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
-            imbue_kusama_runtime::RuntimeOrigin::root(),
-            Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_DEVELOPMENT)))),
-            SAFE_XCM_VERSION),
+			// imbue_kusama_runtime::PolkadotXcm::force_default_xcm_version(
+            // imbue_kusama_runtime::RuntimeOrigin::root(),
+            // Some(SAFE_XCM_VERSION)),
+			//
+			// imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+            // imbue_kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(0, Here)),
+            // SAFE_XCM_VERSION),
+			//
+			// imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+            // imbue_kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_SIBLING)))),
+            // SAFE_XCM_VERSION),
+			//
+			// imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+            // imbue_kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_DEVELOPMENT)))),
+            // SAFE_XCM_VERSION),
 		),
 		runtime = {
 			Runtime: imbue_kusama_runtime::Runtime,
