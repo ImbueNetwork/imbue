@@ -13,26 +13,25 @@
 use frame_support::assert_ok;
 use xcm_emulator::TestExt;
 
-use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
+use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
 
 use common_runtime::{common_xcm::general_key, parachains};
 
-use crate::kusama_test_net::{Development, Sibling, Kusama, TestNet, KusamaSender, KusamaReceiver, ImbueKusamaSender, ImbueKusamaReceiver, SiblingKusamaSender, SiblingKusamaReceiver};
+use crate::kusama_test_net::{Development, Sibling, Kusama, KusamaSender, KusamaReceiver, ImbueKusamaSender, ImbueKusamaReceiver, SiblingKusamaReceiver};
 use crate::setup::{
-    development_account, kar_amount, karura_account, ksm_amount, native_amount, mgx_amount,
-    sibling_account, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
+    ksm_amount, native_amount, mgx_amount, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
 };
 use common_runtime::Balance;
 use common_types::{CurrencyId, FundingType, TreasuryOrigin};
 use imbue_kusama_runtime::{
-    AUsdPerSecond, Balances, CanonicalImbuePerSecond, KarPerSecond, KsmPerSecond, OrmlTokens,
-    Runtime as R, RuntimeOrigin, XTokens, System,
+    CanonicalImbuePerSecond, OrmlTokens,
+    Runtime as R, RuntimeOrigin, XTokens,
 };
 use orml_traits::MultiCurrency;
 use pallet_proposals::traits::RefundHandler;
-use crate::constants::{kusama, SAFE_XCM_VERSION};
-use xcm_emulator::{assert_expected_events, Parachain as Para};
-use crate::constants::accounts::get_para_id_development_account;
+use crate::constants::{SAFE_XCM_VERSION};
+
+
 
 #[test]
 fn transfer_ksm_to_relay_chain() {
@@ -63,7 +62,7 @@ fn transfer_ksm_to_relay_chain() {
                 MultiLocation::new(
                     1,
                     X1(Junction::AccountId32 {
-                        id: ImbueKusamaReceiver::get().clone().into(),
+                        id: KusamaReceiver::get().clone().into(),
                         network: Some(NetworkId::Kusama),
                     })
                 )
@@ -164,7 +163,6 @@ fn transfer_ksm_from_sibling() {
     Development::execute_with(|| {
         let ksm_balance =
             OrmlTokens::free_balance(CurrencyId::KSM, &SiblingKusamaReceiver::get().into());
-        let test = Development::events();
         assert!(ksm_balance > 0);
     });
 }

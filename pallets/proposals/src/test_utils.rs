@@ -7,6 +7,7 @@ use crate::{
     ProjectKey, ProposedMilestone,
 };
 use common_types::{CurrencyId, FundingType};
+#[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, Vec};
 use frame_support::{assert_ok, traits::Hooks};
 use frame_system::EventRecord;
@@ -129,6 +130,7 @@ pub fn create_project<T: Config>(
     project_key
 }
 
+#[cfg(feature = "runtime-benchmarks")]
 pub fn create_funded_user<T: Config>(
     seed: &'static str,
     n: u32,
