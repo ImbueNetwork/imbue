@@ -31,9 +31,9 @@ pub mod pallet {
     pub(crate) type VetterIdOf<T> = AccountIdOf<T>;
     pub(crate) type Rank = u16;
 
-    type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    type ShortlistRoundKey = u32;
-    type BoundedShortlistPlaces<T> = BoundedBTreeMap<
+    pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+    pub(crate) type ShortlistRoundKey = u32;
+    pub(crate) type BoundedShortlistPlaces<T> = BoundedBTreeMap<
         AccountIdOf<T>,
         ((Role, Rank), Option<VetterIdOf<T>>),
         <T as Config>::MaxCandidatesPerShortlist,
@@ -137,11 +137,12 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
             let mut weight = Weight::default();
-            if n % T::ShortlistPeriod::get() == Zero::zero() {
+            if n % T::ShortlistPeriod::get() == Zero::zero()  {
                 let round_key = ShortlistRound::<T>::get();
                 let shortlist = CandidateShortlist::<T>::get(round_key);
                 weight.saturating_add(T::DbWeight::get().reads(2));
 
+                // TODO: Add sanity check for this loop for proof sizes + ref time.
                 shortlist
                     .iter()
                     .for_each(|(acc, ((role, rank), maybe_vetter))| {

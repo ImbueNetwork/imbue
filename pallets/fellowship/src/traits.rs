@@ -12,7 +12,6 @@ pub trait DemocracyHandle<AccountId> {
 }
 
 /// Used by external pallets that decide when to add and remove members from the fellowship.
-/// Makes a ying/yang with the democracy handle :)
 pub trait FellowshipHandle<AccountId> {
     type Role: Member + TypeInfo + MaxEncodedLen + FullCodec + FullEncode + Copy;
     type Rank: Member + TypeInfo + MaxEncodedLen + FullCodec + FullEncode + Copy;
