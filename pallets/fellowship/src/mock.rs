@@ -66,6 +66,7 @@ parameter_types! {
     pub ShortlistPeriod: BlockNumber = 100;
     pub MembershipDeposit: Balance = 50_000_000;
     pub SlashAccount: AccountId = Public::from_raw([1u8; 32]);
+    pub TreasuryAccount: AccountId = *TREASURY;
     pub BlockHashCount: BlockNumber = 250;
     pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
 }
@@ -80,6 +81,7 @@ impl pallet_fellowship::Config for Test {
     type MembershipDeposit = MembershipDeposit;
     type DepositCurrencyId = DepositCurrencyId;
     type SlashAccount = SlashAccount;
+    type TreasuryAccount = TreasuryAccount;
     type WeightInfo = ();
 }
 
@@ -120,6 +122,7 @@ impl orml_tokens::Config for Test {
 pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
+pub static TREASURY: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()
