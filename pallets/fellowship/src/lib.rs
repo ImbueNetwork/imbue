@@ -63,6 +63,7 @@ pub mod pallet {
         /// Currently just send all slash deposits to a single account.
         /// TODO: use OnUnbalanced.
         type SlashAccount: Get<AccountIdOf<Self>>;
+        type TreasuryAccount: Get<AccountIdOf<Self>>;
         type WeightInfo: WeightInfo;
     }
 
@@ -89,6 +90,12 @@ pub mod pallet {
     /// Needed incase the reserve amount will change.
     #[pallet::storage]
     pub type FellowshipReserves<T> =
+        StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, OptionQuery>;
+    
+    /// Keeps track of the deposits taken from a fellow that were funded by the treasury.
+    /// Needed incase the reserve amount will change.
+    #[pallet::storage]
+    pub type TreasuryReserves<T> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, OptionQuery>;
 
     /// Keeps track of the accounts a fellow has recruited.
@@ -132,6 +139,8 @@ pub mod pallet {
         TooManyCandidates,
         /// The fellowship deposit has could not be found, contact development.
         FellowshipReserveDisapeared,
+        /// The treasury account is empty, bit of a disaster if you ask me. Panic if this happens xd.
+        TreasuryAccountIsEmpty,
     }
 
     #[pallet::hooks]
@@ -143,7 +152,6 @@ pub mod pallet {
                 let shortlist = CandidateShortlist::<T>::get(round_key);
                 weight.saturating_add(T::DbWeight::get().reads(2));
 
-                // TODO: Add sanity check for this loop for proof sizes + ref time.
                 shortlist
                     .iter()
                     .for_each(|(acc, ((role, rank), maybe_vetter))| {
@@ -163,7 +171,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// An origin check wrapping the standard add_to_fellowship call.
         /// Force add someone to the fellowship. This is required to be called by the ForceOrigin
-        /// No deposit will be taken for this.
+        /// A deposit will be taken and returned to the TreasuryAccount.
         #[pallet::call_index(0)]
         #[pallet::weight(10_000)]
         pub fn force_add_fellowship(
@@ -173,8 +181,18 @@ pub mod pallet {
             rank: Rank,
         ) -> DispatchResult {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
-            <Self as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&who, role, rank, None)?;
-            Self::deposit_event(Event::<T>::FellowshipAdded { who, role });
+            if !Roles::<T>::contains_key(&who) {
+                let membership_deposit = <T as Config>::MembershipDeposit::get();
+                let _ = <T as Config>::MultiCurrency::reserve(
+                    T::DepositCurrencyId::get(),
+                    &T::TreasuryAccount::get(),
+                    membership_deposit,
+                ).map_err(|_|Error::<T>::TreasuryAccountIsEmpty)?;
+
+                TreasuryReserves::<T>::insert(&who, membership_deposit);
+            }
+            Roles::<T>::insert(&who, (role, rank));
+            Self::deposit_event(Event::<T>::FellowshipAdded { who: who.clone(), role });
             Ok(().into())
         }
 
@@ -312,7 +330,8 @@ pub mod pallet {
         /// Add someone to the fellowship the only way this "fails" is when the candidate does not have
         /// enough native token for the deposit, this candidate is then added to PendingFellows where they
         /// can pay the deposit later to accept the membership.
-        /// The deposit amount is defined in the Config.
+        /// The deposit amount + currency is defined in the Config.
+        /// To pay the deposit, call pay_deposit_to_remove_pending_status
         fn add_to_fellowship(
             who: &AccountIdOf<T>,
             role: Role,
@@ -362,15 +381,23 @@ pub mod pallet {
             PendingFellows::<T>::remove(who);
             Roles::<T>::remove(who);
             FellowToVetter::<T>::remove(who);
-            // Essentially you can only slash a deposit if it has been taken
+
             // Deposits are only taken when a role is assigned
             if has_role {
-                let deposit_amount: BalanceOf<T> = FellowshipReserves::<T>::get(&who)
-                    .ok_or(Error::<T>::FellowshipReserveDisapeared)?;
+                let mut deposit_amount: BalanceOf<T> = Zero::zero();
+                let mut return_address: AccountIdOf<T> = T::TreasuryAccount::get();
+
+                if let Some(b) = TreasuryReserves::<T>::get(&who) {
+                    deposit_amount = b;
+                } else {
+                    deposit_amount = FellowshipReserves::<T>::get(&who).ok_or(Error::<T>::FellowshipReserveDisapeared)?;
+                    return_address = who.clone();
+                }
+
                 if slash_deposit {
                     let _imbalance = <T as Config>::MultiCurrency::repatriate_reserved(
                         CurrencyId::Native,
-                        &who,
+                        &return_address,
                         &<T as Config>::SlashAccount::get(),
                         deposit_amount,
                         BalanceStatus::Free,
@@ -378,7 +405,7 @@ pub mod pallet {
                 } else {
                     <T as Config>::MultiCurrency::unreserve(
                         CurrencyId::Native,
-                        who,
+                        &return_address,
                         deposit_amount,
                     );
                 }
