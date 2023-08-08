@@ -150,16 +150,16 @@ pub mod pallet {
             if n % T::ShortlistPeriod::get() == Zero::zero() {
                 let round_key = ShortlistRound::<T>::get();
                 let shortlist = CandidateShortlist::<T>::get(round_key);
-                weight.saturating_add(T::DbWeight::get().reads(2));
+                weight = weight.saturating_add(T::DbWeight::get().reads(2));
 
                 shortlist
                     .iter()
                     .for_each(|(acc, ((role, rank), maybe_vetter))| {
-                        weight.saturating_add(T::WeightInfo::add_to_fellowship());
-                        Self::add_to_fellowship(acc, *role, *rank, maybe_vetter.as_ref());
+                        weight = weight.saturating_add(T::WeightInfo::add_to_fellowship());
+                        let _ = Self::add_to_fellowship(acc, *role, *rank, maybe_vetter.as_ref());
                     });
 
-                weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
                 CandidateShortlist::<T>::remove(round_key);
                 ShortlistRound::<T>::put(round_key.saturating_add(1));
             }
