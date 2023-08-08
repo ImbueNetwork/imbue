@@ -1,7 +1,6 @@
 use crate::Rank;
 use codec::{FullCodec, FullEncode};
 use frame_support::pallet_prelude::*;
-use sp_runtime::traits::BadOrigin;
 use sp_runtime::DispatchError;
 use sp_std::vec::Vec;
 

@@ -2,11 +2,10 @@ use crate as pallet_fellowship;
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
 use frame_support::{
-    pallet_prelude::*,
-    traits::{ConstU16, ConstU64, Nothing},
+    traits::{ConstU16, Nothing},
 };
 use frame_system::EnsureRoot;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::MultiCurrency;
 use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
 use sp_runtime::{

@@ -5,16 +5,16 @@ use crate::*;
 use crate::{mock::*, Error, Event, FellowToVetter, Role, Roles};
 use common_traits::MaybeConvert;
 use common_types::CurrencyId;
-use frame_support::{assert_err, assert_noop, assert_ok, once_cell::sync::Lazy, BoundedBTreeMap};
+use frame_support::{assert_noop, assert_ok, once_cell::sync::Lazy, BoundedBTreeMap};
 use frame_system::Pallet as System;
 use orml_tokens::Error as TokensError;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_core::sr25519::Public;
 use sp_runtime::{
-    traits::{BadOrigin, Saturating},
+    traits::BadOrigin,
     DispatchError,
 };
-use sp_std::{convert::TryInto, vec, vec::Vec};
+use sp_std::vec;
 
 // Saves a bit of typing.
 type Fellowship = FellowshipI<Test>;

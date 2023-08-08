@@ -41,7 +41,6 @@ pub mod pallet {
     >;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -384,7 +383,7 @@ pub mod pallet {
 
             // Deposits are only taken when a role is assigned
             if has_role {
-                let mut deposit_amount: BalanceOf<T> = Zero::zero();
+                let mut deposit_amount: BalanceOf<T> = T::MembershipDeposit::get();
                 let mut return_address: AccountIdOf<T> = T::TreasuryAccount::get();
 
                 if let Some(b) = TreasuryReserves::<T>::get(&who) {
