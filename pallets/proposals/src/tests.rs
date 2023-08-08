@@ -1,7 +1,9 @@
-use crate::{mock::*, *};
-use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok};
+
+use common_types::CurrencyId;
 use test_utils::*;
+
+use crate::{*, mock::*};
 
 #[test]
 fn submit_milestone_milestone_doesnt_exist() {
@@ -795,16 +797,6 @@ fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
 }
 
 #[test]
-fn vote_on_no_confidence_round_no_project() {
-    build_test_externality().execute_with(|| {
-        assert_noop!(
-            Proposals::finalise_no_confidence_round(RuntimeOrigin::signed(*CHARLIE), 20),
-            Error::<Test>::ProjectDoesNotExist
-        );
-    });
-}
-
-#[test]
 fn vote_on_no_confidence_round_not_in_round() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
@@ -904,6 +896,59 @@ fn vote_on_no_confidence_mutates_vote() {
         );
     });
 }
+
+
+#[test]
+fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE,*CHARLIE,*ALICE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+
+        assert_ok!(Proposals::raise_vote_of_no_confidence(
+            RuntimeOrigin::signed(*BOB),
+            project_key
+        ));
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*DAVE),
+            project_key,
+            true
+        ));
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            false
+        ));
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            false
+        ));
+        let vote = NoConfidenceVotes::<Test>::get(project_key).expect("vote should exist");
+        assert_eq!(
+            vote.nay, 300_000,
+            "Total vote should equal half contributions here."
+        );
+        assert_eq!(
+            vote.yay, 100000,
+            "Total vote should equal half contributions here."
+        );
+
+        let has_voted = UserHasVoted::<Test>::get((project_key, RoundType::VoteOfNoConfidence, 0));
+        assert!(
+            has_voted.values().len() == 4usize,
+            "Not all the votes has been recorded"
+        );
+        assert!(
+            has_voted.contains_key(&BOB) || has_voted.contains_key(&DAVE) || has_voted.contains_key(&ALICE) || has_voted.contains_key(&CHARLIE)  ,
+            "Bob,Alice,Dave charlie have voted."
+        );
+        assert_last_event::<Test>(Event::<Test>::NoConfidenceRoundFinalised(*ALICE, project_key).into());
+        assert_eq!(Projects::<Test>::get(project_key),None);
+        assert_eq!(Rounds::<Test>::get(project_key,RoundType::VoteOfNoConfidence),None);
+    });
+}
+
 
 // todo: finalise voteof no confidence tests.
 // ^^ is connected to making the pallet generic over funding type.

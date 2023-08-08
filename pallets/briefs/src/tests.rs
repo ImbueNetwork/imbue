@@ -8,25 +8,9 @@ use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
 use sp_arithmetic::per_things::Percent;
-use sp_runtime::DispatchError::BadOrigin;
+
 use std::convert::TryInto;
 
-#[test]
-fn approve_freelancer_not_root() {
-    build_test_externality().execute_with(|| {
-        assert_noop!(
-            BriefsMod::add_to_fellowship(RuntimeOrigin::signed(*ALICE), *BOB),
-            BadOrigin
-        );
-    });
-}
-
-#[test]
-fn approve_freelancer_as_root() {
-    build_test_externality().execute_with(|| {
-        assert_ok!(BriefsMod::add_to_fellowship(RuntimeOrigin::root(), *BOB));
-    });
-}
 
 #[test]
 fn create_brief_not_approved_applicant() {
@@ -39,8 +23,6 @@ fn create_brief_not_approved_applicant() {
 #[test]
 fn create_brief_brief_owner_overflow() {
     build_test_externality().execute_with(|| {
-        let _ = BriefsMod::add_to_fellowship(RuntimeOrigin::root(), *ALICE);
-
         assert_noop!(
             BriefsMod::create_brief(
                 RuntimeOrigin::signed(*BOB),

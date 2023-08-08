@@ -104,13 +104,12 @@ impl<T: Config> Pallet<T> {
             });
 
             Self::deposit_event(Event::MilestoneApproved(
-                project.initiator,
+                who.clone(),
                 project_key,
                 milestone_key,
                 <frame_system::Pallet<T>>::block_number(),
             ));
-            //TODO: Set vote as approved.
-            // set the vote as approved, set the milestone as approved.
+            Rounds::<T>::remove(project_key, RoundType::VotingRound);
         }
 
         Self::deposit_event(Event::VoteSubmitted(
@@ -245,7 +244,7 @@ impl<T: Config> Pallet<T> {
         })?;
 
         NoConfidenceVotes::<T>::insert(project_key, vote);
-        Self::deposit_event(Event::NoConfidenceRoundCreated(project_key));
+        Self::deposit_event(Event::NoConfidenceRoundCreated(who, project_key));
         Ok(())
     }
 
@@ -265,34 +264,92 @@ impl<T: Config> Pallet<T> {
             .get(&who)
             .ok_or(Error::<T>::OnlyContributorsCanVote)?;
 
-        NoConfidenceVotes::<T>::try_mutate(project_key, |maybe_vote| {
+        let nay_vote = NoConfidenceVotes::<T>::try_mutate(project_key, |maybe_vote| {
             if let Some(v) = maybe_vote {
                 if is_yay {
                     v.yay = v.yay.saturating_add(contribution.value);
                 } else {
                     v.nay = v.nay.saturating_add(contribution.value);
                 }
-                Ok::<(), DispatchError>(())
+                Ok::<BalanceOf<T>, DispatchError>(v.nay)
             } else {
                 Err(Error::<T>::VotingRoundNotStarted.into())
             }
         })?;
+
         UserHasVoted::<T>::try_mutate((project_key, RoundType::VoteOfNoConfidence, 0), |votes| {
             ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
             votes
-                .try_insert(who, false)
+                .try_insert(who.clone(), false)
                 .map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
 
-        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(project_key));
+        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(who.clone(), project_key));
+
+        //once the voting is complete check if the confidence vote could be auto finalized
+        //getting the total threshold required for the total confidence
+        let voting_no_confidence_threshold: BalanceOf<T> =
+            T::PercentRequiredForVoteNoConfidenceToPass::get().mul_floor(project.raised_funds);
+
+        //verifying whether the no confidence vote has passed the threshold if so then auto finalize it
+        if nay_vote >= voting_no_confidence_threshold {
+            let locked_milestone_percentage =
+                project.milestones.iter().fold(Percent::zero(), |acc, ms| {
+                    if !ms.1.is_approved {
+                        acc.saturating_add(ms.1.percentage_to_unlock)
+                    } else {
+                        acc
+                    }
+                });
+
+            let project_account_id = Self::project_account_id(project_key);
+
+            match project.funding_type {
+                FundingType::Proposal => {
+                    // Handle refunds on native chain, there is no need to deal with xcm here.
+                    for (acc_id, contribution) in project.contributions.iter() {
+                        let refund_amount =
+                            locked_milestone_percentage.mul_floor(contribution.value);
+                        <T as Config>::MultiCurrency::transfer(
+                            project.currency_id,
+                            &project_account_id,
+                            acc_id,
+                            refund_amount,
+                        )?;
+                    }
+                }
+
+                FundingType::Brief => {
+                    //Have to handle it in the dispute pallet
+                }
+
+                // Must a grant be treasury funded?
+                FundingType::Grant(_) => {
+                    let mut refund_amount: BalanceOf<T> = Zero::zero();
+                    // Sum the contributions and send a single xcm.
+                    for (_acc_id, contribution) in project.contributions.iter() {
+                        let per_contributor =
+                            locked_milestone_percentage.mul_floor(contribution.value);
+                        refund_amount = refund_amount.saturating_add(per_contributor);
+                    }
+                    <T as Config>::RefundHandler::send_refund_message_to_treasury(
+                        project_account_id,
+                        refund_amount,
+                        project.currency_id,
+                        project.funding_type,
+                    )?;
+                }
+            }
+            Projects::<T>::remove(project_key);
+            Rounds::<T>::remove(project_key, RoundType::VoteOfNoConfidence);
+            <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
+            Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
+        }
         Ok(())
     }
 
-    /// Collect the vote, if the vote is above the threshold, refund.
-    /// Currently this must be called before the round is over to refund.
-    // TODO: Move to pallet-dispute and test there, this pallet should not know what a funding type is.
-    // Instead it should be dealt with in Refund handler trait.
+    #[deprecated(since = "3.1.0", note = "autofinalisation has been implemented.")]
     pub fn call_finalise_no_confidence_vote(
         who: T::AccountId,
         project_key: ProjectKey,
@@ -326,6 +383,7 @@ impl<T: Config> Pallet<T> {
             // TODO: this should be generic and not bound to funding type..
             match project.funding_type {
                 FundingType::Brief | FundingType::Proposal => {
+                    //
                     // Handle refunds on native chain, there is no need to deal with xcm here.
                     // Todo: Batch call using pallet-utility?
                     for (acc_id, contribution) in project.contributions.iter() {
@@ -359,7 +417,7 @@ impl<T: Config> Pallet<T> {
 
             Projects::<T>::remove(project_key);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
-            Self::deposit_event(Event::NoConfidenceRoundFinalised(project_key));
+            Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into());
         }

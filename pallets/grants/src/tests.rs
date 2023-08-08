@@ -2,7 +2,7 @@
 use crate::mock::*;
 use crate::pallet::{BoundedApprovers, BoundedPMilestones, Config, Error};
 use common_types::{CurrencyId, TreasuryOrigin};
-use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
+use frame_support::{assert_noop, pallet_prelude::*};
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;

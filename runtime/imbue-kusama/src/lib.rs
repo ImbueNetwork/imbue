@@ -6,6 +6,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+#[cfg(test)]
+mod sanity;
+
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
@@ -95,8 +98,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 1038,
-    impl_version: 2,
+    spec_version: 9430,
+    impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
     state_version: 0,
@@ -137,6 +140,7 @@ parameter_types! {
         .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
         .build_or_panic();
     pub const SS58Prefix: u8 = 42;
+    pub MaxCollectivesProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 }
 
 pub struct BaseCallFilter;
@@ -151,6 +155,7 @@ impl Contains<RuntimeCall> for BaseCallFilter {
                 | pallet_xcm::Call::teleport_assets { .. }
                 | pallet_xcm::Call::reserve_transfer_assets { .. }
                 | pallet_xcm::Call::limited_reserve_transfer_assets { .. }
+                | pallet_xcm::Call::force_suspension { .. }
                 | pallet_xcm::Call::limited_teleport_assets { .. } => false,
                 pallet_xcm::Call::__Ignore { .. } => {
                     unimplemented!()
@@ -231,17 +236,19 @@ impl pallet_balances::Config for Runtime {
     /// The type for recording an account's balance.
     type Balance = Balance;
     /// Handler for the unbalanced reduction when removing a dust account.
-    type DustRemoval = Treasury;
-    /// The overarching event type.
-
+    type DustRemoval = ();
     /// The minimum amount required to keep an account open.
-    type ExistentialDeposit = NativeTokenTransferFee;
+    type ExistentialDeposit = ExistentialDeposit;
     /// The means of storing the balances of an account.
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Self>;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type HoldIdentifier = ();
+    type FreezeIdentifier = ();
+    type MaxHolds = ConstU32<0>;
+    type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
@@ -260,6 +267,7 @@ impl pallet_transaction_payment::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
     type RuntimeCall = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -433,6 +441,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
     type SetMembersOrigin = MoreThanHalfCouncil;
+    type MaxProposalWeight = MaxCollectivesProposalWeight;
 }
 
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
@@ -445,6 +454,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
     type SetMembersOrigin = MoreThanHalfCouncil;
+    type MaxProposalWeight = MaxCollectivesProposalWeight;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
@@ -760,7 +770,6 @@ parameter_types! {
     pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
     pub const PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub const MaximumContributorsPerProject: u32 = 5000;
-    pub const RefundsPerBlock: u8 = 20;
     pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
     pub const ImbueFee: Percent = Percent::from_percent(5_u8);
@@ -768,6 +777,7 @@ parameter_types! {
     pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
     pub const MaxMilestonesPerProject: u32 = 50;
     pub const MaxProjectsPerAccount: u16 = u16::MAX;
+    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -779,7 +789,7 @@ impl pallet_proposals::Config for Runtime {
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
-    type WeightInfo = pallet_proposals::weights::SubstrateWeight<Self>;
+    type WeightInfo = pallet_proposals::weights::WeightInfo<Self>;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
@@ -788,6 +798,7 @@ impl pallet_proposals::Config for Runtime {
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = Deposits;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
+    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
 }
 
 parameter_types! {
@@ -802,7 +813,7 @@ impl pallet_grants::Config for Runtime {
     type MaxApprovers = MaxApprovers;
     type RMultiCurrency = Currencies;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
-    type WeightInfo = pallet_grants::weights::SubstrateWeight<Self>;
+    type WeightInfo = pallet_grants::weights::WeightInfo<Self>;
 }
 
 parameter_types! {
@@ -819,7 +830,7 @@ impl pallet_briefs::Config for Runtime {
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
-    type WeightInfo = pallet_briefs::weights::SubstrateWeight<Self>;
+    type WeightInfo = pallet_briefs::weights::WeightInfo<Self>;
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = Deposits;
 }
@@ -891,7 +902,7 @@ construct_runtime! {
 
         // XCM helpers.
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 26,
-        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 27,
+        PolkadotXcm: pallet_xcm::{Pallet, Storage, Call, Event<T>, Origin, Config} = 27,
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 28,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 29,
 
@@ -995,9 +1006,17 @@ impl_runtime_apis! {
         }
     }
 
-    impl sp_api::Metadata<Block> for Runtime {
+   impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
             OpaqueMetadata::new(Runtime::metadata().into())
+        }
+
+        fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+            Runtime::metadata_at_version(version)
+        }
+
+        fn metadata_versions() -> sp_std::vec::Vec<u32> {
+            Runtime::metadata_versions()
         }
     }
 

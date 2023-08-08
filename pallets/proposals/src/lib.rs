@@ -31,7 +31,7 @@ mod benchmarking;
 mod test_utils;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub mod weights;
 pub use weights::*;
@@ -80,9 +80,7 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// The currency type.
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-        /// Weight info for pallet benchmarks.
-        type WeightInfo: WeightInfo;
-        /// TODO: Not in use
+        type WeightInfo: WeightInfoT;
         type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
         /// The amount of time given, up to point of decision, when a vote of no confidence is held.
         type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
@@ -112,10 +110,11 @@ pub mod pallet {
         type RoleToPercentFee: Convert<Role, Percent>;
         /// Ensure that an accountId is in a given role.
         type EnsureRole: EnsureRole<AccountIdOf<Self>, Role>;
+        /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
+        type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
@@ -215,11 +214,11 @@ pub mod pallet {
         /// A milestone has been approved.
         MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, T::BlockNumber),
         /// You have created a vote of no confidence.
-        NoConfidenceRoundCreated(ProjectKey),
+        NoConfidenceRoundCreated(T::AccountId, ProjectKey),
         /// You have voted upon a round of no confidence.
-        NoConfidenceRoundVotedUpon(ProjectKey),
+        NoConfidenceRoundVotedUpon(T::AccountId, ProjectKey),
         /// You have finalised a vote of no confidence.
-        NoConfidenceRoundFinalised(ProjectKey),
+        NoConfidenceRoundFinalised(T::AccountId, ProjectKey),
     }
 
     // Errors inform users that something went wrong.
@@ -387,6 +386,7 @@ pub mod pallet {
         /// Vote on an already existing "Vote of no condidence" round.
         /// is_yay is FOR the project's continuation.
         /// so is_yay == false == against the project from continuing.
+        /// This autofinalises like in the milestone voting.
         #[pallet::call_index(13)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
         pub fn vote_on_no_confidence_round(
@@ -396,22 +396,6 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             Self::add_vote_no_confidence(who, project_key, is_yay)
-        }
-
-        /// Finalise a "vote of no condidence" round.
-        /// Votes must pass a threshold as defined in the config trait for the vote to succeed.
-        #[pallet::call_index(14)]
-        #[pallet::weight(<T as Config>::WeightInfo::finalise_no_confidence_round())]
-        pub fn finalise_no_confidence_round(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-        ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            Self::call_finalise_no_confidence_vote(
-                who,
-                project_key,
-                T::PercentRequiredForVoteToPass::get(),
-            )
         }
     }
     impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
@@ -606,4 +590,13 @@ pub struct Contribution<Balance, BlockNumber> {
 pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,
+}
+
+pub trait WeightInfoT {
+    fn submit_milestone() -> Weight;
+    fn vote_on_milestone() -> Weight;
+    fn withdraw() -> Weight;
+    fn raise_vote_of_no_confidence() -> Weight;
+    fn vote_on_no_confidence_round() -> Weight;
+    fn on_initialize() -> Weight;
 }

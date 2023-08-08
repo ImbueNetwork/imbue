@@ -166,6 +166,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type HoldIdentifier = ();
+    type FreezeIdentifier = ();
+    type MaxHolds = ConstU32<0>;
+    type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
@@ -221,7 +225,7 @@ impl pallet_briefs::Config for Test {
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = MockDepositHandler;
-    type WeightInfo = ();
+    type WeightInfo = pallet_briefs::WeightInfo<Self>;
 }
 
 parameter_types! {
@@ -239,6 +243,7 @@ parameter_types! {
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
+    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
 }
 
 impl pallet_proposals::Config for Test {
@@ -246,7 +251,7 @@ impl pallet_proposals::Config for Test {
     type PalletId = ProposalsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
-    type WeightInfo = ();
+    type WeightInfo = pallet_proposals::WeightInfo<Self>;
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
@@ -260,6 +265,7 @@ impl pallet_proposals::Config for Test {
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
+    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
 }
 parameter_types! {
     pub const BasicDeposit: u64 = 10;
