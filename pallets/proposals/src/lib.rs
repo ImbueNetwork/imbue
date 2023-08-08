@@ -29,7 +29,7 @@ mod benchmarking;
 mod test_utils;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub mod weights;
 pub use weights::*;

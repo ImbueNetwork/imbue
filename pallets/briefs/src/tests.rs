@@ -8,7 +8,7 @@ use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
 use sp_arithmetic::per_things::Percent;
-use sp_runtime::DispatchError::BadOrigin;
+
 use std::convert::TryInto;
 
 

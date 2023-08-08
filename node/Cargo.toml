@@ -20,7 +20,6 @@ default = []
 runtime-benchmarks = [
     'polkadot-cli/runtime-benchmarks',
 	'imbue-kusama-runtime/runtime-benchmarks',
-	'imbue-kusama-runtime/runtime-benchmarks',
 ]
 
 [dependencies]
