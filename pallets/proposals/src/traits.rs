@@ -9,7 +9,7 @@ use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
 
-pub trait IntoProposal<AccountId, Balance, BlockNumber> {
+pub trait IntoProposal<AccountId, Balance, BlockNumber, Bound: Get<u32>> {
     /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.
     /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
     /// (if using crate) This function should bypass the usual checks when creating a proposal and
@@ -21,7 +21,7 @@ pub trait IntoProposal<AccountId, Balance, BlockNumber> {
         brief_hash: H256,
         benificiary: AccountId,
         milestones: Vec<ProposedMilestone>,
-        funding_type: FundingType,
+        project_config: crate::ProjectConfig<Bound>,
     ) -> Result<(), DispatchError>;
 }
 

@@ -216,6 +216,10 @@ impl pallet_proposals::Config for Test {
     type DepositHandler = MockDepositHandler<Test>;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
     type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
+    type ProjectToVetter = pallet_fellowship::Pallet<Test>;
+    type RoleToPercentFee = pallet_fellowship::impls::RoleToPercentFee;
+    type EnsureRole = pallet_fellowship::impls::EnsureFellowshipRole<Self>;
+
 }
 
 parameter_types! {
@@ -247,6 +251,7 @@ parameter_types! {
     pub ShortlistPeriod: BlockNumber = 100;
     pub MembershipDeposit: Balance = 50_000_000;
     pub SlashAccount: AccountId = sr25519::Public::from_raw([1u8; 32]);
+    pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
 }
 
 impl pallet_fellowship::Config for Test {
@@ -258,6 +263,8 @@ impl pallet_fellowship::Config for Test {
     type ShortlistPeriod = ShortlistPeriod;
     type MembershipDeposit = MembershipDeposit;
     type SlashAccount = SlashAccount;
+    type DepositCurrencyId = DepositCurrencyId;
+    type TreasuryAccount = SlashAccount;  
     type WeightInfo = ();
 }
 

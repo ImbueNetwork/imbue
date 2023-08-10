@@ -17,6 +17,7 @@ use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Convert, Saturating, Zero};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
+use xcm::latest::{MultiLocation};
 
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
@@ -276,6 +277,10 @@ pub mod pallet {
         TooManyProjects,
         /// Not enough funds in project account to distribute fees.
         NotEnoughFundsForFees,
+        /// Conversion failed due to an error while funding the Project.
+        ProjectFundingFailed,
+        /// Conversion failed due to an error in milestone conversion (probably a bound has been abused).
+        MilestoneConversionFailed,
     }
 
     #[pallet::hooks]
@@ -398,7 +403,7 @@ pub mod pallet {
             Self::add_vote_no_confidence(who, project_key, is_yay)
         }
     }
-    impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
+    impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, T::MaximumContributorsPerProject>
         for crate::Pallet<T>
     where
         Project<T>: EncodeLike<Project<T>>,
@@ -411,7 +416,7 @@ pub mod pallet {
             brief_hash: H256,
             benificiary: AccountIdOf<T>,
             proposed_milestones: Vec<ProposedMilestone>,
-            funding_type: FundingType,
+            project_config: ProjectConfig<T::MaximumContributorsPerProject>,
         ) -> Result<(), DispatchError> {
             let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
 
@@ -422,53 +427,23 @@ pub mod pallet {
                 CurrencyId::Native,
             )?;
 
-            let sum_of_contributions = contributions
-                .values()
-                .fold(Default::default(), |acc: BalanceOf<T>, x| {
-                    acc.saturating_add(x.value)
-                });
-
+            
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
-
-            match funding_type {
-                FundingType::Proposal | FundingType::Brief => {
-                    for (acc, cont) in contributions.iter() {
-                        let project_account_id =
-                            crate::Pallet::<T>::project_account_id(project_key);
-                        <<T as Config>::MultiCurrency as MultiReservableCurrency<
-                            AccountIdOf<T>,
-                        >>::unreserve(currency_id, acc, cont.value);
-                        <T as Config>::MultiCurrency::transfer(
-                            currency_id,
-                            acc,
-                            &project_account_id,
-                            cont.value,
-                        )?;
-                    }
-                }
-                FundingType::Grant(_) => {}
-            }
-
-            let mut milestone_key: u32 = 0;
-            let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
-            for milestone in proposed_milestones {
-                let milestone = Milestone {
-                    project_key,
-                    milestone_key,
-                    percentage_to_unlock: milestone.percentage_to_unlock,
-                    is_approved: false,
-                };
-                milestones
-                    .try_insert(milestone_key, milestone)
-                    .map_err(|_| Error::<T>::TooManyMilestones)?;
-                milestone_key = milestone_key.saturating_add(1);
-            }
-
+            
+            let is_funded = fund_project(project_config.on_creation_funding, &contributions, &project_account_id, currency_id).map_err(|_|Error::<T>::ProjectFundingFailed)?;
+            let converted_milestones = try_convert_to_milestones(proposed_milestones).map_err(|_|Error::<T>::MilestoneConversionFailed)?;
             let bounded_contributions: ContributionsFor<T> = contributions
                 .try_into()
                 .map_err(|_| Error::<T>::TooManyContributions)?;
 
+            let sum_of_contributions = contributions
+            .values()
+            .fold(Default::default(), |acc: BalanceOf<T>, x| {
+                acc.saturating_add(x.value)
+            });
+            
             let project: Project<T> = Project {
+                agreement_hash: brief_hash,
                 milestones,
                 contributions: bounded_contributions,
                 currency_id,
@@ -477,13 +452,12 @@ pub mod pallet {
                 initiator: benificiary.clone(),
                 created_on: frame_system::Pallet::<T>::block_number(),
                 cancelled: false,
-                agreement_hash: brief_hash,
-                funding_type,
                 deposit_id,
+                config: project_config,
+                is_funded,
             };
 
             Projects::<T>::insert(project_key, project);
-
             ProjectCount::<T>::mutate(|c| *c = c.saturating_add(1));
 
             Self::deposit_event(Event::ProjectCreated(
@@ -559,6 +533,7 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
     }
 }
 
+//TODO: MIGRATION FOR FUNDINGTYPE AND PROJECTCONFIG AND is_funded
 /// The struct which contain milestones that can be submitted.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
@@ -572,8 +547,9 @@ pub struct Project<T: Config> {
     pub initiator: AccountIdOf<T>,
     pub created_on: BlockNumberFor<T>,
     pub cancelled: bool,
-    pub funding_type: FundingType,
     pub deposit_id: DepositIdOf<T>,
+    pub config: ProjectConfig<T>,
+    pub is_funded: bool,
 }
 
 /// The contribution users made to a proposal project.
@@ -590,6 +566,35 @@ pub struct Contribution<Balance, BlockNumber> {
 pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,
+}
+
+/// Used by external pallets to decide on specific configurations for the project.
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+pub struct ProjectConfig<Bound: Get<u32>> {
+    /// Where do the refunds end up and what percentage do they get.
+    refund_locations: BoundedVec<(MultiLocation, Percent), Bound>,
+    /// Who should deal with disputes.
+    dispute_handle: DisputeHandle,
+    /// When is the project funded and how is it taken.
+    on_creation_funding: FundingPath,
+}
+
+enum FundingPath {
+    TakeFromReserved,
+    WaitForFunding,
+}
+
+enum Reason {
+    NoConfidence,
+    NotToRequirement,
+    Other('static &str)
+}
+
+enum DisputeHandle<Bound: Get<u32>> {
+    Fellowship,
+    Group(BoundedVec<MultiLocation, Bound>),
+    Canonical(Multilocation)
 }
 
 pub trait WeightInfoT {

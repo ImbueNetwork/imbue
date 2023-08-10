@@ -131,6 +131,7 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::UserIsNotInitiator);
 
+        // Collect and calculate the amount that can be withdrawn.
         let mut unlocked_funds: BalanceOf<T> = Zero::zero();
         for (_, ms) in project.milestones.iter() {
             if ms.is_approved {
@@ -155,15 +156,15 @@ impl<T: Config> Pallet<T> {
         if let FundingType::Grant(_) = project.funding_type {
             approvers = Some(project.contributions.keys().collect());
         }
-        Self::distribute_fees(
-            project.funding_type,
-            fee,
-            project.currency_id,
-            &project_account,
-            &pallet_account,
-            &project.initiator,
-            approvers,
-        )?;
+        //Self::distribute_fees(
+        //    project.funding_type,
+        //    fee,
+        //    project.currency_id,
+        //    &project_account,
+        //    &pallet_account,
+        //    &project.initiator,
+        //    approvers,
+        //)?;
 
         // Transfer to initiator
         T::MultiCurrency::transfer(
@@ -173,6 +174,7 @@ impl<T: Config> Pallet<T> {
             withdrawn,
         )?;
 
+        // Remove the project if the funds left are 0.
         Projects::<T>::mutate_exists(project_key, |project| -> DispatchResult {
             if let Some(p) = project {
                 p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
@@ -424,6 +426,54 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+
+    // TODO: test
+    /// Try and fund a project based on its FundingPath.
+    /// If the funds have actually been transferred this will return and Ok(true)
+    /// If the funds have not been transferred (i.e awaiting funding) then it will return Ok(false)
+    pub(crate) fn fund_project<'a>(funding_path: FundingPath, contributions: &'a BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>, project_account_id: &'a ProjectKey, currency_id: CurrencyId) -> Result<bool, DispatchError> {
+        match project_config.on_creation_funding {
+            FundingPath::TakeFromReserved => {
+                for (acc, cont) in contributions.iter() {
+                    <<T as Config>::MultiCurrency as MultiReservableCurrency<
+                        AccountIdOf<T>,
+                    >>::unreserve(currency_id, acc, cont.value);
+                    <T as Config>::MultiCurrency::transfer(
+                        currency_id,
+                        acc,
+                        project_account_id,
+                        cont.value,
+                    )?;
+                }
+                true
+            },
+            FundingPath::WaitForFunding => {
+                false
+            }
+        }
+    }
+
+    // TODO: Test
+    /// Try and convert some proposed milestones to milestones.
+    /// Fails when the MaxMilestones bound is not respected
+    pub(crate) fn try_convert_to_milestones(milestones: Vec<ProposedMilestone>) -> Result<BoundedBTreeMilestones<T>, DispatchError> {
+        let mut milestone_key: u32 = 0;
+        let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
+        for milestone in proposed_milestones {
+            let milestone = Milestone {
+                project_key,
+                milestone_key,
+                percentage_to_unlock: milestone.percentage_to_unlock,
+                is_approved: false,
+            };
+            milestones
+                .try_insert(milestone_key, milestone)
+                .map_err(|_| Error::<T>::TooManyMilestones)?;
+            milestone_key = milestone_key.saturating_add(1);
+        }
+    }
+
+    //TODO: Vetters get 10% of freelancer fee for x months
     pub fn distribute_fees<'a>(
         funding_type: FundingType,
         fee: BalanceOf<T>,
