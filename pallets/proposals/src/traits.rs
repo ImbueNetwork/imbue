@@ -1,9 +1,8 @@
 use crate::{AccountIdOf, BalanceOf, Contribution, ProposedMilestone};
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
-use frame_support::{inherent::Vec, pallet_prelude::DispatchError, transactional, PalletId};
+use frame_support::{inherent::Vec, pallet_prelude::*, transactional, PalletId};
 use orml_traits::XcmTransfer;
 use orml_xtokens::Error;
-
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
@@ -37,22 +36,6 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
     ) -> Result<(), DispatchError>;
     fn get_treasury_account_id(treasury_origin: TreasuryOrigin)
         -> Result<AccountId, DispatchError>;
-}
-
-// Some implementations used in Imbue of the traits above.
-type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
-// For test purposes
-impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for T {
-    fn convert_to_proposal(
-        _currency_id: CurrencyId,
-        _contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
-        _brief_hash: H256,
-        _benificiary: AccountIdOf<T>,
-        _proposed_milestones: Vec<ProposedMilestone>,
-        _funding_type: FundingType,
-    ) -> Result<(), DispatchError> {
-        Ok(())
-    }
 }
 
 #[cfg(feature = "std")]

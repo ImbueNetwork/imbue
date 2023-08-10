@@ -153,9 +153,9 @@ impl<T: Config> Pallet<T> {
         let pallet_account = Self::account_id();
 
         let mut approvers: Option<Vec<&AccountIdOf<T>>> = None;
-        if let FundingType::Grant(_) = project.funding_type {
-            approvers = Some(project.contributions.keys().collect());
-        }
+        //if let FundingType::Grant(_) = project.funding_type {
+        //    approvers = Some(project.contributions.keys().collect());
+        //}
         //Self::distribute_fees(
         //    project.funding_type,
         //    fee,
@@ -307,42 +307,42 @@ impl<T: Config> Pallet<T> {
 
             let project_account_id = Self::project_account_id(project_key);
 
-            match project.funding_type {
-                FundingType::Proposal => {
-                    // Handle refunds on native chain, there is no need to deal with xcm here.
-                    for (acc_id, contribution) in project.contributions.iter() {
-                        let refund_amount =
-                            locked_milestone_percentage.mul_floor(contribution.value);
-                        <T as Config>::MultiCurrency::transfer(
-                            project.currency_id,
-                            &project_account_id,
-                            acc_id,
-                            refund_amount,
-                        )?;
-                    }
-                }
+            // match project.funding_type {
+            //     FundingType::Proposal => {
+            //         // Handle refunds on native chain, there is no need to deal with xcm here.
+            //         for (acc_id, contribution) in project.contributions.iter() {
+            //             let refund_amount =
+            //                 locked_milestone_percentage.mul_floor(contribution.value);
+            //             <T as Config>::MultiCurrency::transfer(
+            //                 project.currency_id,
+            //                 &project_account_id,
+            //                 acc_id,
+            //                 refund_amount,
+            //             )?;
+            //         }
+            //     }
 
-                FundingType::Brief => {
-                    //Have to handle it in the dispute pallet
-                }
+            //     FundingType::Brief => {
+            //         //Have to handle it in the dispute pallet
+            //     }
 
-                // Must a grant be treasury funded?
-                FundingType::Grant(_) => {
-                    let mut refund_amount: BalanceOf<T> = Zero::zero();
-                    // Sum the contributions and send a single xcm.
-                    for (_acc_id, contribution) in project.contributions.iter() {
-                        let per_contributor =
-                            locked_milestone_percentage.mul_floor(contribution.value);
-                        refund_amount = refund_amount.saturating_add(per_contributor);
-                    }
-                    <T as Config>::RefundHandler::send_refund_message_to_treasury(
-                        project_account_id,
-                        refund_amount,
-                        project.currency_id,
-                        project.funding_type,
-                    )?;
-                }
-            }
+            //     // Must a grant be treasury funded?
+            //     FundingType::Grant(_) => {
+            //         let mut refund_amount: BalanceOf<T> = Zero::zero();
+            //         // Sum the contributions and send a single xcm.
+            //         for (_acc_id, contribution) in project.contributions.iter() {
+            //             let per_contributor =
+            //                 locked_milestone_percentage.mul_floor(contribution.value);
+            //             refund_amount = refund_amount.saturating_add(per_contributor);
+            //         }
+            //         <T as Config>::RefundHandler::send_refund_message_to_treasury(
+            //             project_account_id,
+            //             refund_amount,
+            //             project.currency_id,
+            //             project.funding_type,
+            //         )?;
+            //     }
+            // }
             Projects::<T>::remove(project_key);
             Rounds::<T>::remove(project_key, RoundType::VoteOfNoConfidence);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
@@ -383,39 +383,39 @@ impl<T: Config> Pallet<T> {
             let project_account_id = Self::project_account_id(project_key);
 
             // TODO: this should be generic and not bound to funding type..
-            match project.funding_type {
-                FundingType::Brief | FundingType::Proposal => {
-                    //
-                    // Handle refunds on native chain, there is no need to deal with xcm here.
-                    // Todo: Batch call using pallet-utility?
-                    for (acc_id, contribution) in project.contributions.iter() {
-                        let refund_amount =
-                            locked_milestone_percentage.mul_floor(contribution.value);
-                        <T as Config>::MultiCurrency::transfer(
-                            project.currency_id,
-                            &project_account_id,
-                            acc_id,
-                            refund_amount,
-                        )?;
-                    }
-                }
-                // Must a grant be treasury funded?
-                FundingType::Grant(_) => {
-                    let mut refund_amount: BalanceOf<T> = Zero::zero();
-                    // Sum the contributions and send a single xcm.
-                    for (_acc_id, contribution) in project.contributions.iter() {
-                        let per_contributor =
-                            locked_milestone_percentage.mul_floor(contribution.value);
-                        refund_amount = refund_amount.saturating_add(per_contributor);
-                    }
-                    <T as Config>::RefundHandler::send_refund_message_to_treasury(
-                        project_account_id,
-                        refund_amount,
-                        project.currency_id,
-                        project.funding_type,
-                    )?;
-                }
-            }
+            // match project.funding_type {
+            //     FundingType::Brief | FundingType::Proposal => {
+            //         //
+            //         // Handle refunds on native chain, there is no need to deal with xcm here.
+            //         // Todo: Batch call using pallet-utility?
+            //         for (acc_id, contribution) in project.contributions.iter() {
+            //             let refund_amount =
+            //                 locked_milestone_percentage.mul_floor(contribution.value);
+            //             <T as Config>::MultiCurrency::transfer(
+            //                 project.currency_id,
+            //                 &project_account_id,
+            //                 acc_id,
+            //                 refund_amount,
+            //             )?;
+            //         }
+            //     }
+            //     // Must a grant be treasury funded?
+            //     FundingType::Grant(_) => {
+            //         let mut refund_amount: BalanceOf<T> = Zero::zero();
+            //         // Sum the contributions and send a single xcm.
+            //         for (_acc_id, contribution) in project.contributions.iter() {
+            //             let per_contributor =
+            //                 locked_milestone_percentage.mul_floor(contribution.value);
+            //             refund_amount = refund_amount.saturating_add(per_contributor);
+            //         }
+            //         <T as Config>::RefundHandler::send_refund_message_to_treasury(
+            //             project_account_id,
+            //             refund_amount,
+            //             project.currency_id,
+            //             project.funding_type,
+            //         )?;
+            //     }
+            // }
 
             Projects::<T>::remove(project_key);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
@@ -431,8 +431,8 @@ impl<T: Config> Pallet<T> {
     /// Try and fund a project based on its FundingPath.
     /// If the funds have actually been transferred this will return and Ok(true)
     /// If the funds have not been transferred (i.e awaiting funding) then it will return Ok(false)
-    pub(crate) fn fund_project<'a>(funding_path: FundingPath, contributions: &'a BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>, project_account_id: &'a ProjectKey, currency_id: CurrencyId) -> Result<bool, DispatchError> {
-        match project_config.on_creation_funding {
+    pub(crate) fn fund_project<'a>(funding_path: &'a FundingPath, contributions: &'a BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>, project_account_id: &'a T::AccountId, currency_id: CurrencyId) -> Result<bool, DispatchError> {
+        match *funding_path {
             FundingPath::TakeFromReserved => {
                 for (acc, cont) in contributions.iter() {
                     <<T as Config>::MultiCurrency as MultiReservableCurrency<
@@ -445,10 +445,10 @@ impl<T: Config> Pallet<T> {
                         cont.value,
                     )?;
                 }
-                true
+                Ok(true)
             },
             FundingPath::WaitForFunding => {
-                false
+                Ok(false)
             }
         }
     }
@@ -456,7 +456,7 @@ impl<T: Config> Pallet<T> {
     // TODO: Test
     /// Try and convert some proposed milestones to milestones.
     /// Fails when the MaxMilestones bound is not respected
-    pub(crate) fn try_convert_to_milestones(milestones: Vec<ProposedMilestone>) -> Result<BoundedBTreeMilestones<T>, DispatchError> {
+    pub(crate) fn try_convert_to_milestones(proposed_milestones: Vec<ProposedMilestone>, project_key: ProjectKey) -> Result<BoundedBTreeMilestones<T>, DispatchError> {
         let mut milestone_key: u32 = 0;
         let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
         for milestone in proposed_milestones {
@@ -471,6 +471,7 @@ impl<T: Config> Pallet<T> {
                 .map_err(|_| Error::<T>::TooManyMilestones)?;
             milestone_key = milestone_key.saturating_add(1);
         }
+        Ok(milestones)
     }
 
     //TODO: Vetters get 10% of freelancer fee for x months
