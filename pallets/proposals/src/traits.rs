@@ -1,4 +1,4 @@
-use crate::{AccountIdOf, BalanceOf, Contribution, ProposedMilestone};
+use crate::{AccountIdOf, BalanceOf, Contribution, ProposedMilestone, FundingPath, DisputeHandle};
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
 use frame_support::{inherent::Vec, pallet_prelude::*, transactional, PalletId};
 use orml_traits::XcmTransfer;
@@ -6,22 +6,29 @@ use orml_xtokens::Error;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
+use sp_arithmetic::Percent;
 use xcm::latest::{MultiLocation, WeightLimit};
 
-pub trait IntoProposal<AccountId, Balance, BlockNumber, Bound: Get<u32>> {
-    /// Convert a set of milestones into a proposal, the bounty must be fully funded before calling this.
-    /// If an Ok is returned the brief pallet will delete the brief from storage as its been converted.
-    /// (if using crate) This function should bypass the usual checks when creating a proposal and
-    /// instantiate everything carefully.
-    // TODO: Generic over currencyId: https://github.com/ImbueNetwork/imbue/issues/135
+
+pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
+    /// Convert the propoerties of a project into a project.
+    /// This is the main method when wanting to use pallet_proposals and is how
+    /// You configure a Project
+    // TODO: change from proposal to project.
     fn convert_to_proposal(
         currency_id: CurrencyId,
         current_contribution: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
         brief_hash: H256,
         benificiary: AccountId,
         milestones: Vec<ProposedMilestone>,
-        project_config: crate::ProjectConfig<Bound>,
+        refund_locations: Vec<(MultiLocation, Percent)>,
+        dispute_handle: DisputeHandle,
+        on_creation_funding: FundingPath,
     ) -> Result<(), DispatchError>;
+
+    /// Convert a btreemap of contributions to multilocations with the Here junction.
+    /// Use when the contributors are the refund locations.
+    fn convert_contributions_to_refund_locations(contributions: &BTreeMap<AccountId, Contribution<Balance, BlockNumber>>) -> Vec<(MultiLocation, Percent)>;
 }
 
 pub trait RefundHandler<AccountId, Balance, CurrencyId> {

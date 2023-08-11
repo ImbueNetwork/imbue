@@ -142,6 +142,8 @@ pub mod pallet {
         TreasuryAccountIsEmpty,
     }
 
+
+    //TODO: test this
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {

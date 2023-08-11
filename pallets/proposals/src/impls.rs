@@ -148,23 +148,8 @@ impl<T: Config> Pallet<T> {
 
         let fee = <T as Config>::ImbueFee::get().mul_floor(withdrawable);
         let withdrawn = withdrawable.saturating_sub(fee);
-
         let project_account = Self::project_account_id(project_key);
         let pallet_account = Self::account_id();
-
-        let mut approvers: Option<Vec<&AccountIdOf<T>>> = None;
-        //if let FundingType::Grant(_) = project.funding_type {
-        //    approvers = Some(project.contributions.keys().collect());
-        //}
-        //Self::distribute_fees(
-        //    project.funding_type,
-        //    fee,
-        //    project.currency_id,
-        //    &project_account,
-        //    &pallet_account,
-        //    &project.initiator,
-        //    approvers,
-        //)?;
 
         // Transfer to initiator
         T::MultiCurrency::transfer(
@@ -251,6 +236,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Allows a contributer to agree or disagree with a vote of no confidence.
+    #[deprecated(since = "3.1.0", note = "Will be handled in pallet-dispute.")]
     pub fn add_vote_no_confidence(
         who: T::AccountId,
         project_key: ProjectKey,
@@ -452,6 +438,7 @@ impl<T: Config> Pallet<T> {
             }
         }
     }
+
 
     // TODO: Test
     /// Try and convert some proposed milestones to milestones.

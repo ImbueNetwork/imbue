@@ -294,6 +294,7 @@ pub mod pallet {
                 Ok::<(), DispatchError>(())
             })?;
 
+            //TODO: Dust clearance
             Self::deposit_event(Event::<T>::BriefContribution(who, brief_id));
             Ok(())
         }
@@ -308,6 +309,7 @@ pub mod pallet {
             ensure!(who == brief.applicant, Error::<T>::MustBeApplicant);
 
             let contributions = BriefContributions::<T>::get(brief_id);
+            let refund locations: Vec<(Multilocation, Percent)> = Vec::new();
 
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
 

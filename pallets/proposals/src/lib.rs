@@ -88,7 +88,7 @@ pub mod pallet {
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<Percent>;
         /// Maximum number of contributors per project.
-        type MaximumContributorsPerProject: Get<u32> + TypeInfo;
+        type MaximumContributorsPerProject: Get<u32>;
         /// Defines the length that a milestone can be voted on.
         type MilestoneVotingWindow: Get<Self::BlockNumber>;
         /// The type responisble for handling refunds.
@@ -403,7 +403,7 @@ pub mod pallet {
             Self::add_vote_no_confidence(who, project_key, is_yay)
         }
     }
-    impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, T::MaximumContributorsPerProject>
+    impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
         for crate::Pallet<T>
     where
         Project<T>: EncodeLike<Project<T>>,
@@ -416,7 +416,9 @@ pub mod pallet {
             agreement_hash: H256,
             benificiary: AccountIdOf<T>,
             proposed_milestones: Vec<ProposedMilestone>,
-            project_config: ProjectConfig<T::MaximumContributorsPerProject>,
+            refund_locations: Vec<(MultiLocation, Percent)>,
+            dispute_handle: DisputeHandle,
+            on_creation_funding: FundingPath,
         ) -> Result<(), DispatchError> {
             let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
 
@@ -429,7 +431,7 @@ pub mod pallet {
 
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
             // todo: Error handling here can be improved.
-            let is_funded = Self::fund_project(&project_config.on_creation_funding, &contributions, &project_account_id, currency_id).map_err(|_|Error::<T>::ProjectFundingFailed)?;
+            let is_funded = Self::fund_project(&on_creation_funding, &contributions, &project_account_id, currency_id).map_err(|_|Error::<T>::ProjectFundingFailed)?;
             let converted_milestones = Self::try_convert_to_milestones(proposed_milestones, project_key).map_err(|_|Error::<T>::MilestoneConversionFailed)?;
             let bounded_contributions: ContributionsFor<T> = contributions
                 .try_into()
@@ -452,8 +454,9 @@ pub mod pallet {
                 created_on: frame_system::Pallet::<T>::block_number(),
                 cancelled: false,
                 deposit_id,
-                config: project_config,
-                is_funded,
+                refund_locations: refund_locations.try_into().map_err(|_|Error::<T>::Overflow)?,
+                dispute_handle,
+                on_creation_funding,
             };
 
             Projects::<T>::insert(project_key, project);
@@ -468,6 +471,11 @@ pub mod pallet {
                 project_account_id,
             ));
             Ok(())
+        }
+
+        fn convert_contributions_to_refund_locations(contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>) -> Vec<(MultiLocation, Percent)> {
+            let iterator = contributions.iter();
+            ensure!()
         }
     }
 }
@@ -547,8 +555,12 @@ pub struct Project<T: Config> {
     pub created_on: BlockNumberFor<T>,
     pub cancelled: bool,
     pub deposit_id: DepositIdOf<T>,
-    pub config: ProjectConfig<T::MaximumContributorsPerProject>,
-    pub is_funded: bool,
+    /// Where do the refunds end up and what percent they get.
+    pub refund_locations: BoundedVec<(MultiLocation, Percent), T::MaximumContributorsPerProject>,
+    /// Who should deal with disputes.
+    pub dispute_handle: DisputeHandle,
+    /// When is the project funded and how is it taken.
+    pub on_creation_funding: FundingPath,
 }
 
 /// The contribution users made to a proposal project.
@@ -567,34 +579,37 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
-/// Used by external pallets to decide on specific configurations for the project.
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-pub struct ProjectConfig<ContributorBound: Get<u32>> {
-    /// Where do the refunds end up and what percentage do they get.
-    refund_locations: BoundedVec<(MultiLocation, Percent), ContributorBound>,
-    /// Who should deal with disputes.
-    dispute_handle: DisputeHandle<ContributorBound>,
-    /// When is the project funded and how is it taken.
-    on_creation_funding: FundingPath,
-}
-
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-enum FundingPath {
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen, Default)]
+pub enum FundingPath {
     TakeFromReserved,
     WaitForFunding,
 }
 
-enum Reason {
+impl Default for FundingPath {
+    fn default() -> Self {
+        Self::TakeFromReserved
+    }
+}
+
+// This belogns in pallet-dispute
+pub enum Reason {
     NoConfidence,
     NotToRequirement,
     Other(String)
 }
 
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-enum DisputeHandle<ContributorBound: Get<u32>> {
+// This belongs in pallet-dispute
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen, Default)]
+pub enum DisputeHandle {
     Fellowship,
-    Group(BoundedVec<MultiLocation, ContributorBound>),
+    Contributors,
     Canonical(MultiLocation)
+}
+
+impl Default for DisputeHandle {
+    fn default() -> Self {
+        Self::Fellowship
+    }
 }
 
 pub trait WeightInfoT {

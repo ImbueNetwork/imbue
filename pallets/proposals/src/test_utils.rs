@@ -64,70 +64,32 @@ pub fn get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
     get_milestones(<T as Config>::MaxMilestonesPerProject::get() as u8)
 }
 
-/// Create a project for test purposes, this will not test the paths coming into this pallet via
-/// the IntoProposal trait.
-pub fn create_project<T: Config>(
+
+// Not in use agreement_hash: H256,
+refund_locations: Vec<(MultiLocation, Percent)>,
+dispute_handle: DisputeHandle,
+on_creation_funding: FundingPath,
+
+
+// Using the FundingPath::TakeFromReserved create a project for testing funded milestones
+// This will be called in the majority of test cases.
+// We must reserve balances before converting into a Project for obvious reasons.
+pub fn create_and_fund_project<T: Config>(
     beneficiary: AccountIdOf<T>,
     contributions: ContributionsFor<T>,
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
 ) -> ProjectKey {
-    let deposit_id = <T as Config>::DepositHandler::take_deposit(
-        beneficiary.clone(),
-        <T as Config>::ProjectStorageItem::get(),
-        CurrencyId::Native,
-    )
-    .expect("this should work");
-    let agreement_hash: H256 = Default::default();
-
-    let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
-
-    let mut raised_funds: BalanceOf<T> = 0u32.into();
-    let project_account_id = Proposals::<T>::project_account_id(project_key);
-
-    for (account, contribution) in contributions.iter() {
-        let amount = contribution.value;
-        assert_ok!(<T as crate::Config>::MultiCurrency::transfer(
-            currency_id,
-            account,
-            &project_account_id,
-            amount
-        ));
-        raised_funds = raised_funds.saturating_add(amount);
-    }
-
-    let mut milestone_key: u32 = 0;
-    let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-
-    for ms in proposed_milestones {
-        let milestone = Milestone {
-            project_key,
-            milestone_key,
-            percentage_to_unlock: ms.percentage_to_unlock,
-            is_approved: false,
-        };
-        milestones.insert(milestone_key, milestone);
-        milestone_key = milestone_key.saturating_add(1);
-    }
-
-    let project = Project {
-        milestones: milestones.try_into().expect("too many milestones"),
-        contributions: contributions.try_into().expect("too many contributions"),
+    <Proposals as IntoProposals<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
-        withdrawn_funds: 0u32.into(),
-        raised_funds,
-        initiator: beneficiary.clone(),
-        created_on: frame_system::Pallet::<T>::block_number(),
-        cancelled: false,
-        agreement_hash,
-        funding_type: FundingType::Brief,
-        deposit_id,
-    };
-
-    crate::Projects::<T>::insert(project_key, project);
-    crate::ProjectCount::<T>::put(project_key);
-
-    project_key
+        current_contribution,
+        brief_hash,
+        benificiary,
+        milestones,
+        refund_locations,
+        <DisputeHandle as Default>::default(),
+        FundingPath::TakeFromReserved,
+    )
 }
 
 #[cfg(feature = "runtime-benchmarks")]
