@@ -11,6 +11,7 @@ members = [
 	"pallets/grants",
 	"pallets/crowdfunding",
 	"pallets/deposits",
+	"pallets/disputes",
 	"runtime/integration-tests",
 	"runtime/imbue-kusama",
 	"runtime/common",
