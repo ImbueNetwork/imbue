@@ -24,6 +24,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 		type DisputeKey: AtLeast32BitUnsigned;
 		type MaxReasonLength: Get<u32>;
+		type MaxJurySize: Get<u32>;
 	}
 
 	#[pallet::storage]
@@ -55,6 +56,7 @@ pub mod pallet {
 		) -> DispatchResult {
 				Ok(().into())
 		}
+
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::do_something())]
 		pub fn force_cancel_dispute(
@@ -82,7 +84,11 @@ pub mod pallet {
 	struct Dispute<T: Config> {
 		raised_by: AccountIdOf<T>,
 		fund_account: AccountIdOf<T>,
+		// TODO: Add balance type
+		// currencyid: CurrencyId
+		//fund_amount: BalanceOf<T>
 		votes: todo!(),
 		reason: BoundedVec<u8, <T as Config>::MaxReasonLength>,
+		jury: BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize>
 	}
 }
