@@ -54,7 +54,10 @@ pub mod pallet {
 			dispute_key: T::DisputeKey,
 			is_yay: bool,
 		) -> DispatchResult {
-				Ok(().into())
+			// get dispute struct
+			// ensure caller is part of the jury
+			// mutate vote accordingly.
+			Ok(().into())
 		}
 
 		#[pallet::call_index(1)]
@@ -64,17 +67,24 @@ pub mod pallet {
 			dispute_key: T::DisputeKey,
 			is_yay: bool,
 		) -> DispatchResult {
-				Ok(().into())
+
+			Ok(().into())
 		}
 	}
 
 	impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
 		type DisputeKey = T::DisputeKey;
 		fn raise_dispute(
-			who: &AccountId,
-			reason: &str,
+			raised_by: AccountIdOf<T>,
+			fund_account: AccountIdOf<T>,
+			reason: Vec<u8>,
 			project_id: u32,
+			jury: Vec<AccountIdOf<T>>,
 		) -> Result<(), DispatchError> {
+			// Fill struct
+			// Insert into storage
+
+			// Raise Event 
 			Ok(())
 		}
 	}
@@ -89,6 +99,6 @@ pub mod pallet {
 		//fund_amount: BalanceOf<T>
 		votes: todo!(),
 		reason: BoundedVec<u8, <T as Config>::MaxReasonLength>,
-		jury: BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize>
+		jury: BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize>>
 	}
 }
