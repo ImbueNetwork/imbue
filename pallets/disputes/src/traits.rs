@@ -8,10 +8,11 @@ pub trait DisputeRaiser<AccountId> {
     // Who is the jury,
     // Bind the string to a constant amount (500)
     fn raise_dispute(
-        who: &AccountId,
-        reason: &str,
+        raised_by: AccountIdOf<T>,
+        fund_account: AccountIdOf<T>,
+        reason: Vec<u8>,
         project_id: u32,
-        
+        jury: Vec<AccountIdOf<T>>,
     ) -> Result<(), DispatchError>;
 }
 
