@@ -802,7 +802,6 @@ impl pallet_proposals::Config for Runtime {
 }
 
 parameter_types! {
-    // TODO: This should be the same as the max contributors bound
     pub MaxApprovers: u32 = 50;
     pub GrantStorageItem: StorageDepositItems = StorageDepositItems::Grant;
 }

@@ -73,13 +73,20 @@ on_creation_funding: FundingPath,
 
 // Using the FundingPath::TakeFromReserved create a project for testing funded milestones
 // This will be called in the majority of test cases.
-// We must reserve balances before converting into a Project for obvious reasons.
+// IntoProposal assumes that funds have been reserved before calling it.
 pub fn create_and_fund_project<T: Config>(
     beneficiary: AccountIdOf<T>,
     contributions: ContributionsFor<T>,
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
-) -> ProjectKey {
+) -> Result<ProjectKey, DispatchError> {
+    contributions.iter().for_each(|(acc, c)| {
+        <T as Config>::RMultiCurrency::reserve(currency_id, acc, c.value)?;
+    });
+    AccountIdOf<T>,
+    Contribution<BalanceOf<T>, BlockNumberFor<T>>,
+    
+    // Reserve the assets from the contributors used.
     <Proposals as IntoProposals<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
         current_contribution,
@@ -89,8 +96,10 @@ pub fn create_and_fund_project<T: Config>(
         refund_locations,
         <DisputeHandle as Default>::default(),
         FundingPath::TakeFromReserved,
-    )
+    )?;
 }
+
+pub fn create_project_awaiting_funding() {}
 
 #[cfg(feature = "runtime-benchmarks")]
 pub fn create_funded_user<T: Config>(
