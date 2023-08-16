@@ -391,6 +391,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
+    // TODO: unit tests
     fn try_auto_finalise_milestone_voting(project_key: ProjectKey, yay_vote: BalanceOf<T>, funding_threshold: BalanceOf<T>, user_has_voted_key: (ProjectKey, RoundType, MilestoneKey), who: AccountIdOf<T>) -> Result<(), DispatchError> {
         // If the yay votes is over the funding threshold then the milestone is approved.
         if yay_vote >= funding_threshold {
