@@ -30,13 +30,16 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn disputes)]
-    pub type Disputes<T:> =
+    pub type Disputes<T> =
         StorageMap<_, Blake2_128Concat, T::DisputeKey, Dispute<T>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		//This event is emitted when a dispute is being raised
 		DisputeRaised {who: AccountIdOf<T>},
+		//This event is emitted from the vote_on_dispute extrinsics 
+		//to notify what dispute is being voted on
 		DisputeVotedOn {who: AccountIdOf<T>},
 	}
 
@@ -44,6 +47,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		NoneValue,
 		StorageOverflow,
+		//This error is thrown whenever the dispute key passed doesn't correspond to any dispute
+		DisputeDoesNotExist,
 	}
 
 
@@ -59,6 +64,19 @@ pub mod pallet {
 			// get dispute struct
 			// ensure caller is part of the jury
 			// mutate vote accordingly.
+			//TODO only the choosen jury can vote on the disputes?
+			let mut dispute = Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+			let mut vote = dispute.votes;
+			if is_yay{
+				vote.yay +=1;
+			}
+			else {
+				vote.nay +=1;
+			}
+
+			//TODO will update the mutated votes into the dispute correct?
+			//TODO If the votes met the threshold we need to call the refund pallet correct?
+			
 			Ok(().into())
 		}
 
@@ -93,7 +111,6 @@ pub mod pallet {
 				votes: Vote{
 					yay: 0,
 					nay: 0,
-					is_approved: false,
 				},
 				reason,
 				jury,
@@ -103,7 +120,7 @@ pub mod pallet {
 			Disputes::<T>::insert(dispute_key, dispute);
 
 			// Raise Event 
-			//TODO need to check if want to add more information while raising a dispute like returning the whole dispute struct
+			//TODO need to check if want to add more information while raising a dispute like returning the whole dispute struct?
 			Self::deposit_event(Event::DisputeRaised(
 				raised_by
             ));
@@ -129,7 +146,6 @@ pub mod pallet {
    pub struct Vote {
     yay: u32 ,
     nay: u32,
-    is_approved: bool,
 }
 
 }
