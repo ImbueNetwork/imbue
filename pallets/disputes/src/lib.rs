@@ -4,6 +4,7 @@ pub use pallet::*;
 pub mod traits;
 pub mod weights;
 pub use weights::*;
+use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -28,7 +29,8 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-    pub type Disputes<T> =
+	#[pallet::getter(fn disputes)]
+    pub type Disputes<T:> =
         StorageMap<_, Blake2_128Concat, T::DisputeKey, Dispute<T>, OptionQuery>;
 
 	#[pallet::event]
@@ -81,10 +83,31 @@ pub mod pallet {
 			project_id: u32,
 			jury: Vec<AccountIdOf<T>>,
 		) -> Result<(), DispatchError> {
-			// Fill struct
-			// Insert into storage
+
+			//incrementing the dispute_key 
+			let dispute_key = DisputeKey::<T>::get().saturating_add(1);
+			// creating the struct with the passed information and initializing vote as 0 initially
+			let dispute:Dispute<T> = Dispute{
+				raised_by,
+				fund_account,
+				votes: Vote{
+					yay: 0,
+					nay: 0,
+					is_approved: false,
+				},
+				reason,
+				jury,
+			};
+
+			//storing the raised dispute inside the disputes storage 
+			Disputes::<T>::insert(dispute_key, dispute);
 
 			// Raise Event 
+			//TODO need to check if want to add more information while raising a dispute like returning the whole dispute struct
+			Self::deposit_event(Event::DisputeRaised(
+				raised_by
+            ));
+
 			Ok(())
 		}
 	}
@@ -97,8 +120,16 @@ pub mod pallet {
 		// TODO: Add balance type
 		// currencyid: CurrencyId
 		//fund_amount: BalanceOf<T>
-		votes: todo!(),
+		votes: Vote,
 		reason: BoundedVec<u8, <T as Config>::MaxReasonLength>,
-		jury: BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize>>
+		jury: BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize>
 	}
+
+	#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+   pub struct Vote {
+    yay: u32 ,
+    nay: u32,
+    is_approved: bool,
+}
+
 }
