@@ -1,4 +1,4 @@
-use sp_runtime::DispatchError;
+use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned};
 
 pub trait DisputeRaiser<AccountId> {
     type DisputeKey: AtLeast32BitUnsigned;
@@ -8,11 +8,11 @@ pub trait DisputeRaiser<AccountId> {
     // Who is the jury,
     // Bind the string to a constant amount (500)
     fn raise_dispute(
-        raised_by: AccountIdOf<T>,
-        fund_account: AccountIdOf<T>,
+        raised_by: AccountId,
+        fund_account: AccountId,
         reason: Vec<u8>,
         project_id: u32,
-        jury: Vec<AccountIdOf<T>>,
+        jury: Vec<AccountId>,
     ) -> Result<(), DispatchError>;
 }
 
