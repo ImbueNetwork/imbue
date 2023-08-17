@@ -9,7 +9,8 @@ use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned};
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
+	use codec::{FullEncode, FullCodec};
+use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use traits::DisputeRaiser;
 
@@ -17,20 +18,20 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	pub(crate) type DisputeKey = u32;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type WeightInfo: WeightInfo;
-		type DisputeKey: AtLeast32BitUnsigned;
+		//Felix teachings --> to keep an associated type into storage it needs to implement certain traits
+		type DisputeKey: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
 		type MaxReasonLength: Get<u32>;
 		type MaxJurySize: Get<u32>;
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn disputes)]
-    pub type Disputes<T> =
+    pub type Disputes<T: Config> =
         StorageMap<_, Blake2_128Concat, T::DisputeKey, Dispute<T>, OptionQuery>;
 
 	#[pallet::event]
@@ -73,6 +74,7 @@ pub mod pallet {
 			else {
 				vote.nay +=1;
 			}
+
 
 			//TODO will update the mutated votes into the dispute correct?
 			//TODO If the votes met the threshold we need to call the refund pallet correct?
