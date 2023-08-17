@@ -27,6 +27,8 @@ use frame_support::pallet_prelude::*;
 		type DisputeKey: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
 		type MaxReasonLength: Get<u32>;
 		type MaxJurySize: Get<u32>;
+		type DisputeHooks: traits::DisputeHooks;
+		type TimeLimit: Get<<Self as frame_system::Config>::BlockNumber>;
 	}
 
 	#[pallet::storage]
@@ -50,6 +52,7 @@ use frame_support::pallet_prelude::*;
 		StorageOverflow,
 		//This error is thrown whenever the dispute key passed doesn't correspond to any dispute
 		DisputeDoesNotExist,
+		DisputeAlreadyExists,
 	}
 
 
@@ -96,16 +99,15 @@ use frame_support::pallet_prelude::*;
 
 	impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
 		type DisputeKey = T::DisputeKey;
+		
 		fn raise_dispute(
+			dispute_key: Self::DisputeKey,
 			raised_by: AccountIdOf<T>,
 			fund_account: AccountIdOf<T>,
 			reason: Vec<u8>,
 			project_id: u32,
 			jury: Vec<AccountIdOf<T>>,
 		) -> Result<(), DispatchError> {
-
-			//incrementing the dispute_key 
-			let dispute_key = DisputeKey::<T>::get().saturating_add(1);
 			// creating the struct with the passed information and initializing vote as 0 initially
 			let dispute:Dispute<T> = Dispute{
 				raised_by,
@@ -117,6 +119,8 @@ use frame_support::pallet_prelude::*;
 				reason,
 				jury,
 			};
+
+			ensure!(!Disputes::<T>::contains_key(dispute_key), Error::<T>::DisputeAlreadyExists);
 
 			//storing the raised dispute inside the disputes storage 
 			Disputes::<T>::insert(dispute_key, dispute);
