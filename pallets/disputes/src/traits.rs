@@ -1,4 +1,7 @@
+use codec::{FullEncode, FullCodec, MaxEncodedLen};
+use scale_info::TypeInfo;
 use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned};
+
 
 pub trait DisputeRaiser<AccountId> {
     type DisputeKey: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
@@ -9,11 +12,11 @@ pub trait DisputeRaiser<AccountId> {
     // Bind the string to a constant amount (500)
     fn raise_dispute(
         dispute_key: Self::DisputeKey,
-        raised_by: AccountIdOf<T>,
-        fund_account: AccountIdOf<T>,
+        raised_by: AccountId,
+        fund_account: AccountId,
         reason: Vec<u8>,
         project_id: u32,
-        jury: Vec<AccountIdOf<T>>,
+        jury: Vec<AccountId>,
     ) -> Result<(), DispatchError>;
 }
 
