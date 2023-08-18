@@ -1,5 +1,4 @@
-use super::*;
-use crate as proposals;
+use crate as pallet_proposals;
 use frame_support::{
     parameter_types,
     traits::{ConstU32, Nothing},
@@ -7,8 +6,19 @@ use frame_support::{
     PalletId,
 };
 
+use crate::*;
+use common_types::CurrencyId;
 use frame_system::EnsureRoot;
-use sp_core::{sr25519::Signature, Pair, Public, H256};
+use sp_core::{sr25519::Signature, H256};
+
+use frame_support::once_cell::sync::Lazy;
+use orml_traits::MultiCurrency;
+use sp_arithmetic::per_things::Percent;
+use sp_core::sr25519;
+use sp_runtime::{
+    testing::Header,
+    traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+};
 
 use sp_std::{
     convert::{TryFrom, TryInto},
@@ -16,31 +26,13 @@ use sp_std::{
     vec::Vec,
 };
 
-use sp_runtime::{
-    testing::{Header, TestXt},
-    traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
-};
-
-use common_types::CurrencyId;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-pub type BlockNumber = u32;
+pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u64;
-
-fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
-
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
+pub type Moment = u64;
 
 parameter_types! {
     pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
@@ -64,11 +56,11 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Proposals: proposals::{Pallet, Call, Storage, Event<T>},
         Tokens: orml_tokens::{Pallet, Storage, Event<T>},
         Currencies: orml_currencies::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
+        Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -85,19 +77,17 @@ parameter_types! {
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = i128;
     type CurrencyId = common_types::CurrencyId;
+    type CurrencyHooks = ();
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = orml_tokens::TransferDust<Test, DustAccount>;
     type MaxLocks = MaxLocks;
     type DustRemovalWhitelist = Nothing;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
 }
 
 parameter_types! {
@@ -105,12 +95,12 @@ parameter_types! {
     pub const OperationalFeeMultiplier: u8 = 5;
 }
 impl pallet_transaction_payment::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type WeightToFee = IdentityFee<u64>;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = ();
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
-    type Event = Event;
 }
 
 parameter_types! {
@@ -122,21 +112,20 @@ impl frame_system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = sp_core::sr25519::Public;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = pallet_balances::AccountData<Balance>;
-
+    type RuntimeEvent = RuntimeEvent;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
@@ -145,21 +134,11 @@ impl frame_system::Config for Test {
     type MaxConsumers = ConstU32<16>;
 }
 
-type Extrinsic = TestXt<Call, ()>;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-pub type AccountPublic = <Signature as Verify>::Signer;
 
 impl frame_system::offchain::SigningTypes for Test {
     type Public = <Signature as Verify>::Signer;
     type Signature = Signature;
-}
-
-impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
-where
-    Call: From<LocalCall>,
-{
-    type OverarchingCall = Call;
-    type Extrinsic = Extrinsic;
 }
 
 parameter_types! {
@@ -174,29 +153,26 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type AccountStore = System;
     type Balance = u64;
     type DustRemoval = ();
-    type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type HoldIdentifier = ();
+    type FreezeIdentifier = ();
+    type MaxHolds = ConstU32<0>;
+    type MaxFreezes = ConstU32<0>;
 }
-/*pub struct DoNothingRouter;
-impl SendXcm for DoNothingRouter {
-    fn send_xcm(_dest: impl Into<MultiLocation>, _msg: Xcm<()>) -> SendResult {
-        Ok(())
-    }
-}*/
-// For testing the module, we construct a mock runtime.
 
 parameter_types! {
     pub const MinimumPeriod: u64 = 1;
 }
 impl pallet_timestamp::Config for Test {
-    type Moment = u64;
+    type Moment = Moment;
     type OnTimestampSet = ();
     type MinimumPeriod = MinimumPeriod;
     type WeightInfo = ();
@@ -206,19 +182,39 @@ parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
-    pub PercentRequiredForVoteToPass: u8 = 75u8;
+    pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
+    pub MaximumContributorsPerProject: u32 = 5000;
+    pub RefundsPerBlock: u8 = 2;
+    pub IsIdentityRequired: bool = false;
+    pub MilestoneVotingWindow: BlockNumber  =  100800u64;
+    pub MaxMilestonesPerProject: u32 = 100;
+    pub ImbueFee: Percent = Percent::from_percent(5u8);
+    pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ProjectStorageItem: StorageItems = StorageItems::Project;
+    pub MaxProjectsPerAccount: u16 = 50;
+    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
 }
-impl proposals::Config for Test {
-    type Event = Event;
+
+impl pallet_proposals::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type AuthorityOrigin = EnsureRoot<AccountId>;
-    type MultiCurrency = Currencies;
-    type WeightInfo = ();
-    type MaxProjectsPerRound = ConstU32<4>;
+    type MultiCurrency = Tokens;
+    type WeightInfo = crate::WeightInfo<Self>;
     // Adding 2 weeks as th expiration time
     type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
+    type MaximumContributorsPerProject = MaximumContributorsPerProject;
+    type MilestoneVotingWindow = MilestoneVotingWindow;
+    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type MaxMilestonesPerProject = MaxMilestonesPerProject;
+    type ImbueFee = ImbueFee;
+    type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
+    type ProjectStorageItem = ProjectStorageItem;
+    type DepositHandler = MockDepositHandler<Test>;
+    type MaxProjectsPerAccount = MaxProjectsPerAccount;
+    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
 }
 
 parameter_types! {
@@ -229,13 +225,9 @@ parameter_types! {
     pub const MaxAdditionalFields: u32 = 2;
     pub const MaxRegistrars: u32 = 20;
 }
-//ord_parameter_types! {
-//    pub const One: u64 = 1;
-//    pub const Two: u64 = 2;
-//}
 
 impl pallet_identity::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type Slashed = ();
     type BasicDeposit = BasicDeposit;
@@ -249,30 +241,71 @@ impl pallet_identity::Config for Test {
     type WeightInfo = ();
 }
 
-impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Test
-where
-    Call: From<LocalCall>,
-{
-    fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-        call: Call,
-        _public: <Signature as Verify>::Signer,
-        _account: AccountId,
-        nonce: u64,
-    ) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
-        Some((call, (nonce, ())))
-    }
-}
-
 parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
+pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
+pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
+pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
+pub static DAVE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([128u8; 32]));
+pub static JOHN: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([255u8; 32]));
 
-pub fn build_test_externality() -> sp_io::TestExternalities {
+pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
+
+    // orml_tokens::GenesisConfig::<Test>::default()
+    //     .assimilate_storage(&mut t)
+    //     .unwrap();
+
+    // orml_tokens::GenesisConfig::<Test> {
+    //     balances: {
+    //         vec![*ALICE, *BOB, *CHARLIE]
+    //             .into_iter()
+    //             .map(|id| (id, CurrencyId::Native, 1000000))
+    //             .collect::<Vec<_>>()
+    //     },
+    // }
+    // .assimilate_storage(&mut t)
+    // .unwrap();
+
     let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
+    ext.execute_with(|| {
+        let initial_balance = 100_000_000u64;
+        System::set_block_number(1);
+        let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &DAVE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &JOHN, initial_balance);
+    });
     ext
+}
+
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
+pub enum StorageItems {
+    Project,
+}
+
+pub struct MockDepositHandler<T>(T);
+impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>>
+    for MockDepositHandler<T>
+{
+    type DepositId = u64;
+    type StorageItem = StorageItems;
+    fn take_deposit(
+        _who: crate::AccountIdOf<T>,
+        _storage_item: Self::StorageItem,
+        _currency_id: CurrencyId,
+    ) -> Result<Self::DepositId, DispatchError> {
+        Ok(0u64)
+    }
+    fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
+    fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(().into())
+    }
 }

@@ -1,2385 +1,955 @@
-use crate as proposals;
-use crate::mock::*;
+use frame_support::{assert_noop, assert_ok};
 
-use crate::*;
 use common_types::CurrencyId;
-use frame_support::{
-    assert_noop, assert_ok, bounded_btree_map, bounded_vec, dispatch::DispatchErrorWithPostInfo,
-    weights::PostDispatchInfo,
-};
-use sp_core::sr25519;
-use sp_std::vec::Vec;
+use test_utils::*;
+
+use crate::{*, mock::*};
 
 #[test]
-fn create_a_test_project() {
+fn submit_milestone_milestone_doesnt_exist() {
     build_test_externality().execute_with(|| {
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        Proposals::create_project(
-            Origin::signed(alice),
-            //project name
-            b"Imbue's Awesome Initiative"
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //project logo
-            b"Imbue Logo"
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //project description
-            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding."
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //website
-            b"https://imbue.network"
-                .to_vec()
-                .try_into()
-                .expect("input should be of decent length"),
-            //milestone
-            bounded_vec![ProposedMilestone {
-                name: bounded_vec![],
-                percentage_to_unlock: 100,
-            }],
-            //funds required
-            1000000u64,
-            CurrencyId::Native,
-        )
-        .unwrap();
-    });
-}
-
-#[test]
-fn create_a_test_project_with_less_than_100_percent() {
-    build_test_externality().execute_with(|| {
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         assert_noop!(
-        Proposals::create_project(
-            Origin::signed(alice),
-            //project name
-            b"Imbue's Awesome Initiative".to_vec().try_into().expect("input should be of decent length"),
-            //project logo
-            b"Imbue Logo".to_vec().try_into().expect("input should be of decent length"),
-            //project description
-            b"This project is aimed at promoting Decentralised Data and Transparent Crowdfunding.".to_vec().try_into().expect("input should be of decent length"), 
-            //website
-            b"https://imbue.network".to_vec().try_into().expect("input should be of decent length"),
-            //milestone
-            bounded_vec![ProposedMilestone {
-                name: bounded_vec![], percentage_to_unlock: 99
-            }],
-            //funds required
-            1000000u64,
-            CurrencyId::Native
-        ),DispatchErrorWithPostInfo {
-            post_info: PostDispatchInfo {
-                actual_weight: None,
-                pays_fee: Pays::Yes,
-            },
-            error: Error::<Test>::MilestonesTotalPercentageMustEqual100.into()
-        });
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 11),
+            Error::<Test>::MilestoneDoesNotExist
+        );
     });
 }
 
 #[test]
-fn create_a_test_project_with_no_name() {
+fn submit_milestone_no_project() {
     build_test_externality().execute_with(|| {
         assert_noop!(
-            create_projects_with_inputs("", "logo", "description", "website", 100_000u64), 
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::ProjectNameIsMandatory.into()
-            }
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), 0, 1),
+            Error::<Test>::ProjectDoesNotExist
         );
     });
 }
+
 #[test]
-fn create_a_test_project_with_no_logo() {
+fn submit_milestone_not_initiator() {
     build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         assert_noop!(
-            create_projects_with_inputs("name", "", "description", "website", 100_000u64), 
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::LogoIsMandatory.into()
-            }
+            Proposals::submit_milestone(RuntimeOrigin::signed(*BOB), project_key, 1),
+            Error::<Test>::UserIsNotInitiator
         );
-    });
-}
-#[test]
-fn create_a_test_project_with_no_description() {
-    build_test_externality().execute_with(|| {
         assert_noop!(
-            create_projects_with_inputs("name", "logo", "", "website", 100_000u64), 
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::ProjectDescriptionIsMandatory.into()
-            }
+            Proposals::submit_milestone(RuntimeOrigin::signed(*DAVE), project_key, 1),
+            Error::<Test>::UserIsNotInitiator
         );
     });
 }
 
 #[test]
-fn create_a_test_project_with_no_website() {
+fn submit_milestones_too_many_this_block() {
     build_test_externality().execute_with(|| {
-        assert_noop!(
-            create_projects_with_inputs("name", "logo", "description", "", 100_000u64), 
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::WebsiteURLIsMandatory.into()
-            }
-        );
-    });
-}
+        let max = <Test as Config>::ExpiringProjectRoundsPerBlock::get();
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
 
-#[test]
-fn create_a_test_project_and_add_whitelist() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let max_cap = 1_000_000u64;
-    let project_key = 0;
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-        let whitelist = bounded_btree_map!(alice => max_cap);
-
-        Proposals::add_project_whitelist(Origin::signed(alice), project_key, whitelist).unwrap();
-
-        let latest_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            latest_event,
-            mock::Event::from(proposals::Event::WhitelistAdded(0, 1))
-        );
-    });
-}
-
-#[test]
-fn create_a_test_project_and_add_whitelist_from_non_initatorfail() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let max_cap = 1000000u64;
-    let project_key = 0;
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-        let whitelist = bounded_btree_map!(alice => max_cap);
-
-        assert_noop!(
-            Proposals::add_project_whitelist(Origin::signed(bob), project_key, whitelist),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::UserIsNotInitator.into()
-            }
-        );
-    });
-}
-
-#[test]
-fn create_a_test_project_remove_whitelist() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-        Proposals::remove_project_whitelist(Origin::signed(alice), 0).unwrap();
-        let latest_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            latest_event,
-            mock::Event::from(proposals::Event::WhitelistRemoved(0, 1))
-        );
-    });
-}
-
-#[test]
-fn create_a_test_project_and_schedule_round() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-
-        assert_ok!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number(),
-            System::block_number() + 1,
-            //Project key starts with 0 for the first project submitted to the chain
-            bounded_vec![0],
-            RoundType::ContributionRound,
-        ));
-    });
-}
-
-#[test]
-fn schedule_round_invalid_project_key() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-
-        assert_noop!(
-            Proposals::schedule_round(
-                Origin::root(),
-                System::block_number(),
-                System::block_number() + 1,
-                //Project key starts with 0 for the first project submitted to the chain
-                bounded_vec![1],
-                RoundType::ContributionRound
-            ),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::ProjectDoesNotExist.into()
-            }
-        );
-    });
-}
-
-#[test]
-fn schedule_round_invalid_end_block_no() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-
-        assert_noop!(
-            Proposals::schedule_round(
-                Origin::root(),
-                System::block_number() + 6000,
-                System::block_number() + 3000,
-                //Project key starts with 0 for the first project submitted to the chain
-                bounded_vec![1],
-                RoundType::ContributionRound
-            ),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::EndTooEarly.into()
-            }
-        );
-    });
-}
-
-#[test]
-fn cancel_round_no_active_round() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-
-        assert_ok!(
-            Proposals::schedule_round(
-                Origin::root(),
-                System::block_number() + 3000,
-                System::block_number() + 6000,
-                bounded_vec![0],
-                RoundType::ContributionRound
-            ),
-        );
-
-        assert_noop!(
-            Proposals::cancel_round(Origin::root(), 0),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::NoActiveRound.into()
-            }
-        );
-    });
-}
-
-#[test]
-fn test_funding_round_is_created_on_schedule_round() {
-    let project_keys: BoundedProjectKeys = bounded_vec![0u32];
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    //create_project extrinsic
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-        
-        assert_ok!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 2,
-            project_keys.clone(),
-            RoundType::ContributionRound
-        ));
-
-        let exp_fundingroundcreated_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-
-        assert_eq!(
-            exp_fundingroundcreated_event,
-            mock::Event::from(proposals::Event::FundingRoundCreated(
-                1,
-                project_keys.to_vec()
-            ))
-        );
-    });
-}
-
-#[test]
-fn cancel_round() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    //create_project extrinsic
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        //schedule_round extrinsic
-        assert_ok!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 2,
-            project_keys.clone(),
-            RoundType::ContributionRound
-        ));
-
-        let round_index = 1;
-
-        //cancel_round extrinsic
-        assert_ok!(<proposals::Pallet<Test>>::cancel_round(
-            Origin::root(),
-            round_index
-        ));
-
-        let exp_roundcancelled_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_roundcancelled_event,
-            mock::Event::from(proposals::Event::RoundCancelled(1))
-        );
-    });
-}
-
-#[test]
-fn test_cancelling_started_round() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project(alice);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let round_key = 1;
-
-        assert_noop!(
-            <proposals::Pallet<Test>>::cancel_round(Origin::root(), round_key),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::RoundStarted.into(),
-            }
-        );
-    });
-}
-
-#[test]
-//only user with root privilege can cancel the round
-fn test_cancelling_round_without_root_privilege() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project(alice);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-        let round_key = 1;
-        assert_noop!(
-            <proposals::Pallet<Test>>::cancel_round(Origin::signed(alice), round_key),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: DispatchError::BadOrigin,
-            }
-        );
-    });
-}
-
-#[test]
-fn create_a_test_project_and_schedule_round_and_contribute() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        //create_project extrinsic
-        create_project(alice);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key: u32 = 0;
-        let contribution_amount = 2000u64;
-
-        //schedule_round extrinsic
-        Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 10,
-            //Project key starts with 0 for the first project submitted to the chain
-            project_keys,
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = 10_000;
-
-        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
-
-        run_to_block(4);
-        //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-        Proposals::contribute(
-            Origin::signed(alice),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-        Proposals::contribute(
-            Origin::signed(alice),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-
-        //contribute success event
-        let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_contributedtoproject_event,
-            mock::Event::from(proposals::Event::ContributeSucceeded(
-                alice,
-                project_key,
-                contribution_amount,
+        (0..=max).for_each(|i| {
+            let project_key = create_project::<Test>(
+                *ALICE,
+                cont.clone(),
+                prop_milestones.clone(),
                 CurrencyId::Native,
-                4
-            ))
-        );
-    });
-}
-
-#[test]
-fn create_a_test_project_and_schedule_round_and_add_whitelist_with_cap_and_contribute() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        //create_project extrinsic
-        create_project(alice);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key: u32 = 0;
-        let contribution_amount = 2000u64;
-        let max_cap = 1000000u64;
-
-        let whitelist = bounded_btree_map!(alice => max_cap);
-        Proposals::add_project_whitelist(Origin::signed(alice), project_key, whitelist).unwrap();
-
-        //schedule_round extrinsic
-        Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 10,
-            //Project key starts with 0 for the first project submitted to the chain
-            project_keys,
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = contribution_amount;
-
-        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
-
-        run_to_block(4);
-
-        //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-
-        //contribute success event
-        let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_contributedtoproject_event,
-            mock::Event::from(proposals::Event::ContributeSucceeded(
-                alice,
-                project_key,
-                contribution_amount,
-                CurrencyId::Native,
-                4
-            ))
-        );
-    });
-}
-
-#[test]
-fn create_a_test_project_and_schedule_round_and_add_whitelist_with_unlimited_cap_and_contribute() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        //create_project extrinsic
-        create_project(alice);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key: u32 = 0;
-        let contribution_amount = 2000u64;
-        let max_cap = 0u64;
-
-        let whitelist = bounded_btree_map!(alice => max_cap);
-        Proposals::add_project_whitelist(Origin::signed(alice), project_key, whitelist).unwrap();
-
-        //schedule_round extrinsic
-        Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 10,
-            //Project key starts with 0 for the first project submitted to the chain
-            project_keys,
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = contribution_amount;
-
-        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
-
-        run_to_block(4);
-
-        //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-
-        //contribute success event
-        let exp_contributedtoproject_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_contributedtoproject_event,
-            mock::Event::from(proposals::Event::ContributeSucceeded(
-                alice,
-                project_key,
-                contribution_amount,
-                CurrencyId::Native,
-                4
-            ))
-        );
-    });
-}
-
-#[test]
-fn create_a_test_project_and_schedule_round_and_add_whitelist_and_contribute_over_capfail() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        //create_project extrinsic
-        create_project(alice);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key: u32 = 0;
-        let contribution_amount = 60_000u64;
-        let max_cap = 100_000u64;
-
-        let whitelist = bounded_btree_map!(alice => max_cap);
-        Proposals::add_project_whitelist(Origin::signed(alice), project_key, whitelist).unwrap();
-
-        //schedule_round extrinsic
-        Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 10,
-            //Project key starts with 0 for the first project submitted to the chain
-            project_keys,
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let alice_balance = 100_000_000u64;
-        let _ = Currencies::deposit(CurrencyId::Native, &alice, alice_balance);
-
-        run_to_block(4);
-        Proposals::contribute(
-            Origin::signed(alice),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-
-        assert_noop!(
-            Proposals::contribute(
-                Origin::signed(alice),
-                None,
-                project_key,
-                contribution_amount
-            ),
-            //approve project
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::ContributionMustBeLowerThanMaxCap.into()
+            );
+            if i != max {
+                assert_ok!(Proposals::submit_milestone(
+                    RuntimeOrigin::signed(*ALICE),
+                    project_key,
+                    1
+                ));
+            } else {
+                assert_noop!(
+                    Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1),
+                    Error::<Test>::Overflow
+                );
             }
-        );
+        })
     });
 }
 
 #[test]
-fn create_a_test_project_and_schedule_round_and_contribute_and_approve() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+fn submit_milestone_creates_non_bias_vote() {
     build_test_externality().execute_with(|| {
-        //create_project extrinsic
-        create_project(alice);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key = 0;
-        let contribution_amount = 1000000u64;
-
-        //schedule_round extrinsic
-        Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 10,
-            //Project key starts with 0 for the first project submitted to the chain
-            project_keys,
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = contribution_amount;
-        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
-
-        run_to_block(4);
-        //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-
-        let project_key = 0;
-        //approve project
-        Proposals::approve(Origin::root(), None, project_key, None).unwrap();
-
-        //approve event
-        let exp_approvedproject_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_approvedproject_event,
-            mock::Event::from(proposals::Event::ProjectApproved(1, project_key))
-        );
-    });
-}
-
-#[test]
-//negative test case - Approve fails because contribution amount has not met the project required funds
-fn create_a_test_project_and_schedule_round_and_contribute_and_approvefail() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        //create_project extrinsic
-        create_project(alice);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key = 0;
-        let contribution_amount = 100000u64;
-
-        //schedule_round extrinsic
-        Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 10,
-            //Project key starts with 0 for the first project submitted to the chain
-            project_keys,
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = contribution_amount;
-        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
-
-        run_to_block(4);
-        //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-
-        assert_noop!(
-            //approve project
-            Proposals::approve(Origin::root(), None, project_key, None),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::RoundNotEnded.into()
-            }
-        );
-    });
-}
-
-#[test]
-fn test_submit_milestone() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-    let voting_round_key = 2;
-
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project(alice);
-
-        let project_key = 0;
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            value
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(0);
-
-        run_to_block(3);
-
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
-
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            0
-        ));
-
-        let latest_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            latest_event,
-            mock::Event::from(proposals::Event::VotingRoundCreated(
-                voting_round_key,
-                vec![project_key]
-            ))
-        );
-    });
-}
-
-#[test]
-//negative test case - cannot submit milestones for unapproved projects
-fn test_submit_milestone_without_approval() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project(alice);
-
-        let project_key = 0;
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            value
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(0);
-
-        run_to_block(3);
-
-        assert_noop!(
-            Proposals::submit_milestone(Origin::signed(alice), project_key, 0),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::OnlyApprovedProjectsCanSubmitMilestones.into(),
-            }
-        );
-    });
-}
-
-#[test]
-fn test_voting_on_a_milestone() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-    let milestone1_key = 0;
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project(alice);
-
-        let project_key = 0;
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            value
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(0);
-
-        run_to_block(3);
-
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
-
-        assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            0
-        ));
-
-        run_to_block(5);
-        assert_ok!(Proposals::vote_on_milestone(
-            Origin::signed(bob),
-            project_key,
-            milestone1_key,
-            None,
-            true
-        ));
-
-        let latest_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            latest_event,
-            mock::Event::from(proposals::Event::VoteComplete(bob, 0, 0, true, 5))
-        );
-    });
-}
-
-#[test]
-//voting on cancelled round should throw error
-fn test_voting_on_a_cancelled_round() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-    let round_key = 1;
-
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project(alice);
-
-        let project_key = 0;
-        let project_keys: BoundedProjectKeys = bounded_vec![project_key];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 2,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        assert_ok!(<proposals::Pallet<Test>>::cancel_round(
-            Origin::root(),
-            round_key
-        ));
-
-        run_to_block(5);
-        let milestone_key = 0;
-        assert_noop!(
-            Proposals::vote_on_milestone(
-                Origin::signed(bob),
-                project_key,
-                milestone_key,
-                None,
-                true
-            ),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::RoundNotProcessing.into(),
-            }
-        );
-
-        let latest_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            latest_event,
-            mock::Event::from(proposals::Event::RoundCancelled(round_key))
-        );
-    });
-}
-
-#[test]
-//negative test case where the project creator tries to finalize milestone without getting the vote on that milestone
-fn test_finalize_a_milestone_without_voting() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-    let milestone1_key = 0;
-    let milestone2_key = 1;
-    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
-    let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 20,
-    };
-    let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 30,
-    };
-
-    let milestone3: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 3"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 50,
-    };
-    proposed_milestones.push(milestone1);
-    proposed_milestones.push(milestone2);
-    proposed_milestones.push(milestone3);
-
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project_multiple_milestones(alice, proposed_milestones);
-
-        let project_key = 0;
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            value
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(0);
-        let _ = milestone_index.try_push(1);
-
-        run_to_block(3);
-
-        assert_ok!(Proposals::approve(
-            Origin::root(),
-            None,
-            project_key,
-            Some(milestone_index)
-        ));
-
-        assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            milestone1_key
-        ));
-
-        assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            milestone2_key
-        ));
-
-        run_to_block(5);
-        assert_ok!(Proposals::vote_on_milestone(
-            Origin::signed(bob),
-            project_key,
-            milestone1_key,
-            None,
-            true
-        ));
-
-        //this works as the voting has been done for this milestone
-        assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
-            project_key,
-            0
-        ));
-
-        assert_noop!(
-            Proposals::finalise_milestone_voting(Origin::signed(alice), project_key, 1),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::MilestoneVotingNotComplete.into(),
-            }
-        );
-    });
-}
-
-#[test]
-fn test_project_initiator_cannot_withdraw_if_majority_vote_against() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
-    let additional_amount = 10_000_000u64;
-
-    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
-
-    let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 20,
-    };
-    let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 30,
-    };
-
-    let milestone3: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 3"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 50,
-    };
-    proposed_milestones.push(milestone1);
-    proposed_milestones.push(milestone2);
-    proposed_milestones.push(milestone3);
-
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        let _ = Currencies::deposit(CurrencyId::Native, &charlie, additional_amount);
-        create_project_multiple_milestones(alice, proposed_milestones);
-
-        let project_key = 0;
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let bob_contribution = 200_000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            bob_contribution
-        ));
-
-        // Second contribution to give Bob majority
-        let bob_second_contribution = 400_000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            bob_second_contribution
-        ));
-
-        let charlie_contribution = 500_000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(charlie),
-            None,
-            project_key,
-            charlie_contribution
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(0);
-        let _ = milestone_index.try_push(1);
-
-        run_to_block(3);
-
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
-
-        assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            0
-        ));
-
-        run_to_block(5);
-        let milestone_key = 0;
-        //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone_key, None, false)
-            .ok();
-
-        //Charlie voting on the submitted milestone
-        Proposals::vote_on_milestone(
-            Origin::signed(charlie),
-            project_key,
-            milestone_key,
-            None,
-            true,
-        )
-        .ok();
-
-        assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
-            project_key,
-            0
-        ));
-
-        assert_noop!(
-            Proposals::withdraw(Origin::signed(alice), project_key),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::NoAvailableFundsToWithdraw.into(),
-            }
-        );
-    })
-}
-
-#[test]
-fn test_project_initiator_can_withdraw_only_the_percentage_milestone_completed() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
-    let additional_amount = 10000000u64;
-    let required_funds = 1000000u64;
-    let milestone1_key = 0;
-    let milestone2_key = 1;
-    let milestone3_key = 2;
-
-    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
-
-    let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 20,
-    };
-    let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 30,
-    };
-
-    let milestone3: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 3"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 50,
-    };
-    proposed_milestones.push(milestone1);
-    proposed_milestones.push(milestone2);
-    proposed_milestones.push(milestone3);
-    let proposed_milestones1 = proposed_milestones.clone();
-
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        let _ = Currencies::deposit(CurrencyId::Native, &charlie, additional_amount);
-        create_project_multiple_milestones(alice, proposed_milestones);
-
-        let project_key = 0;
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let value = 500000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            value
-        ));
-
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(charlie),
-            None,
-            project_key,
-            value
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(milestone1_key);
-        let _ = milestone_index.try_push(milestone2_key);
-
-        run_to_block(3);
-
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
-
-        assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            milestone1_key
-        ));
-
-        assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            milestone2_key
-        ));
-
-        run_to_block(5);
-        //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone1_key, None, true)
-            .ok();
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone2_key, None, true)
-            .ok();
-
-        //Charlie voting on the submitted milestone
-        Proposals::vote_on_milestone(
-            Origin::signed(charlie),
-            project_key,
-            milestone1_key,
-            None,
-            true,
-        )
-        .ok();
-        Proposals::vote_on_milestone(
-            Origin::signed(charlie),
-            project_key,
-            milestone2_key,
-            None,
-            true,
-        )
-        .ok();
-
-        assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
-            project_key,
-            0
-        ));
-
-        assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(*ALICE),
             project_key,
             1
         ));
+        let created_vote = MilestoneVotes::<Test>::get(project_key, 1).expect("should exist");
 
-        assert_ok!(<proposals::Pallet<Test>>::withdraw(
-            Origin::signed(alice),
-            project_key
-        ));
-
-        //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let initial_percentage_to_withdraw: u32 =
-            proposed_milestones1.get(0).unwrap().percentage_to_unlock
-                + proposed_milestones1.get(1).unwrap().percentage_to_unlock;
-
-        //making sure that only balance is equal to the amount withdrawn
-        //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
-        assert_ne!(
-            Balances::free_balance(&alice),
-            additional_amount + required_funds
-        );
-        assert_eq!(
-            Balances::free_balance(&alice),
-            additional_amount + required_funds * (initial_percentage_to_withdraw as u64) / 100
-        );
-
-        // withdraw last milestone
-        assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            2
-        ));
-        run_to_block(10);
-        //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone3_key, None, true)
-            .ok();
-        //Charlie voting on the submitted milestone
-        Proposals::vote_on_milestone(
-            Origin::signed(charlie),
-            project_key,
-            milestone3_key,
-            None,
-            true,
-        )
-        .ok();
-
-        assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
-            project_key,
-            milestone3_key
-        ));
-
-        assert_ok!(<proposals::Pallet<Test>>::withdraw(
-            Origin::signed(alice),
-            project_key
-        ));
-
-        assert_eq!(
-            Balances::free_balance(&alice),
-            additional_amount + required_funds
-        );
-
-        //can withdraw only the amount corresponding to the milestone percentage completion
-        let latest_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
-                alice,
-                0,
-                500000u64,
-                CurrencyId::Native
-            ))
-        );
-    })
+        assert_eq!(created_vote.nay, 0, "initial vote should be default");
+        assert_eq!(created_vote.yay, 0, "initial vote should be default");
+    });
 }
 
 #[test]
-fn test_project_initiator_can_withdraw_only_the_percentage_after_force_milestone_completed() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
-    let additional_amount = 10000000u64;
-    let required_funds = 1000000u64;
-
-    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
-
-    let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 20,
-    };
-    let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 30,
-    };
-
-    let milestone3: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 3"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 50,
-    };
-    proposed_milestones.push(milestone1);
-    proposed_milestones.push(milestone2);
-    proposed_milestones.push(milestone3);
-    let proposed_milestones1 = proposed_milestones.clone();
-
+fn submit_milestone_can_resubmit_during_voting_round() {
     build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        let _ = Currencies::deposit(CurrencyId::Native, &charlie, additional_amount);
-        create_project_multiple_milestones(alice, proposed_milestones);
-
-        let project_key = 0;
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let value = 500000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            value
-        ));
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(charlie),
-            None,
-            project_key,
-            value
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(0);
-        let _ = milestone_index.try_push(1);
-
-        run_to_block(3);
-
-        assert_ok!(Proposals::approve(
-            Origin::root(),
-            None,
-            project_key,
-            Some(milestone_index)
-        ));
-
-        assert_ok!(<proposals::Pallet<Test>>::withdraw(
-            Origin::signed(alice),
-            project_key
-        ));
-
-        //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw: u32 =
-            proposed_milestones1.get(0).unwrap().percentage_to_unlock
-                + proposed_milestones1.get(1).unwrap().percentage_to_unlock;
-
-        //making sure that only balance is equal to the amount withdrawn
-        //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
-        assert_ne!(
-            Balances::free_balance(&alice),
-            additional_amount + required_funds
-        );
-        assert_eq!(
-            Balances::free_balance(&alice),
-            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
-        );
-
-        //can withdraw only the amount corresponding to the milestone percentage completion
-        let latest_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
-                alice,
-                0,
-                500000u64,
-                CurrencyId::Native
-            ))
-        );
-    })
-}
-
-#[test]
-fn test_withdraw_upon_project_approval_and_finalised_voting() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-    let milestone1_key = 0;
-
-    build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project(alice);
-
-        let project_key = 0;
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let required_funds = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            required_funds
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(0);
-
-        run_to_block(3);
-
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
-
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(*ALICE),
             project_key,
-            0
+            milestone_key
         ));
-
-        run_to_block(5);
         assert_ok!(Proposals::vote_on_milestone(
-            Origin::signed(bob),
+            RuntimeOrigin::signed(*BOB),
             project_key,
-            milestone1_key,
-            None,
+            milestone_key,
             true
         ));
-
-        assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
             project_key,
-            milestone1_key
+            milestone_key
         ));
-
-        assert_ok!(<proposals::Pallet<Test>>::withdraw(
-            Origin::signed(alice),
-            project_key
-        ));
-
+        let user_voted =
+            UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key));
+        dbg!(&user_voted);
         assert_eq!(
-            Balances::free_balance(&alice),
-            additional_amount + required_funds
+            user_voted.len(),
+            0usize,
+            "User votes should be defaulted on resubmission."
         );
-        let latest_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
+        let group_vote = MilestoneVotes::<Test>::get(project_key, milestone_key)
+            .expect("group vote should exist.");
         assert_eq!(
-            latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
-                alice,
-                0,
-                100,
-                CurrencyId::Native
-            ))
+            group_vote,
+            Default::default(),
+            "Group vote should have defaulted on resubmission"
         );
     });
 }
 
 #[test]
-fn test_withdraw_from_non_initiator_account() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-
+fn submit_milestone_can_submit_again_after_failed_vote() {
     build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project(alice);
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            1
+        ));
+        let expiry_block = frame_system::Pallet::<Test>::block_number()
+            + <Test as Config>::MilestoneVotingWindow::get() as u64;
+        run_to_block::<Test>(expiry_block + 1);
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            1
+        ));
+    });
+}
 
-        let project_key = 0;
-
+#[test]
+fn submit_milestone_cannot_submit_again_after_success_vote() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            milestone_key,
+            true
+        ));
+        // The auto approval should have approved it here.
+        let expiry_block = frame_system::Pallet::<Test>::block_number()
+            + <Test as Config>::MilestoneVotingWindow::get() as u64;
+        run_to_block::<Test>(expiry_block + 1);
         assert_noop!(
-            Proposals::withdraw(Origin::signed(bob), project_key),
-            DispatchErrorWithPostInfo {
-                post_info: PostDispatchInfo {
-                    actual_weight: None,
-                    pays_fee: Pays::Yes,
-                },
-                error: Error::<Test>::InvalidAccount.into(),
-            }
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key),
+            Error::<Test>::MilestoneAlreadyApproved
         );
     });
 }
 
 #[test]
-//positive test case submit multiple milestones
-fn submit_multiple_milestones() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let additional_amount = 100000000u64;
-    let voting_round1_key = 2;
-    let voting_round2_key = 3;
-    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
-    let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 50,
-    };
-    let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 50,
-    };
-    proposed_milestones.push(milestone1);
-    proposed_milestones.push(milestone2);
-
-    let project_keys: BoundedProjectKeys = bounded_vec![0];
-
+fn vote_on_milestone_no_project() {
     build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        create_project_multiple_milestones(alice, proposed_milestones);
-
-        let project_key = 0;
-        let milestone_index_1 = 0;
-        let milestone_index_2 = 1;
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let value = 100u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            value
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(milestone_index_1);
-        let _ = milestone_index.try_push(milestone_index_2);
-
-        run_to_block(3);
-
-        assert_ok!(Proposals::approve(Origin::root(), None, project_key, None));
-
-        assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            milestone_index_1
-        ));
-
-        let voting_round_event_1 = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            voting_round_event_1,
-            mock::Event::from(proposals::Event::VotingRoundCreated(
-                voting_round1_key,
-                vec![project_key]
-            ))
-        );
-
-        run_to_block(5);
-
-        assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            milestone_index_2
-        ));
-
-        let voting_round_event_2 = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            voting_round_event_2,
-            mock::Event::from(proposals::Event::VotingRoundCreated(
-                voting_round2_key,
-                vec![project_key]
-            ))
+        assert_noop!(
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(*ALICE), 0, 0, true),
+            Error::<Test>::ProjectDoesNotExist
         );
     });
 }
 
 #[test]
-fn create_a_test_project_and_schedule_round_and_contribute_and_refund() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
+fn vote_on_milestone_before_round_starts_fails() {
     build_test_externality().execute_with(|| {
-        //create_project extrinsic
-        create_project(alice);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let project_key: u32 = 0;
-        let contribution_amount = 2000u64;
-
-        //schedule_round extrinsic
-        Proposals::schedule_round(
-            Origin::root(),
-            System::block_number() + 1,
-            System::block_number() + 10,
-            //Project key starts with 0 for the first project submitted to the chain
-            project_keys,
-            RoundType::ContributionRound,
-        )
-        .unwrap();
-
-        let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-        let additional_amount = 10_000;
-        let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
-
-        run_to_block(4);
-        //contribute extrinsic
-        Proposals::contribute(
-            Origin::signed(alice),
-            None,
-            project_key,
-            contribution_amount,
-        )
-        .unwrap();
-
-        //ensuring alice's balance has reduced after contribution
-        let alice_balance_post_contribute: u64 = 8_000;
-        assert_eq!(
-            alice_balance_post_contribute,
-            Balances::free_balance(&alice)
-        );
-
-        Proposals::refund(Origin::root(), project_key).unwrap();
-
-        //ensuring the refunded amount was transferred back successfully
-        assert_eq!(additional_amount, Balances::free_balance(&alice));
-
-        //contribute success event
-        let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_projectfundsrefunded_event,
-            mock::Event::from(proposals::Event::ProjectLockedFundsRefunded(
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_noop!(
+            Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
                 project_key,
-                contribution_amount
-            ))
+                milestone_key,
+                true
+            ),
+            Error::<Test>::VotingRoundNotStarted
         );
     });
 }
 
 #[test]
-fn withdraw_percentage_milestone_completed_refund_locked_milestone() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
-    let additional_amount = 10000000u64;
-    let required_funds = 1000000u64;
-    let project_key = 0;
-
-    let mut proposed_milestones: Vec<ProposedMilestone> = Vec::new();
-
-    let milestone1: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 1"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 20,
-    };
-    let milestone2: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 2"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 30,
-    };
-
-    let milestone3: ProposedMilestone = ProposedMilestone {
-        name: b"milestone 3"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        percentage_to_unlock: 50,
-    };
-    proposed_milestones.push(milestone1);
-    proposed_milestones.push(milestone2);
-    proposed_milestones.push(milestone3);
-    let proposed_milestones1 = proposed_milestones.clone();
-
+fn vote_on_milestone_after_round_end_fails() {
     build_test_externality().execute_with(|| {
-        deposit_initial_balance(&alice, &bob, additional_amount);
-        let _ = Currencies::deposit(CurrencyId::Native, &charlie, additional_amount);
-        create_project_multiple_milestones(alice, proposed_milestones);
-
-        let project_keys: BoundedProjectKeys = bounded_vec![0];
-        let milestone1_key = 0;
-        let milestone2_key = 1;
-
-        assert_ok!(<proposals::Pallet<Test>>::schedule_round(
-            Origin::root(),
-            System::block_number() - 1,
-            System::block_number() + 1,
-            project_keys,
-            RoundType::ContributionRound
-        ));
-
-        let value = 500000u64;
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(bob),
-            None,
-            project_key,
-            value
-        ));
-        assert_ok!(<proposals::Pallet<Test>>::contribute(
-            Origin::signed(charlie),
-            None,
-            project_key,
-            value
-        ));
-
-        let mut milestone_index: BoundedMilestoneKeys = bounded_vec![];
-        let _ = milestone_index.try_push(0);
-
-        run_to_block(3);
-
-        assert_ok!(Proposals::approve(
-            Origin::root(),
-            None,
-            project_key,
-            Some(milestone_index)
-        ));
-
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let expiring_block = frame_system::Pallet::<Test>::block_number()
+            + <Test as Config>::MilestoneVotingWindow::get();
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(*ALICE),
             project_key,
-            milestone1_key
+            milestone_key
         ));
+        run_to_block::<Test>(expiring_block);
+        assert_noop!(
+            Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
+                project_key,
+                milestone_key,
+                true
+            ),
+            Error::<Test>::VotingRoundNotStarted
+        );
+    });
+}
 
+#[test]
+fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
         assert_ok!(Proposals::submit_milestone(
-            Origin::signed(alice),
-            project_key,
-            milestone2_key
-        ));
-
-        run_to_block(5);
-        //Bob voting on the submitted milestone
-        Proposals::vote_on_milestone(Origin::signed(bob), project_key, milestone1_key, None, true)
-            .ok();
-
-        //Charlie voting on the submitted milestone
-        Proposals::vote_on_milestone(
-            Origin::signed(charlie),
-            project_key,
-            milestone1_key,
-            None,
-            true,
-        )
-        .ok();
-
-        assert_ok!(Proposals::finalise_milestone_voting(
-            Origin::signed(alice),
+            RuntimeOrigin::signed(*ALICE),
             project_key,
             0
         ));
-
-        assert_ok!(<proposals::Pallet<Test>>::withdraw(
-            Origin::signed(alice),
-            project_key
-        ));
-
-        //calculating the total percentage that can be withdrawn based on the submitted milestones
-        let total_percentage_to_withdraw: u32 =
-            proposed_milestones1.get(0).unwrap().percentage_to_unlock;
-
-        //making sure that only balance is equal to the amount withdrawn
-        //making sure not all the required funds have been assigned instead only the percentage eligible could be withdrawn
-        //checking that Alice now has 10.2m
-        assert_ne!(
-            Balances::free_balance(&alice),
-            additional_amount + required_funds
-        );
-        assert_eq!(
-            Balances::free_balance(&alice),
-            additional_amount + required_funds * (total_percentage_to_withdraw as u64) / 100
-        );
-
-        //can withdraw only the amount corresponding to the milestone percentage completion
-        let latest_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            latest_event,
-            mock::Event::from(proposals::Event::ProjectFundsWithdrawn(
-                alice,
-                project_key,
-                200000u64,
-                CurrencyId::Native
-            ))
-        );
-
-        //validating contributor current balance
-        let contributor_balance_pre_refund: u64 = 9_500_000;
-        assert_eq!(contributor_balance_pre_refund, Balances::free_balance(&bob));
-        assert_eq!(
-            contributor_balance_pre_refund,
-            Balances::free_balance(&charlie)
-        );
-
-        Proposals::refund(Origin::root(), project_key).unwrap();
-
-        //ensuring the refunded amount was transferred back successfully
-        let contributor_balance_pre_refund: u64 = 9_900_000;
-        assert_eq!(contributor_balance_pre_refund, Balances::free_balance(&bob));
-        assert_eq!(
-            contributor_balance_pre_refund,
-            Balances::free_balance(&charlie)
-        );
-
-        //contribute success event
-        let exp_projectfundsrefunded_event = <frame_system::Pallet<Test>>::events()
-            .pop()
-            .expect("Expected at least one EventRecord to be found")
-            .event;
-        assert_eq!(
-            exp_projectfundsrefunded_event,
-            mock::Event::from(proposals::Event::ProjectLockedFundsRefunded(
-                project_key,
-                800000u64
-            ))
-        );
-    })
-}
-
-#[test]
-fn test_schedule_round_fails_gracefully_with_empty_vec() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    build_test_externality().execute_with(|| {
-        create_project(alice);
-
         assert_noop!(
-            Proposals::schedule_round(
-                Origin::root(),
-                System::block_number(),
-                System::block_number() + 1,
-                // Empty keys is the test.
-                bounded_vec![],
-                RoundType::ContributionRound
-            ),
-            Error::<Test>::LengthMustExceedZero
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true),
+            Error::<Test>::VotingRoundNotStarted
         );
     });
 }
 
 #[test]
-fn test_raising_a_vote_of_no_confidence() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("Charlie");
-
-
-    let project_key = 0u32;
-
+fn vote_on_milestone_not_contributor() {
     build_test_externality().execute_with(|| {
-        // Create a project for both alice and bob.
-        create_project(alice);
-
-        // Schedule a round to allow for contributions.
-        assert_ok!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number(),
-            System::block_number() + 100,
-            bounded_vec![project_key],
-            RoundType::ContributionRound
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key
         ));
-
-        // Deposit funds and contribute.
-        let _ = Currencies::deposit(CurrencyId::Native, &bob, 10_000_000u64);
-        run_to_block(System::block_number() + 3);
-        
-        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 1_000_000u64).unwrap();
-        run_to_block(System::block_number() + 101);
-        
-        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));
-
-        // Assert that Bob cannot raise the vote as he is not a contributor.
-        assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key), Error::<Test>::OnlyContributorsCanVote);
-
-        // Call a vote of no confidence and assert it will pass.
-        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_key));
-
-        let vote = NoConfidenceVotes::<Test>::get(project_key).unwrap();
-        let round_count = RoundCount::<Test>::get();
-
-        // Assert that storage has been mutated correctly.
-        assert!(vote.nay == 1_000_000u64 && vote.yay == 0u64);
-        assert!(UserVotes::<Test>::get((bob, project_key, 0, round_count)) == Some(true));
-        assert!(round_count == 2u32);
-        assert!(NoConfidenceVotes::<Test>::contains_key(project_key));
-
-        // Assert that you cannot raise the vote twice.
-        assert_noop!(Proposals::raise_vote_of_no_confidence(Origin::signed(bob), project_key), Error::<Test>::RoundStarted);
+        assert_noop!(
+            Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*DAVE),
+                project_key,
+                milestone_key,
+                true
+            ),
+            Error::<Test>::OnlyContributorsCanVote
+        );
     });
 }
 
 #[test]
-fn test_adding_vote_of_no_confidence() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
-    let project_key = 0u32;
+fn vote_on_milestone_actually_adds_to_vote() {
     build_test_externality().execute_with(|| {
-        // Create a project for both alice and bob.
-        create_project(alice);
-
-        //schedule a round to allow for contributions.
-        assert_ok!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number(),
-            System::block_number() + 100,
-            bounded_vec![project_key],
-            RoundType::ContributionRound
-        ));
-
-        // Deposit funds and contribute.
-        let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
-        let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
-        run_to_block(System::block_number() + 3);
-        
-        // Setup required state to start voting: must have contributed and round must have started.
-        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 500_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 500_000u64).unwrap();
-
-        run_to_block(System::block_number() + 101);
-
-        // Assert that threshold has been met
-        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));   
-
-        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
-        
-        // Charlie has raised a vote of no confidence, now Bob is gonna disagree!
-        assert_ok!(Proposals::vote_on_no_confidence_round(
-            Origin::signed(bob),
-            None,
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
             project_key,
+            milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true
+        ));
+        let vote =
+            MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
+        assert!(vote.yay == 100_000u64);
+        assert!(vote.nay == 0u64);
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            milestone_key,
+            false
+        ));
+        let vote =
+            MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
+        assert!(vote.yay == 100_000u64);
+        assert!(vote.nay == 100_000u64);
+    });
+}
+
+#[test]
+fn withdraw_not_initiator() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            milestone_key,
             true
         ));
 
-        // Assert Bob cannot game the system.
         assert_noop!(
-            Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, true),
-            Error::<Test>::VoteAlreadyExists
+            Proposals::withdraw(RuntimeOrigin::signed(*BOB), project_key),
+            Error::<Test>::UserIsNotInitiator
         );
         assert_noop!(
-            Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, false),
-            Error::<Test>::VoteAlreadyExists
+            Proposals::withdraw(RuntimeOrigin::signed(*DAVE), project_key),
+            Error::<Test>::UserIsNotInitiator
         );
-
-        // Assert the state of the system is as it should be.
-        let vote = NoConfidenceVotes::<Test>::get(project_key).unwrap();
-        let round_count = RoundCount::<Test>::get();
-
-        // Assert that storage has been mutated correctly.
-        assert!(vote.nay == 500_000u64 && vote.yay == 500_000u64);
-        assert!(UserVotes::<Test>::get((charlie, project_key, 0, round_count)) == Some(true));
-        assert!(UserVotes::<Test>::get((bob, project_key, 0, round_count)) == Some(true));
-
-        assert!(round_count == 2u32);
     });
 }
 
 #[test]
-fn test_finalise_vote_of_no_confidence_with_threshold_met() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
-    let steve = get_account_id_from_seed::<sr25519::Public>("steve");
-
-    let project_key = 0u32;
+fn withdraw_only_transfers_approved_milestones() {
     build_test_externality().execute_with(|| {
-        // Create a project for both alice and bob.
-        create_project(alice);
+        let per_contribution = 100_000;
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], per_contribution);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
 
-        //schedule a round to allow for contributions.
-        assert_ok!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number(),
-            System::block_number() + 100,
-            bounded_vec![project_key],
-            RoundType::ContributionRound
+        let alice_before =
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(per_contribution * 2 / 10);
+        // total_contribution / number of milestones - fee
+        let alice_expected_balance =
+            alice_before + ((per_contribution * 2 / 10) as u64) - expected_fee as u64;
+        assert_eq!(
+            alice_after, alice_expected_balance,
+            "Alice account is not the expected balance"
+        );
+
+        let project_account = crate::Pallet::<Test>::project_account_id(project_key);
+
+        assert_eq!(
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &project_account),
+            180_000,
+            "funds havent been taken out of project as expected."
+        );
+    });
+}
+
+#[test]
+fn withdraw_removes_project_after_all_funds_taken() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(1);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+        assert!(Projects::<Test>::get(project_key).is_some());
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
         ));
 
-        // Deposit funds and contribute.
-        let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
-        let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
-        run_to_block(System::block_number() + 3);
-        // Setup required state to start voting: must have contributed and round must have started.
-        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 750_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 250_000u64).unwrap();
-        run_to_block(System::block_number() + 101);
-        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));
+        assert!(
+            Projects::<Test>::get(project_key).is_none(),
+            "Project should have been removed after funds withdrawn."
+        )
+    });
+}
 
-        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
-        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), None, project_key, false));
+#[test]
+fn store_project_info_after_project_is_completed() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(1);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+        assert!(Projects::<Test>::get(project_key).is_some());
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
 
-        // Assert that steve who is not a contributor cannot finalise the same goes for the initiator.
+        if let Some((_account, projects)) = CompletedProjects::<Test>::iter().next() {
+            assert_eq!(projects.len(), 1);
+            assert_eq!(projects.contains(&project_key), true);
+        }
+    });
+}
+
+#[test]
+fn store_too_many_projects_for_account() {
+    build_test_externality().execute_with(|| {
+        let max = <Test as Config>::MaxProjectsPerAccount::get();
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(1);
+        let milestone_key = 0;
+        (0..=max).for_each(|i| {
+            let project_key = create_project::<Test>(
+                *ALICE,
+                cont.clone(),
+                prop_milestones.clone(),
+                CurrencyId::Native,
+            );
+            let _ = Proposals::submit_milestone(
+                RuntimeOrigin::signed(*ALICE),
+                project_key.clone(),
+                milestone_key,
+            )
+            .unwrap();
+            let _ = Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
+                project_key.clone(),
+                milestone_key,
+                true,
+            )
+            .unwrap();
+
+            if i != max {
+                assert_ok!(Proposals::withdraw(
+                    RuntimeOrigin::signed(*ALICE),
+                    project_key.clone()
+                ));
+            } else {
+                assert_noop!(
+                    Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key.clone()),
+                    Error::<Test>::TooManyProjects
+                );
+            }
+        })
+    });
+}
+
+#[test]
+fn withdraw_takes_imbue_fee() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let pallet_account = crate::Pallet::<Test>::account_id();
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10_000);
+        assert_eq!(
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &pallet_account),
+            expected_fee,
+            "fee hasnt been taken out of project as expected."
+        );
+    });
+}
+
+#[test]
+fn withdraw_cannot_double_withdraw() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
         assert_noop!(
-            Proposals::finalise_no_confidence_round(Origin::signed(steve), None, project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Error::<Test>::NoAvailableFundsToWithdraw
+        );
+    });
+}
+
+#[test]
+fn withdraw_once_times_with_double_submissions() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
+            .unwrap();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true)
+            .unwrap();
+
+        let alice_before =
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(20000);
+        let alice_expected_balance = alice_before + 20000 - expected_fee;
+        assert_eq!(
+            alice_after, alice_expected_balance,
+            "Alice account is not the expected balance"
+        );
+    });
+}
+
+// kind of a beast but worth it.
+#[test]
+fn withdraw_twice_with_intermitent_submission() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+
+        // The first submission and withdraw
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
+            .unwrap();
+        let alice_before =
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10_000);
+        let alice_expected_balance = alice_before + 10000 - expected_fee;
+        assert_eq!(
+            alice_after, alice_expected_balance,
+            "Alice account is not the expected balance"
+        );
+
+        // The second submission and withdraw
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true)
+            .unwrap();
+        let alice_before =
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10000);
+        let alice_expected_balance = alice_before + 10000 - expected_fee;
+        assert_eq!(
+            alice_after, alice_expected_balance,
+            "Alice account is not the expected balance"
+        );
+    });
+}
+
+#[test]
+fn withdraw_with_variable_percentage() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = vec![
+            ProposedMilestone {
+                percentage_to_unlock: Percent::from_percent(70u8),
+            },
+            ProposedMilestone {
+                percentage_to_unlock: Percent::from_percent(30u8),
+            },
+        ];
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
+            .unwrap();
+        let alice_before =
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+        let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(70000);
+        let alice_expected_balance = alice_before + 70000 - expected_fee;
+        assert_eq!(
+            alice_after, alice_expected_balance,
+            "Alice account is not the expected balance"
+        );
+    });
+}
+
+#[test]
+fn withdraw_fails_before_approval() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_noop!(
+            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Error::<Test>::NoAvailableFundsToWithdraw
+        );
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        assert_noop!(
+            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Error::<Test>::NoAvailableFundsToWithdraw
+        );
+    });
+}
+
+#[test]
+fn raise_no_confidence_round_already_started() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+        assert_ok!(Proposals::raise_vote_of_no_confidence(
+            RuntimeOrigin::signed(*BOB),
+            project_key
+        ));
+        assert_noop!(
+            Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*BOB), project_key),
+            Error::<Test>::RoundStarted
+        );
+    });
+}
+
+#[test]
+fn raise_no_confidence_round_not_contributor() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        assert_noop!(
+            Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), project_key),
             Error::<Test>::OnlyContributorsCanVote
         );
+    });
+}
+
+#[test]
+fn raise_no_confidence_round_no_project() {
+    build_test_externality().execute_with(|| {
         assert_noop!(
-            Proposals::finalise_no_confidence_round(Origin::signed(alice), None, project_key),
-            Error::<Test>::OnlyContributorsCanVote
+            Proposals::raise_vote_of_no_confidence(RuntimeOrigin::signed(*CHARLIE), 20),
+            Error::<Test>::ProjectDoesNotExist
         );
-        // And we might aswell assert that you cannot call finalise on a project key that doesnt exist.
+    });
+}
+
+#[test]
+fn raise_no_confidence_round_puts_initial_vote_is_isnay() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+
+        assert_ok!(Proposals::raise_vote_of_no_confidence(
+            RuntimeOrigin::signed(*BOB),
+            project_key
+        ));
+
+        let vote = NoConfidenceVotes::<Test>::get(project_key).expect("vote should exist");
+        assert_eq!(
+            vote.nay, 100_000,
+            "Bobs vote does not equal expected amount."
+        );
+
+        let has_voted = UserHasVoted::<Test>::get((project_key, RoundType::VoteOfNoConfidence, 0));
+        assert!(
+            has_voted.values().len() == 1usize,
+            "The btree should only have a single value, the caller of the round."
+        );
+        assert!(
+            has_voted.contains_key(&BOB),
+            "Bob called the round so should be recorded as voted."
+        );
+    });
+}
+
+#[test]
+fn vote_on_no_confidence_round_not_in_round() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+
         assert_noop!(
-            Proposals::finalise_no_confidence_round(Origin::signed(bob), None, 2),
+            Proposals::vote_on_no_confidence_round(
+                RuntimeOrigin::signed(*CHARLIE),
+                project_key,
+                true
+            ),
             Error::<Test>::ProjectNotInRound
         );
-        // Assert that bob, a contrbutor, can finalise
-        assert_ok!(Proposals::finalise_no_confidence_round(
-            Origin::signed(bob),
-            None,
+    });
+}
+
+#[test]
+fn vote_on_no_confidence_round_not_contributor() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+
+        assert_ok!(Proposals::raise_vote_of_no_confidence(
+            RuntimeOrigin::signed(*BOB),
             project_key
         ));
+        assert_noop!(
+            Proposals::vote_on_no_confidence_round(
+                RuntimeOrigin::signed(*CHARLIE),
+                project_key,
+                true
+            ),
+            Error::<Test>::OnlyContributorsCanVote
+        );
     });
 }
 
-// I Realised that i have already tested for thresholds on the mark and therefore above
-// Alas i should test below the threshold
 #[test]
-fn test_finalise_vote_of_no_confidence_below_threshold() {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    let bob = get_account_id_from_seed::<sr25519::Public>("Bob");
-    let charlie = get_account_id_from_seed::<sr25519::Public>("charlie");
-
-    let project_key = 0u32;
+fn vote_on_no_confidence_round_already_voted() {
     build_test_externality().execute_with(|| {
-        // Create a project for both alice and bob.
-        create_project(alice);
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
 
-        //schedule a round to allow for contributions.
-        assert_ok!(Proposals::schedule_round(
-            Origin::root(),
-            System::block_number(),
-            System::block_number() + 100,
-            bounded_vec![project_key],
-            RoundType::ContributionRound
+        assert_ok!(Proposals::raise_vote_of_no_confidence(
+            RuntimeOrigin::signed(*BOB),
+            project_key
         ));
-
-        // Deposit funds and contribute.
-        let _ = Currencies::deposit(CurrencyId::Native, &charlie, 10_000_000u64);
-        let _ = Currencies::deposit(CurrencyId::Native, &bob, 20_000_000u64);
-        run_to_block(System::block_number() + 3);
-        
-        // Setup required state to start voting: must have contributed and round must have started.
-        Proposals::contribute(Origin::signed(charlie), Some(1), project_key, 500_000u64).unwrap();
-        Proposals::contribute(Origin::signed(bob), Some(1), project_key, 500_000u64).unwrap();
-
-        run_to_block(System::block_number() + 101);
-
-        // Assert that threshold has been met
-        assert_ok!(Proposals::approve(Origin::root(), Some(1), project_key, None));   
-
-        assert_ok!(Proposals::raise_vote_of_no_confidence(Origin::signed(charlie), project_key));
-        assert_ok!(Proposals::vote_on_no_confidence_round(Origin::signed(bob), Some(2), project_key, true));
-
-        assert_noop!(Proposals::finalise_no_confidence_round(Origin::signed(charlie), Some(2), project_key), Error::<Test>::VoteThresholdNotMet);
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*DAVE),
+            project_key,
+            true
+        ));
+        assert_noop!(
+            Proposals::vote_on_no_confidence_round(RuntimeOrigin::signed(*DAVE), project_key, true),
+            Error::<Test>::VotesAreImmutable
+        );
     });
 }
 
-//common helper methods
-fn create_project(account: AccountId) {
-    assert_ok!(Proposals::create_project(
-        Origin::signed(account),
-        //project name
-        b"Farmer's Project Sudan"
-            .to_vec()
-            .try_into()
-            .expect("test bytes should be of decent length;"),
-        //project logo
-        b"Imbue Logo"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        //project description
-        b"This project is aimed at providing decentralised funding for a farming project."
-            .to_vec()
-            .try_into()
-            .expect("test bytes should be of decent length;"),
-        //website
-        b"https://farmers.network"
-            .to_vec()
-            .try_into()
-            .expect("test bytes should be of decent length;"),
-        //milestone
-        bounded_vec![ProposedMilestone {
-            name: bounded_vec![],
-            percentage_to_unlock: 100
-        }],
-        //funds required
-        1_000_000u64,
-        CurrencyId::Native
-    ));
+#[test]
+fn vote_on_no_confidence_mutates_vote() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+
+        assert_ok!(Proposals::raise_vote_of_no_confidence(
+            RuntimeOrigin::signed(*BOB),
+            project_key
+        ));
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*DAVE),
+            project_key,
+            true
+        ));
+        let vote = NoConfidenceVotes::<Test>::get(project_key).expect("vote should exist");
+        assert_eq!(
+            vote.nay, 100_000,
+            "Total vote should equal half contributions here."
+        );
+        assert_eq!(
+            vote.yay, 100_000,
+            "Total vote should equal half contributions here."
+        );
+
+        let has_voted = UserHasVoted::<Test>::get((project_key, RoundType::VoteOfNoConfidence, 0));
+        assert!(
+            has_voted.values().len() == 2usize,
+            "The btree should only have a single value, the caller of the round."
+        );
+        assert!(
+            has_voted.contains_key(&BOB) && has_voted.contains_key(&DAVE),
+            "Bob and charlie have voted."
+        );
+    });
 }
 
-fn create_project_multiple_milestones(
-    alice: AccountId,
-    proposed_milestones: Vec<ProposedMilestone>,
-) {
-    assert_ok!(Proposals::create_project(
-        Origin::signed(alice),
-        //project name
-        b"Farmer's Project Sudan"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        //project logo
-        b"Imbue Logo"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        //project description
-        b"This project is aimed at providing decentralised funding for a farming project."
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        //website
-        b"https://farmers.network"
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        //milestone
-        proposed_milestones
-            .try_into()
-            .expect("proposed milestones are too long"),
-        //funds required
-        1_000_000u64,
-        CurrencyId::Native
-    ));
+
+#[test]
+fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE,*CHARLIE,*ALICE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+
+        assert_ok!(Proposals::raise_vote_of_no_confidence(
+            RuntimeOrigin::signed(*BOB),
+            project_key
+        ));
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*DAVE),
+            project_key,
+            true
+        ));
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            false
+        ));
+        assert_ok!(Proposals::vote_on_no_confidence_round(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            false
+        ));
+        let vote = NoConfidenceVotes::<Test>::get(project_key).expect("vote should exist");
+        assert_eq!(
+            vote.nay, 300_000,
+            "Total vote should equal half contributions here."
+        );
+        assert_eq!(
+            vote.yay, 100000,
+            "Total vote should equal half contributions here."
+        );
+
+        let has_voted = UserHasVoted::<Test>::get((project_key, RoundType::VoteOfNoConfidence, 0));
+        assert!(
+            has_voted.values().len() == 4usize,
+            "Not all the votes has been recorded"
+        );
+        assert!(
+            has_voted.contains_key(&BOB) || has_voted.contains_key(&DAVE) || has_voted.contains_key(&ALICE) || has_voted.contains_key(&CHARLIE)  ,
+            "Bob,Alice,Dave charlie have voted."
+        );
+        assert_last_event::<Test>(Event::<Test>::NoConfidenceRoundFinalised(*ALICE, project_key).into());
+        assert_eq!(Projects::<Test>::get(project_key),None);
+        assert_eq!(Rounds::<Test>::get(project_key,RoundType::VoteOfNoConfidence),None);
+    });
 }
 
-fn create_projects_with_inputs(name: &str, logo: &str, description: &str, website: &str, funds_required: u64) -> DispatchResultWithPostInfo {
-    let alice = get_account_id_from_seed::<sr25519::Public>("Alice");
-    Proposals::create_project(
-        Origin::signed(alice),
-        //project name
-        name.as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        //project logo
-        logo.as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        //project description
-        description.as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        //website
-        website.as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("input should be of decent length"),
-        //milestone
-        bounded_vec![ProposedMilestone {
-            name: bounded_vec![],
-            percentage_to_unlock: 100
-        }],
-        //funds required
-        funds_required,
-        CurrencyId::Native
-    )
-}
 
-fn deposit_initial_balance(alice: &AccountId, bob: &AccountId, additional_amount: u64) {
-    let _ = Currencies::deposit(CurrencyId::Native, &alice, additional_amount);
-    let _ = Currencies::deposit(CurrencyId::Native, &bob, additional_amount);
-}
-
-fn run_to_block(n: u64) {
-    while System::block_number() < n {
-        if System::block_number() > 1 {
-            Proposals::on_finalize(System::block_number());
-            System::on_finalize(System::block_number());
-        }
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-        Proposals::on_initialize(System::block_number());
-    }
-}
+// todo: finalise voteof no confidence tests.
+// ^^ is connected to making the pallet generic over funding type.
+// Todo: assert the last event of each extrinsic/

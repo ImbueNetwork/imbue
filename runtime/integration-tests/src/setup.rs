@@ -1,14 +1,10 @@
-use common_runtime::{Balance};
-pub use imbue_kusama_runtime::{AccountId, CurrencyId, Origin, Runtime, System};
-use frame_support::traits::GenesisBuild;
+use common_runtime::Balance;
 use common_types::currency_decimals;
-/// Accounts
-pub const ALICE: [u8; 32] = [4u8; 32];
-pub const BOB: [u8; 32] = [5u8; 32];
-
+use frame_support::traits::GenesisBuild;
+pub use imbue_kusama_runtime::{AccountId, CurrencyId, Runtime, RuntimeOrigin, System};
 /// Parachain Ids
 pub const PARA_ID_DEVELOPMENT: u32 = 2121;
-pub const PARA_ID_SIBLING: u32 = 3000;
+pub const PARA_ID_SIBLING: u32 = 2110;
 pub const PARA_ID_KARURA: u32 = 2000;
 
 pub struct ExtBuilder {
@@ -73,7 +69,7 @@ impl ExtBuilder {
 
         <pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
             &pallet_xcm::GenesisConfig {
-                safe_xcm_version: Some(2),
+                safe_xcm_version: Some(3),
             },
             &mut t,
         )
@@ -89,8 +85,8 @@ pub fn native_amount(amount: Balance) -> Balance {
     amount * dollar(currency_decimals::NATIVE)
 }
 
-pub fn ausd_amount(amount: Balance) -> Balance {
-    amount * dollar(currency_decimals::AUSD)
+pub fn mgx_amount(amount: Balance) -> Balance {
+    amount * dollar(currency_decimals::MGX)
 }
 
 pub fn kar_amount(amount: Balance) -> Balance {
@@ -102,7 +98,7 @@ pub fn ksm_amount(amount: Balance) -> Balance {
 }
 
 pub fn dollar(decimals: u32) -> Balance {
-	10u128.saturating_pow(decimals.into())
+    10u128.saturating_pow(decimals.into())
 }
 
 pub fn sibling_account() -> AccountId {

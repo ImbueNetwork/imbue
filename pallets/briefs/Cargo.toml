@@ -1,0 +1,82 @@
+[package]
+name = "pallet-briefs"
+authors = ['Imbue <https://github.com/ImbueNetwork>']
+description = "Briefs pallet is used to create a piece of work (briefs) to be done by a freelancer"
+version = '0.1.0'
+license = 'Apache 2.0'
+homepage = 'https://github.com/ImbueNetwork/imbue'
+repository = "https://github.com/ImbueNetwork/imbue"
+edition = '2018'
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+] }
+serde = { version = "1.0.101", default-features=false}
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+
+# local dependancies
+common-traits = { path = "../../libs/common-traits", default-features = false }
+common-types = { path = "../../libs/common-types", default-features = false }
+pallet-proposals = {path= "../proposals", default-features = false }
+pallet-deposits = {path= "../deposits", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+
+[dev-dependencies]
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43" }
+pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+serde = { version = "1.0.101" }
+common-traits = { path = "../../libs/common-traits" }
+common-types = { path = "../../libs/common-types" }
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+pallet-proposals = {path= "../proposals"}
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}
+pallet-deposits = {path= "../deposits"}
+common-runtime = { path = "../../runtime/common"}
+
+[features]
+default = ['std']
+std = [
+	"codec/std",
+	"serde/std",
+	"frame-benchmarking?/std",
+ 	"frame-support/std", 
+	"frame-system/std", 
+	"scale-info/std", 
+	"sp-core/std", 
+	"sp-std/std",
+	"sp-runtime/std", 
+	"sp-io/std",
+	"pallet-balances/std",
+	"pallet-proposals/std",
+	"pallet-identity/std",
+	"pallet-timestamp/std",
+	"common-runtime/std",
+]
+	
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+	"common-runtime/runtime-benchmarks",
+]
+
+try-runtime = ["frame-support/try-runtime"]

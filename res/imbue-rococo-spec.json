@@ -2,11 +2,14 @@
   "name": "imbue rococo-dev testnet",
   "id": "imbue-rococo-dev-testnet",
   "chainType": "Live",
-  "bootNodes": [ 
-    "/ip4/13.59.92.128/tcp/30333/p2p/12D3KooWJp6SAVLsc2aoEAwP3D9ETEcBKW9tvV1ZvfDqXBUw74zQ",
-    "/ip4/3.13.1.191/tcp/30333/p2p/12D3KooWS9zjsa3GMzxX3AueGrRZCHvCsSJwVd91r5kHxUgXReww",
-    "/ip4/3.135.76.127/tcp/30333/p2p/12D3KooWDC3eSCQ9adtSdPUnWLGA1qxS7Th8Ab4NDMnQ8iB3ZdkX",
-    "/ip4/3.139.96.49/tcp/30333/p2p/12D3KooWReR5YCFw7cbS1bVVEr6H1fkbZMNC5S9thuaXz1wizLS1"],
+  "bootNodes": [
+    "/ip4/3.15.205.222/tcp/30333/p2p/12D3KooWN6YqZYsyGKUbagdnomGgDAwDaUZjwjc5HM7z47Vua3sA",
+    "/ip4/3.15.205.222/tcp/31333/p2p/12D3KooWBWudxLGQJxURspWLTAZbno3JfMjbVdokDQoprRFdz4Bt",
+    "/ip4/3.15.205.222/tcp/32333/p2p/12D3KooWLHKb4vNFRCj2B998arS852XqprVEmU1xwuv2PibrvFWJ",
+    "/ip4/52.14.196.149/tcp/30333/p2p/12D3KooWS9zjsa3GMzxX3AueGrRZCHvCsSJwVd91r5kHxUgXReww",
+    "/ip4/3.140.84.14/tcp/30333/p2p/12D3KooWQ6vrxiriYMzqxd7RW7BJRmdGheWW7aJ4wN1YHKYu1BJV",
+    "/ip4/3.18.221.77/tcp/32333/p2p/12D3KooWSmAthU2YayEt2mRmuG3tjScWQsqHoyaCQvgb1z8bi94K"
+  ],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",

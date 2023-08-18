@@ -1,0 +1,66 @@
+[package]
+name = "pallet-crowdfunding"
+version = "0.1.0"
+description = "Used to setup the state for a proposal to morph into a project."
+authors = ['Imbue <https://github.com/ImbueNetwork>']
+homepage = 'https://github.com/ImbueNetwork/imbue'
+edition = "2021"
+license = 'Apache 2.0'
+publish = false
+repository = 'https://github.com/ImbueNetwork/imbue'
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = [
+	"derive",
+] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false}
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false}
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43", default-features = false }
+
+common-types = { path = "../../libs/common-types", default-features = false }
+pallet-proposals = { path= "../proposals", default-features = false}
+pallet-deposits = {path= "../deposits", default-features = false }
+common-runtime = { path = "../../runtime/common"}
+
+[dev-dependencies]
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+pallet-proposals = { path= "../proposals"}
+common-types = { path = "../../libs/common-types"}
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43"}
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}
+pallet-deposits = {path= "../deposits"}
+
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"frame-benchmarking?/std",
+	"frame-support/std",
+	"frame-system/std",
+	"scale-info/std",
+	"pallet-proposals/std",
+	"sp-core/std",
+	"pallet-identity/std",
+	"pallet-xcm/std",
+	"common-runtime/std",
+]
+
+runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks",	"common-runtime/runtime-benchmarks",]
+try-runtime = ["frame-support/try-runtime"]

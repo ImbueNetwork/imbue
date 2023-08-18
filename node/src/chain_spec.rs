@@ -1,4 +1,6 @@
 use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
+use imbue_kusama_runtime::currency::IMBU;
 use imbue_kusama_runtime::{
     AccountId, AuraId, CouncilConfig, CouncilMembershipConfig, DemocracyConfig, Signature,
     TechnicalCommitteeConfig, TechnicalMembershipConfig,
@@ -7,15 +9,13 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use std::convert::TryInto;
-use hex_literal::hex;
-use imbue_kusama_runtime::currency::IMBU;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     AccountId32,
 };
+use std::convert::TryInto;
+use std::str::FromStr;
 
 /// Properties for imbue.
 pub fn imbue_properties() -> Properties {
@@ -30,10 +30,12 @@ pub fn imbue_properties() -> Properties {
 pub type ImbueKusamaChainSpec = sc_service::GenericChainSpec<imbue_kusama_runtime::GenesisConfig>;
 
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+/// The default XCM version to set in genesis config.
+const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
+    TPublic::Pair::from_string(&format!("//{seed}"), None)
         .expect("static values are valid; qed")
         .public()
 }
@@ -67,7 +69,7 @@ where
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
+    TPublic::Pair::from_string(&format!("//{seed}"), None)
         .expect("static values are valid; qed")
         .public()
 }
@@ -82,9 +84,9 @@ pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
 pub fn development_local_config(environment: &str) -> ImbueKusamaChainSpec {
     ImbueKusamaChainSpec::from_genesis(
         // Name
-        format!("imbue {} testnet", environment).as_str(),
+        format!("imbue {environment} testnet").as_str(),
         // ID
-        format!("imbue-{}-testnet", environment).as_str(),
+        format!("imbue-{environment}-testnet").as_str(),
         ChainType::Local,
         move || {
             development_genesis(
@@ -112,9 +114,9 @@ pub fn development_local_config(environment: &str) -> ImbueKusamaChainSpec {
 
 pub fn development_environment_config(environment: &str) -> ImbueKusamaChainSpec {
     ImbueKusamaChainSpec::from_genesis(
-        format!("imbue {} testnet", environment).as_str(),
+        format!("imbue {environment} testnet").as_str(),
         // ID
-        format!("imbue-{}-testnet", environment).as_str(),
+        format!("imbue-{environment}-testnet").as_str(),
         ChainType::Live,
         move || {
             development_genesis(
@@ -130,7 +132,7 @@ pub fn development_environment_config(environment: &str) -> ImbueKusamaChainSpec
                             .into(),
                         hex!["72992197d9d63d698428f1d94354e8ac6aba3a451d666c6bb433e046499a3665"]
                             .unchecked_into(),
-                    )
+                    ),
                 ],
                 endowed_accounts(),
                 Some(200_000_000 * IMBU),
@@ -152,10 +154,10 @@ pub fn development_environment_config(environment: &str) -> ImbueKusamaChainSpec
 }
 
 pub fn imbue_kusama_config() -> ImbueKusamaChainSpec {
-	ImbueKusamaChainSpec::from_json_bytes(
-		&include_bytes!("../../res/genesis/imbue-kusama-raw.json")[..],
-	)
-	.unwrap()
+    ImbueKusamaChainSpec::from_json_bytes(
+        &include_bytes!("../../res/genesis/imbue-kusama-raw.json")[..],
+    )
+    .unwrap()
 }
 
 fn endowed_accounts() -> Vec<AccountId> {
@@ -190,7 +192,9 @@ fn endowed_accounts_local() -> Vec<AccountId> {
     ]
 }
 
-pub fn get_dev_session_keys(keys: imbue_kusama_runtime::AuraId) -> imbue_kusama_runtime::SessionKeys {
+pub fn get_dev_session_keys(
+    keys: imbue_kusama_runtime::AuraId,
+) -> imbue_kusama_runtime::SessionKeys {
     imbue_kusama_runtime::SessionKeys { aura: keys }
 }
 
@@ -231,7 +235,7 @@ fn development_genesis(
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
         },
-        balances: imbue_kusama_runtime::BalancesConfig { balances: balances },
+        balances: imbue_kusama_runtime::BalancesConfig { balances },
         orml_asset_registry: Default::default(),
         orml_tokens: imbue_kusama_runtime::OrmlTokensConfig {
             balances: token_balances,
@@ -250,7 +254,9 @@ fn development_genesis(
             phantom: Default::default(),
         },
         technical_membership: TechnicalMembershipConfig {
-            members: technical_committee_membership.try_into().expect("convert error!"),
+            members: technical_committee_membership
+                .try_into()
+                .expect("convert error!"),
             phantom: Default::default(),
         },
         session: imbue_kusama_runtime::SessionConfig {
@@ -284,5 +290,8 @@ fn development_genesis(
         treasury: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
+        polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig {
+            safe_xcm_version: Some(SAFE_XCM_VERSION),
+        },
     }
 }
