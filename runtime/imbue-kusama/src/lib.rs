@@ -865,7 +865,6 @@ construct_runtime! {
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>} = 1,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 5,
         Treasury: pallet_treasury::{Pallet, Storage, Config, Event<T>, Call} = 6,
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
