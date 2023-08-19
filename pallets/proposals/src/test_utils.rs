@@ -65,12 +65,6 @@ pub fn get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
 }
 
 
-// Not in use agreement_hash: H256,
-refund_locations: Vec<(MultiLocation, Percent)>,
-dispute_handle: DisputeHandle,
-on_creation_funding: FundingPath,
-
-
 // Using the FundingPath::TakeFromReserved create a project for testing funded milestones
 // This will be called in the majority of test cases.
 // IntoProposal assumes that funds have been reserved before calling it.
@@ -83,23 +77,43 @@ pub fn create_and_fund_project<T: Config>(
     contributions.iter().for_each(|(acc, c)| {
         <T as Config>::RMultiCurrency::reserve(currency_id, acc, c.value)?;
     });
-    AccountIdOf<T>,
-    Contribution<BalanceOf<T>, BlockNumberFor<T>>,
+    let agreement_hash: H256 = Default::default();
+    let refund_locations = <Proposals as IntoProposals<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_contributions_to_refund_locations(&contributions.into_inner())?;
     
     // Reserve the assets from the contributors used.
     <Proposals as IntoProposals<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
-        current_contribution,
-        brief_hash,
-        benificiary,
-        milestones,
+        contributions,
+        agreement_hash,
+        beneficiary,
+        proposed_milestones,
         refund_locations,
-        <DisputeHandle as Default>::default(),
+        BoundedVec::new(),
         FundingPath::TakeFromReserved,
     )?;
 }
 
-pub fn create_project_awaiting_funding() {}
+// For testing grants and errors pre funding
+pub fn create_project_awaiting_funding<T: Config>(
+    beneficiary: AccountIdOf<T>,
+    contributions: ContributionsFor<T>,
+    proposed_milestones: Vec<ProposedMilestone>,
+    currency_id: CurrencyId,
+    treasury_account: MultiLocation,
+) {
+    let agreement_hash: H256 = Default::default();
+    // Reserve the assets from the contributors used.
+    <Proposals as IntoProposals<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
+        currency_id,
+        contributions,
+        agreement_hash,
+        beneficiary,
+        proposed_milestones,
+        vec![treasury_account].try_into().expect("one is smaller than bound; qed"),
+        BoundedVec::new(),
+        FundingPath::WaitForFunding,
+    )?;
+}
 
 #[cfg(feature = "runtime-benchmarks")]
 pub fn create_funded_user<T: Config>(
