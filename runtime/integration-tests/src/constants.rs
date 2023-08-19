@@ -1,5 +1,5 @@
 use core::default::Default;
-use polkadot_primitives::v4::{ MAX_CODE_SIZE, MAX_POV_SIZE};
+use polkadot_primitives::v4::{MAX_CODE_SIZE, MAX_POV_SIZE};
 
 use grandpa::AuthorityId as GrandpaId;
 pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
@@ -86,7 +86,6 @@ pub mod accounts {
 
 pub mod collators {
     use super::*;
-
 
     pub fn invulnerables() -> Vec<(AccountId, AuraId)> {
         vec![
@@ -295,9 +294,6 @@ pub mod imbue {
             parachain_system: Default::default(),
             polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig {
                 safe_xcm_version: Some(SAFE_XCM_VERSION),
-            },
-            sudo: imbue_kusama_runtime::SudoConfig {
-                key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
             },
             ..Default::default()
         };
