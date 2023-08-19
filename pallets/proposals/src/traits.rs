@@ -22,13 +22,13 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
         benificiary: AccountId,
         milestones: Vec<ProposedMilestone>,
         refund_locations: Vec<(MultiLocation, Percent)>,
-        dispute_handle: DisputeHandle,
+        jury: Vec<AccountId>,
         on_creation_funding: FundingPath,
     ) -> Result<(), DispatchError>;
 
     /// Convert a btreemap of contributions to multilocations with the Here junction.
     /// Use when the contributors are the refund locations.
-    fn convert_contributions_to_refund_locations(contributions: &BTreeMap<AccountId, Contribution<Balance, BlockNumber>>) -> Vec<(MultiLocation, Percent)>;
+    fn convert_contributions_to_refund_locations(contributions: &BTreeMap<AccountId, Contribution<Balance, BlockNumber>>) -> Result<Vec<(MultiLocation, Percent)>, DispatchError>;
 }
 
 pub trait RefundHandler<AccountId, Balance, CurrencyId> {

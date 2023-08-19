@@ -947,6 +947,56 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
         assert_eq!(Projects::<Test>::get(project_key),None);
         assert_eq!(Rounds::<Test>::get(project_key,RoundType::VoteOfNoConfidence),None);
     });
+
+
+    #[test]
+    fn convert_to_proposal_not_enough_for_storage_deposit() {
+        build_test_externality().execute_with(|| {
+            assert!(false);
+        });
+    }
+
+    #[test]
+    fn convert_to_proposal_too_many_contributions() {
+        build_test_externality().execute_with(|| {
+            assert!(false);
+        });
+    }
+
+    #[test]
+    fn convert_to_proposal_too_many_refund_locations() {
+        build_test_externality().execute_with(|| {
+            assert!(false);
+        });
+    }
+    
+    #[test]
+    fn convert_to_proposal_too_many_jury_members() {
+        build_test_externality().execute_with(|| {
+            assert!(false);
+        });
+    }
+    
+    #[test]
+    fn fund_project_success() {
+        build_test_externality().execute_with(|| {
+            assert!(false);
+        });
+    }   
+
+    #[test]
+    fn fund_project_not_enough_to_reserve() {
+        build_test_externality().execute_with(|| {
+            assert!(false);
+        });
+    }   
+
+    #[test]
+    fn try_convert_to_milestones_too_many_milestones() {
+        build_test_externality().execute_with(|| {
+            assert!(false);
+        });
+    }   
 }
 
 
