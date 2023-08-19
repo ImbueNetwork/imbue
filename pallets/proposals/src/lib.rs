@@ -113,6 +113,8 @@ pub mod pallet {
         type EnsureRole: EnsureRole<AccountIdOf<Self>, Role>;
         /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
+        /// Maximum size of the accounts responsible for handling disputes.
+        type MaximumJurySize: Get<u32>;
     }
 
     #[pallet::pallet]
@@ -281,6 +283,10 @@ pub mod pallet {
         ProjectFundingFailed,
         /// Conversion failed due to an error in milestone conversion (probably a bound has been abused).
         MilestoneConversionFailed,
+        /// This project has too many refund locations.
+        TooManyRefundLocations,
+        /// This project has too many jury members.
+        TooManyJuryMembers,
     }
 
     #[pallet::hooks]
@@ -417,7 +423,7 @@ pub mod pallet {
             benificiary: AccountIdOf<T>,
             proposed_milestones: Vec<ProposedMilestone>,
             refund_locations: Vec<(MultiLocation, Percent)>,
-            dispute_handle: DisputeHandle,
+            jury: Vec<AccountIdOf<T>>,
             on_creation_funding: FundingPath,
         ) -> Result<(), DispatchError> {
             let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
@@ -454,8 +460,8 @@ pub mod pallet {
                 created_on: frame_system::Pallet::<T>::block_number(),
                 cancelled: false,
                 deposit_id,
-                refund_locations: refund_locations.try_into().map_err(|_|Error::<T>::Overflow)?,
-                dispute_handle,
+                refund_locations: refund_locations.try_into().map_err(|_|Error::<T>::TooManyRefundLocations)?,
+                jury.try_into().map_err(||Error::<T>::TooManyJuryMembers)?,
                 on_creation_funding,
             };
 
@@ -473,9 +479,28 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Assumes contributions are on the local chain.
         fn convert_contributions_to_refund_locations(contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>) -> Vec<(MultiLocation, Percent)> {
-            let iterator = contributions.iter();
-            ensure!()
+            let sum_of_contributions = bounded_contributions
+            .values()
+            .fold(Default::default(), |acc: BalanceOf<T>, x| {
+                acc.saturating_add(x.value)
+            });
+            
+            let mut sum_of_percents: Percent = Zero::zero();
+            let ret: Vec<(MultiLocation, Percent)> = contributions.iter().map(|c| {
+                let percent = Percent::from_parts((c.value / sum_of_contributions) as u8 * 100u8);
+                sum_of_percents.saturating_add(percent);
+                // Since these are local we can use MultiLocation::Default;
+                (<MultiLocation as Default>::default(), percent)
+            });
+
+            if sum_of_perents != One::one() {
+                // We are missing a part of the fund so take the remainder and use the treasury as the return address.
+                todo!()
+            }
+            
+            ret             
         }
     }
 }
@@ -540,7 +565,7 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
     }
 }
 
-//TODO: MIGRATION FOR FUNDINGTYPE AND PROJECTCONFIG AND is_funded
+//TODO: MIGRATION FOR refund locations, jury, on_creation_funding
 /// The struct which contain milestones that can be submitted.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
@@ -558,7 +583,7 @@ pub struct Project<T: Config> {
     /// Where do the refunds end up and what percent they get.
     pub refund_locations: BoundedVec<(MultiLocation, Percent), T::MaximumContributorsPerProject>,
     /// Who should deal with disputes.
-    pub dispute_handle: DisputeHandle,
+    pub jury: BoundedVec<AccountId, T::MaximumJurySize>,
     /// When is the project funded and how is it taken.
     pub on_creation_funding: FundingPath,
 }
@@ -589,21 +614,6 @@ impl Default for FundingPath {
     fn default() -> Self {
         Self::TakeFromReserved
     }
-}
-
-// This belogns in pallet-dispute
-pub enum Reason {
-    NoConfidence,
-    NotToRequirement,
-    Other(String)
-}
-
-// This belongs in pallet-dispute
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen, Default)]
-pub enum DisputeHandle {
-    Fellowship,
-    Contributors,
-    Canonical(MultiLocation)
 }
 
 impl Default for DisputeHandle {
