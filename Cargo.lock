@@ -4311,6 +4311,7 @@ dependencies = [
  "pallet-proposals-rpc-runtime-api",
  "pallet-scheduler",
  "pallet-session",
+ "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
