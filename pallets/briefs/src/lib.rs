@@ -294,7 +294,6 @@ pub mod pallet {
                 Ok::<(), DispatchError>(())
             })?;
 
-            //TODO: Dust clearance
             Self::deposit_event(Event::<T>::BriefContribution(who, brief_id));
             Ok(())
         }

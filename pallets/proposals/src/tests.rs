@@ -2,7 +2,6 @@ use frame_support::{assert_noop, assert_ok};
 
 use common_types::CurrencyId;
 use test_utils::*;
-
 use crate::{*, mock::*};
 
 #[test]
@@ -367,6 +366,7 @@ fn withdraw_only_transfers_approved_milestones() {
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], per_contribution);
         let prop_milestones = get_milestones(10);
         let project_key = create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
+        let project_account = crate::Pallet::<Test>::project_account_id(project_key);
         let milestone_key = 0;
         let _ =
             Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
@@ -385,7 +385,6 @@ fn withdraw_only_transfers_approved_milestones() {
             true,
         )
         .unwrap();
-
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(
@@ -401,9 +400,6 @@ fn withdraw_only_transfers_approved_milestones() {
             alice_after, alice_expected_balance,
             "Alice account is not the expected balance"
         );
-
-        let project_account = crate::Pallet::<Test>::project_account_id(project_key);
-
         assert_eq!(
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &project_account),
             180_000,
@@ -950,12 +946,6 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
 }
 
 #[test]
-fn convert_to_proposal_not_enough_for_storage_deposit() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
-#[test]
 fn convert_to_proposal_too_many_contributions() {
     build_test_externality().execute_with(|| {
         assert!(false);
@@ -993,6 +983,27 @@ fn try_convert_to_milestones_too_many_milestones() {
         assert!(false);
     });
 }   
+
+#[test]
+fn try_convert_to_milestones_works() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+#[test]
+fn convert_contributions_to_refund_locations_works() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
+fn convert_contributions_to_refund_locations_uses_treasury_for_dust_clearance() {
+    build_test_externality().execute_with(|| {
+        assert!(false);
+    });
+}
+
 // todo: finalise voteof no confidence tests.
 // ^^ is connected to making the pallet generic over funding type.
 // Todo: assert the last event of each extrinsic/

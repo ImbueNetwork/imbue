@@ -149,6 +149,8 @@ impl<T: Config> Pallet<T> {
         let fee = <T as Config>::ImbueFee::get().mul_floor(withdrawable);
         let withdrawn = withdrawable.saturating_sub(fee);
         let project_account = Self::project_account_id(project_key);
+
+        //TODO: Fee is not taken.
         let pallet_account = Self::account_id();
 
         // Transfer to initiator

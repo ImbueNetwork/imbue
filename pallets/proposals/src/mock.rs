@@ -219,7 +219,6 @@ impl pallet_proposals::Config for Test {
     type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
     type ProjectToVetter = pallet_fellowship::Pallet<Test>;
     type RoleToPercentFee = pallet_fellowship::impls::RoleToPercentFee;
-    type EnsureRole = pallet_fellowship::impls::EnsureFellowshipRole<Self>;
     type MaximumJurySize = MaximumJurySize;
 }
 
@@ -279,6 +278,7 @@ pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
 pub static DAVE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([128u8; 32]));
 pub static JOHN: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([255u8; 32]));
+pub static EMPTY: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([123u8; 32]));
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()

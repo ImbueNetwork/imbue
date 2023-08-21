@@ -110,8 +110,6 @@ pub mod pallet {
         type ProjectToVetter: for<'a> MaybeConvert<&'a AccountIdOf<Self>, VetterIdOf<Self>>;
         /// Turn an account role into a fee percentage. Handled in the fellowship pallet usually.
         type RoleToPercentFee: Convert<Role, Percent>;
-        /// Ensure that an accountId is in a given role.
-        type EnsureRole: EnsureRole<AccountIdOf<Self>, Role>;
         /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
         /// Maximum size of the accounts responsible for handling disputes.
