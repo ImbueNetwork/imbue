@@ -194,6 +194,7 @@ parameter_types! {
     pub ProjectStorageItem: StorageItems = StorageItems::Project;
     pub MaxProjectsPerAccount: u16 = 50;
     pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
+    pub MaximumJurySize: u32 = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -219,7 +220,7 @@ impl pallet_proposals::Config for Test {
     type ProjectToVetter = pallet_fellowship::Pallet<Test>;
     type RoleToPercentFee = pallet_fellowship::impls::RoleToPercentFee;
     type EnsureRole = pallet_fellowship::impls::EnsureFellowshipRole<Self>;
-
+    type MaximumJurySize = MaximumJurySize;
 }
 
 parameter_types! {

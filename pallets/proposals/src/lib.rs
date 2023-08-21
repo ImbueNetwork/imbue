@@ -467,7 +467,7 @@ pub mod pallet {
             };
 
             Projects::<T>::insert(project_key, project);
-            ProjectCount::<T>::mutate(|c| *c = c.saturating_add(1));
+            ProjectCount::<T>::put(project_key);
 
             Self::deposit_event(Event::ProjectCreated(
                 benificiary,

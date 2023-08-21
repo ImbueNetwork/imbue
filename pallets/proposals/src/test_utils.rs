@@ -4,18 +4,18 @@ use crate::Config;
 use crate::Pallet as Proposals;
 use crate::{
     AccountIdOf, BalanceOf, Contribution, ContributionsFor, Milestone, MilestoneKey, Project,
-    ProjectKey, ProposedMilestone,
+    ProjectKey, ProposedMilestone, FundingPath, ProjectCount, BlockNumberFor, MultiLocation, traits::IntoProposal
 };
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, Vec};
-use frame_support::{assert_ok, traits::Hooks};
+use frame_support::{assert_ok, traits::Hooks, BoundedVec};
 use frame_system::EventRecord;
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use pallet_deposits::traits::DepositHandler;
 use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{SaturatedConversion, DispatchError};
 use sp_runtime::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
@@ -75,22 +75,24 @@ pub fn create_and_fund_project<T: Config>(
     currency_id: CurrencyId,
 ) -> Result<ProjectKey, DispatchError> {
     contributions.iter().for_each(|(acc, c)| {
-        <T as Config>::RMultiCurrency::reserve(currency_id, acc, c.value)?;
+        <T as Config>::MultiCurrency::reserve(currency_id, acc, c.value).unwrap();
     });
     let agreement_hash: H256 = Default::default();
-    let refund_locations = <Proposals as IntoProposals<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_contributions_to_refund_locations(&contributions.into_inner())?;
+    let refund_locations = <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_contributions_to_refund_locations(&contributions.clone().into_inner());
     
     // Reserve the assets from the contributors used.
-    <Proposals as IntoProposals<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
+    <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
-        contributions,
+        contributions.into_inner(),
         agreement_hash,
         beneficiary,
         proposed_milestones,
         refund_locations,
-        BoundedVec::new(),
+        Vec::new(),
         FundingPath::TakeFromReserved,
     )?;
+
+    Ok(ProjectCount::<T>::get())
 }
 
 // For testing grants and errors pre funding
@@ -100,19 +102,22 @@ pub fn create_project_awaiting_funding<T: Config>(
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
     treasury_account: MultiLocation,
-) {
+) -> Result<ProjectKey, DispatchError> 
+{
     let agreement_hash: H256 = Default::default();
     // Reserve the assets from the contributors used.
-    <Proposals as IntoProposals<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
+    <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
-        contributions,
+        contributions.into_inner(),
         agreement_hash,
         beneficiary,
         proposed_milestones,
-        vec![treasury_account].try_into().expect("one is smaller than bound; qed"),
-        BoundedVec::new(),
+        vec![(treasury_account, Percent::from_parts(100u8))],
+        Vec::new(),
         FundingPath::WaitForFunding,
     )?;
+
+    Ok(ProjectCount::<T>::get())
 }
 
 #[cfg(feature = "runtime-benchmarks")]
