@@ -41,8 +41,8 @@ pub use frame_support::{
     ensure, parameter_types,
     traits::{
         fungibles, ConstU128, ConstU16, ConstU32, Contains, Currency as PalletCurrency,
-        EnsureOriginWithArg, EqualPrivilegeOnly, Everything, Get, Imbalance, IsInVec, Nothing,
-        OnUnbalanced, Randomness, WithdrawReasons,
+        EitherOfDiverse, EnsureOriginWithArg, EqualPrivilegeOnly, Everything, Get, Imbalance,
+        IsInVec, Nothing, OnUnbalanced, Randomness, WithdrawReasons,
     },
     weights::{
         constants::{
@@ -98,7 +98,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 9430,
+    spec_version: 94301,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -438,7 +438,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
-    type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
     type SetMembersOrigin = MoreThanHalfCouncil;
     type MaxProposalWeight = MaxCollectivesProposalWeight;
@@ -453,7 +453,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
     type MaxMembers = TechCommitteeMaxMembers;
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-    type SetMembersOrigin = MoreThanHalfCouncil;
+    type SetMembersOrigin = MoreThanHalfTechCommittee;
     type MaxProposalWeight = MaxCollectivesProposalWeight;
 }
 
@@ -495,6 +495,12 @@ parameter_types! {
     pub const MaxProposals: u32 = 100;
 }
 
+/// Half of the technical committee can have an `ExternalMajority/ExternalDefault` vote
+/// be tabled immediately and with a shorter voting/enactment period.
+type FastTrackOrigin = EitherOfDiverse<
+    pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 2>,
+    frame_system::EnsureRoot<AccountId>,
+>;
 impl pallet_democracy::Config for Runtime {
     type BlacklistOrigin = EnsureRoot<AccountId>;
     // To cancel a proposal before it has been passed, the technical committee must be unanimous or
@@ -502,7 +508,7 @@ impl pallet_democracy::Config for Runtime {
     type CancelProposalOrigin = HalfOfCouncil;
     type RuntimeEvent = RuntimeEvent;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-    type CancellationOrigin = HalfOfCouncil;
+    type CancellationOrigin = EnsureRootOr<HalfOfCouncil>;
     type CooloffPeriod = CooloffPeriod;
     type Currency = Balances;
     type EnactmentPeriod = EnactmentPeriod;
@@ -513,12 +519,10 @@ impl pallet_democracy::Config for Runtime {
     type ExternalMajorityOrigin = HalfOfCouncil;
     /// A straight majority of the council can decide what their next motion is.
     type ExternalOrigin = HalfOfCouncil;
-    /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
-    /// be tabled immediately and with a shorter voting/enactment period.
-    type FastTrackOrigin = HalfOfCouncil;
+    type FastTrackOrigin = FastTrackOrigin;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     type InstantAllowed = InstantAllowed;
-    type InstantOrigin = HalfOfCouncil;
+    type InstantOrigin = EnsureRootOr<HalfOfCouncil>;
     type LaunchPeriod = LaunchPeriod;
     type MaxProposals = MaxProposals;
     type MaxVotes = MaxVotes;
@@ -579,11 +583,14 @@ impl frame_system::offchain::SigningTypes for Runtime {
     type Signature = Signature;
 }
 
-/// All council members must vote yes to create this origin.
+/// Half of council members must vote yes to create this origin.
 type HalfOfCouncil = EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
+/// Half of TechCommitee members must vote yes to create this origin.
+type HalfOfTechCommittee = EnsureProportionAtLeast<AccountId, TechnicalCommittee, 1, 2>;
 /// A majority of the Unit body from Rococo over XCM is our required administration origin.
 pub type AdminOrigin = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfCouncil = EnsureRootOr<HalfOfCouncil>;
+pub type MoreThanHalfTechCommittee = EnsureRootOr<HalfOfCouncil>;
 
 // pub type MoreThanHalfCouncil = EnsureOneOf<
 // 	EnsureRoot<AccountId>,
