@@ -493,14 +493,15 @@ pub mod pallet {
             let mut sum_of_percents: Percent = Zero::zero();
             let ret: Vec<(MultiLocation, Percent)> = contributions.iter().map(|c| {
                 let percent = Percent::from_rational(c.1.value, sum_of_contributions);
-                sum_of_percents.saturating_add(percent);
+                sum_of_percents = sum_of_percents.saturating_add(percent);
                 // Since these are local we can use MultiLocation::Default;
                 (<MultiLocation as Default>::default(), percent)
             }).collect::<Vec<(MultiLocation, Percent)>>();
 
             if sum_of_percents != One::one() {
                 // We are missing a part of the fund so take the remainder and use the treasury as the return address.
-                todo!()
+                println!(" sum is {:?}", sum_of_percents);
+                println!("difference is {:?}", (<Percent as One>::one() - sum_of_percents));
             }
             
             ret             
