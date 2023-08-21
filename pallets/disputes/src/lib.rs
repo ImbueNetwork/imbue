@@ -14,6 +14,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use traits::DisputeRaiser;
 
+	
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
@@ -53,6 +54,8 @@ pub mod pallet {
         //This error is thrown whenever the dispute key passed doesn't correspond to any dispute
         DisputeDoesNotExist,
         DisputeAlreadyExists,
+		//wrong jury trying to vote
+		InvalidJuryAccount,
     }
 
     #[pallet::call]
@@ -68,20 +71,27 @@ pub mod pallet {
             // ensure caller is part of the jury
             // mutate vote accordingly.
             //TODO only the choosen jury can vote on the disputes?
+			let who = ensure_signed(origin)?;
             let mut dispute =
                 Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+		    ensure!(dispute.jury.iter().any(|e| e == &who),Error::<T>::InvalidJuryAccount);
             let mut vote = dispute.votes;
+
             if is_yay {
                 vote.yay += 1;
             } else {
                 vote.nay += 1;
             }
-
-            //TODO will update the mutated votes into the dispute correct?
+			//updating the votes
+			dispute.votes = vote;
+			//updated the dispute
+			Disputes::insert(dispute_key, dispute);
+		
             //TODO If the votes met the threshold we need to call the refund pallet correct?
 
             Ok(().into())
         }
+
 
         #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::do_something())]
@@ -93,6 +103,7 @@ pub mod pallet {
             Ok(().into())
         }
     }
+
 
     impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
         type DisputeKey = T::DisputeKey;

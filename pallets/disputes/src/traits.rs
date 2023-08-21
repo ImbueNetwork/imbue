@@ -1,6 +1,7 @@
 use codec::{FullEncode, FullCodec, MaxEncodedLen};
+use frame_system::Config;
 use scale_info::TypeInfo;
-use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned};
+use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned, BoundedVec};
 
 
 pub trait DisputeRaiser<AccountId> {
@@ -14,7 +15,7 @@ pub trait DisputeRaiser<AccountId> {
         dispute_key: Self::DisputeKey,
         raised_by: AccountId,
         fund_account: AccountId,
-        reason: Vec<u8>,
+        reason: BoundedVec<u8, <T as Config>::MaxReasonLength>,
         project_id: u32,
         jury: Vec<AccountId>,
     ) -> Result<(), DispatchError>;
