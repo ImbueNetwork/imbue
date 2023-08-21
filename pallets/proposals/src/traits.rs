@@ -1,4 +1,4 @@
-use crate::{AccountIdOf, BalanceOf, Contribution, ProposedMilestone, FundingPath, DisputeHandle};
+use crate::{AccountIdOf, BalanceOf, Contribution, ProposedMilestone, FundingPath};
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
 use frame_support::{inherent::Vec, pallet_prelude::*, transactional, PalletId};
 use orml_traits::XcmTransfer;
@@ -6,7 +6,7 @@ use orml_xtokens::Error;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::collections::btree_map::BTreeMap;
-use sp_arithmetic::Percent;
+use sp_arithmetic::{Percent, traits::AtLeast32BitUnsigned};
 use xcm::latest::{MultiLocation, WeightLimit};
 
 
@@ -28,7 +28,7 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
 
     /// Convert a btreemap of contributions to multilocations with the Here junction.
     /// Use when the contributors are the refund locations.
-    fn convert_contributions_to_refund_locations(contributions: &BTreeMap<AccountId, Contribution<Balance, BlockNumber>>) -> Result<Vec<(MultiLocation, Percent)>, DispatchError>;
+    fn convert_contributions_to_refund_locations(contributions: &BTreeMap<AccountId, Contribution<Balance, BlockNumber>>) -> Vec<(MultiLocation, Percent)>;
 }
 
 pub trait RefundHandler<AccountId, Balance, CurrencyId> {

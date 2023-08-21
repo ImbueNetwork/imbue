@@ -65,9 +65,9 @@ impl<T: Config> Pallet<T> {
             .ok_or(Error::<T>::OnlyContributorsCanVote)?
             .value;
         let now = frame_system::Pallet::<T>::block_number();
-        let voters_bitmap_key = (project_key, RoundType::VotingRound, milestone_key);
+        let user_has_voted_key = (project_key, RoundType::VotingRound, milestone_key);
 
-        UserHasVoted::<T>::try_mutate(voters_bitmap_key, |votes| {
+        UserHasVoted::<T>::try_mutate(user_has_voted_key, |votes| {
             ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
             votes
                 .try_insert(who.clone(), approve_milestone)

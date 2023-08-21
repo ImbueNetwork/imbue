@@ -15,7 +15,7 @@ use pallet_fellowship::{traits::EnsureRole, Role};
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
-use sp_runtime::traits::{AccountIdConversion, Convert, Saturating, Zero};
+use sp_runtime::traits::{AccountIdConversion, Convert, Saturating, Zero, One};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 use xcm::latest::{MultiLocation};
 
@@ -74,6 +74,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config:
         frame_system::Config + pallet_identity::Config + pallet_timestamp::Config
+    
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -461,7 +462,7 @@ pub mod pallet {
                 cancelled: false,
                 deposit_id,
                 refund_locations: refund_locations.try_into().map_err(|_|Error::<T>::TooManyRefundLocations)?,
-                jury.try_into().map_err(||Error::<T>::TooManyJuryMembers)?,
+                jury: jury.try_into().map_err(|_|Error::<T>::TooManyJuryMembers)?,
                 on_creation_funding,
             };
 
@@ -479,9 +480,11 @@ pub mod pallet {
             Ok(())
         }
 
+        // TODO: TEST
+        /// SAFETY: Does no check on the bounds of the Map so ensure a bound before.
         /// Assumes contributions are on the local chain.
-        fn convert_contributions_to_refund_locations(contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>) -> Vec<(MultiLocation, Percent)> {
-            let sum_of_contributions = bounded_contributions
+        fn convert_contributions_to_refund_locations(contributions: &BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>) -> Vec<(MultiLocation, Percent)> {
+            let sum_of_contributions = contributions
             .values()
             .fold(Default::default(), |acc: BalanceOf<T>, x| {
                 acc.saturating_add(x.value)
@@ -489,13 +492,13 @@ pub mod pallet {
             
             let mut sum_of_percents: Percent = Zero::zero();
             let ret: Vec<(MultiLocation, Percent)> = contributions.iter().map(|c| {
-                let percent = Percent::from_parts((c.value / sum_of_contributions) as u8 * 100u8);
+                let percent = Percent::from_rational(c.1.value, sum_of_contributions);
                 sum_of_percents.saturating_add(percent);
                 // Since these are local we can use MultiLocation::Default;
                 (<MultiLocation as Default>::default(), percent)
-            });
+            }).collect::<Vec<(MultiLocation, Percent)>>();
 
-            if sum_of_perents != One::one() {
+            if sum_of_percents != One::one() {
                 // We are missing a part of the fund so take the remainder and use the treasury as the return address.
                 todo!()
             }
@@ -583,7 +586,7 @@ pub struct Project<T: Config> {
     /// Where do the refunds end up and what percent they get.
     pub refund_locations: BoundedVec<(MultiLocation, Percent), T::MaximumContributorsPerProject>,
     /// Who should deal with disputes.
-    pub jury: BoundedVec<AccountId, T::MaximumJurySize>,
+    pub jury: BoundedVec<AccountIdOf<T>, T::MaximumJurySize>,
     /// When is the project funded and how is it taken.
     pub on_creation_funding: FundingPath,
 }
@@ -606,23 +609,12 @@ pub struct Whitelist<AccountId, Balance> {
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen, Default)]
 pub enum FundingPath {
+    #[default]
     TakeFromReserved,
     WaitForFunding,
 }
 
-impl Default for FundingPath {
-    fn default() -> Self {
-        Self::TakeFromReserved
-    }
-}
-
-impl Default for DisputeHandle {
-    fn default() -> Self {
-        Self::Fellowship
-    }
-}
-
-pub trait WeightInfoT {
+    pub trait WeightInfoT {
     fn submit_milestone() -> Weight;
     fn vote_on_milestone() -> Weight;
     fn withdraw() -> Weight;
