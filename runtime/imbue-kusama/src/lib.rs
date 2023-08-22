@@ -41,8 +41,8 @@ pub use frame_support::{
     ensure, parameter_types,
     traits::{
         fungibles, ConstU128, ConstU16, ConstU32, Contains, Currency as PalletCurrency,
-        EnsureOriginWithArg, EqualPrivilegeOnly, Everything, Get, Imbalance, IsInVec, Nothing,
-        OnUnbalanced, Randomness, WithdrawReasons,
+        EitherOfDiverse, EnsureOriginWithArg, EqualPrivilegeOnly, Everything, Get, Imbalance,
+        IsInVec, Nothing, OnUnbalanced, Randomness, WithdrawReasons,
     },
     weights::{
         constants::{
@@ -264,12 +264,6 @@ impl pallet_transaction_payment::Config for Runtime {
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
-impl pallet_sudo::Config for Runtime {
-    type RuntimeCall = RuntimeCall;
-    type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
-}
-
 parameter_types! {
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
@@ -438,7 +432,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
     type MotionDuration = CouncilMotionDuration;
     type MaxProposals = CouncilMaxProposals;
     type MaxMembers = CouncilMaxMembers;
-    type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
     type SetMembersOrigin = MoreThanHalfCouncil;
     type MaxProposalWeight = MaxCollectivesProposalWeight;
@@ -453,7 +447,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
     type MaxMembers = TechCommitteeMaxMembers;
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-    type SetMembersOrigin = MoreThanHalfCouncil;
+    type SetMembersOrigin = MoreThanHalfTechCommittee;
     type MaxProposalWeight = MaxCollectivesProposalWeight;
 }
 
@@ -495,6 +489,12 @@ parameter_types! {
     pub const MaxProposals: u32 = 100;
 }
 
+/// Half of the technical committee can have an `ExternalMajority/ExternalDefault` vote
+/// be tabled immediately and with a shorter voting/enactment period.
+type FastTrackOrigin = EitherOfDiverse<
+    pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 2>,
+    frame_system::EnsureRoot<AccountId>,
+>;
 impl pallet_democracy::Config for Runtime {
     type BlacklistOrigin = EnsureRoot<AccountId>;
     // To cancel a proposal before it has been passed, the technical committee must be unanimous or
@@ -502,7 +502,7 @@ impl pallet_democracy::Config for Runtime {
     type CancelProposalOrigin = HalfOfCouncil;
     type RuntimeEvent = RuntimeEvent;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-    type CancellationOrigin = HalfOfCouncil;
+    type CancellationOrigin = EnsureRootOr<HalfOfCouncil>;
     type CooloffPeriod = CooloffPeriod;
     type Currency = Balances;
     type EnactmentPeriod = EnactmentPeriod;
@@ -513,12 +513,10 @@ impl pallet_democracy::Config for Runtime {
     type ExternalMajorityOrigin = HalfOfCouncil;
     /// A straight majority of the council can decide what their next motion is.
     type ExternalOrigin = HalfOfCouncil;
-    /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
-    /// be tabled immediately and with a shorter voting/enactment period.
-    type FastTrackOrigin = HalfOfCouncil;
+    type FastTrackOrigin = FastTrackOrigin;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     type InstantAllowed = InstantAllowed;
-    type InstantOrigin = HalfOfCouncil;
+    type InstantOrigin = EnsureRootOr<HalfOfCouncil>;
     type LaunchPeriod = LaunchPeriod;
     type MaxProposals = MaxProposals;
     type MaxVotes = MaxVotes;
@@ -579,16 +577,12 @@ impl frame_system::offchain::SigningTypes for Runtime {
     type Signature = Signature;
 }
 
-/// All council members must vote yes to create this origin.
+/// Half of council members must vote yes to create this origin.
 type HalfOfCouncil = EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
 /// A majority of the Unit body from Rococo over XCM is our required administration origin.
 pub type AdminOrigin = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfCouncil = EnsureRootOr<HalfOfCouncil>;
-
-// pub type MoreThanHalfCouncil = EnsureOneOf<
-// 	EnsureRoot<AccountId>,
-// 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
-// >;
+pub type MoreThanHalfTechCommittee = EnsureRootOr<HalfOfCouncil>;
 
 // Parameterize collator selection pallet
 parameter_types! {
@@ -871,7 +865,7 @@ construct_runtime! {
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>} = 1,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
-        Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
+        // Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 5,
         Treasury: pallet_treasury::{Pallet, Storage, Config, Event<T>, Call} = 6,
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
