@@ -199,7 +199,7 @@ pub fn get_dev_session_keys(
 }
 
 fn development_genesis(
-    root_key: AccountId,
+    _root_key: AccountId,
     initial_authorities: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
     total_issuance: Option<imbue_kusama_runtime::Balance>,

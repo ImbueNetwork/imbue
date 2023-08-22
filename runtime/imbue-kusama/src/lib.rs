@@ -579,17 +579,10 @@ impl frame_system::offchain::SigningTypes for Runtime {
 
 /// Half of council members must vote yes to create this origin.
 type HalfOfCouncil = EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
-/// Half of TechCommitee members must vote yes to create this origin.
-type HalfOfTechCommittee = EnsureProportionAtLeast<AccountId, TechnicalCommittee, 1, 2>;
 /// A majority of the Unit body from Rococo over XCM is our required administration origin.
 pub type AdminOrigin = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfCouncil = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfTechCommittee = EnsureRootOr<HalfOfCouncil>;
-
-// pub type MoreThanHalfCouncil = EnsureOneOf<
-// 	EnsureRoot<AccountId>,
-// 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
-// >;
 
 // Parameterize collator selection pallet
 parameter_types! {
