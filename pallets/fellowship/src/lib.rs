@@ -1,3 +1,16 @@
+// The Imbue fellowship pallet is used as a way of creating a community of internally approved members.
+// One must be of a specific role to add accounts to a shortlist, anyone with the correct authority can remove them from the shortlist.
+// After T::ShortlistPeriod blocks the shortlist will attempt to take the membership deposit from the accounts on the list.
+// If the deposit is taken they are successfully added to the fellowship with a default rank.
+// If the deposit is not taken they are added to PendingFellows where they can pay the deposit later to claim their fellowship.
+
+// DEBT: 
+// For the force add extrinsics, the Treasury account is used to take the deposit from. 
+// - This actually makes no sense at all as if the fellow is slashed the deposit will probably go back to the treasury.... 
+// Therefore its not a disincentive anymore.
+
+// Future development: How to deal with ranks + promotions.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
 
@@ -60,8 +73,8 @@ pub mod pallet {
         /// The deposit currency id that is taken
         type DepositCurrencyId: Get<CurrencyId>;
         /// Currently just send all slash deposits to a single account.
-        /// TODO: use OnUnbalanced.
         type SlashAccount: Get<AccountIdOf<Self>>;
+
         type TreasuryAccount: Get<AccountIdOf<Self>>;
         type WeightInfo: WeightInfo;
     }
@@ -91,12 +104,6 @@ pub mod pallet {
     pub type FellowshipReserves<T> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, OptionQuery>;
     
-    /// Keeps track of the deposits taken from a fellow that were funded by the treasury.
-    /// Needed incase the reserve amount will change.
-    #[pallet::storage]
-    pub type TreasuryReserves<T> =
-        StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, OptionQuery>;
-
     /// Keeps track of the accounts a fellow has recruited.
     /// Can be used to pay out completion fees.
     #[pallet::storage]
@@ -338,24 +345,24 @@ pub mod pallet {
             role: Role,
             rank: Rank,
             vetter: Option<&VetterIdOf<T>>,
+            take_membership_deposit: bool,
         ) -> Result<(), DispatchError> {
             // If they aleady have a role then dont reserve as the reservation has already been taken.
             // This would only happen if a role was changed.
             if !Roles::<T>::contains_key(who) {
-                let membership_deposit = <T as Config>::MembershipDeposit::get();
-                if let Ok(_) = <T as Config>::MultiCurrency::reserve(
-                    T::DepositCurrencyId::get(),
-                    who,
-                    membership_deposit,
-                ) {
-                    FellowshipReserves::<T>::insert(who, membership_deposit);
-                    Roles::<T>::insert(who, (role, rank));
+                if take_membership_deposit {
+                    if Self::try_take_deposit(who) {
+                        Roles::<T>::insert(who, (role, rank));
+                    } else {
+                        PendingFellows::<T>::insert(who, (role, rank));
+                        Self::deposit_event(Event::<T>::MemberAddedToPendingFellows {
+                            who: who.clone(),
+                        });
+                    }
                 } else {
-                    PendingFellows::<T>::insert(who, (role, rank));
-                    Self::deposit_event(Event::<T>::MemberAddedToPendingFellows {
-                        who: who.clone(),
-                    });
+                    Roles::<T>::insert(who, (role, rank));
                 }
+
                 if let Some(v) = vetter {
                     FellowToVetter::<T>::insert(who, v);
                 }
@@ -385,30 +392,19 @@ pub mod pallet {
 
             // Deposits are only taken when a role is assigned
             if has_role {
-                let mut deposit_amount: BalanceOf<T> = T::MembershipDeposit::get();
-                let mut return_address: AccountIdOf<T> = T::TreasuryAccount::get();
-
-                if let Some(b) = TreasuryReserves::<T>::get(&who) {
-                    deposit_amount = b;
-                } else {
-                    deposit_amount = FellowshipReserves::<T>::get(&who).ok_or(Error::<T>::FellowshipReserveDisapeared)?;
-                    return_address = who.clone();
-                }
-
-                if slash_deposit {
-                    let _imbalance = <T as Config>::MultiCurrency::repatriate_reserved(
-                        CurrencyId::Native,
-                        &return_address,
-                        &<T as Config>::SlashAccount::get(),
-                        deposit_amount,
-                        BalanceStatus::Free,
-                    )?;
-                } else {
+                if let Some(deposit_amount) = FellowshipReserves::<T>::get(&who) {
                     <T as Config>::MultiCurrency::unreserve(
                         CurrencyId::Native,
-                        &return_address,
+                        &who,
                         deposit_amount,
                     );
+                    if slash_deposit {
+                        <T as Config>::MultiCurrency::transfer(
+                            CurrencyId::Native,
+                            &<T as Config>::SlashAccount::get(),
+                            deposit_amount,
+                        );
+                    }
                 }
             }
             Ok(())

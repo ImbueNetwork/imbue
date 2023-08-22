@@ -571,3 +571,18 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
         );
     });
 }
+
+#[test]
+fn on_initialize_adds_to_fellowship_from_shortlist() {
+    new_test_ext().execute_with(|| {
+        assert(false)
+    });
+}
+
+
+#[test]
+fn on_initialize_doesnt_add_removed_shortlist_members() {
+    new_test_ext().execute_with(|| {
+        assert(false)
+    });
+}

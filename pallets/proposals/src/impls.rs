@@ -414,12 +414,16 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-
     // TODO: test
     /// Try and fund a project based on its FundingPath.
     /// If the funds have actually been transferred this will return and Ok(true)
     /// If the funds have not been transferred (i.e awaiting funding) then it will return Ok(false)
-    pub(crate) fn fund_project<'a>(funding_path: &'a FundingPath, contributions: &'a BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>, project_account_id: &'a T::AccountId, currency_id: CurrencyId) -> Result<bool, DispatchError> {
+    pub(crate) fn fund_project<'a>(
+        funding_path: &'a FundingPath,
+        contributions: &'a BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
+        project_account_id: &'a T::AccountId,
+        currency_id: CurrencyId,
+    ) -> Result<bool, DispatchError> {
         match *funding_path {
             FundingPath::TakeFromReserved => {
                 for (acc, cont) in contributions.iter() {
@@ -434,18 +438,18 @@ impl<T: Config> Pallet<T> {
                     )?;
                 }
                 Ok(true)
-            },
-            FundingPath::WaitForFunding => {
-                Ok(false)
             }
+            FundingPath::WaitForFunding => Ok(false),
         }
     }
-
 
     // TODO: Test
     /// Try and convert some proposed milestones to milestones.
     /// Fails when the MaxMilestones bound is not respected
-    pub(crate) fn try_convert_to_milestones(proposed_milestones: Vec<ProposedMilestone>, project_key: ProjectKey) -> Result<BoundedBTreeMilestones<T>, DispatchError> {
+    pub(crate) fn try_convert_to_milestones(
+        proposed_milestones: Vec<ProposedMilestone>,
+        project_key: ProjectKey,
+    ) -> Result<BoundedBTreeMilestones<T>, DispatchError> {
         let mut milestone_key: u32 = 0;
         let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
         for milestone in proposed_milestones {

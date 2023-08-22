@@ -20,6 +20,7 @@ pub trait FellowshipHandle<AccountId> {
         role: Self::Role,
         rank: Self::Rank,
         vetter: Option<&AccountId>,
+        take_membership_deposit: bool,
     ) -> Result<(), DispatchError>;
     fn revoke_fellowship(who: &AccountId, slash_deposit: bool) -> Result<(), DispatchError>;
 }

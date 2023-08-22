@@ -15,9 +15,9 @@ use pallet_fellowship::{traits::EnsureRole, Role};
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
-use sp_runtime::traits::{AccountIdConversion, Convert, Saturating, Zero, One};
+use sp_runtime::traits::{AccountIdConversion, Convert, One, Saturating, Zero};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
-use xcm::latest::{MultiLocation};
+use xcm::latest::MultiLocation;
 
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
@@ -74,7 +74,6 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config:
         frame_system::Config + pallet_identity::Config + pallet_timestamp::Config
-    
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -436,18 +435,26 @@ pub mod pallet {
 
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
             // todo: Error handling here can be improved.
-            let is_funded = Self::fund_project(&on_creation_funding, &contributions, &project_account_id, currency_id).map_err(|_|Error::<T>::ProjectFundingFailed)?;
-            let converted_milestones = Self::try_convert_to_milestones(proposed_milestones, project_key).map_err(|_|Error::<T>::MilestoneConversionFailed)?;
+            let is_funded = Self::fund_project(
+                &on_creation_funding,
+                &contributions,
+                &project_account_id,
+                currency_id,
+            )
+            .map_err(|_| Error::<T>::ProjectFundingFailed)?;
+            let converted_milestones =
+                Self::try_convert_to_milestones(proposed_milestones, project_key)
+                    .map_err(|_| Error::<T>::MilestoneConversionFailed)?;
             let bounded_contributions: ContributionsFor<T> = contributions
                 .try_into()
                 .map_err(|_| Error::<T>::TooManyContributions)?;
 
             let sum_of_contributions = bounded_contributions
-            .values()
-            .fold(Default::default(), |acc: BalanceOf<T>, x| {
-                acc.saturating_add(x.value)
-            });
-            
+                .values()
+                .fold(Default::default(), |acc: BalanceOf<T>, x| {
+                    acc.saturating_add(x.value)
+                });
+
             let project: Project<T> = Project {
                 agreement_hash,
                 milestones: converted_milestones,
@@ -459,8 +466,12 @@ pub mod pallet {
                 created_on: frame_system::Pallet::<T>::block_number(),
                 cancelled: false,
                 deposit_id,
-                refund_locations: refund_locations.try_into().map_err(|_|Error::<T>::TooManyRefundLocations)?,
-                jury: jury.try_into().map_err(|_|Error::<T>::TooManyJuryMembers)?,
+                refund_locations: refund_locations
+                    .try_into()
+                    .map_err(|_| Error::<T>::TooManyRefundLocations)?,
+                jury: jury
+                    .try_into()
+                    .map_err(|_| Error::<T>::TooManyJuryMembers)?,
                 on_creation_funding,
             };
 
@@ -481,28 +492,36 @@ pub mod pallet {
         // TODO: TEST
         /// SAFETY: Does no check on the bounds of the Map so ensure a bound before.
         /// Assumes contributions are on the local chain.
-        fn convert_contributions_to_refund_locations(contributions: &BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>) -> Vec<(MultiLocation, Percent)> {
+        fn convert_contributions_to_refund_locations(
+            contributions: &BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
+        ) -> Vec<(MultiLocation, Percent)> {
             let sum_of_contributions = contributions
-            .values()
-            .fold(Default::default(), |acc: BalanceOf<T>, x| {
-                acc.saturating_add(x.value)
-            });
-            
+                .values()
+                .fold(Default::default(), |acc: BalanceOf<T>, x| {
+                    acc.saturating_add(x.value)
+                });
+
             let mut sum_of_percents: Percent = Zero::zero();
-            let ret: Vec<(MultiLocation, Percent)> = contributions.iter().map(|c| {
-                let percent = Percent::from_rational(c.1.value, sum_of_contributions);
-                sum_of_percents = sum_of_percents.saturating_add(percent);
-                // Since these are local we can use MultiLocation::Default;
-                (<MultiLocation as Default>::default(), percent)
-            }).collect::<Vec<(MultiLocation, Percent)>>();
+            let ret: Vec<(MultiLocation, Percent)> = contributions
+                .iter()
+                .map(|c| {
+                    let percent = Percent::from_rational(c.1.value, sum_of_contributions);
+                    sum_of_percents = sum_of_percents.saturating_add(percent);
+                    // Since these are local we can use MultiLocation::Default;
+                    (<MultiLocation as Default>::default(), percent)
+                })
+                .collect::<Vec<(MultiLocation, Percent)>>();
 
             if sum_of_percents != One::one() {
                 // We are missing a part of the fund so take the remainder and use the treasury as the return address.
                 println!(" sum is {:?}", sum_of_percents);
-                println!("difference is {:?}", (<Percent as One>::one() - sum_of_percents));
+                println!(
+                    "difference is {:?}",
+                    (<Percent as One>::one() - sum_of_percents)
+                );
             }
-            
-            ret             
+
+            ret
         }
     }
 }
@@ -613,7 +632,7 @@ pub enum FundingPath {
     WaitForFunding,
 }
 
-    pub trait WeightInfoT {
+pub trait WeightInfoT {
     fn submit_milestone() -> Weight;
     fn vote_on_milestone() -> Weight;
     fn withdraw() -> Weight;

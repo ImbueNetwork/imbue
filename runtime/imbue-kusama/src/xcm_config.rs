@@ -1,7 +1,6 @@
 use crate::{AllPalletsWithSystem, Balances, ConstU32};
 use frame_system::EnsureRoot;
-use sp_runtime::traits::{Convert};
-
+use sp_runtime::traits::Convert;
 
 // A few exports that help ease life for downstream crates.
 pub use common_runtime::{
@@ -271,7 +270,6 @@ impl pallet_xcm::Config for Runtime {
     type AdminOrigin = EnsureRoot<AccountId>;
     type MaxRemoteLockConsumers = ConstU32<0>;
     type RemoteLockConsumerIdentifier = ();
-
 }
 
 impl orml_xcm::Config for Runtime {
@@ -465,5 +463,3 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
         .into()
     }
 }
-
-

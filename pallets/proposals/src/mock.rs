@@ -264,7 +264,7 @@ impl pallet_fellowship::Config for Test {
     type MembershipDeposit = MembershipDeposit;
     type SlashAccount = SlashAccount;
     type DepositCurrencyId = DepositCurrencyId;
-    type TreasuryAccount = SlashAccount;  
+    type TreasuryAccount = SlashAccount;
     type WeightInfo = ();
 }
 

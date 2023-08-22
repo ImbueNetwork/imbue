@@ -3,8 +3,9 @@
 use crate::Config;
 use crate::Pallet as Proposals;
 use crate::{
-    AccountIdOf, BalanceOf, Contribution, ContributionsFor, Milestone, MilestoneKey, Project,
-    ProjectKey, ProposedMilestone, FundingPath, ProjectCount, BlockNumberFor, MultiLocation, traits::IntoProposal
+    traits::IntoProposal, AccountIdOf, BalanceOf, BlockNumberFor, Contribution, ContributionsFor,
+    FundingPath, Milestone, MilestoneKey, MultiLocation, Project, ProjectCount, ProjectKey,
+    ProposedMilestone,
 };
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
@@ -15,8 +16,8 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use pallet_deposits::traits::DepositHandler;
 use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
-use sp_runtime::{SaturatedConversion, DispatchError};
 use sp_runtime::Saturating;
+use sp_runtime::{DispatchError, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber) {
@@ -64,7 +65,6 @@ pub fn get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
     get_milestones(<T as Config>::MaxMilestonesPerProject::get() as u8)
 }
 
-
 // Using the FundingPath::TakeFromReserved create a project for testing funded milestones
 // This will be called in the majority of test cases.
 // IntoProposal assumes that funds have been reserved before calling it.
@@ -78,8 +78,14 @@ pub fn create_and_fund_project<T: Config>(
         <T as Config>::MultiCurrency::reserve(currency_id, acc, c.value).unwrap();
     });
     let agreement_hash: H256 = Default::default();
-    let refund_locations = <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_contributions_to_refund_locations(&contributions.clone().into_inner());
-    
+    let refund_locations = <Proposals<T> as IntoProposal<
+        AccountIdOf<T>,
+        BalanceOf<T>,
+        BlockNumberFor<T>,
+    >>::convert_contributions_to_refund_locations(
+        &contributions.clone().into_inner()
+    );
+
     // Reserve the assets from the contributors used.
     <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
@@ -102,8 +108,7 @@ pub fn create_project_awaiting_funding<T: Config>(
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
     treasury_account: MultiLocation,
-) -> Result<ProjectKey, DispatchError> 
-{
+) -> Result<ProjectKey, DispatchError> {
     let agreement_hash: H256 = Default::default();
     // Reserve the assets from the contributors used.
     <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
