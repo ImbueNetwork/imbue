@@ -51,7 +51,6 @@ pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-preimage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false  }
-pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate",  default-features = false, features = ["historical"] , branch = "polkadot-v0.9.43" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
@@ -155,7 +154,6 @@ std = [
 	"pallet-multisig/std",
 	'pallet-timestamp/std',
 	'pallet-scheduler/std',
-	'pallet-sudo/std',
 	'pallet-utility/std',
 	'pallet-vesting/std',
 	'pallet-transaction-payment/std',

@@ -238,9 +238,6 @@ fn development_genesis(
         },
         balances: imbue_kusama_runtime::BalancesConfig { balances },
         orml_asset_registry: Default::default(),
-        sudo: imbue_kusama_runtime::SudoConfig {
-            key: Some(root_key),
-        },
         orml_tokens: imbue_kusama_runtime::OrmlTokensConfig {
             balances: token_balances,
         },

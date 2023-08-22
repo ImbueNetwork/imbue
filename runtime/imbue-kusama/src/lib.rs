@@ -98,7 +98,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 94301,
+    spec_version: 9430,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -262,12 +262,6 @@ impl pallet_transaction_payment::Config for Runtime {
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
-}
-
-impl pallet_sudo::Config for Runtime {
-    type RuntimeCall = RuntimeCall;
-    type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -878,7 +872,7 @@ construct_runtime! {
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>} = 1,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
-        Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
+        // Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 5,
         Treasury: pallet_treasury::{Pallet, Storage, Config, Event<T>, Call} = 6,
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
