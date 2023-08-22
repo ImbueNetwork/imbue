@@ -295,9 +295,6 @@ pub mod imbue {
             polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig {
                 safe_xcm_version: Some(SAFE_XCM_VERSION),
             },
-            sudo: imbue_kusama_runtime::SudoConfig {
-                key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
-            },
             ..Default::default()
         };
 
