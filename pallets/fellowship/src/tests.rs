@@ -633,6 +633,32 @@ fn on_initialize_doesnt_add_removed_shortlist_members() {
     });
 }
 
+
+#[test]
+fn on_initialize_cleans_storage_for_next_round() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(Fellowship::force_add_fellowship(
+            RuntimeOrigin::root(),
+            *ALICE,
+            Role::Freelancer,
+            10
+        ));
+        assert_ok!(Fellowship::add_candidate_to_shortlist(
+            RuntimeOrigin::signed(*ALICE),
+            *CHARLIE,
+            Role::Vetter,
+            10
+        ));
+        let pre_shortlist_round_key = ShortlistRound::<Test>::get();
+        assert!(CandidateShortlist::<Test>::get(pre_shortlist_round_key).iter().len() == 1);
+        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get());
+        
+        let post_shortlist_round_key = ShortlistRound::<Test>::get();
+        assert_eq!(post_shortlist_round_key, pre_shortlist_round_key + 1);
+        assert!(CandidateShortlist::<Test>::get(post_shortlist_round_key).iter().len() == 0);
+    });
+}
+
 #[test]
 fn e2e() {
     new_test_ext().execute_with(|| {
