@@ -591,7 +591,20 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
 #[test]
 fn on_initialize_adds_to_fellowship_from_shortlist() {
     new_test_ext().execute_with(|| {
-        assert!(false)
+        assert_ok!(Fellowship::force_add_fellowship(
+            RuntimeOrigin::root(),
+            *ALICE,
+            Role::Freelancer,
+            10
+        ));
+        assert_ok!(Fellowship::add_candidate_to_shortlist(
+            RuntimeOrigin::signed(*ALICE),
+            *CHARLIE,
+            Role::Vetter,
+            10
+        ));
+        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get());
+        assert_eq!(Roles::<Test>::get(&*CHARLIE).unwrap(), (Role::Vetter, 10));
     });
 }
 
@@ -599,7 +612,24 @@ fn on_initialize_adds_to_fellowship_from_shortlist() {
 #[test]
 fn on_initialize_doesnt_add_removed_shortlist_members() {
     new_test_ext().execute_with(|| {
-        assert!(false)
+        assert_ok!(Fellowship::force_add_fellowship(
+            RuntimeOrigin::root(),
+            *ALICE,
+            Role::Freelancer,
+            10
+        ));
+        assert_ok!(Fellowship::add_candidate_to_shortlist(
+            RuntimeOrigin::signed(*ALICE),
+            *CHARLIE,
+            Role::Vetter,
+            10
+        ));
+        assert_ok!(Fellowship::remove_candidate_from_shortlist(
+            RuntimeOrigin::signed(*ALICE),
+            *CHARLIE,
+        ));
+        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get());
+        assert!(Roles::<Test>::get(&*CHARLIE).is_none());
     });
 }
 
