@@ -1,11 +1,10 @@
 use crate::impls::*;
 use crate::traits::*;
-use crate::Pallet as FellowshipI;
 use crate::*;
 use crate::{mock::*, Error, Event, FellowToVetter, Role, Roles};
 use common_traits::MaybeConvert;
 use common_types::CurrencyId;
-use frame_support::{assert_noop, assert_ok, once_cell::sync::Lazy, BoundedBTreeMap};
+use frame_support::{assert_noop, assert_ok, once_cell::sync::Lazy, BoundedBTreeMap, traits::Hooks};
 use frame_system::Pallet as System;
 use orml_tokens::Error as TokensError;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -13,24 +12,41 @@ use sp_core::sr25519::Public;
 use sp_runtime::{
     traits::BadOrigin,
     DispatchError,
+    Saturating,
 };
+use sp_arithmetic::traits::One;
 use sp_std::vec;
 
 // Saves a bit of typing.
-type Fellowship = FellowshipI<Test>;
 pub(crate) static DEP_CURRENCY: Lazy<CurrencyId> =
     Lazy::new(|| <Test as Config>::DepositCurrencyId::get());
-fn add_to_fellowship(
+fn add_to_fellowship_take_deposit(
     who: &AccountIdOf<Test>,
     role: Role,
     rank: Rank,
     vetter: Option<&VetterIdOf<Test>>,
 ) -> Result<(), DispatchError> {
-    <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::add_to_fellowship(who, role, rank, vetter)
+    <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::add_to_fellowship(who, role, rank, vetter, true);
+    Ok(())
 }
 
 fn revoke_fellowship(who: &AccountIdOf<Test>, slash_deposit: bool) -> Result<(), DispatchError> {
     <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::revoke_fellowship(who, slash_deposit)
+}
+
+pub fn run_to_block<T: Config>(n: T::BlockNumber)
+where T::BlockNumber: Into<u64>
+{
+    loop {
+        let mut block: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+        if block >= n {
+            break;
+        }
+        block = block.saturating_add(<T::BlockNumber as One>::one());
+        frame_system::Pallet::<T>::set_block_number(block);
+        frame_system::Pallet::<T>::on_initialize(block);
+        Fellowship::on_initialize(block.into());
+    }
 }
 
 #[test]
@@ -214,7 +230,7 @@ fn add_to_fellowship_takes_deposit_if_avaliable() {
     new_test_ext().execute_with(|| {
         let alice_reserved_before =
             <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
-        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, None).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, None).is_ok());
         let alice_reserved_after =
             <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
         assert_eq!(
@@ -234,7 +250,7 @@ fn add_to_fellowship_adds_to_pending_fellows_where_deposit_fails() {
             &ALICE,
             free - minimum + minimum
         ));
-        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, None).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, None).is_ok());
         assert_eq!(
             PendingFellows::<Test>::get(*ALICE)
                 .expect("Pending fellows should have the account inserted."),
@@ -254,7 +270,7 @@ fn add_to_fellowship_adds_to_pending_fellows_assert_event() {
             free - minimum + minimum,
         )
         .unwrap();
-        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, None).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, None).is_ok());
         System::<Test>::assert_last_event(
             Event::<Test>::MemberAddedToPendingFellows { who: *ALICE }.into(),
         );
@@ -264,7 +280,7 @@ fn add_to_fellowship_adds_to_pending_fellows_assert_event() {
 #[test]
 fn add_to_fellowship_adds_vetter_if_exists() {
     new_test_ext().execute_with(|| {
-        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
         assert_eq!(FellowToVetter::<Test>::get(&*ALICE).unwrap(), *BOB);
     });
 }
@@ -272,9 +288,9 @@ fn add_to_fellowship_adds_vetter_if_exists() {
 #[test]
 fn add_to_fellowship_edits_role_if_exists_already() {
     new_test_ext().execute_with(|| {
-        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
         assert_eq!(Roles::<Test>::get(&*ALICE).unwrap(), (Role::Freelancer, 10));
-        assert!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&BOB)).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Vetter, 5, Some(&BOB)).is_ok());
         assert_eq!(Roles::<Test>::get(&*ALICE).unwrap(), (Role::Vetter, 5));
     });
 }
@@ -282,8 +298,8 @@ fn add_to_fellowship_edits_role_if_exists_already() {
 #[test]
 fn add_to_fellowship_maintains_vetter_if_exists_already() {
     new_test_ext().execute_with(|| {
-        assert!(add_to_fellowship(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
-        assert!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
         assert_eq!(FellowToVetter::<Test>::get(&*ALICE).unwrap(), *BOB);
     });
 }
@@ -301,7 +317,7 @@ fn revoke_fellowship_unreserves_if_deposit_taken_no_slash() {
     new_test_ext().execute_with(|| {
         let alice_reserved_before =
             <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
-        assert!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
         assert_ok!(revoke_fellowship(&ALICE, false));
         let alice_reserved_after =
             <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
@@ -317,7 +333,7 @@ fn revoke_fellowship_slashes_if_deposit_taken() {
     new_test_ext().execute_with(|| {
         let alice_reserved_before =
             <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
-        assert!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
         assert_ok!(revoke_fellowship(&ALICE, true));
         let alice_reserved_after =
             <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
@@ -336,7 +352,7 @@ fn revoke_fellowship_with_slash_goes_to_slash_account() {
             *DEP_CURRENCY,
             &<Test as Config>::SlashAccount::get(),
         );
-        assert!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
+        assert!(add_to_fellowship_take_deposit(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
         assert_ok!(revoke_fellowship(&ALICE, true));
         let slash_after = <Test as Config>::MultiCurrency::free_balance(
             *DEP_CURRENCY,
@@ -368,8 +384,8 @@ fn add_candidate_to_shortlist_not_a_vetter() {
 #[test]
 fn add_candidate_to_shortlist_already_fellow() {
     new_test_ext().execute_with(|| {
-        assert_ok!(add_to_fellowship(&ALICE, Role::Vetter, 5, Some(&CHARLIE)));
-        assert_ok!(add_to_fellowship(&BOB, Role::Freelancer, 5, Some(&CHARLIE)));
+        assert_ok!(add_to_fellowship_take_deposit(&ALICE, Role::Vetter, 5, Some(&CHARLIE)));
+        assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Freelancer, 5, Some(&CHARLIE)));
         assert_noop!(
             Fellowship::add_candidate_to_shortlist(
                 RuntimeOrigin::signed(*ALICE),
@@ -385,7 +401,7 @@ fn add_candidate_to_shortlist_already_fellow() {
 #[test]
 fn add_candidate_to_shortlist_candidate_lacks_deposit_fails() {
     new_test_ext().execute_with(|| {
-        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Vetter, 5, None));
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
         let _ = <Test as Config>::MultiCurrency::withdraw(
@@ -409,7 +425,7 @@ fn add_candidate_to_shortlist_candidate_lacks_deposit_fails() {
 #[test]
 fn add_candidate_to_shortlist_candidate_already_on_shortlist() {
     new_test_ext().execute_with(|| {
-        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Vetter, 5, None));
         assert_ok!(Fellowship::add_candidate_to_shortlist(
             RuntimeOrigin::signed(*BOB),
             *ALICE,
@@ -431,7 +447,7 @@ fn add_candidate_to_shortlist_candidate_already_on_shortlist() {
 #[test]
 fn add_candidate_to_shortlist_too_many_candidates() {
     new_test_ext().execute_with(|| {
-        assert_ok!(add_to_fellowship(&CHARLIE, Role::Vetter, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(&CHARLIE, Role::Vetter, 5, None));
         let mut shortlist: BoundedShortlistPlaces<Test> = BoundedBTreeMap::new();
         (0..<Test as Config>::MaxCandidatesPerShortlist::get()).for_each(|i| {
             shortlist
@@ -456,7 +472,7 @@ fn add_candidate_to_shortlist_too_many_candidates() {
 #[test]
 fn add_candidate_to_shortlist_works_assert_event() {
     new_test_ext().execute_with(|| {
-        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Vetter, 5, None));
         assert_ok!(Fellowship::add_candidate_to_shortlist(
             RuntimeOrigin::signed(*BOB),
             *ALICE,
@@ -472,7 +488,7 @@ fn add_candidate_to_shortlist_works_assert_event() {
 #[test]
 fn remove_candidate_from_shortlist_not_a_vetter() {
     new_test_ext().execute_with(|| {
-        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Vetter, 5, None));
         assert_ok!(Fellowship::add_candidate_to_shortlist(
             RuntimeOrigin::signed(*BOB),
             *ALICE,
@@ -490,7 +506,7 @@ fn remove_candidate_from_shortlist_not_a_vetter() {
 #[test]
 fn remove_candidate_from_shortlist_works_assert_event() {
     new_test_ext().execute_with(|| {
-        assert_ok!(add_to_fellowship(&BOB, Role::Vetter, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Vetter, 5, None));
         assert_ok!(Fellowship::add_candidate_to_shortlist(
             RuntimeOrigin::signed(*BOB),
             *ALICE,
@@ -533,7 +549,7 @@ fn pay_deposit_and_remove_pending_status_not_enough_funds_to_reserve() {
             free - minimum + minimum,
         )
         .unwrap();
-        assert_ok!(add_to_fellowship(&ALICE, Role::Freelancer, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 5, None));
         assert_noop!(
             Fellowship::pay_deposit_to_remove_pending_status(RuntimeOrigin::signed(*ALICE)),
             TokensError::<Test>::BalanceTooLow
@@ -552,7 +568,7 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
             free - minimum + minimum,
         )
         .unwrap();
-        assert_ok!(add_to_fellowship(&ALICE, Role::Freelancer, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 5, None));
         let _ = <Test as Config>::MultiCurrency::deposit(
             *DEP_CURRENCY,
             &ALICE,
@@ -575,7 +591,7 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
 #[test]
 fn on_initialize_adds_to_fellowship_from_shortlist() {
     new_test_ext().execute_with(|| {
-        assert(false)
+        assert!(false)
     });
 }
 
@@ -583,6 +599,57 @@ fn on_initialize_adds_to_fellowship_from_shortlist() {
 #[test]
 fn on_initialize_doesnt_add_removed_shortlist_members() {
     new_test_ext().execute_with(|| {
-        assert(false)
+        assert!(false)
     });
 }
+
+#[test]
+fn e2e() {
+    new_test_ext().execute_with(|| {
+        // force add some vetters to for clarity of state
+        assert_ok!(Fellowship::force_add_fellowship(
+            RuntimeOrigin::root(),
+            *ALICE,
+            Role::Freelancer,
+            10
+        ));
+        assert_ok!(Fellowship::force_add_fellowship(
+            RuntimeOrigin::root(),
+            *BOB,
+            Role::Vetter,
+            10
+        ));
+
+        // Add multiple people to the shortlist using multiple vetters/freelancers
+        assert_ok!(Fellowship::add_candidate_to_shortlist(
+            RuntimeOrigin::signed(*ALICE),
+            *CHARLIE,
+            Role::Vetter,
+            10
+        ));
+
+        // Bypass the usual requirement of deposit so we can test the e2e for PendingFellows
+        assert_ok!(<Test as Config>::MultiCurrency::deposit(CurrencyId::Native, &*EMPTY, <Test as Config>::MembershipDeposit::get() * 2));
+        assert_ok!(Fellowship::add_candidate_to_shortlist(
+            RuntimeOrigin::signed(*BOB),
+            *EMPTY,
+            Role::Freelancer,
+            10
+        ));
+        assert_ok!(<Test as Config>::MultiCurrency::withdraw(CurrencyId::Native, &*EMPTY, <Test as Config>::MembershipDeposit::get() + 100));
+        
+        // wait for blocks to pass 
+        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get());
+
+        // ensure they are part of the fellowships or if without funds the pending fellows.
+        assert_eq!(PendingFellows::<Test>::get(&*EMPTY).unwrap(), (Role::Freelancer, 10));
+        assert_eq!(Roles::<Test>::get(&*CHARLIE).unwrap(), (Role::Vetter, 10));
+
+        // Deposit the required funds and pay.
+        assert_ok!(<Test as Config>::MultiCurrency::deposit(CurrencyId::Native, &*EMPTY, <Test as Config>::MembershipDeposit::get() * 2));
+        assert_ok!(Fellowship::pay_deposit_to_remove_pending_status(RuntimeOrigin::signed(*EMPTY)));
+        assert_eq!(Roles::<Test>::get(&*EMPTY).unwrap(), (Role::Freelancer, 10));
+    });
+}
+
+

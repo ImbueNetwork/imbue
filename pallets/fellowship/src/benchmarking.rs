@@ -14,9 +14,8 @@ benchmarks! {
       let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
       let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
   }: {
-    <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob));
+    <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
   }
-
     impl_benchmark_test_suite!(Fellowship, crate::mock::new_test_ext(), crate::mock::Test);
 }
 

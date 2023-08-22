@@ -6898,6 +6898,7 @@ dependencies = [
  "orml-traits",
  "parity-scale-codec 3.6.2",
  "scale-info 2.8.0",
+ "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",

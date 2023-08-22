@@ -1,12 +1,13 @@
 use crate::traits::EnsureRole;
 use crate::*;
 use common_traits::MaybeConvert;
-use frame_support::ensure;
+use frame_support::{ensure, traits::Get};
 use sp_runtime::{
     traits::{BadOrigin, Convert},
     DispatchError, Percent,
 };
 use sp_std::vec::Vec;
+use orml_traits::MultiReservableCurrency;
 
 /// Ensure that a account is of a given role.
 /// Used in other pallets like an ensure origin.
@@ -61,7 +62,7 @@ impl Convert<crate::Role, Percent> for RoleToPercentFee {
 impl<T: Config> Pallet<T> {
     /// Try take the membership deposit from who
     /// If the deposit was taken, this will return true, else false.
-    fn try_take_deposit(who: &AccountIdOf<T>) -> bool {
+    pub(crate) fn try_take_deposit(who: &AccountIdOf<T>) -> bool {
         let membership_deposit = <T as Config>::MembershipDeposit::get();
         if let Ok(_) = <T as Config>::MultiCurrency::reserve(
             T::DepositCurrencyId::get(),

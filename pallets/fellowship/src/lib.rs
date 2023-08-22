@@ -164,7 +164,7 @@ pub mod pallet {
                     .iter()
                     .for_each(|(acc, ((role, rank), maybe_vetter))| {
                         weight = weight.saturating_add(T::WeightInfo::add_to_fellowship());
-                        let _ = Self::add_to_fellowship(acc, *role, *rank, maybe_vetter.as_ref());
+                        Self::add_to_fellowship(acc, *role, *rank, maybe_vetter.as_ref(), true);
                     });
 
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
@@ -189,17 +189,7 @@ pub mod pallet {
             rank: Rank,
         ) -> DispatchResult {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
-            if !Roles::<T>::contains_key(&who) {
-                let membership_deposit = <T as Config>::MembershipDeposit::get();
-                let _ = <T as Config>::MultiCurrency::reserve(
-                    T::DepositCurrencyId::get(),
-                    &T::TreasuryAccount::get(),
-                    membership_deposit,
-                ).map_err(|_|Error::<T>::TreasuryAccountIsEmpty)?;
-
-                TreasuryReserves::<T>::insert(&who, membership_deposit);
-            }
-            Roles::<T>::insert(&who, (role, rank));
+            <Self as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&who, role, rank, None, false);
             Self::deposit_event(Event::<T>::FellowshipAdded { who: who.clone(), role });
             Ok(().into())
         }
@@ -346,7 +336,7 @@ pub mod pallet {
             rank: Rank,
             vetter: Option<&VetterIdOf<T>>,
             take_membership_deposit: bool,
-        ) -> Result<(), DispatchError> {
+        ) {
             // If they aleady have a role then dont reserve as the reservation has already been taken.
             // This would only happen if a role was changed.
             if !Roles::<T>::contains_key(who) {
@@ -369,8 +359,6 @@ pub mod pallet {
             } else {
                 Roles::<T>::insert(who, (role, rank));
             }
-
-            Ok(())
         }
 
         /// Does no check on the Origin of the call.
@@ -395,15 +383,16 @@ pub mod pallet {
                 if let Some(deposit_amount) = FellowshipReserves::<T>::get(&who) {
                     <T as Config>::MultiCurrency::unreserve(
                         CurrencyId::Native,
-                        &who,
+                        who,
                         deposit_amount,
                     );
                     if slash_deposit {
                         <T as Config>::MultiCurrency::transfer(
                             CurrencyId::Native,
+                            who,
                             &<T as Config>::SlashAccount::get(),
                             deposit_amount,
-                        );
+                        )?;
                     }
                 }
             }
