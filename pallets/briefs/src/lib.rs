@@ -25,7 +25,9 @@ mod migrations;
 #[frame_support::pallet]
 pub mod pallet {
     use common_types::{milestone_origin::FundingType, CurrencyId};
-    use frame_support::{pallet_prelude::*, sp_runtime::Saturating, traits::Get, BoundedBTreeMap, weights::Weight};
+    use frame_support::{
+        pallet_prelude::*, sp_runtime::Saturating, traits::Get, weights::Weight, BoundedBTreeMap,
+    };
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
@@ -60,7 +62,7 @@ pub mod pallet {
     pub type BriefHash = H256;
 
     #[pallet::pallet]
-       pub struct Pallet<T>(_);
+    pub struct Pallet<T>(_);
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -410,7 +412,4 @@ pub mod pallet {
         fn commence_work() -> Weight;
         fn cancel_brief() -> Weight;
     }
-    
 }
-
-
