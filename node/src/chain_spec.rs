@@ -199,7 +199,7 @@ pub fn get_dev_session_keys(
 }
 
 fn development_genesis(
-    _root_key: AccountId,
+    root_key: AccountId,
     initial_authorities: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
     total_issuance: Option<imbue_kusama_runtime::Balance>,
@@ -238,6 +238,9 @@ fn development_genesis(
         },
         balances: imbue_kusama_runtime::BalancesConfig { balances },
         orml_asset_registry: Default::default(),
+        sudo: imbue_kusama_runtime::SudoConfig {
+            key: Some(root_key),
+        },
         orml_tokens: imbue_kusama_runtime::OrmlTokensConfig {
             balances: token_balances,
         },

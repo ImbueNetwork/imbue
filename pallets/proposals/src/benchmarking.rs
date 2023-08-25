@@ -41,7 +41,8 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn vote_on_milestone() {
+    fn vote_on_milestone()
+    {
         let alice: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
@@ -71,7 +72,8 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn withdraw() {
+    fn withdraw()
+    {
         let alice: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
@@ -114,14 +116,11 @@ mod benchmarks {
 
         #[extrinsic_call]
         withdraw(RawOrigin::Signed(alice.clone()), project_key);
-        assert_last_event::<T>(
-            Event::<T>::ProjectFundsWithdrawn(alice, project_key, withdrawn, CurrencyId::Native)
-                .into(),
-        );
+        assert_last_event::<T>(Event::<T>::ProjectFundsWithdrawn(alice, project_key, withdrawn, CurrencyId::Native).into());
     }
 
     #[benchmark]
-    fn raise_vote_of_no_confidence() {
+    fn raise_vote_of_no_confidence(){
         let alice: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
@@ -141,7 +140,8 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn vote_on_no_confidence_round() {
+    fn vote_on_no_confidence_round()
+    {
         let alice: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
@@ -173,20 +173,16 @@ mod benchmarks {
 
     // Benchmark for a single loop of on_initialise as a voting round (most expensive).
     #[benchmark]
-    fn on_initialize() {
+    fn on_initialize()
+    {
         let block_number: <T as frame_system::Config>::BlockNumber = 100u32.into();
-        let keys: BoundedVec<
-            (ProjectKey, RoundType, MilestoneKey),
-            <T as Config>::ExpiringProjectRoundsPerBlock,
-        > = vec![(0, RoundType::VotingRound, 0)]
-            .try_into()
-            .expect("bound will be larger than 1;");
+        let keys: BoundedVec<(ProjectKey, RoundType, MilestoneKey), <T as Config>::ExpiringProjectRoundsPerBlock>  = vec![(0, RoundType::VotingRound, 0)].try_into().expect("bound will be larger than 1;");
 
         RoundsExpiring::<T>::insert(block_number, keys);
         #[block]
-        {
+		{
             crate::Pallet::<T>::on_initialize(block_number);
-        }
+		}
     }
 
     impl_benchmark_test_suite!(

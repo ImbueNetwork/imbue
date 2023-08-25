@@ -264,6 +264,12 @@ impl pallet_transaction_payment::Config for Runtime {
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
+impl pallet_sudo::Config for Runtime {
+    type RuntimeCall = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
+
 parameter_types! {
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
@@ -502,7 +508,7 @@ impl pallet_democracy::Config for Runtime {
     type CancelProposalOrigin = HalfOfCouncil;
     type RuntimeEvent = RuntimeEvent;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-    type CancellationOrigin = EnsureRootOr<HalfOfCouncil>;
+    type CancellationOrigin = HalfOfCouncil;
     type CooloffPeriod = CooloffPeriod;
     type Currency = Balances;
     type EnactmentPeriod = EnactmentPeriod;
@@ -513,7 +519,9 @@ impl pallet_democracy::Config for Runtime {
     type ExternalMajorityOrigin = HalfOfCouncil;
     /// A straight majority of the council can decide what their next motion is.
     type ExternalOrigin = HalfOfCouncil;
-    type FastTrackOrigin = FastTrackOrigin;
+    /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
+    /// be tabled immediately and with a shorter voting/enactment period.
+    type FastTrackOrigin = HalfOfCouncil;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     type InstantAllowed = InstantAllowed;
     type InstantOrigin = EnsureRootOr<HalfOfCouncil>;
@@ -577,12 +585,17 @@ impl frame_system::offchain::SigningTypes for Runtime {
     type Signature = Signature;
 }
 
-/// Half of council members must vote yes to create this origin.
+/// All council members must vote yes to create this origin.
 type HalfOfCouncil = EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
 /// A majority of the Unit body from Rococo over XCM is our required administration origin.
 pub type AdminOrigin = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfCouncil = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfTechCommittee = EnsureRootOr<HalfOfCouncil>;
+
+// pub type MoreThanHalfCouncil = EnsureOneOf<
+// 	EnsureRoot<AccountId>,
+// 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
+// >;
 
 // Parameterize collator selection pallet
 parameter_types! {
@@ -865,7 +878,7 @@ construct_runtime! {
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>} = 1,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
-        // Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
+        Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 5,
         Treasury: pallet_treasury::{Pallet, Storage, Config, Event<T>, Call} = 6,
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,

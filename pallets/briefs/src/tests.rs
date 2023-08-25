@@ -11,6 +11,7 @@ use sp_arithmetic::per_things::Percent;
 
 use std::convert::TryInto;
 
+
 #[test]
 fn create_brief_not_approved_applicant() {
     build_test_externality().execute_with(|| {

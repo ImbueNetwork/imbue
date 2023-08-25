@@ -3,7 +3,7 @@ use frame_support::{assert_noop, assert_ok};
 use common_types::CurrencyId;
 use test_utils::*;
 
-use crate::{mock::*, *};
+use crate::{*, mock::*};
 
 #[test]
 fn submit_milestone_milestone_doesnt_exist() {
@@ -897,10 +897,11 @@ fn vote_on_no_confidence_mutates_vote() {
     });
 }
 
+
 #[test]
 fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *DAVE, *CHARLIE, *ALICE], 100_000);
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE,*CHARLIE,*ALICE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
 
@@ -939,22 +940,15 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
             "Not all the votes has been recorded"
         );
         assert!(
-            has_voted.contains_key(&BOB)
-                || has_voted.contains_key(&DAVE)
-                || has_voted.contains_key(&ALICE)
-                || has_voted.contains_key(&CHARLIE),
+            has_voted.contains_key(&BOB) || has_voted.contains_key(&DAVE) || has_voted.contains_key(&ALICE) || has_voted.contains_key(&CHARLIE)  ,
             "Bob,Alice,Dave charlie have voted."
         );
-        assert_last_event::<Test>(
-            Event::<Test>::NoConfidenceRoundFinalised(*ALICE, project_key).into(),
-        );
-        assert_eq!(Projects::<Test>::get(project_key), None);
-        assert_eq!(
-            Rounds::<Test>::get(project_key, RoundType::VoteOfNoConfidence),
-            None
-        );
+        assert_last_event::<Test>(Event::<Test>::NoConfidenceRoundFinalised(*ALICE, project_key).into());
+        assert_eq!(Projects::<Test>::get(project_key),None);
+        assert_eq!(Rounds::<Test>::get(project_key,RoundType::VoteOfNoConfidence),None);
     });
 }
+
 
 // todo: finalise voteof no confidence tests.
 // ^^ is connected to making the pallet generic over funding type.
