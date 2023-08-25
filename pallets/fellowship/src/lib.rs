@@ -172,7 +172,7 @@ pub mod pallet {
         /// Force add someone to the fellowship. This is required to be called by the ForceOrigin
         /// WARNING: No deposit is taken for force adds.
         #[pallet::call_index(0)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::force_add_fellowship())]
         pub fn force_add_fellowship(
             origin: OriginFor<T>,
             who: AccountIdOf<T>,
@@ -188,7 +188,7 @@ pub mod pallet {
         /// Remove the account from the fellowship,
         /// Called by the fellow and returns the deposit to them.
         #[pallet::call_index(1)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::leave_fellowship())]
         pub fn leave_fellowship(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             // TODO??: ensure that the fellow is not currently in a dispute.
@@ -199,7 +199,7 @@ pub mod pallet {
 
         /// Force remove a fellow and slashed their deposit as defined in the Config.
         #[pallet::call_index(2)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::force_remove_and_slash_fellowship())]
         pub fn force_remove_and_slash_fellowship(
             origin: OriginFor<T>,
             who: AccountIdOf<T>,
@@ -214,7 +214,7 @@ pub mod pallet {
         /// The caller must be of type Vetter or Freelancer to add to a shortlist.
         /// Also the candidate must already have the minimum deposit required.
         #[pallet::call_index(3)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::add_candidate_to_shortlist())]
         pub fn add_candidate_to_shortlist(
             origin: OriginFor<T>,
             candidate: AccountIdOf<T>,
@@ -262,7 +262,7 @@ pub mod pallet {
         /// Remove a candidate from the shortlist.
         /// The caller must have a role of either Vetter or Freelancer.
         #[pallet::call_index(4)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::remove_candidate_from_shortlist())]
         pub fn remove_candidate_from_shortlist(
             origin: OriginFor<T>,
             candidate: AccountIdOf<T>,
@@ -291,7 +291,7 @@ pub mod pallet {
         /// added to the PendingFellows, calling this allows them to attempt to take the deposit and
         /// become a fellow.
         #[pallet::call_index(5)]
-        #[pallet::weight(10_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::pay_deposit_to_remove_pending_status())]
         pub fn pay_deposit_to_remove_pending_status(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let (role, rank) = PendingFellows::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
