@@ -49,17 +49,11 @@ fn transfer_treasury_to_parachain_grant_escrow_address() {
     });
 
     Kusama::execute_with(|| {
+        // First we ensure the treasury has enough balance to transfer
         assert_ok!(kusama_runtime::Balances::force_set_balance(
             kusama_runtime::RuntimeOrigin::root(),
             kusama_treasury_address.clone().into(),
             transfer_amount.saturating_mul(10)
-        ));
-
-        assert_ok!(kusama_runtime::Balances::force_transfer(
-            kusama_runtime::RuntimeOrigin::root(),
-            kusama_treasury_address.clone().into(),
-            get_para_id_development_account().into(),
-            transfer_amount
         ));
 
         let call = Box::new(kusama_runtime::RuntimeCall::XcmPallet(
