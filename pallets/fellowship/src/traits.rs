@@ -39,8 +39,8 @@ pub trait EnsureRole<AccountId, Role> {
     ) -> Result<Self::Success, DispatchError>;
 }
 
-pub trait WeightInfoT<T: Config> {
-    fn force_add_fellowship() -> Weight;
+pub trait WeightInfoT {
+    fn add_to_fellowship() -> Weight;
     fn force_add_fellowship() -> Weight;
     fn leave_fellowship() -> Weight;
     fn force_remove_and_slash_fellowship() -> Weight;

@@ -17,6 +17,7 @@ use sp_std::{convert::TryInto, str, vec::Vec};
     <T as frame_system::Config>::AccountId: AsRef<[u8]>,
     <T as frame_system::Config>::BlockNumber: From<u32>,
 )]
+
 mod benchmarks {
     use super::*;
 
@@ -51,7 +52,7 @@ mod benchmarks {
         let prop_milestones = get_max_milestones::<T>();
         let project_key = create_project::<T>(
             alice.clone(),
-            contributions,
+    z        contributions,
             prop_milestones,
             CurrencyId::Native,
         );

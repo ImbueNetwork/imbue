@@ -200,17 +200,9 @@ fn force_add_fellowship_then_leave_fellowship_maintains_fellow_reserve() {
 }
 
 #[test]
-fn force_add_fellowship_then_leave_fellowship_takes_from_treasury_no_slash() {
+fn force_add_fellowship_then_leave_fellowship_takes_no_deposit() {
     new_test_ext().execute_with(|| {
-        let t_reserved_before =
-            <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &<Test as Config>::TreasuryAccount::get());
-        let _ =
-            Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10)
-                .expect("qed");
-        assert_ok!(Fellowship::leave_fellowship(RuntimeOrigin::signed(*ALICE)));
-        let t_reserved_after =
-            <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &<Test as Config>::TreasuryAccount::get());
-        assert_eq!(t_reserved_before, t_reserved_after);
+        assert!(false);
     });
 }
 

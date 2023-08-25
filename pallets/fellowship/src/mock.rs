@@ -79,7 +79,6 @@ impl pallet_fellowship::Config for Test {
     type MembershipDeposit = MembershipDeposit;
     type DepositCurrencyId = DepositCurrencyId;
     type SlashAccount = SlashAccount;
-    type TreasuryAccount = TreasuryAccount;
     type WeightInfo = ();
 }
 
@@ -136,4 +135,30 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
     });
     ext
+}
+
+use frame_support::pallet_prelude::Weight;
+impl crate::traits::WeightInfoT for () {
+    
+    fn add_to_fellowship() -> Weight {
+        <Weight as Default>::default() 
+    }
+    fn force_add_fellowship() -> Weight {
+        <Weight as Default>::default() 
+    }
+    fn leave_fellowship() -> Weight {
+        <Weight as Default>::default() 
+    }
+    fn force_remove_and_slash_fellowship() -> Weight {
+        <Weight as Default>::default() 
+    }
+    fn add_candidate_to_shortlist() -> Weight {
+        <Weight as Default>::default() 
+    }
+    fn remove_candidate_from_shortlist() -> Weight {
+        <Weight as Default>::default() 
+    }
+    fn pay_deposit_to_remove_pending_status() -> Weight {
+        <Weight as Default>::default() 
+    }
 }
