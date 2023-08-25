@@ -12,28 +12,15 @@
 // GNU General Public License for more details.
 use frame_support::assert_ok;
 use frame_support::dispatch::RawOrigin;
-// use kusama_runtime::governance::pallet_custom_origins::Origin;
-use kusama_runtime::OriginCaller::{Origins, ParachainsOrigin};
-use kusama_runtime::Runtime;
-use xcm_emulator::{bx, AccountId, TestExt};
 
-use xcm::latest::{
-    Junction, Junction::*, Junctions::*, MultiAsset, MultiAssets, MultiLocation, NetworkId,
-};
+use xcm_emulator::{bx, TestExt};
+
+use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
 
 use common_runtime::{common_xcm::general_key, parachains};
 
 use crate::constants::accounts::get_para_id_development_account;
-use crate::constants::{
-    xcm::{
-        v3::prelude::{
-            BuyExecution, DepositAsset, ReserveAssetDeposited, SetFeesMode, TransferReserveAsset,
-        },
-        v3::Xcm,
-        VersionedMultiLocation, VersionedXcm,
-    },
-    SAFE_XCM_VERSION,
-};
+use crate::constants::SAFE_XCM_VERSION;
 use crate::kusama_test_net::{
     Development, ImbueKusamaReceiver, ImbueKusamaSender, Kusama, KusamaReceiver, KusamaSender,
     Sibling, SiblingKusamaReceiver,
@@ -46,10 +33,6 @@ use imbue_kusama_runtime::{
 };
 use orml_traits::MultiCurrency;
 use pallet_proposals::traits::RefundHandler;
-use polkadot_runtime_parachains::inclusion::UmpQueueId::Para;
-use polkadot_runtime_parachains::paras::ParachainOrigin;
-use xcm::prelude::{AllCounted, Concrete, Fungible, Limited, Wild};
-use xcm::v3::Weight;
 
 #[test]
 fn transfer_treasury_to_parachain_grant_escrow_address() {
