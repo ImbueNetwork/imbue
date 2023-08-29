@@ -21,5 +21,12 @@ pub trait DisputeHooks<DisputeKey> {
     // Outcome
     // handle the completed dispute
     fn on_dispute_complete() -> ();
+    fn on_dispute_cancel() -> ();
+}
+
+enum Outcome {
+    Refund, 
+    ContinueNormally,
+    Slash
 }
 

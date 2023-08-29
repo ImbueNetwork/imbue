@@ -29,6 +29,7 @@ use frame_support::pallet_prelude::*;
 		type MaxJurySize: Get<u32>;
 		type DisputeHooks: traits::DisputeHooks;
 		type TimeLimit: Get<<Self as frame_system::Config>::BlockNumber>;
+		type CancellingAuthority: EnsureOrigin<Self::RuntimeOrigin>;
 	}
 
 	#[pallet::storage]
@@ -68,7 +69,15 @@ use frame_support::pallet_prelude::*;
 			// get dispute struct
 			// ensure caller is part of the jury
 			// mutate vote accordingly.
-			//TODO only the choosen jury can vote on the disputes?
+			
+			// FELIX_REVIEW: use mutate instead and throw error if not found.
+			// TODO: only the choosen jury can vote on the disputes?
+			//Disputes::<T>::try_mutate(|dispute_key|{
+			//	let
+
+			// Ok::<(), DispatchError>();
+			//})?;
+
 			let mut dispute = Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
 			let mut vote = dispute.votes;
 			if is_yay{
@@ -78,10 +87,8 @@ use frame_support::pallet_prelude::*;
 				vote.nay +=1;
 			}
 
-
+			// emit event
 			//TODO will update the mutated votes into the dispute correct?
-			//TODO If the votes met the threshold we need to call the refund pallet correct?
-			
 			Ok(().into())
 		}
 
@@ -92,7 +99,10 @@ use frame_support::pallet_prelude::*;
 			dispute_key: T::DisputeKey,
 			is_yay: bool,
 		) -> DispatchResult {
-
+			// check origin is of authority origin using associated type
+			// remove the dispute.
+			// call DisputeHooks::on_dispute_cancelled()
+			// emit event
 			Ok(().into())
 		}
 	}
