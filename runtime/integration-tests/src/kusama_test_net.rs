@@ -13,13 +13,13 @@
 
 //! Relay chain and parachains emulation.
 
-use cumulus_primitives_core::ParaId;
-use frame_support::{traits::GenesisBuild, weights::Weight};
-pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
 
-use polkadot_primitives::v4::{ MAX_CODE_SIZE, MAX_POV_SIZE};
-use polkadot_runtime_parachains::configuration::HostConfiguration;
-use sp_runtime::traits::AccountIdConversion;
+
+pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
+use crate::constants::SAFE_XCM_VERSION;
+
+
+
 use xcm_emulator::{
 	decl_test_networks, decl_test_parachains, decl_test_relay_chains, Parachain, RelayChain,
 	TestExt,
@@ -27,10 +27,10 @@ use xcm_emulator::{
 pub use sp_core::{sr25519, storage::Storage, Get};
 use xcm::prelude::*;
 use crate::constants::{imbue,kusama, accounts::{ALICE,BOB, CHARLIE, DAVE, EVE, FERDIE}};
-use imbue_kusama_runtime::CurrencyId;
+
 use frame_support::{parameter_types, sp_io, sp_tracing};
 use crate::setup::{
-    ksm_amount, native_amount, ExtBuilder, PARA_ID_DEVELOPMENT, PARA_ID_KARURA,
+    PARA_ID_DEVELOPMENT,
     PARA_ID_SIBLING,
 };
 use xcm_executor::traits::Convert;
@@ -38,7 +38,31 @@ use xcm_builder::test_utils::XcmHash;
 decl_test_relay_chains! {
 	pub struct Kusama {
 		genesis = kusama::genesis(),
-		on_init = (),
+		on_init = (
+			// kusama_runtime::XcmPallet::force_default_xcm_version(
+            // kusama_runtime::RuntimeOrigin::root(),
+            // Some(SAFE_XCM_VERSION)),
+			//
+			// kusama_runtime::XcmPallet::force_xcm_version(
+            // kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_SIBLING)))),
+            // SAFE_XCM_VERSION),
+			//
+			// kusama_runtime::XcmPallet::force_xcm_version(
+            // kusama_runtime::RuntimeOrigin::root(),
+            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_DEVELOPMENT)))),
+            // SAFE_XCM_VERSION),
+
+			kusama_runtime::XcmPallet::force_xcm_version(
+            kusama_runtime::RuntimeOrigin::root(),
+            Box::new(MultiLocation::new(0, X1(Parachain(PARA_ID_SIBLING)))),
+            SAFE_XCM_VERSION),
+
+			kusama_runtime::XcmPallet::force_xcm_version(
+            kusama_runtime::RuntimeOrigin::root(),
+            Box::new(MultiLocation::new(0, X1(Parachain(PARA_ID_DEVELOPMENT)))),
+            SAFE_XCM_VERSION),
+		),
 		runtime = {
 			Runtime: kusama_runtime::Runtime,
 			RuntimeOrigin: kusama_runtime::RuntimeOrigin,
@@ -58,7 +82,12 @@ decl_test_relay_chains! {
 decl_test_parachains! {
 	pub struct Development {
 		genesis = imbue::genesis(PARA_ID_DEVELOPMENT),
-		on_init = (),
+		on_init = (
+			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+            imbue_kusama_runtime::RuntimeOrigin::root(),
+            Box::new(MultiLocation::new(1, Here)),
+            SAFE_XCM_VERSION),
+		),
 		runtime = {
 			Runtime: imbue_kusama_runtime::Runtime,
 			RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
@@ -79,7 +108,12 @@ decl_test_parachains! {
 	},
 	pub struct Sibling {
 		genesis = imbue::genesis(PARA_ID_SIBLING),
-		on_init = (),
+		on_init = (
+			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+            imbue_kusama_runtime::RuntimeOrigin::root(),
+            Box::new(MultiLocation::new(1, Here)),
+            SAFE_XCM_VERSION),
+		),
 		runtime = {
 			Runtime: imbue_kusama_runtime::Runtime,
 			RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,

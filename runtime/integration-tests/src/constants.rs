@@ -1,4 +1,5 @@
 use core::default::Default;
+use polkadot_primitives::v4::{ MAX_CODE_SIZE, MAX_POV_SIZE};
 
 use grandpa::AuthorityId as GrandpaId;
 pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
@@ -16,8 +17,6 @@ use sp_runtime::{
     BuildStorage, MultiSignature, Perbill,
 };
 pub use xcm;
-pub const XCM_V2: u32 = 3;
-pub const XCM_V3: u32 = 2;
 pub const REF_TIME_THRESHOLD: u64 = 33;
 pub const PROOF_SIZE_THRESHOLD: u64 = 33;
 
@@ -88,18 +87,6 @@ pub mod accounts {
 pub mod collators {
     use super::*;
 
-    pub fn invulnerables_statemint() -> Vec<(AccountId, AuraId)> {
-        vec![
-            (
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
-                get_from_seed::<AuraId>("Alice"),
-            ),
-            (
-                get_account_id_from_seed::<sr25519::Public>("Bob"),
-                get_from_seed::<AuraId>("Bob"),
-            ),
-        ]
-    }
 
     pub fn invulnerables() -> Vec<(AccountId, AuraId)> {
         vec![
