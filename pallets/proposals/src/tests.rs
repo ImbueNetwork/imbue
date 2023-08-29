@@ -1071,6 +1071,4 @@ fn convert_contributions_to_refund_locations_uses_treasury_for_dust_clearance() 
     });
 }
 
-// todo: finalise voteof no confidence tests.
-// ^^ is connected to making the pallet generic over funding type.
 // Todo: assert the last event of each extrinsic/

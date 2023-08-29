@@ -493,7 +493,7 @@ pub mod pallet {
         /// SAFETY: Does no check on the bounds of the Map so ensure a bound before.
         /// Assumes contributions are on the local chain.
         fn convert_contributions_to_refund_locations(
-            contributions: &BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
+            contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
         ) -> Vec<(MultiLocation, Percent)> {
             let sum_of_contributions = contributions
                 .values()
@@ -508,17 +508,23 @@ pub mod pallet {
                     let percent = Percent::from_rational(c.1.value, sum_of_contributions);
                     sum_of_percents = sum_of_percents.saturating_add(percent);
                     // Since these are local we can use MultiLocation::Default;
+                    (
+                        MultiLocation::new(0u8, Junctions::X1(
+                            Junction::AccountId32 {
+                                network
+                            }
+                        ))
+                    )
                     (<MultiLocation as Default>::default(), percent)
                 })
                 .collect::<Vec<(MultiLocation, Percent)>>();
 
+            // TEST THIS
             if sum_of_percents != One::one() {
                 // We are missing a part of the fund so take the remainder and use the treasury as the return address.
-                println!(" sum is {:?}", sum_of_percents);
-                println!(
-                    "difference is {:?}",
-                    (<Percent as One>::one() - sum_of_percents)
-                );
+                let diff = One::one().saturating_sub(sum_of_percents);
+                ret.push(())
+
             }
 
             ret
