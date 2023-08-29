@@ -76,7 +76,7 @@ mod benchmarks {
          let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
          let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
          <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
-         Fellowship::add_candidate_to_shortlist(RawOrigin::Signed(alice.clone()), bob.clone(), Role::Vetter, 10);
+         Fellowship::<T>::add_candidate_to_shortlist(RawOrigin::Signed(alice.clone()).into(), bob.clone(), Role::Vetter, 10);
 
          #[extrinsic_call]
          remove_candidate_from_shortlist(RawOrigin::Signed(alice), bob.clone());
@@ -85,13 +85,16 @@ mod benchmarks {
 
      #[benchmark]
      fn pay_deposit_to_remove_pending_status() {
+        let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1);
         let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
-        <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&bob, Role::Vetter, 10, Some(&alice), true);
+        let charlie: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
+
+        <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&bob, Role::Vetter, 10, Some(&charlie), true);
         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
 
         #[extrinsic_call]
-        pay_deposit_to_remove_pending_status(RawOrigin::Signed(bob));
-        System::<T>::assert_last_event(Event::<T>::FellowshipAdded{who: bob}.into());
+        pay_deposit_to_remove_pending_status(RawOrigin::Signed(bob.clone()));
+        System::<T>::assert_last_event(Event::<T>::FellowshipAdded{who: bob, role: Role::Vetter}.into());
     }
 
     impl_benchmark_test_suite!(Fellowship, crate::mock::new_test_ext(), crate::mock::Test);
