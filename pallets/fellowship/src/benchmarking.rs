@@ -1,7 +1,8 @@
 #![cfg(feature = "runtime-benchmarks")]
+
 use super::*;
 use crate::Pallet as Fellowship;
-use crate::{traits::FellowshipHandle, Role};
+use crate::{traits::FellowshipHandle, Role, Config};
 use common_types::CurrencyId;
 use frame_benchmarking::{v2::*};
 use frame_support::assert_ok;
@@ -10,14 +11,11 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
 use frame_system::Pallet as System;
 
-#[benchmarks( where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
-    crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>,
-)]
 
+#[benchmarks( where <T as frame_system::Config>::AccountId: AsRef<[u8]>, crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
+#[benchmarks]
 mod benchmarks {
-    use super::*;
-
+	use super::*;
     #[benchmark]
     fn add_to_fellowship() {
         let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
@@ -30,36 +28,36 @@ mod benchmarks {
         System::<T>::assert_last_event(Event::<T>::FellowshipAdded{who: alice.clone(), role: Role::Vetter}.into());
     }
 
-    #[benchmark]
-    fn force_add_fellowship() {
-        let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
-        #[extrinsic_call]
-        force_add_fellowship(RawOrigin::Root, alice, Role::Freelancer, 10);
-        System::<T>::assert_last_event(Event::<T>::FellowshipAdded{who: alice.clone(), role: Role::Vetter}.into());
-    }
+     #[benchmark]
+     fn force_add_fellowship() {
+         let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
+         #[extrinsic_call]
+         force_add_fellowship(RawOrigin::Root, alice.clone(), Role::Freelancer, 10);
+         System::<T>::assert_last_event(Event::<T>::FellowshipAdded{who: alice.clone(), role: Role::Vetter}.into());
+     }
 
-    #[benchmark]
-    fn leave_fellowship() {
-        let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
-        <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
+     #[benchmark]
+     fn leave_fellowship() {
+         let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
+         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
+         <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
 
-        #[extrinsic_call]
-        leave_fellowship(&alice);
+         #[extrinsic_call]
+         leave_fellowship(RawOrigin::Signed(alice.clone()));
 
-        System::<T>::assert_last_event(Event::<T>::FellowshipRemoved{who: alice.clone()}.into());
-    }
+         System::<T>::assert_last_event(Event::<T>::FellowshipRemoved{who: alice.clone()}.into());
+     }
 
-    #[benchmark]
-    fn force_remove_and_slash_fellowship() {
-        let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
-        <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
+     #[benchmark]
+     fn force_remove_and_slash_fellowship() {
+         let alice: T::AccountId = create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
+         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
+         <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
 
-        #[extrinsic_call]
-        force_remove_and_slash_fellowship(RawOrigin::Root, alice.clone());
-        System::<T>::assert_last_event(Event::<T>::FellowshipRemoved{who: alice.clone()}.into());
-    }
+         #[extrinsic_call]
+         force_remove_and_slash_fellowship(RawOrigin::Root, alice.clone());
+         System::<T>::assert_last_event(Event::<T>::FellowshipRemoved{who: alice.clone()}.into());
+     }
 
     impl_benchmark_test_suite!(Fellowship, crate::mock::new_test_ext(), crate::mock::Test);
 }
