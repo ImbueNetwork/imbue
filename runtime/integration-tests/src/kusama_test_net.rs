@@ -13,150 +13,145 @@
 
 //! Relay chain and parachains emulation.
 
-
-
-pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
 use crate::constants::SAFE_XCM_VERSION;
+pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
 
-
-
-use xcm_emulator::{
-	decl_test_networks, decl_test_parachains, decl_test_relay_chains, Parachain, RelayChain,
-	TestExt,
+use crate::constants::{
+    accounts::{ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE},
+    imbue, kusama,
 };
 pub use sp_core::{sr25519, storage::Storage, Get};
 use xcm::prelude::*;
-use crate::constants::{imbue,kusama, accounts::{ALICE,BOB, CHARLIE, DAVE, EVE, FERDIE}};
-
-use frame_support::{parameter_types, sp_io, sp_tracing};
-use crate::setup::{
-    PARA_ID_DEVELOPMENT,
-    PARA_ID_SIBLING,
+use xcm_emulator::{
+    decl_test_networks, decl_test_parachains, decl_test_relay_chains, Parachain, RelayChain,
+    TestExt,
 };
-use xcm_executor::traits::Convert;
+
+use crate::setup::{PARA_ID_DEVELOPMENT, PARA_ID_SIBLING};
+use frame_support::{parameter_types, sp_io, sp_tracing};
 use xcm_builder::test_utils::XcmHash;
+use xcm_executor::traits::Convert;
 decl_test_relay_chains! {
-	pub struct Kusama {
-		genesis = kusama::genesis(),
-		on_init = (
-			// kusama_runtime::XcmPallet::force_default_xcm_version(
+    pub struct Kusama {
+        genesis = kusama::genesis(),
+        on_init = (
+            // kusama_runtime::XcmPallet::force_default_xcm_version(
             // kusama_runtime::RuntimeOrigin::root(),
             // Some(SAFE_XCM_VERSION)),
-			//
-			// kusama_runtime::XcmPallet::force_xcm_version(
+            //
+            // kusama_runtime::XcmPallet::force_xcm_version(
             // kusama_runtime::RuntimeOrigin::root(),
             // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_SIBLING)))),
             // SAFE_XCM_VERSION),
-			//
-			// kusama_runtime::XcmPallet::force_xcm_version(
+            //
+            // kusama_runtime::XcmPallet::force_xcm_version(
             // kusama_runtime::RuntimeOrigin::root(),
             // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_DEVELOPMENT)))),
             // SAFE_XCM_VERSION),
 
-			kusama_runtime::XcmPallet::force_xcm_version(
+            kusama_runtime::XcmPallet::force_xcm_version(
             kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(0, X1(Parachain(PARA_ID_SIBLING)))),
             SAFE_XCM_VERSION),
 
-			kusama_runtime::XcmPallet::force_xcm_version(
+            kusama_runtime::XcmPallet::force_xcm_version(
             kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(0, X1(Parachain(PARA_ID_DEVELOPMENT)))),
             SAFE_XCM_VERSION),
-		),
-		runtime = {
-			Runtime: kusama_runtime::Runtime,
-			RuntimeOrigin: kusama_runtime::RuntimeOrigin,
-			RuntimeCall: kusama_runtime::RuntimeCall,
-			RuntimeEvent: kusama_runtime::RuntimeEvent,
-			MessageQueue: kusama_runtime::MessageQueue,
-			XcmConfig: kusama_runtime::xcm_config::XcmConfig,
-			SovereignAccountOf: kusama_runtime::xcm_config::SovereignAccountOf,
-			System: kusama_runtime::System,
-			Balances: kusama_runtime::Balances,
-		},
-		pallets_extra = {
-			XcmPallet: kusama_runtime::XcmPallet,
-		}
-	}
+        ),
+        runtime = {
+            Runtime: kusama_runtime::Runtime,
+            RuntimeOrigin: kusama_runtime::RuntimeOrigin,
+            RuntimeCall: kusama_runtime::RuntimeCall,
+            RuntimeEvent: kusama_runtime::RuntimeEvent,
+            MessageQueue: kusama_runtime::MessageQueue,
+            XcmConfig: kusama_runtime::xcm_config::XcmConfig,
+            SovereignAccountOf: kusama_runtime::xcm_config::SovereignAccountOf,
+            System: kusama_runtime::System,
+            Balances: kusama_runtime::Balances,
+        },
+        pallets_extra = {
+            XcmPallet: kusama_runtime::XcmPallet,
+        }
+    }
 }
 decl_test_parachains! {
-	pub struct Development {
-		genesis = imbue::genesis(PARA_ID_DEVELOPMENT),
-		on_init = (
-			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+    pub struct Development {
+        genesis = imbue::genesis(PARA_ID_DEVELOPMENT),
+        on_init = (
+            imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
             imbue_kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(1, Here)),
             SAFE_XCM_VERSION),
-		),
-		runtime = {
-			Runtime: imbue_kusama_runtime::Runtime,
-			RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
-			RuntimeCall: imbue_kusama_runtime::RuntimeCall,
-			RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
-			XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
-			DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
-			LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
-			System: imbue_kusama_runtime::System,
-			Balances: imbue_kusama_runtime::Balances,
-			ParachainSystem: imbue_kusama_runtime::ParachainSystem,
-			ParachainInfo: imbue_kusama_runtime::ParachainInfo,
-		},
-		pallets_extra = {
-			PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,
-			XTokens: imbue_kusama_runtime::XTokens,
-		}
-	},
-	pub struct Sibling {
-		genesis = imbue::genesis(PARA_ID_SIBLING),
-		on_init = (
-			imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
+        ),
+        runtime = {
+            Runtime: imbue_kusama_runtime::Runtime,
+            RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
+            RuntimeCall: imbue_kusama_runtime::RuntimeCall,
+            RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
+            XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
+            DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
+            LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
+            System: imbue_kusama_runtime::System,
+            Balances: imbue_kusama_runtime::Balances,
+            ParachainSystem: imbue_kusama_runtime::ParachainSystem,
+            ParachainInfo: imbue_kusama_runtime::ParachainInfo,
+        },
+        pallets_extra = {
+            PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,
+            XTokens: imbue_kusama_runtime::XTokens,
+        }
+    },
+    pub struct Sibling {
+        genesis = imbue::genesis(PARA_ID_SIBLING),
+        on_init = (
+            imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
             imbue_kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(1, Here)),
             SAFE_XCM_VERSION),
-		),
-		runtime = {
-			Runtime: imbue_kusama_runtime::Runtime,
-			RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
-			RuntimeCall: imbue_kusama_runtime::RuntimeCall,
-			RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
-			XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
-			DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
-			LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
-			System: imbue_kusama_runtime::System,
-			Balances: imbue_kusama_runtime::Balances,
-			ParachainSystem: imbue_kusama_runtime::ParachainSystem,
-			ParachainInfo: imbue_kusama_runtime::ParachainInfo,
-		},
-		pallets_extra = {
-			PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,
-			XTokens: imbue_kusama_runtime::XTokens,
-		}
-	}
+        ),
+        runtime = {
+            Runtime: imbue_kusama_runtime::Runtime,
+            RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
+            RuntimeCall: imbue_kusama_runtime::RuntimeCall,
+            RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
+            XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
+            DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
+            LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
+            System: imbue_kusama_runtime::System,
+            Balances: imbue_kusama_runtime::Balances,
+            ParachainSystem: imbue_kusama_runtime::ParachainSystem,
+            ParachainInfo: imbue_kusama_runtime::ParachainInfo,
+        },
+        pallets_extra = {
+            PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,
+            XTokens: imbue_kusama_runtime::XTokens,
+        }
+    }
 }
 
 decl_test_networks! {
-	pub struct TestNet {
-		relay_chain = Kusama,
-		parachains = vec![
-			Development,
-			Sibling,
-			// Karura,
-		],
-	}
+    pub struct TestNet {
+        relay_chain = Kusama,
+        parachains = vec![
+            Development,
+            Sibling,
+            // Karura,
+        ],
+    }
 }
 
 parameter_types! {
-	// Kusama
-	pub KusamaSender: AccountId = Kusama::account_id_of(ALICE);
-	pub KusamaReceiver: AccountId = Kusama::account_id_of(BOB);
-	// Imbue Kusama
-	pub ImbueKusamaSender: AccountId = Development::account_id_of(CHARLIE);
-	pub ImbueKusamaReceiver: AccountId = Development::account_id_of(DAVE);
-	// Sibling Kusama
-	pub SiblingKusamaSender: AccountId = Sibling::account_id_of(EVE);
-	pub SiblingKusamaReceiver: AccountId = Sibling::account_id_of(FERDIE);
+    // Kusama
+    pub KusamaSender: AccountId = Kusama::account_id_of(ALICE);
+    pub KusamaReceiver: AccountId = Kusama::account_id_of(BOB);
+    // Imbue Kusama
+    pub ImbueKusamaSender: AccountId = Development::account_id_of(CHARLIE);
+    pub ImbueKusamaReceiver: AccountId = Development::account_id_of(DAVE);
+    // Sibling Kusama
+    pub SiblingKusamaSender: AccountId = Sibling::account_id_of(EVE);
+    pub SiblingKusamaReceiver: AccountId = Sibling::account_id_of(FERDIE);
 }
-
 
 // decl_test_parachains! {
 //     pub struct Development {
