@@ -1030,6 +1030,23 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
 }
 
 
+#[test]
+fn close_voting_round_works() {
+    build_test_externality().execute_with(|| {
+        Rounds::<Test>::insert(0, RoundType::VotingRound, 100);
+        let r_expiring: BoundedVec<(ProjectKey, RoundType, MilestoneKey) = vec![(0, RoundType::VotingRound, 0)].try_into().expect();
+        RoundsExpiring::<Test>::insert(100, r_expiring);
+        UserHasVoted::<Test>::insert((0, RoundType::VotingRound, 0));
+
+        assert_ok!(crate::Pallet::<Test>::close_voting_round(0, (0, RoundType::VotingRound, 0)));
+        assert!(Rounds::<Test>::get(0, RoundType::VotingRound, 100).is_none());
+        assert!(RoundsExpiring::<Test>::get(100, r_expiring).is_none())
+        assert!(UserHasVoted::<Test>::insert((0, RoundType::VotingRound, 0)).is_none())
+    })
+}
+
+
+
 // todo: finalise voteof no confidence tests.
 // ^^ is connected to making the pallet generic over funding type.
 // Todo: assert the last event of each extrinsic/

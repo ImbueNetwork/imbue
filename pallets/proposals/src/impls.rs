@@ -17,7 +17,7 @@ impl<T: Config> Pallet<T> {
     }
 
     // Take a project and submit an associated milestone.
-    pub fn new_milestone_submission(
+    fn new_milestone_submission(
         who: T::AccountId,
         project_key: ProjectKey,
         milestone_key: MilestoneKey,
@@ -48,7 +48,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn new_milestone_vote(
+    fn new_milestone_vote(
         who: T::AccountId,
         project_key: ProjectKey,
         milestone_key: MilestoneKey,
@@ -75,14 +75,14 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
 
-        let yay_vote = MilestoneVotes::<T>::try_mutate(project_key, milestone_key, |vote| {
+        let vote = MilestoneVotes::<T>::try_mutate(project_key, milestone_key, |vote| {
             if let Some(v) = vote {
                 if approve_milestone {
                     v.yay = v.yay.saturating_add(contribution_amount);
                 } else {
                     v.nay = v.nay.saturating_add(contribution_amount);
                 }
-                Ok::<BalanceOf<T>, DispatchError>(v.yay)
+                Ok::<BalanceOf<T>, DispatchError>(v)
             } else {
                 Err(Error::<T>::VotingRoundNotStarted.into())
             }
@@ -90,7 +90,9 @@ impl<T: Config> Pallet<T> {
 
         let funding_threshold: BalanceOf<T> =
             T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
-        Self::try_auto_finalise_milestone_voting(project_key, yay_vote, funding_threshold, user_has_voted_key, who.clone())?;
+        Self::try_auto_finalise_milestone_voting(project_key, vote, funding_threshold, user_has_voted_key, who.clone())?;
+
+
         Self::deposit_event(Event::VoteSubmitted(
             who,
             project_key,
@@ -101,7 +103,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub fn new_withdrawal(
+    fn new_withdrawal(
         who: T::AccountId,
         project_key: ProjectKey,
     ) -> DispatchResultWithPostInfo {
@@ -172,7 +174,7 @@ impl<T: Config> Pallet<T> {
 
     /// This function raises a vote of no confidence.
     /// This round can only be called once and there after can only be voted on.
-    pub fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+    fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
         //ensure that who is a contributor or root
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contribution = project
@@ -216,7 +218,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Allows a contributer to agree or disagree with a vote of no confidence.
-    pub fn add_vote_no_confidence(
+    fn add_vote_no_confidence(
         who: T::AccountId,
         project_key: ProjectKey,
         is_yay: bool,
@@ -317,7 +319,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[deprecated(since = "3.1.0", note = "autofinalisation has been implemented.")]
-    pub fn call_finalise_no_confidence_vote(
+    fn call_finalise_no_confidence_vote(
         who: T::AccountId,
         project_key: ProjectKey,
         majority_required: Percent,
@@ -391,10 +393,9 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // TODO: unit tests
-    fn try_auto_finalise_milestone_voting(project_key: ProjectKey, yay_vote: BalanceOf<T>, funding_threshold: BalanceOf<T>, user_has_voted_key: (ProjectKey, RoundType, MilestoneKey), who: AccountIdOf<T>) -> Result<(), DispatchError> {
+    pub(crate) fn try_auto_finalise_milestone_voting(project_key: ProjectKey, vote: &Vote<BalanceOf<T>>, funding_threshold: BalanceOf<T>, user_has_voted_key: (ProjectKey, RoundType, MilestoneKey), who: AccountIdOf<T>) -> Result<(), DispatchError> {
         // If the yay votes is over the funding threshold then the milestone is approved.
-        if yay_vote >= funding_threshold {
+        if vote.yay >= funding_threshold {
             Projects::<T>::mutate(project_key, |maybe_project| {
                 if let Some(p) = maybe_project {
                     if let Some(ms) = p.milestones.get_mut(&user_has_voted_key.2) {
@@ -409,14 +410,32 @@ impl<T: Config> Pallet<T> {
                 user_has_voted_key.2,
                 <frame_system::Pallet<T>>::block_number(),
             ));
-            // Prevent further voting.
-            let exp_block = Rounds::<T>::take(project_key, RoundType::VotingRound).ok_or(Error::<T>::VotingRoundNotStarted)?;
-            // Prevent hook from calling.
-            RoundsExpiring::<T>::remove(exp_block);
-            // Allow future votes to occur on this milestone
-            UserHasVoted::<T>::remove(user_has_voted_key);
+
+            Self::close_voting_round(project_key, user_has_voted_key)?;
         }
 
+        // Only finalise on the funding supermajority.
+        // 
+        if vote.nay >= funding_threshold {
+            Self::close_voting_round(project_key, user_has_voted_key)?;
+            Self::deposit_event(Event::MilestoneRejected(
+                project_key,
+                milestones_key,
+            ));
+        }
         Ok(().into())
     }
+
+    pub(crate) fn close_voting_round(project_key: ProjectKey, user_has_voted_key: (ProjectKey, RoundType, MilestoneKey)) -> Result<(), DispatchError> {
+        // Prevent further voting.
+        let exp_block = Rounds::<T>::take(project_key, RoundType::VotingRound).ok_or(Error::<T>::VotingRoundNotStarted)?;
+        // Prevent hook from calling.
+        RoundsExpiring::<T>::remove(exp_block);
+        // Allow future votes to occur on this milestone
+        UserHasVoted::<T>::remove(user_has_voted_key);
+        Ok(())
+    }
+
+
+
 }
