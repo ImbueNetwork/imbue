@@ -1,10 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+//FELIX REVIEW: Eventually it will be nice to have a short introduction here explaining what this pallet does and the
+// avaliable methods etc.
+
 pub use pallet::*;
 pub mod traits;
-pub mod weights;
-use sp_runtime::{traits::AtLeast32BitUnsigned, DispatchError};
-pub use weights::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -13,14 +13,15 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use traits::DisputeRaiser;
+    use sp_runtime::{traits::AtLeast32BitUnsigned, DispatchError};
 
-	
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
     #[pallet::config]
+    //FELIX Review: Comment each of the config items so we know exactly what they are doing.
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type WeightInfo: WeightInfo;
@@ -30,23 +31,27 @@ pub mod pallet {
         type MaxJurySize: Get<u32>;
         type DisputeHooks: traits::DisputeHooks<Self::DisputeKey>;
         type TimeLimit: Get<<Self as frame_system::Config>::BlockNumber>;
+		// type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
+
+    // FELIX REVIEW: Document every storage item.
     #[pallet::storage]
     #[pallet::getter(fn disputes)]
     pub type Disputes<T: Config> =
         StorageMap<_, Blake2_128Concat, T::DisputeKey, Dispute<T>, OptionQuery>;
 
     #[pallet::event]
+    // FELIX REVIEW: the below generate_deposit line is depricated in the 9.0.43 so you can remove it completely.
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         //This event is emitted when a dispute is being raised
         DisputeRaised { who: AccountIdOf<T> },
-        //This event is emitted from the vote_on_dispute extrinsics
-        //to notify what dispute is being voted on
+        // FELIX: These should be descriptive comments, look at the other pallets
         DisputeVotedOn { who: AccountIdOf<T> },
     }
 
+	// FELIX: ALL THESE NEED COMMENTS
     #[pallet::error]
     pub enum Error<T> {
         NoneValue,
@@ -61,6 +66,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
+		// FELIX: BENCHMARK
         #[pallet::weight(T::WeightInfo::do_something())]
         pub fn vote_on_dispute(
             origin: OriginFor<T>,
@@ -70,13 +76,14 @@ pub mod pallet {
             // get dispute struct
             // ensure caller is part of the jury
             // mutate vote accordingly.
-            //TODO only the choosen jury can vote on the disputes?
+
+			// FELIX: USE A try_mutate instead.
 			let who = ensure_signed(origin)?;
             let mut dispute =
                 Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
-		    ensure!(dispute.jury.iter().any(|e| e == &who),Error::<T>::InvalidJuryAccount);
-            let mut vote = dispute.votes;
+		    ensure!(dispute.jury.iter().any(|e| e == &who), Error::<T>::InvalidJuryAccount);
 
+			let mut vote = dispute.votes;
             if is_yay {
                 vote.yay += 1;
             } else {
@@ -87,19 +94,25 @@ pub mod pallet {
 			//updated the dispute
 			Disputes::insert(dispute_key, dispute);
 		
-            //TODO If the votes met the threshold we need to call the refund pallet correct?
-
+            // TODO If the votes met the threshold we need to call the refund pallet correct?
+			// NO because we will wait the entirety of the duration.
+			// FELIX: emit event
             Ok(().into())
         }
 
 
         #[pallet::call_index(1)]
+        // FELIX REVIEW: Benchmarks
         #[pallet::weight(T::WeightInfo::do_something())]
         pub fn force_cancel_dispute(
             origin: OriginFor<T>,
             dispute_key: T::DisputeKey,
             is_yay: bool,
         ) -> DispatchResult {
+			// FELIX: Ensure cancelling authority
+			// remove
+			// call hook on_cancel for trait use T::DisputeHooks
+			// emit event
             Ok(().into())
         }
     }
@@ -158,4 +171,11 @@ pub mod pallet {
         yay: u32,
         nay: u32,
     }
+
+	enum Outcome {
+		Refund,
+		Continue,
+		Slash
+	
+	}
 }

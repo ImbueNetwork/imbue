@@ -16,15 +16,19 @@ pub trait DisputeRaiser<AccountId> {
         dispute_key: Self::DisputeKey,
         raised_by: AccountId,
         fund_account: AccountId,
-        reason: BoundedVec<u8, <T as Config>::MaxReasonLength>,
+        // Felix review: You cannot use T here, in the proposals pallet the <T as pallet_dispute::Config> wont exist. 
+        reason: BoundedVec<u8, <T as crate::Config>::MaxReasonLength>,
         project_id: u32,
         jury: Vec<AccountId>,
     ) -> Result<(), DispatchError>;
 }
 
+
 pub trait DisputeHooks<DisputeKey> {
     // Outcome
     // handle the completed dispute
-    fn on_dispute_complete() -> ();
+    fn on_dispute_complete() -> Result<(), DispatchError>;
+    fn on_dispute_cancel() -> Result<(), DispatchError>;
 }
+
 
