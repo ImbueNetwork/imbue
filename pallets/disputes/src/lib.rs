@@ -47,8 +47,10 @@ pub mod pallet {
     pub enum Event<T: Config> {
         //This event is emitted when a dispute is being raised
         DisputeRaised { who: AccountIdOf<T> },
-        // FELIX: These should be descriptive comments, look at the other pallets
+        // This event is emitted whenever there has been a voting successfully happened for a given dispute by
+        // the authorized jury member
         DisputeVotedOn { who: AccountIdOf<T> },
+
     }
 
 	// FELIX: ALL THESE NEED COMMENTS
@@ -97,6 +99,7 @@ pub mod pallet {
             // TODO If the votes met the threshold we need to call the refund pallet correct?
 			// NO because we will wait the entirety of the duration.
 			// FELIX: emit event
+            Self::deposit_event(Event::DisputeVotedOn(who));
             Ok(().into())
         }
 
@@ -146,7 +149,7 @@ pub mod pallet {
             Disputes::<T>::insert(dispute_key, dispute);
 
             // Raise Event
-            //TODO need to check if want to add more information while raising a dispute like returning the whole dispute struct?
+            //SHANKAR if want to add more information while raising a dispute like returning the whole dispute struct to get some more info about what has been raised or so on?
             Self::deposit_event(Event::DisputeRaised(raised_by));
 
             Ok(())
