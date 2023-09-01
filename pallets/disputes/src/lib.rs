@@ -5,6 +5,7 @@
 
 pub use pallet::*;
 pub mod traits;
+use sp_runtime::traits::Saturating;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -12,8 +13,8 @@ pub mod pallet {
     use codec::{FullCodec, FullEncode};
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use traits::DisputeRaiser;
     use sp_runtime::{traits::AtLeast32BitUnsigned, DispatchError};
+    use traits::DisputeRaiser;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -31,11 +32,10 @@ pub mod pallet {
         type MaxJurySize: Get<u32>;
         type DisputeHooks: traits::DisputeHooks<Self::DisputeKey>;
         type TimeLimit: Get<<Self as frame_system::Config>::BlockNumber>;
-		// type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        // type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
-
-    // FELIX REVIEW: Document every storage item.
+    //Used to store the disputes that is being raised, given the dispute key it returns the Dispute
     #[pallet::storage]
     #[pallet::getter(fn disputes)]
     pub type Disputes<T: Config> =
@@ -45,30 +45,31 @@ pub mod pallet {
     // FELIX REVIEW: the below generate_deposit line is depricated in the 9.0.43 so you can remove it completely.
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        //This event is emitted when a dispute is being raised
+        //This event is emitted whenever a dispute has been successfully raised
         DisputeRaised { who: AccountIdOf<T> },
         // This event is emitted whenever there has been a voting successfully happened for a given dispute by
         // the authorized jury member
         DisputeVotedOn { who: AccountIdOf<T> },
-
     }
 
-	// FELIX: ALL THESE NEED COMMENTS
+
     #[pallet::error]
     pub enum Error<T> {
+        //When there is no value present
         NoneValue,
+        //Whenever we try to insert the storage beyond its bounded capacity
         StorageOverflow,
         //This error is thrown whenever the dispute key passed doesn't correspond to any dispute
         DisputeDoesNotExist,
         DisputeAlreadyExists,
-		//wrong jury trying to vote
-		InvalidJuryAccount,
+        //wrong jury trying to vote
+        InvalidJuryAccount,
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-		// FELIX: BENCHMARK
+        // FELIX: BENCHMARK
         #[pallet::weight(T::WeightInfo::do_something())]
         pub fn vote_on_dispute(
             origin: OriginFor<T>,
@@ -77,32 +78,37 @@ pub mod pallet {
         ) -> DispatchResult {
             // get dispute struct
             // ensure caller is part of the jury
-            // mutate vote accordingly.
+            // mutate vote accordingly.            
+            let who = ensure_signed(origin)?;
 
-			// FELIX: USE A try_mutate instead.
-			let who = ensure_signed(origin)?;
-            let mut dispute =
-                Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
-		    ensure!(dispute.jury.iter().any(|e| e == &who), Error::<T>::InvalidJuryAccount);
+            //iterate over the disputes and update the voting state based on the passed vote
+            Disputes::<T>::try_mutate(dispute_key, |dispute| {
+                if let Some(d) = dispute {
+                    ensure!(
+                        d.jury.iter().any(|e| e == &who),
+                        Error::<T>::InvalidJuryAccount
+                    );
+                    let vote = d.votes;
+                    if is_yay {
+                        vote.yay = vote.yay.saturating_add(1);
+                    } else {
+                        vote.nay = vote.nay.saturating_add(1);
+                    }
+                    Ok(())
+                }
+                else {
+                    Err(Error::<T>::DisputeDoesNotExist)
+                }
+            });
 
-			let mut vote = dispute.votes;
-            if is_yay {
-                vote.yay += 1;
-            } else {
-                vote.nay += 1;
-            }
-			//updating the votes
-			dispute.votes = vote;
-			//updated the dispute
-			Disputes::insert(dispute_key, dispute);
-		
-            // TODO If the votes met the threshold we need to call the refund pallet correct?
-			// NO because we will wait the entirety of the duration.
-			// FELIX: emit event
+            // //updating the votes
+            // dispute.votes = vote;
+            // //updated the dispute
+            // Disputes::insert(dispute_key, dispute);
+
             Self::deposit_event(Event::DisputeVotedOn(who));
             Ok(().into())
         }
-
 
         #[pallet::call_index(1)]
         // FELIX REVIEW: Benchmarks
@@ -112,14 +118,13 @@ pub mod pallet {
             dispute_key: T::DisputeKey,
             is_yay: bool,
         ) -> DispatchResult {
-			// FELIX: Ensure cancelling authority
-			// remove
-			// call hook on_cancel for trait use T::DisputeHooks
-			// emit event
+            // FELIX: Ensure cancelling authority
+            // remove
+            // call hook on_cancel for trait use T::DisputeHooks
+            // emit event
             Ok(().into())
         }
     }
-
 
     impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
         type DisputeKey = T::DisputeKey;
@@ -149,7 +154,8 @@ pub mod pallet {
             Disputes::<T>::insert(dispute_key, dispute);
 
             // Raise Event
-            //SHANKAR if want to add more information while raising a dispute like returning the whole dispute struct to get some more info about what has been raised or so on?
+            //SHANKAR if want to add more information while raising a dispute like returning the whole dispute struct to
+            //get some more info about what has been raised or so on?
             Self::deposit_event(Event::DisputeRaised(raised_by));
 
             Ok(())
@@ -175,10 +181,9 @@ pub mod pallet {
         nay: u32,
     }
 
-	enum Outcome {
-		Refund,
-		Continue,
-		Slash
-	
-	}
+    enum Outcome {
+        Refund,
+        Continue,
+        Slash,
+    }
 }

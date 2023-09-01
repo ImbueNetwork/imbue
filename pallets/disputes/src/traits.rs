@@ -1,6 +1,5 @@
 
-Euse codec::{FullEncode, FullCodec, MaxEncodedLen};
-use frame_system::Config;
+use codec::{FullEncode, FullCodec, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned, BoundedVec};
 
