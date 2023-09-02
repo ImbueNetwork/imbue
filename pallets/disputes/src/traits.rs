@@ -1,4 +1,6 @@
 
+use core::u32;
+
 use codec::{FullEncode, FullCodec, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned, BoundedVec};
@@ -6,6 +8,8 @@ use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned, BoundedVec};
 
 pub trait DisputeRaiser<AccountId> {
     type DisputeKey: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
+    type MaxReasonLength;
+    type MaxJurySize;
 
     // Strip this to be the minumim the dispute pallet needs to know.
     // where is the money,
@@ -16,9 +20,9 @@ pub trait DisputeRaiser<AccountId> {
         raised_by: AccountId,
         fund_account: AccountId,
         // Felix review: You cannot use T here, in the proposals pallet the <T as pallet_dispute::Config> wont exist. 
-        reason: BoundedVec<u8, <T as crate::Config>::MaxReasonLength>,
+        reason: BoundedVec<u8, Self::MaxReasonLength>,
         project_id: u32,
-        jury: Vec<AccountId>,
+        jury: BoundedVec<AccountId, Self::MaxJurySize>,
     ) -> Result<(), DispatchError>;
 }
 
