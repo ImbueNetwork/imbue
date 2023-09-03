@@ -19,9 +19,7 @@ pub trait DisputeRaiser<AccountId> {
         dispute_key: Self::DisputeKey,
         raised_by: AccountId,
         fund_account: AccountId,
-        // Felix review: You cannot use T here, in the proposals pallet the <T as pallet_dispute::Config> wont exist. 
         reason: BoundedVec<u8, Self::MaxReasonLength>,
-        project_id: u32,
         jury: BoundedVec<AccountId, Self::MaxJurySize>,
     ) -> Result<(), DispatchError>;
 }
