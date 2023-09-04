@@ -1004,7 +1004,7 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
         assert_last_event::<Test>(
             Event::<Test>::NoConfidenceRoundFinalised(*ALICE, project_key).into(),
         );
-        assert_eq!(Projects::<Test>::get(project_key), None);
+        assert!(Projects::<Test>::get(project_key).is_none());
         assert_eq!(
             Rounds::<Test>::get(project_key, RoundType::VoteOfNoConfidence),
             None

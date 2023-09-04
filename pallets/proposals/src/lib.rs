@@ -411,7 +411,6 @@ pub mod pallet {
         for crate::Pallet<T>
     where
         Project<T>: EncodeLike<Project<T>>,
-        <T as frame_system::Config>::AccountId: From<[u8; 32]>,
     {
         /// The caller is used to take the storage deposit from.
         /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
@@ -491,8 +490,8 @@ pub mod pallet {
         }
 
         // TODO: TEST
-        /// SAFETY: Does no check on the bounds of the Map so ensure a bound before.
         /// Assumes contributions are on the local chain.
+        /// SAFETY: Does no check on the bounds of the Map so ensure a bound before.
         fn convert_contributions_to_refund_locations(
             contributions: &BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
         ) -> Vec<(Locality<AccountIdOf<T>>, Percent)> {
@@ -515,7 +514,8 @@ pub mod pallet {
 
             // TEST THIS
             if sum_of_percents != One::one() {
-                // We are missing a part of the fund so take the remainder and use the treasury as the return address.
+                // We are missing a part of the fund so take the remainder and use the pallet_id as the return address. 
+                //(as is used throughout the rest of the pallet for fees)
                 let diff = <Percent as One>::one().saturating_sub(sum_of_percents);
                 ret.push((Locality::from_local(Self::account_id()), diff));
             }
@@ -615,7 +615,7 @@ pub enum Locality<AccountId> {
     Foreign(MultiLocation),
 }
 
-impl<AccountId: From<[u8; 32]>> Locality<AccountId> {
+impl<AccountId> Locality<AccountId> {
     fn from_multilocation(m: MultiLocation) -> Self {
         Self::Foreign(m)
     }

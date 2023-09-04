@@ -62,7 +62,6 @@ frame_support::construct_runtime!(
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
-        Fellowship: pallet_fellowship,
     }
 );
 
@@ -217,7 +216,7 @@ impl pallet_proposals::Config for Test {
     type DepositHandler = MockDepositHandler<Test>;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
     type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
-    type ProjectToVetter = pallet_fellowship::Pallet<Test>;
+    type ProjectToVetter = Test;
     type RoleToPercentFee = pallet_fellowship::impls::RoleToPercentFee;
     type MaximumJurySize = MaximumJurySize;
 }
@@ -254,18 +253,6 @@ parameter_types! {
     pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
 }
 
-impl pallet_fellowship::Config for Test {
-    type RuntimeEvent = RuntimeEvent;
-    type MultiCurrency = Tokens;
-    type ForceAuthority = EnsureRoot<AccountId>;
-    type DemocracyHandle = Test;
-    type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
-    type ShortlistPeriod = ShortlistPeriod;
-    type MembershipDeposit = MembershipDeposit;
-    type SlashAccount = SlashAccount;
-    type DepositCurrencyId = DepositCurrencyId;
-    type WeightInfo = ();
-}
 
 parameter_types! {
     pub const UnitWeightCost: u64 = 10;
@@ -278,26 +265,12 @@ pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_r
 pub static DAVE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([128u8; 32]));
 pub static JOHN: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([255u8; 32]));
 pub static EMPTY: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([123u8; 32]));
+pub static VETTER: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([123u8; 32]));
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
-
-    // orml_tokens::GenesisConfig::<Test>::default()
-    //     .assimilate_storage(&mut t)
-    //     .unwrap();
-
-    // orml_tokens::GenesisConfig::<Test> {
-    //     balances: {
-    //         vec![*ALICE, *BOB, *CHARLIE]
-    //             .into_iter()
-    //             .map(|id| (id, CurrencyId::Native, 1000000))
-    //             .collect::<Vec<_>>()
-    //     },
-    // }
-    // .assimilate_storage(&mut t)
-    // .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
@@ -308,6 +281,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &DAVE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &JOHN, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &VETTER, initial_balance);
     });
     ext
 }
@@ -338,11 +312,9 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
     }
 }
 
-impl pallet_fellowship::traits::DemocracyHandle<AccountId> for Test {
-    fn initiate_shortlist_vote() -> () {
-        ()
-    }
-    fn cancel_shortlist_vote() -> () {
-        ()
+type VetterId = AccountId;
+impl MaybeConvert<&AccountId, VetterId> for Test {
+    fn maybe_convert(fellow: &AccountId) -> Option<VetterId> {
+        Some(*VETTER)
     }
 }

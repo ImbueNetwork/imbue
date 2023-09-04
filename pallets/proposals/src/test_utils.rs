@@ -5,7 +5,7 @@ use crate::Pallet as Proposals;
 use crate::{
     traits::IntoProposal, AccountIdOf, BalanceOf, BlockNumberFor, Contribution, ContributionsFor,
     FundingPath, Milestone, MilestoneKey, MultiLocation, Project, ProjectCount, ProjectKey,
-    ProposedMilestone,
+    ProposedMilestone, Locality
 };
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
@@ -117,7 +117,7 @@ pub fn create_project_awaiting_funding<T: Config>(
         agreement_hash,
         beneficiary,
         proposed_milestones,
-        vec![(treasury_account, Percent::from_parts(100u8))],
+        vec![(Locality::Foreign(treasury_account), Percent::from_parts(100u8))],
         Vec::new(),
         FundingPath::WaitForFunding,
     )?;
