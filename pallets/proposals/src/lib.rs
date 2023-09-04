@@ -411,6 +411,7 @@ pub mod pallet {
         for crate::Pallet<T>
     where
         Project<T>: EncodeLike<Project<T>>,
+        <T as frame_system::Config>::AccountId: From<[u8; 32]>,
     {
         /// The caller is used to take the storage deposit from.
         /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
@@ -420,7 +421,7 @@ pub mod pallet {
             agreement_hash: H256,
             benificiary: AccountIdOf<T>,
             proposed_milestones: Vec<ProposedMilestone>,
-            refund_locations: Vec<(MultiLocation, Percent)>,
+            refund_locations: Vec<(Locality<AccountIdOf<T>>, Percent)>,
             jury: Vec<AccountIdOf<T>>,
             on_creation_funding: FundingPath,
         ) -> Result<(), DispatchError> {
@@ -493,8 +494,8 @@ pub mod pallet {
         /// SAFETY: Does no check on the bounds of the Map so ensure a bound before.
         /// Assumes contributions are on the local chain.
         fn convert_contributions_to_refund_locations(
-            contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
-        ) -> Vec<(MultiLocation, Percent)> {
+            contributions: &BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
+        ) -> Vec<(Locality<AccountIdOf<T>>, Percent)> {
             let sum_of_contributions = contributions
                 .values()
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
@@ -502,29 +503,21 @@ pub mod pallet {
                 });
 
             let mut sum_of_percents: Percent = Zero::zero();
-            let ret: Vec<(MultiLocation, Percent)> = contributions
+            let mut ret = contributions
                 .iter()
                 .map(|c| {
                     let percent = Percent::from_rational(c.1.value, sum_of_contributions);
                     sum_of_percents = sum_of_percents.saturating_add(percent);
                     // Since these are local we can use MultiLocation::Default;
-                    (
-                        MultiLocation::new(0u8, Junctions::X1(
-                            Junction::AccountId32 {
-                                network
-                            }
-                        ))
-                    )
-                    (<MultiLocation as Default>::default(), percent)
+                    (Locality::from_local(c.0.clone()), percent)
                 })
-                .collect::<Vec<(MultiLocation, Percent)>>();
+                .collect::<Vec<(Locality<AccountIdOf<T>>, Percent)>>();
 
             // TEST THIS
             if sum_of_percents != One::one() {
                 // We are missing a part of the fund so take the remainder and use the treasury as the return address.
-                let diff = One::one().saturating_sub(sum_of_percents);
-                ret.push(())
-
+                let diff = <Percent as One>::one().saturating_sub(sum_of_percents);
+                ret.push((Locality::from_local(Self::account_id()), diff));
             }
 
             ret
@@ -608,11 +601,27 @@ pub struct Project<T: Config> {
     pub cancelled: bool,
     pub deposit_id: DepositIdOf<T>,
     /// Where do the refunds end up and what percent they get.
-    pub refund_locations: BoundedVec<(MultiLocation, Percent), T::MaximumContributorsPerProject>,
+    pub refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject>,
     /// Who should deal with disputes.
     pub jury: BoundedVec<AccountIdOf<T>, T::MaximumJurySize>,
     /// When is the project funded and how is it taken.
     pub on_creation_funding: FundingPath,
+}
+
+/// For deriving the location of an account.
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+pub enum Locality<AccountId> {
+    Local(AccountId),
+    Foreign(MultiLocation),
+}
+
+impl<AccountId: From<[u8; 32]>> Locality<AccountId> {
+    fn from_multilocation(m: MultiLocation) -> Self {
+        Self::Foreign(m)
+    }
+    fn from_local(l: AccountId) -> Self {
+        Self::Local(l)
+    }
 }
 
 /// The contribution users made to a proposal project.

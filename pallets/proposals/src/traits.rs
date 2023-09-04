@@ -1,4 +1,4 @@
-use crate::{AccountIdOf, BalanceOf, Contribution, FundingPath, ProposedMilestone};
+use crate::{AccountIdOf, BalanceOf, Contribution, FundingPath, ProposedMilestone, Locality};
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
 use frame_support::{inherent::Vec, pallet_prelude::*, transactional, PalletId};
 use orml_traits::XcmTransfer;
@@ -20,7 +20,7 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
         brief_hash: H256,
         benificiary: AccountId,
         milestones: Vec<ProposedMilestone>,
-        refund_locations: Vec<(MultiLocation, Percent)>,
+        refund_locations: Vec<(Locality<AccountId>, Percent)>,
         jury: Vec<AccountId>,
         on_creation_funding: FundingPath,
     ) -> Result<(), DispatchError>;
@@ -29,7 +29,7 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
     /// Use when the contributors are the refund locations.
     fn convert_contributions_to_refund_locations(
         contributions: &BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
-    ) -> Vec<(MultiLocation, Percent)>;
+    ) -> Vec<(Locality<AccountId>, Percent)>;
 }
 
 pub trait RefundHandler<AccountId, Balance, CurrencyId> {
