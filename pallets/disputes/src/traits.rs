@@ -1,6 +1,4 @@
 
-use core::u32;
-
 use codec::{FullEncode, FullCodec, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned, BoundedVec};
@@ -28,8 +26,8 @@ pub trait DisputeRaiser<AccountId> {
 pub trait DisputeHooks<DisputeKey> {
     // Outcome
     // handle the completed dispute
-    fn on_dispute_complete() -> Result<(), DispatchError>;
-    fn on_dispute_cancel() -> Result<(), DispatchError>;
+    fn on_dispute_complete(dispute_key: DisputeKey,) -> Result<(), DispatchError>;
+    fn on_dispute_cancel(dispute_key: DisputeKey) -> Result<(), DispatchError>;
 }
 
 
