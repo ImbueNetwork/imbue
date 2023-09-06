@@ -95,12 +95,16 @@ pub mod pallet {
 
             //iterate over the disputes and update the voting state based on the passed vote
             //SHANKAR I was thinking of returning out the updated vote to calculate the finalization?
+            // FELIX REVIEW: for now leave it, and allow votes to be mutable
             Disputes::<T>::try_mutate(dispute_key, |dispute| {
                 if let Some(d) = dispute {
                     ensure!(
                         d.jury.iter().any(|e| e == &who),
                         Error::<T>::InvalidJuryAccount
                     );
+                    // FELIX REVIEW: 
+                    // This doesnt work, notice how a vote isnt mutable, therefore you arnt mutating it at all.
+                    // Also how do you account for changing of a vote 
                     let vote = &d.votes;
                     if is_yay {
                         vote.yay.saturating_add(1);
@@ -133,6 +137,9 @@ pub mod pallet {
         }
     }
 
+
+    // FELIX REVIEW: 
+    // Add all the impl<x: y>... into its own folder called impls.rs
     impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
         type DisputeKey = T::DisputeKey;
         type MaxReasonLength = <T as Config>::MaxReasonLength;
@@ -165,6 +172,8 @@ pub mod pallet {
             // Raise Event
             //SHANKAR if want to add more information while raising a dispute like returning the whole dispute struct to
             //get some more info about what has been raised or so on?
+            //FELIX REVIEW Only add information to events that you are certain youre gonna use on the app.
+            //each event is stored on chain so it would bloat the chain if we started returning whole structs.
             Self::deposit_event(Event::DisputeRaised { who: raised_by });
 
             Ok(())
@@ -191,6 +200,9 @@ pub mod pallet {
     }
 
     impl<T: Config> DisputeHooks<T::DisputeKey> for Pallet<T> {
+        // FELIX REVIEW: i think DisputeHooks should be impled where T: pallet_proposals + pallet_refund.
+        // if you impl it for pallet_dispute then how do we know on pallet_proposals that the dispute is complete?
+        // call me pls
         fn on_dispute_complete(
             dispute_key: <T as Config>::DisputeKey,
         ) -> Result<(), DispatchError> {
@@ -200,6 +212,7 @@ pub mod pallet {
                 Error::<T>::DisputeDoesNotExist
             );
             //SHANKAR: getting dispute so that to be useful to emit via event confirm with FELIX?
+            // FELIX REVIEW, again, only emit events when you know the data is required.
             let dispute = Disputes::<T>::get(dispute_key.clone());
             //emitting the dispute as it is completed
             Self::deposit_event(Event::DisputeCompleted {});
