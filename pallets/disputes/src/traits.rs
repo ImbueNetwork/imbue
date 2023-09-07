@@ -6,8 +6,8 @@ use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned, BoundedVec};
 
 pub trait DisputeRaiser<AccountId> {
     type DisputeKey: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
-    type MaxReasonLength;
-    type MaxJurySize;
+    type MaxReasonLength: Get<u32>;
+    type MaxJurySize: Get<u32>;
 
     // Strip this to be the minumim the dispute pallet needs to know.
     // where is the money,
