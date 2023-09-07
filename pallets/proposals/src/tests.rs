@@ -1015,7 +1015,29 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
 #[test]
 fn convert_to_proposal_too_many_contributions() {
     build_test_externality().execute_with(|| {
-        assert!(false);
+        let agreement_hash: H256 = Default::default();
+        let mut contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>> = Default::default();
+        (0..<Test as Config>::MaximumContributorsPerProject::get()).for_each(|nth| {
+                    contributions.insert(
+                        [nth; 32], 
+                        Contribution {
+                            value: 100_000,
+                            timestamp: One::one(),
+                        }
+                    );
+        });
+
+        assert_noop!(<Proposals<Test> as IntoProposal<AccountId, Balance, BlockNumber>>::convert_to_proposal(
+            CurrencyId::Native,
+            contributions,
+            agreement_hash,
+            *ALICE,
+            proposed_milestones,
+            refund_locations,
+            vec![(Locality::Foreign(treasury_account), Percent::from_parts(100u8))],
+            Vec::new(),
+            FundingPath::WaitForFunding,
+        ), Error::<Test>::TooManyContributions);
     });
 }
 #[test]
@@ -1038,6 +1060,7 @@ fn fund_project_success() {
         assert!(false);
     });
 }
+
 #[test]
 fn fund_project_not_enough_to_reserve() {
     build_test_externality().execute_with(|| {

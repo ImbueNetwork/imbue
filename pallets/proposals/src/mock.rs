@@ -183,7 +183,7 @@ parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
-    pub MaximumContributorsPerProject: u32 = 5000;
+    pub MaximumContributorsPerProject: u32 = 50;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
