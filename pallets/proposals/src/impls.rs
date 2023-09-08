@@ -416,4 +416,17 @@ impl<T: Config> Pallet<T> {
         }
         Ok(().into())
     }
+
+
+    impl<T: Config> DisputeHooks<<<<T as Config>::DisputeRaiser> as DisputeRaiser>::DisputeKey> for Pallet<T> {
+        fn on_dispute_complete(
+            dispute_key: <T as Config>::DisputeKey,
+        ) -> Result<(), DispatchError> {
+            
+        }
+
+        fn on_dispute_cancel(dispute_key: <T as Config>::DisputeKey) -> Result<(), DispatchError> {
+
+        }
+    }
 }

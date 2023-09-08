@@ -22,7 +22,6 @@ pub trait DisputeRaiser<AccountId> {
     ) -> Result<(), DispatchError>;
 }
 
-
 pub trait DisputeHooks<DisputeKey> {
     // Outcome
     // handle the completed dispute

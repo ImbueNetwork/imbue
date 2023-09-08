@@ -105,6 +105,8 @@ pub mod pallet {
         InvalidJuryAccount,
         /// There have been too many disputes on this block. Try next block.
         TooManyDisputesThisBlock,
+        /// The total vote must equal on for a refund vote.
+        TotalVoteMustEqualOne,
     }
 
     #[pallet::hooks]
@@ -124,46 +126,26 @@ pub mod pallet {
             dispute_key: T::DisputeKey,
             vote: Vote,
         ) -> DispatchResult {
-            // get dispute struct
-            // ensure caller is part of the jury
-            // mutate vote accordingly.
-            let who = ensure_signed(origin)?;
+            let whoz = ensure_signed(origin)?;
+            // If refund vote then make sure each side adds to 100%
+            if let Vote::Refund(refund_vote) = vote {
+                ensure!(refund.0 + refund.1 == <Percent as One>::one(), Error::<T>::TotalVoteMustEqualOne);
+            };
 
-            // NO CHECK TO DOUBLE VOTE
-
-            //iterate over the disputes and update the voting state based on the passed vote
-            //SHANKAR I was thinking of returning out the updated vote to calculate the finalization?
-            // FELIX REVIEW: for now leave it, and allow votes to be mutable
             Disputes::<T>::try_mutate(dispute_key, |dispute| {
                 if let Some(d) = dispute {
                     ensure!(
                         d.jury.iter().any(|e| e == &who),
                         Error::<T>::InvalidJuryAccount
                     );
-                    // FELIX REVIEW:
-                    // This doesnt work, notice how a vote isnt mutable, therefore you arnt mutating it at all.
-                    // Also how do you account for changing of a vote
-                    //let  vote = &d.votes;
-                    //match vote {
-                    //    Vote::Refund(mut refund) => {
-                    //        refund.update_refund_votes(refund.to_initiator, refund.to_refund);
-                    //    }
-                    //    Vote::Continue => {
-                    //        println!("Vote: Continue");
-                    //    }
-                    //    Vote::Abstain => {
-                    //        println!("Vote: Abstain");
-                    //    }
-                    //}
-
-
-
-                    Ok(())
+                    d.votes.try_insert(&who, vote).map_err(|_|Error::<T>::TooManyDisputeVotes)?;
+                    Ok::<(), DispatchError>(())
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist)
                 }
-            });
-            Self::deposit_event(Event::<T>::DisputeVotedOn { who });
+            })?;
+
+            Self::deposit_event(Event::<T>::DisputeVotedOn{who});
             Ok(().into())
         }
 
@@ -178,7 +160,7 @@ pub mod pallet {
             //ensuring the cancelling authority 
             <T as Config>::ForceOrigin::ensure_origin(origin)?;
             //calling the on_dispute cancel whenever the force cancel method is called
-            //<Self as DisputeHooks<T::DisputeKey>>::on_dispute_cancel(dispute_key);
+            let res = T::DisputeHooks::on_dispute_cancel(dispute_key);
             Ok(().into())
         }
     }
@@ -221,7 +203,7 @@ pub mod pallet {
         } 
         
         pub fn remove(key: T::DisputeKey) -> Result<(), DispatchError> {
-            // remove
+            Disputes::<T>::insert(dispute_key, dispute);
             // Dispute,
             // DisputeFInaliseOm
             Ok(())
@@ -240,13 +222,6 @@ pub mod pallet {
     pub struct RefundVote{
         pub to_initiator: u32,
         pub to_refund: u32,
-    }
-
-    impl RefundVote {
-        fn update_refund_votes(&mut self, total_to_initiator: u32, total_to_refund: u32) {
-            self.to_initiator += total_to_initiator;
-            self.to_refund += total_to_refund;
-        }
     }
 
     enum Outcome {
