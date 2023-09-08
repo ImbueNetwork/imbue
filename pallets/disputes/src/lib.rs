@@ -16,10 +16,14 @@
 // 4: an extrinsic is called claim_back(parameter: who, where.)
 
 pub use pallet::*;
-pub mod impls;
+//pub mod impls;
 pub mod traits;
+pub mod weights;
 use core::fmt::Debug;
 use frame_support::{pallet_prelude::*, weights::Weight};
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -88,6 +92,8 @@ pub mod pallet {
         /// A dispute has been completed.
         DisputeCompleted,
         //This event is emitted when the dispute is being cancelled
+        DisputeCompleted,
+        //This event is emitted when the dispute is being cancelled
         DisputeCancelled,
     }
 
@@ -116,7 +122,7 @@ pub mod pallet {
         pub fn vote_on_dispute(
             origin: OriginFor<T>,
             dispute_key: T::DisputeKey,
-            is_yay: bool,
+            vote: Vote,
         ) -> DispatchResult {
             // get dispute struct
             // ensure caller is part of the jury
@@ -135,11 +141,24 @@ pub mod pallet {
                         Error::<T>::InvalidJuryAccount
                         let mut vote = &mut d.votes;
                     );
-                    if is_yay {
-                        vote.yay = vote.yay.saturating_add(1);
-                    } else {
-                        vote.nay = vote.nay.saturating_add(1);
+                    // FELIX REVIEW:
+                    // This doesnt work, notice how a vote isnt mutable, therefore you arnt mutating it at all.
+                    // Also how do you account for changing of a vote
+                    let  vote = &d.votes;
+                    match vote {
+                        Vote::Refund(mut refund) => {
+                            refund.update_refund_votes(refund.to_initiator, refund.to_refund);
+                        }
+                        Vote::Continue => {
+                            println!("Vote: Continue");
+                        }
+                        Vote::Abstain => {
+                            println!("Vote: Abstain");
+                        }
                     }
+
+
+
                     Ok(())
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist)
@@ -205,9 +224,24 @@ pub mod pallet {
     }
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-    pub struct Vote {
-        pub percent_refund: Percent, // 100
-        pub percent_to_freelancer: Percent, // 0 - 100
+    pub enum Vote {
+        Refund(RefundVote),
+        Continue,
+        Abstain,
+    }
+
+    // A dispute vote contains what an account believes the outcome should be.
+    #[derive(Encode, Decode, PartialEq, Eq, Clone, Copy,Debug, TypeInfo, MaxEncodedLen)]
+    pub struct RefundVote{
+        pub to_initiator: u32,
+        pub to_refund: u32,
+    }
+
+    impl RefundVote {
+        fn update_refund_votes(&mut self, total_to_initiator: u32, total_to_refund: u32) {
+            self.to_initiator += total_to_initiator;
+            self.to_refund += total_to_refund;
+        }
     }
 
     enum Outcome {

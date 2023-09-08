@@ -14,11 +14,15 @@
             reason: BoundedVec<u8, Self::MaxReasonLength>,
             jury: BoundedVec<AccountIdOf<T>, Self::MaxJurySize>,
         ) -> Result<(), DispatchError> {
+
             // creating the struct with the passed information and initializing vote as 0 initially
             let dispute: Dispute<T> = Dispute {
                 raised_by: raised_by.clone(),
                 fund_account,
-                votes: Vote { yay: 0, nay: 0 },
+                votes: Vote::Refund(RefundVote {
+                    to_initiator: 0,
+                    to_refund: 0,
+                }),
                 reason,
                 jury,
             };
@@ -55,11 +59,9 @@
                 !Disputes::<T>::contains_key(dispute_key.clone()),
                 Error::<T>::DisputeDoesNotExist
             );
-            //SHANKAR: getting dispute so that to be useful to emit via event confirm with FELIX?
-            // FELIX REVIEW, again, only emit events when you know the data is required.
-            let dispute = Disputes::<T>::get(dispute_key.clone());
             //emitting the dispute as it is completed
-            Self::deposit_event(Event::DisputeCompleted {});
+            //TODO emit the dispute_key
+            Self::deposit_event(Event::DisputeCompleted);
             //removing the dispute once its being completed
             Disputes::<T>::remove(dispute_key);
             //SHANKAR: How about handling the refund(distrition of the fund) logic here, need to discuss with FELIX
@@ -73,10 +75,8 @@
                 !Disputes::<T>::contains_key(dispute_key.clone()),
                 Error::<T>::DisputeDoesNotExist
             );
-            //SHANKAR: getting dispute so that to be useful to emit via event confirm with FELIX?
-            let dispute = Disputes::<T>::get(dispute_key.clone());
             //emitting the dispute as it is cancelled
-            Self::deposit_event(Event::DisputeCancelled {});
+            Self::deposit_event(Event::DisputeCancelled);
             //removing the dispute once its being cancelled
             Disputes::<T>::remove(dispute_key);
             //SHANKAR: Confirming incase of cancellation there is no need for any refund logic right?
