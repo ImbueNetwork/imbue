@@ -3,11 +3,13 @@
 //FELIX REVIEW: Eventually it will be nice to have a short introduction here explaining what this pallet does and the
 // avaliable methods etc.
 
-// 1: Raise dispute from DisputeRaiser.
-// - Dispute::new() - setup the state for dispute. This also has to put in storage when a dispute is finalising.
+// 1: Raise dispute using DisputeRaiser from pallet_proposals
+// - It takes the raiser_id,project_id as dispute_key, list of jury(randomly selected upto 7 to 9 count), reason, fund_account
+// - Exisiting implementation looks good, need to update the votes while inserting the new dispute
 
 // 2: Vote on dispute. 
-// vote stacking needs fixing - mutate vote if already voted. 
+// Get the vote as single yes or no and divide based on the number of the voters
+// Need to come up with a way to change the votes that might require the storing the votes of each voter 
 
 // 3: finalise it in the on_initialize hook.
 // Signal that this is ready for continuation. pallet-refund/pallet-proposals.
