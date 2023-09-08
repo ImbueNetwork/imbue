@@ -31,7 +31,13 @@ Imbue Network is a blockchain-based platform that offers a secure, reliable, and
 
 ## Setup
 1. Install Substrate from https://docs.substrate.io/install/.
-2. Run tests with benchmarks 
+2. Clone repo and update submodules 
+```bash
+  git clone --recursive https://github.com/ImbueNetwork/imbue.git
+  cd imbue
+  git submodule update --recursive --remote
+```
+3. Run tests with benchmarks.
 ```bash
   cargo test --features runtime-benchmarks
 ```
