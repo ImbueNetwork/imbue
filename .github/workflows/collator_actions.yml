@@ -47,6 +47,8 @@ jobs:
       runs-on: ubuntu-latest
       steps:
       - uses: actions/checkout@v4
+      - name: Install Protobuf
+        run: sudo apt install protobuf-compiler
       - name: Install clippy
         run: rustup component add clippy
       - name: Ensure executable
