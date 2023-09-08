@@ -19,8 +19,6 @@ pub use pallet::*;
 //pub mod impls;
 pub mod traits;
 pub mod weights;
-use core::fmt::Debug;
-use frame_support::{pallet_prelude::*, weights::Weight};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -30,9 +28,10 @@ pub mod pallet {
     use super::*;
     use codec::{FullCodec, FullEncode};
     use frame_system::pallet_prelude::*;
-    use sp_runtime::traits::AtLeast32BitUnsigned;
+    use frame_support::{pallet_prelude::*, BoundedBTreeMap, weights::Weight, dispatch::fmt::Debug};
+    use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating};
     use traits::DisputeHooks;
-
+    
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
@@ -50,7 +49,8 @@ pub mod pallet {
             + FullCodec
             + MaxEncodedLen
             + TypeInfo
-            + Debug;
+            + Debug
+            + Copy;
         /// This is the max length for specifying the reason while raising the dispute
         type MaxReasonLength: Get<u32>;
         /// This is number of juries that can be assigned to a given dispute
@@ -75,7 +75,7 @@ pub mod pallet {
     /// Value: Vec<DisputeKey>
     #[pallet::storage]
     pub type DisputesFinaliseOn<T: Config> =
-        StorageMap<_, Blake2_128Concat, <T as frame_system>::BlockNumber, BoundedVec<T::DisputeKey, ConstU32<1000>>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, <T as frame_system::Config>::BlockNumber, BoundedVec<T::DisputeKey, ConstU32<1000>>, ValueQuery>;
 
     #[pallet::event]
     // FELIX REVIEW: the below generate_deposit line is depricated in the 9.0.43 so you can remove it completely.
@@ -92,8 +92,6 @@ pub mod pallet {
         /// A dispute has been completed.
         DisputeCompleted,
         //This event is emitted when the dispute is being cancelled
-        DisputeCompleted,
-        //This event is emitted when the dispute is being cancelled
         DisputeCancelled,
     }
 
@@ -105,12 +103,14 @@ pub mod pallet {
         DisputeAlreadyExists,
         // This account is not part of the specified jury.
         InvalidJuryAccount,
+        /// There have been too many disputes on this block. Try next block.
+        TooManyDisputesThisBlock,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
-
+            <Weight as Default>::default()
         }
     }
 
@@ -139,23 +139,22 @@ pub mod pallet {
                     ensure!(
                         d.jury.iter().any(|e| e == &who),
                         Error::<T>::InvalidJuryAccount
-                        let mut vote = &mut d.votes;
                     );
                     // FELIX REVIEW:
                     // This doesnt work, notice how a vote isnt mutable, therefore you arnt mutating it at all.
                     // Also how do you account for changing of a vote
-                    let  vote = &d.votes;
-                    match vote {
-                        Vote::Refund(mut refund) => {
-                            refund.update_refund_votes(refund.to_initiator, refund.to_refund);
-                        }
-                        Vote::Continue => {
-                            println!("Vote: Continue");
-                        }
-                        Vote::Abstain => {
-                            println!("Vote: Abstain");
-                        }
-                    }
+                    //let  vote = &d.votes;
+                    //match vote {
+                    //    Vote::Refund(mut refund) => {
+                    //        refund.update_refund_votes(refund.to_initiator, refund.to_refund);
+                    //    }
+                    //    Vote::Continue => {
+                    //        println!("Vote: Continue");
+                    //    }
+                    //    Vote::Abstain => {
+                    //        println!("Vote: Abstain");
+                    //    }
+                    //}
 
 
 
@@ -179,7 +178,7 @@ pub mod pallet {
             //ensuring the cancelling authority 
             <T as Config>::ForceOrigin::ensure_origin(origin)?;
             //calling the on_dispute cancel whenever the force cancel method is called
-            <Self as DisputeHooks<T::DisputeKey>>::on_dispute_cancel(dispute_key);
+            //<Self as DisputeHooks<T::DisputeKey>>::on_dispute_cancel(dispute_key);
             Ok(().into())
         }
     }
@@ -207,19 +206,25 @@ pub mod pallet {
                 jury,
                 votes: Default::default(),
             };
-            let final_block = frame_system::Pallet<T>::block_number();
+            let final_block = frame_system::Pallet::<T>::block_number();
 
             Disputes::<T>::insert(dispute_key, dispute);
-            DisputesFinaliseOn::<T>::insert(final_block.saturating_add(T::VotingTimeLimit::get()));
+            DisputesFinaliseOn::<T>::try_mutate(final_block.saturating_add(T::VotingTimeLimit::get()),|b_vec|{
 
-            Self::deposit_event(Event::<T>::DisputeRaised {dispute_key});
+                b_vec.try_push(dispute_key).map_err(|_|Error::<T>::TooManyDisputesThisBlock)?;
+
+                Ok::<(), DispatchError>(())
+            })?;
+
+            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeRaised {dispute_key});
             Ok(())
         } 
         
-        pub fn remove(key: T::DisputeKey) -> Result<(), Dispatch> {
+        pub fn remove(key: T::DisputeKey) -> Result<(), DispatchError> {
             // remove
             // Dispute,
             // DisputeFInaliseOm
+            Ok(())
         }
     }
 
@@ -249,12 +254,13 @@ pub mod pallet {
         Continue,
         Slash,
     }
+
+    pub trait WeightInfoT {
+        fn vote_on_dispute() -> Weight;
+        fn force_cancel_dispute() -> Weight;
+        fn raise_dispute() -> Weight;
+        fn on_dispute_complete() -> Weight;
+        fn on_dispute_cancel() -> Weight;
+    }
 }
 
-pub trait WeightInfoT {
-    fn vote_on_dispute() -> Weight;
-    fn force_cancel_dispute() -> Weight;
-    fn raise_dispute() -> Weight;
-    fn on_dispute_complete() -> Weight;
-    fn on_dispute_cancel() -> Weight;
-}

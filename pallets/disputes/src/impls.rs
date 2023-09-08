@@ -47,39 +47,39 @@
     }
 
 
-    impl<T: Config> DisputeHooks<T::DisputeKey> for Pallet<T> {
-        // FELIX REVIEW: i think DisputeHooks should be impled where T: pallet_proposals + pallet_refund.
-        // if you impl it for pallet_dispute then how do we know on pallet_proposals that the dispute is complete?
-        // call me pls
-        fn on_dispute_complete(
-            dispute_key: <T as Config>::DisputeKey,
-        ) -> Result<(), DispatchError> {
-            // verifying whether the given dispute exists, if not throwing exception
-            ensure!(
-                !Disputes::<T>::contains_key(dispute_key.clone()),
-                Error::<T>::DisputeDoesNotExist
-            );
-            //emitting the dispute as it is completed
-            //TODO emit the dispute_key
-            Self::deposit_event(Event::DisputeCompleted);
-            //removing the dispute once its being completed
-            Disputes::<T>::remove(dispute_key);
-            //SHANKAR: How about handling the refund(distrition of the fund) logic here, need to discuss with FELIX
-            //Also we need to return outcome type correct here?
-            Ok(())
-        }
+    // impl<T: Config> DisputeHooks<T::DisputeKey> for Pallet<T> {
+    //     // FELIX REVIEW: i think DisputeHooks should be impled where T: pallet_proposals + pallet_refund.
+    //     // if you impl it for pallet_dispute then how do we know on pallet_proposals that the dispute is complete?
+    //     // call me pls
+    //     fn on_dispute_complete(
+    //         dispute_key: <T as Config>::DisputeKey,
+    //     ) -> Result<(), DispatchError> {
+    //         // verifying whether the given dispute exists, if not throwing exception
+    //         ensure!(
+    //             !Disputes::<T>::contains_key(dispute_key.clone()),
+    //             Error::<T>::DisputeDoesNotExist
+    //         );
+    //         //emitting the dispute as it is completed
+    //         //TODO emit the dispute_key
+    //         Self::deposit_event(Event::DisputeCompleted);
+    //         //removing the dispute once its being completed
+    //         Disputes::<T>::remove(dispute_key);
+    //         //SHANKAR: How about handling the refund(distrition of the fund) logic here, need to discuss with FELIX
+    //         //Also we need to return outcome type correct here?
+    //         Ok(())
+    //     }
 
-        fn on_dispute_cancel(dispute_key: <T as Config>::DisputeKey) -> Result<(), DispatchError> {
-            // verifying whether the given dispute exists, if not throwing exception
-            ensure!(
-                !Disputes::<T>::contains_key(dispute_key.clone()),
-                Error::<T>::DisputeDoesNotExist
-            );
-            //emitting the dispute as it is cancelled
-            Self::deposit_event(Event::DisputeCancelled);
-            //removing the dispute once its being cancelled
-            Disputes::<T>::remove(dispute_key);
-            //SHANKAR: Confirming incase of cancellation there is no need for any refund logic right?
-            Ok(())
-        }
-    }
+    //     fn on_dispute_cancel(dispute_key: <T as Config>::DisputeKey) -> Result<(), DispatchError> {
+    //         // verifying whether the given dispute exists, if not throwing exception
+    //         ensure!(
+    //             !Disputes::<T>::contains_key(dispute_key.clone()),
+    //             Error::<T>::DisputeDoesNotExist
+    //         );
+    //         //emitting the dispute as it is cancelled
+    //         Self::deposit_event(Event::DisputeCancelled);
+    //         //removing the dispute once its being cancelled
+    //         Disputes::<T>::remove(dispute_key);
+    //         //SHANKAR: Confirming incase of cancellation there is no need for any refund logic right?
+    //         Ok(())
+    //     }
+    // }

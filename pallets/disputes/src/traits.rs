@@ -2,7 +2,7 @@
 use codec::{FullEncode, FullCodec, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{DispatchError, traits::AtLeast32BitUnsigned, BoundedVec};
-
+use frame_support::pallet_prelude::*;
 
 pub trait DisputeRaiser<AccountId> {
     type DisputeKey: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
