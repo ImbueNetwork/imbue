@@ -1,4 +1,4 @@
-name: build-imbue-collator
+name: rust
 on:
   workflow_dispatch:
   push:
@@ -12,12 +12,15 @@ on:
     paths-ignore:
       - "**.md"
 
+    env: 
+      CARGO_TERM_COLOR: always
+
 jobs:
   build-imbue-collator:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -40,3 +43,19 @@ jobs:
 
       - name: Run tests with benchmarks
         run: cargo test --features runtime-benchmarks
+clippy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install clippy
+      run: rustup component add clippy
+    - name: Run clippy
+      run: ./ci/jobs/clippy.sh
+rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install rustfmt
+      run: rustup component add rustfmt
+    - name: Run rustfmt
+      run: ./ci/jobs/rustfmt.sh
