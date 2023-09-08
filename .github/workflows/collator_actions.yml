@@ -49,6 +49,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install clippy
         run: rustup component add clippy
+      - name: Ensure executable
+        run: chmod +x ./ci/jobs/clippy.sh
       - name: Run clippy
         run: ./ci/jobs/clippy.sh
   rustfmt:
@@ -57,5 +59,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install rustfmt
       run: rustup component add rustfmt
+    - name: Ensure executable
+      run: chmod +x ./ci/jobs/rustfmt.sh
     - name: Run rustfmt
       run: ./ci/jobs/rustfmt.sh
