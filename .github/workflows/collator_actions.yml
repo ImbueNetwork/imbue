@@ -43,15 +43,15 @@ jobs:
 
       - name: Run tests with benchmarks
         run: cargo test --features runtime-benchmarks
-clippy:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Install clippy
-      run: rustup component add clippy
-    - name: Run clippy
-      run: ./ci/jobs/clippy.sh
-rustfmt:
+  clippy:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v4
+      - name: Install clippy
+        run: rustup component add clippy
+      - name: Run clippy
+        run: ./ci/jobs/clippy.sh
+  rustfmt:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
