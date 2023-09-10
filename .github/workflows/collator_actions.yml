@@ -49,6 +49,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Protobuf
         run: sudo apt install protobuf-compiler
+      - name: Install minimal nightly Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2023-05-22
+          target: wasm32-unknown-unknown
+          override: true
       - name: Install clippy
         run: rustup component add clippy
       - name: Ensure executable
