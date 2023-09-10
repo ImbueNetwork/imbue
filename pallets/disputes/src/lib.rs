@@ -6,12 +6,12 @@
 // 1: Raise dispute from DisputeRaiser.
 // - Dispute::new() - setup the state for dispute. This also has to put in storage when a dispute is finalising.
 
-// 2: Vote on dispute. 
-// vote stacking needs fixing - mutate vote if already voted. 
+// 2: Vote on dispute.
+// vote stacking needs fixing - mutate vote if already voted.
 
 // 3: finalise it in the on_initialize hook.
 // Signal that this is ready for continuation. pallet-refund/pallet-proposals.
-// Refund, Everythings ok. 
+// Refund, Everythings ok.
 
 // 4: an extrinsic is called claim_back(parameter: who, where.)
 
@@ -27,11 +27,13 @@ mod benchmarking;
 pub mod pallet {
     use super::*;
     use codec::{FullCodec, FullEncode};
+    use frame_support::{
+        dispatch::fmt::Debug, pallet_prelude::*, weights::Weight, BoundedBTreeMap,
+    };
     use frame_system::pallet_prelude::*;
-    use frame_support::{pallet_prelude::*, BoundedBTreeMap, weights::Weight, dispatch::fmt::Debug};
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating};
     use traits::DisputeHooks;
-    
+
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
@@ -55,7 +57,6 @@ pub mod pallet {
         type MaxReasonLength: Get<u32>;
         /// This is number of juries that can be assigned to a given dispute
         type MaxJurySize: Get<u32>;
-        type DisputeHooks: traits::DisputeHooks<Self::DisputeKey>;
         /// The amount of time a dispute takes to finalise.
         type VotingTimeLimit: Get<<Self as frame_system::Config>::BlockNumber>;
 
@@ -74,21 +75,27 @@ pub mod pallet {
     /// Key: BlockNumber
     /// Value: Vec<DisputeKey>
     #[pallet::storage]
-    pub type DisputesFinaliseOn<T: Config> =
-        StorageMap<_, Blake2_128Concat, <T as frame_system::Config>::BlockNumber, BoundedVec<T::DisputeKey, ConstU32<1000>>, ValueQuery>;
+    pub type DisputesFinaliseOn<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        <T as frame_system::Config>::BlockNumber,
+        BoundedVec<T::DisputeKey, ConstU32<1000>>,
+        ValueQuery,
+    >;
 
     #[pallet::event]
     // FELIX REVIEW: the below generate_deposit line is depricated in the 9.0.43 so you can remove it completely.
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-
         //This event is emitted whenever a dispute has been successfully raised
-        DisputeRaised{
-            dispute_key: T::DisputeKey
+        DisputeRaised {
+            dispute_key: T::DisputeKey,
         },
         // This event is emitted whenever there has been a voting successfully happened for a given dispute by
         // the authorized jury member
-        DisputeVotedOn { who: AccountIdOf<T> },
+        DisputeVotedOn {
+            who: AccountIdOf<T>,
+        },
         /// A dispute has been completed.
         DisputeCompleted,
         //This event is emitted when the dispute is being cancelled
@@ -129,7 +136,10 @@ pub mod pallet {
             let whoz = ensure_signed(origin)?;
             // If refund vote then make sure each side adds to 100%
             if let Vote::Refund(refund_vote) = vote {
-                ensure!(refund.0 + refund.1 == <Percent as One>::one(), Error::<T>::TotalVoteMustEqualOne);
+                ensure!(
+                    refund.0 + refund.1 == <Percent as One>::one(),
+                    Error::<T>::TotalVoteMustEqualOne
+                );
             };
 
             Disputes::<T>::try_mutate(dispute_key, |dispute| {
@@ -138,14 +148,16 @@ pub mod pallet {
                         d.jury.iter().any(|e| e == &who),
                         Error::<T>::InvalidJuryAccount
                     );
-                    d.votes.try_insert(&who, vote).map_err(|_|Error::<T>::TooManyDisputeVotes)?;
+                    d.votes
+                        .try_insert(&who, vote)
+                        .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
                     Ok::<(), DispatchError>(())
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist)
                 }
             })?;
 
-            Self::deposit_event(Event::<T>::DisputeVotedOn{who});
+            Self::deposit_event(Event::<T>::DisputeVotedOn { who });
             Ok(().into())
         }
 
@@ -157,7 +169,7 @@ pub mod pallet {
             dispute_key: T::DisputeKey,
             is_yay: bool,
         ) -> DispatchResult {
-            //ensuring the cancelling authority 
+            //ensuring the cancelling authority
             <T as Config>::ForceOrigin::ensure_origin(origin)?;
             //calling the on_dispute cancel whenever the force cancel method is called
             let res = T::DisputeHooks::on_dispute_cancel(dispute_key);
@@ -179,9 +191,13 @@ pub mod pallet {
     }
 
     impl<T: Config> Dispute<T> {
-        
         // Create a new dispute and setup state so that pallet will operate as intended.
-        pub fn new(dispute_key: T::DisputeKey, raised_by: AccountIdOf<T>, reason: BoundedVec<u8, T::MaxReasonLength>, jury: BoundedVec<AccountIdOf<T>, T::MaxJurySize>) -> Result<(), DispatchError>{
+        pub fn new(
+            dispute_key: T::DisputeKey,
+            raised_by: AccountIdOf<T>,
+            reason: BoundedVec<u8, T::MaxReasonLength>,
+            jury: BoundedVec<AccountIdOf<T>, T::MaxJurySize>,
+        ) -> Result<(), DispatchError> {
             let dispute = Self {
                 raised_by,
                 reason,
@@ -191,17 +207,21 @@ pub mod pallet {
             let final_block = frame_system::Pallet::<T>::block_number();
 
             Disputes::<T>::insert(dispute_key, dispute);
-            DisputesFinaliseOn::<T>::try_mutate(final_block.saturating_add(T::VotingTimeLimit::get()),|b_vec|{
+            DisputesFinaliseOn::<T>::try_mutate(
+                final_block.saturating_add(T::VotingTimeLimit::get()),
+                |b_vec| {
+                    b_vec
+                        .try_push(dispute_key)
+                        .map_err(|_| Error::<T>::TooManyDisputesThisBlock)?;
 
-                b_vec.try_push(dispute_key).map_err(|_|Error::<T>::TooManyDisputesThisBlock)?;
+                    Ok::<(), DispatchError>(())
+                },
+            )?;
 
-                Ok::<(), DispatchError>(())
-            })?;
-
-            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeRaised {dispute_key});
+            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeRaised { dispute_key });
             Ok(())
-        } 
-        
+        }
+
         pub fn remove(key: T::DisputeKey) -> Result<(), DispatchError> {
             Disputes::<T>::insert(dispute_key, dispute);
             // Dispute,
@@ -218,8 +238,8 @@ pub mod pallet {
     }
 
     // A dispute vote contains what an account believes the outcome should be.
-    #[derive(Encode, Decode, PartialEq, Eq, Clone, Copy,Debug, TypeInfo, MaxEncodedLen)]
-    pub struct RefundVote{
+    #[derive(Encode, Decode, PartialEq, Eq, Clone, Copy, Debug, TypeInfo, MaxEncodedLen)]
+    pub struct RefundVote {
         pub to_initiator: u32,
         pub to_refund: u32,
     }
@@ -238,4 +258,3 @@ pub mod pallet {
         fn on_dispute_cancel() -> Weight;
     }
 }
-
