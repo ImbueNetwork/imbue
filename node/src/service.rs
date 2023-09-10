@@ -87,15 +87,7 @@ pub fn new_partial(
         })
         .transpose()?;
 
-    let executor = ParachainExecutor::new_with_wasm_executor(
-        sc_executor::WasmExecutor {
-            wasm_method: config.wasm_method,
-            default_heap_pages: config.default_heap_pages,
-            max_runtime_instances: config.max_runtime_instances,
-            cache_path: None,
-            runtime_cache_size: config.runtime_cache_size,
-        }
-    );
+    let executor = sc_service::new_native_or_wasm_executor(config);
 
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts::<Block, RuntimeApi, _>(
