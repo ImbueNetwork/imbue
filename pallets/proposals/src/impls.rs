@@ -48,7 +48,7 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub(crate)  fn new_milestone_vote(
+    pub(crate) fn new_milestone_vote(
         who: T::AccountId,
         project_key: ProjectKey,
         milestone_key: MilestoneKey,
@@ -75,23 +75,30 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
 
-        let vote: Vote<BalanceOf<T>> = MilestoneVotes::<T>::try_mutate(project_key, milestone_key, |vote| {
-            if let Some(v) = vote {
-                if approve_milestone {
-                    v.yay = v.yay.saturating_add(contribution_amount);
+        let vote: Vote<BalanceOf<T>> =
+            MilestoneVotes::<T>::try_mutate(project_key, milestone_key, |vote| {
+                if let Some(v) = vote {
+                    if approve_milestone {
+                        v.yay = v.yay.saturating_add(contribution_amount);
+                    } else {
+                        v.nay = v.nay.saturating_add(contribution_amount);
+                    }
+                    Ok::<Vote<BalanceOf<T>>, DispatchError>(v.clone())
                 } else {
-                    v.nay = v.nay.saturating_add(contribution_amount);
+                    Err(Error::<T>::VotingRoundNotStarted.into())
                 }
-                Ok::<Vote<BalanceOf<T>>, DispatchError>(v.clone())
-            } else {
-                Err(Error::<T>::VotingRoundNotStarted.into())
-            }
-        })?;
+            })?;
 
         let funding_threshold: BalanceOf<T> =
             T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
-        
-        Self::try_auto_finalise_milestone_voting(project_key, &vote, funding_threshold, user_has_voted_key, who.clone())?;
+
+        Self::try_auto_finalise_milestone_voting(
+            project_key,
+            &vote,
+            funding_threshold,
+            user_has_voted_key,
+            who.clone(),
+        )?;
         Self::deposit_event(Event::VoteSubmitted(
             who,
             project_key,
@@ -173,7 +180,10 @@ impl<T: Config> Pallet<T> {
 
     /// This function raises a vote of no confidence.
     /// This round can only be called once and there after can only be voted on.
-    pub(crate) fn raise_no_confidence_round(who: T::AccountId, project_key: ProjectKey) -> DispatchResult {
+    pub(crate) fn raise_no_confidence_round(
+        who: T::AccountId,
+        project_key: ProjectKey,
+    ) -> DispatchResult {
         //ensure that who is a contributor or root
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         let contribution = project
@@ -392,7 +402,13 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub(crate) fn try_auto_finalise_milestone_voting(project_key: ProjectKey, vote: &Vote<BalanceOf<T>>, funding_threshold: BalanceOf<T>, user_has_voted_key: (ProjectKey, RoundType, MilestoneKey), who: AccountIdOf<T>) -> Result<(), DispatchError> {
+    pub(crate) fn try_auto_finalise_milestone_voting(
+        project_key: ProjectKey,
+        vote: &Vote<BalanceOf<T>>,
+        funding_threshold: BalanceOf<T>,
+        user_has_voted_key: (ProjectKey, RoundType, MilestoneKey),
+        who: AccountIdOf<T>,
+    ) -> Result<(), DispatchError> {
         // If the yay votes is over the funding threshold then the milestone is approved.
         if vote.yay >= funding_threshold {
             Projects::<T>::mutate(project_key, |maybe_project| {
@@ -423,16 +439,17 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    pub(crate) fn close_voting_round(project_key: ProjectKey, user_has_voted_key: (ProjectKey, RoundType, MilestoneKey)) -> Result<(), DispatchError> {
+    pub(crate) fn close_voting_round(
+        project_key: ProjectKey,
+        user_has_voted_key: (ProjectKey, RoundType, MilestoneKey),
+    ) -> Result<(), DispatchError> {
         // Prevent further voting.
-        let exp_block = Rounds::<T>::take(project_key, RoundType::VotingRound).ok_or(Error::<T>::VotingRoundNotStarted)?;
+        let exp_block = Rounds::<T>::take(project_key, RoundType::VotingRound)
+            .ok_or(Error::<T>::VotingRoundNotStarted)?;
         // Prevent hook from calling.
         RoundsExpiring::<T>::remove(exp_block);
         // Allow future votes to occur on this milestone
         UserHasVoted::<T>::remove(user_has_voted_key);
         Ok(())
     }
-
-
-
 }

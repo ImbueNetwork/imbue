@@ -209,11 +209,19 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
             milestone_key,
             true
         ));
-        
+
         // Assert that the state is good before auto finalisation
-        let exp_block = Rounds::<Test>::get(&project_key, RoundType::VotingRound).expect("There should be a round here for the project_key");
-        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(project_key, RoundType::VotingRound, milestone_key)));
-        assert!(UserHasVoted::<Test>::get((&project_key, RoundType::VotingRound, milestone_key)).contains_key(&BOB));
+        let exp_block = Rounds::<Test>::get(&project_key, RoundType::VotingRound)
+            .expect("There should be a round here for the project_key");
+        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(
+            project_key,
+            RoundType::VotingRound,
+            milestone_key
+        )));
+        assert!(
+            UserHasVoted::<Test>::get((&project_key, RoundType::VotingRound, milestone_key))
+                .contains_key(&BOB)
+        );
 
         // Assert the storage has been cleared up after finalisation
         assert_ok!(Proposals::vote_on_milestone(
@@ -224,8 +232,15 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
         ));
 
         assert!(Rounds::<Test>::get(&project_key, RoundType::VotingRound).is_none());
-        assert_eq!(RoundsExpiring::<Test>::get(&exp_block).len(), 0, "This vec should have been emptied on auto finalisation.");
-        assert!(UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key)).is_empty());
+        assert_eq!(
+            RoundsExpiring::<Test>::get(&exp_block).len(),
+            0,
+            "This vec should have been emptied on auto finalisation."
+        );
+        assert!(
+            UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key))
+                .is_empty()
+        );
     });
 }
 
@@ -247,11 +262,19 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
             milestone_key,
             false
         ));
-        
+
         // Assert that the state is good before auto finalisation
-        let exp_block = Rounds::<Test>::get(&project_key, RoundType::VotingRound).expect("There should be a round here for the project_key");
-        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(project_key, RoundType::VotingRound, milestone_key)));
-        assert!(UserHasVoted::<Test>::get((&project_key, RoundType::VotingRound, milestone_key)).contains_key(&BOB));
+        let exp_block = Rounds::<Test>::get(&project_key, RoundType::VotingRound)
+            .expect("There should be a round here for the project_key");
+        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(
+            project_key,
+            RoundType::VotingRound,
+            milestone_key
+        )));
+        assert!(
+            UserHasVoted::<Test>::get((&project_key, RoundType::VotingRound, milestone_key))
+                .contains_key(&BOB)
+        );
 
         // Assert the storage has been cleared up after finalisation
         assert_ok!(Proposals::vote_on_milestone(
@@ -262,11 +285,17 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
         ));
 
         assert!(Rounds::<Test>::get(&project_key, RoundType::VotingRound).is_none());
-        assert_eq!(RoundsExpiring::<Test>::get(&exp_block).len(), 0, "This vec should have been emptied on auto finalisation.");
-        assert!(UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key)).is_empty());
+        assert_eq!(
+            RoundsExpiring::<Test>::get(&exp_block).len(),
+            0,
+            "This vec should have been emptied on auto finalisation."
+        );
+        assert!(
+            UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key))
+                .is_empty()
+        );
     });
 }
-
 
 #[test]
 fn users_can_submit_multiple_milestones_and_vote_independantly() {
@@ -308,7 +337,7 @@ fn users_can_submit_multiple_milestones_and_vote_independantly() {
         assert!(vote_1.yay == 100_000u64);
         assert!(vote_1.nay == 0u64);
     });
-} 
+}
 
 #[test]
 fn vote_on_milestone_no_project() {
@@ -1075,23 +1104,28 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
     });
 }
 
-
 #[test]
 fn close_voting_round_works() {
     build_test_externality().execute_with(|| {
         Rounds::<Test>::insert(0, RoundType::VotingRound, 100);
-        let r_expiring: BoundedVec<(ProjectKey, RoundType, MilestoneKey), <Test as Config>::ExpiringProjectRoundsPerBlock> = vec![(0, RoundType::VotingRound, 0)].try_into().expect("smaller than bound: qed.");
+        let r_expiring: BoundedVec<
+            (ProjectKey, RoundType, MilestoneKey),
+            <Test as Config>::ExpiringProjectRoundsPerBlock,
+        > = vec![(0, RoundType::VotingRound, 0)]
+            .try_into()
+            .expect("smaller than bound: qed.");
         RoundsExpiring::<Test>::insert(100, r_expiring);
         UserHasVoted::<Test>::insert((0, RoundType::VotingRound, 0), BoundedBTreeMap::new());
 
-        assert_ok!(crate::Pallet::<Test>::close_voting_round(0, (0, RoundType::VotingRound, 0)));
+        assert_ok!(crate::Pallet::<Test>::close_voting_round(
+            0,
+            (0, RoundType::VotingRound, 0)
+        ));
         assert!(Rounds::<Test>::get(0, RoundType::VotingRound).is_none());
         assert!(RoundsExpiring::<Test>::get(100).len() == 0);
         assert!(UserHasVoted::<Test>::get((0, RoundType::VotingRound, 0)).is_empty());
     })
 }
-
-
 
 // todo: finalise voteof no confidence tests.
 // ^^ is connected to making the pallet generic over funding type.
