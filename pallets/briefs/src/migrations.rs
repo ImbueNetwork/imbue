@@ -46,7 +46,7 @@ pub(crate) mod v1 {
                 let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief
                     .milestones
                     .iter()
-                    .map(|ms| {
+                    .filter_map(|ms| {
                         let convert: Result<u8, _> = ms.percentage_to_unlock.try_into();
                         if let Ok(n) = convert {
                             Some(ProposedMilestone {
@@ -56,7 +56,6 @@ pub(crate) mod v1 {
                             None
                         }
                     })
-                    .flatten()
                     .collect::<Vec<ProposedMilestone>>()
                     .try_into();
 

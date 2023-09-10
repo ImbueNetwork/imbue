@@ -328,7 +328,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[deprecated(since = "3.1.0", note = "autofinalisation has been implemented.")]
-    pub(crate) fn call_finalise_no_confidence_vote(
+    pub(crate) fn _call_finalise_no_confidence_vote(
         who: T::AccountId,
         project_key: ProjectKey,
         majority_required: Percent,
@@ -436,7 +436,7 @@ impl<T: Config> Pallet<T> {
                 user_has_voted_key.2,
             ));
         }
-        Ok(().into())
+        Ok(())
     }
 
     pub(crate) fn close_voting_round(

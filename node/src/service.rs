@@ -58,6 +58,7 @@ type ParachainBlockImport = TParachainBlockImport<Block, Arc<ParachainClient>, P
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
 /// be able to perform chain operations.
+#[allow(clippy::type_complexity)]
 pub fn new_partial(
     config: &Configuration,
 ) -> Result<
@@ -86,11 +87,14 @@ pub fn new_partial(
         })
         .transpose()?;
 
-    let executor = ParachainExecutor::new(
-        config.wasm_method,
-        config.default_heap_pages,
-        config.max_runtime_instances,
-        config.runtime_cache_size,
+    let executor = ParachainExecutor::new_with_wasm_executor(
+        sc_executor::WasmExecutor {
+            wasm_method: config.wasm_method,
+            default_heap_pages: config.default_heap_pages,
+            max_runtime_instances: config.max_runtime_instances,
+            cache_path: None,
+            runtime_cache_size: config.runtime_cache_size,
+        }
     );
 
     let (client, backend, keystore_container, task_manager) =
@@ -354,6 +358,7 @@ fn build_import_queue(
         .map_err(Into::into)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_consensus(
     client: Arc<ParachainClient>,
     block_import: ParachainBlockImport,
