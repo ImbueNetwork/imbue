@@ -170,7 +170,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
-        #[allow(clippy::too_many_arguments)] 
+        #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::create_brief())]
         pub fn create_brief(
