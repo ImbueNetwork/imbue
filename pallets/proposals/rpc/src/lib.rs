@@ -71,7 +71,7 @@ fn runtime_error_into_rpc_err(err: impl std::fmt::Debug) -> JsonRpseeError {
     CallError::Custom(ErrorObject::owned(
         Error::RuntimeError.into(),
         "Could not generate the account_id for the given project_id",
-        Some(format!("{:?}", err)),
+        Some(format!("{err:?}")),
     ))
     .into()
 }

@@ -225,7 +225,7 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 parameter_types! {
     pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
     pub const NativeTokenTransferFee: u128 = NATIVE_TOKEN_TRANSFER_FEE;
-    pub const CreationFee: Balance = 1 * MICRO_IMBU;
+    pub const CreationFee: Balance = MICRO_IMBU;
     pub const TransactionByteFee: Balance = MICRO_IMBU * 10;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
@@ -612,11 +612,11 @@ impl pallet_collator_selection::Config for Runtime {
 }
 
 parameter_types! {
-    pub const AssetDeposit: Balance = 1 * IMBU;
-    pub const AssetAccountDeposit: Balance = 1 * IMBU;
+    pub const AssetDeposit: Balance = IMBU;
+    pub const AssetAccountDeposit: Balance = IMBU;
     pub const ApprovalDeposit: Balance = 100 * MILLI_IMBU;
     pub const AssetsStringLimit: u32 = 50;
-    pub const MetadataDepositBase: Balance = 1 * IMBU;
+    pub const MetadataDepositBase: Balance = IMBU;
     pub const MetadataDepositPerByte: Balance = 10 * MILLI_IMBU;
     pub const MaxAuthorities: u32 = 100_000;
 }
@@ -628,12 +628,10 @@ impl pallet_aura::Config for Runtime {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+    pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
         // FIXME:
         // every currency has a zero existential deposit
-        match currency_id {
-            _ => 0,
-        }
+        0
     };
 }
 
@@ -1127,7 +1125,7 @@ impl_runtime_apis! {
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
-            return (list, storage_info)
+            (list, storage_info)
         }
 
         fn dispatch_benchmark(

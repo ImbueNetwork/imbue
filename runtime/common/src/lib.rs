@@ -254,13 +254,11 @@ pub mod asset_registry {
 
         fn try_origin(
             origin: Origin,
-            asset_id: &Option<CurrencyId>,
+            _asset_id: &Option<CurrencyId>,
         ) -> Result<Self::Success, Origin> {
             // FIXME:
-            match asset_id {
-                // Any other `asset_id` defaults to EnsureRoot
-                _ => DefaultEnsureOrigin::try_origin(origin).map(|_| ()),
-            }
+            // Any `asset_id` defaults to EnsureRoot
+            DefaultEnsureOrigin::try_origin(origin).map(|_| ())
         }
 
         #[cfg(feature = "runtime-benchmarks")]

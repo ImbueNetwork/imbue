@@ -475,8 +475,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        pub fn new_contribution<'a>(
-            who: &'a T::AccountId,
+        pub fn new_contribution(
+            who: &T::AccountId,
             crowdfund_key: CrowdFundKey,
             additional_amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
