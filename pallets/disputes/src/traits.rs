@@ -5,19 +5,16 @@ use sp_runtime::{traits::AtLeast32BitUnsigned, BoundedVec, DispatchError};
 
 pub trait DisputeRaiser<AccountId> {
     type DisputeKey: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
+    type SpecificId AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
     type MaxReasonLength: Get<u32>;
     type MaxJurySize: Get<u32>;
+    type MaxSpecifics: Get<u32>;
 
-    // Strip this to be the minumim the dispute pallet needs to know.
-    // where is the money,
-    // Who is the jury,
-    // Bind the string to a constant amount (500)
     fn raise_dispute(
         dispute_key: Self::DisputeKey,
         raised_by: AccountId,
-        fund_account: AccountId,
-        reason: BoundedVec<u8, Self::MaxReasonLength>,
         jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        specific_ids: BoundedVec<SpecificId, MaxSpecifics>, 
     ) -> Result<(), DispatchError>;
 }
 
