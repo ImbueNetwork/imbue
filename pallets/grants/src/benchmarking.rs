@@ -3,8 +3,8 @@
 
 use super::*;
 use crate::test_utils::gen_grant_id;
-use crate::{BoundedApprovers, BoundedPMilestones, Config};
 use crate::Pallet as Grants;
+use crate::{BoundedApprovers, BoundedPMilestones, Config};
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get};
