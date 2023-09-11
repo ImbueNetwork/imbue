@@ -1,9 +1,10 @@
 #![cfg(feature = "runtime-benchmarks")]
+#![allow(unused_imports)]
 
 use super::*;
 use crate::test_utils::gen_grant_id;
-
 use crate::{BoundedApprovers, BoundedPMilestones, Config};
+use crate::Pallet as Grants;
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get};
@@ -40,7 +41,6 @@ mod benchmarks {
             grant_id,
         );
     }
-
     impl_benchmark_test_suite!(Grants, crate::mock::new_test_ext(), crate::mock::Test);
 }
 
@@ -64,7 +64,7 @@ fn get_milestones<T: Config>(n: u32) -> BoundedPMilestones<T> {
 
 fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
     let user = account(suri, n, SEED);
-    let initial_balance: _ = 10_000_000_000_000_000u128;
+    let initial_balance = 10_000_000_000_000_000u128;
     assert_ok!(T::RMultiCurrency::deposit(
         CurrencyId::Native,
         &user,
