@@ -90,7 +90,7 @@ pub mod pallet {
         Blake2_128Concat,
         <T as frame_system::Config>::BlockNumber,
         BoundedVec<T::DisputeKey, ConstU32<1000>>,
-z        ValueQuery,
+        ValueQuery,
     >;
 
     #[pallet::event]
@@ -126,14 +126,17 @@ z        ValueQuery,
         NotAJuryAccount,
         /// There have been too many disputes on this block. Try next block.
         TooManyDisputesThisBlock,
-        /// The dispute has already been extended.
+        /// The dispute has already been extended. You can only extend a dispute once.
         DisputeAlreadyExtended
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
-            <Weight as Default>::default()
+        fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+            let expiring_disputes = DisputesFinaliseOn::<T>::get(n);
+            expiring_disputes.iter().for_each(|dispute_id| {
+                <T::DisputeHooks as DisputeHooks>::on_dispute_complete()
+            })
         }
     }
 
@@ -148,7 +151,7 @@ z        ValueQuery,
             is_yay: bool,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Disputes::<T>::try_mutate(dispute_key, |dispute| {
+            let votes = Disputes::<T>::try_mutate(dispute_key, |dispute| {
                 if let Some(d) = dispute {
                     ensure!(
                         d.jury.iter().any(|e| e == &who),
@@ -157,11 +160,23 @@ z        ValueQuery,
                     d.votes
                         .try_insert(&who, is_yay)
                         .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
-                    Ok::<(), DispatchError>(())
+
+                    
+                    Ok::<&BoundedVec<bool, T::MaxJurySize>, DispatchError>(&d.votes)
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist)
                 }
             })?;
+
+            if votes.iter().all(|v|{v == true}) {
+                // Auto finalise an DisputeResult::Success
+                // Dispute::remove(dispute_key);
+            }
+
+            if votes.iter().all(|v|{v == false}) {
+                // Auto finalise an DisputeResult::Failed
+                // Dispute::remove(dispute_key);
+            }
 
             Self::deposit_event(Event::<T>::DisputeVotedOn { who });
             Ok(().into())
@@ -190,6 +205,7 @@ z        ValueQuery,
             origin: OriginFor<T>,
             dispute_key: T::DisputeKey,
         ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
             let mut dispute = Disputes::<T>::get(dipute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             ensure!(!dispute.is_extended, Error::<T>::DisputeAlreadyExtended)?;
             ensure!(
@@ -275,7 +291,7 @@ z        ValueQuery,
             Ok(())
         }
 
-        pub(crate) fn remove(key: T::DisputeKey) -> Result<(), DispatchError> {
+        pub(crate) fn remove(dispute_key: T::DisputeKey) -> Result<(), DispatchError> {
             Disputes::<T>::insert(dispute_key, dispute);
             // Dispute,
             // DisputeFInaliseOm
