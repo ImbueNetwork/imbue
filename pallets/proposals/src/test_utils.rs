@@ -40,7 +40,7 @@ pub fn get_contributions<T: Config>(
 
     accounts.iter().for_each(|account| {
         let contribution = Contribution {
-            value: value,
+            value,
             timestamp,
         };
         contributions
@@ -58,6 +58,7 @@ pub fn get_milestones(n: u8) -> Vec<ProposedMilestone> {
         .collect::<Vec<ProposedMilestone>>()
 }
 
+#[cfg(feature = "runtime-benchmarks")]
 pub fn get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
     get_milestones(<T as Config>::MaxMilestonesPerProject::get() as u8)
 }
@@ -114,7 +115,7 @@ pub fn create_project<T: Config>(
         currency_id,
         withdrawn_funds: 0u32.into(),
         raised_funds,
-        initiator: beneficiary.clone(),
+        initiator: beneficiary,
         created_on: frame_system::Pallet::<T>::block_number(),
         cancelled: false,
         agreement_hash,

@@ -19,7 +19,7 @@ fn create_proposal_from_brief() {
             *ALICE,
             contribution_value,
             contribution_value,
-            brief_id.clone(),
+            brief_id,
             CurrencyId::Native,
             get_milestones(10),
         );
