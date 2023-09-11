@@ -4,4 +4,4 @@ cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 cd ../..
 
 echo "Starting clippy!"
-RUSTFLAGS="-D warnings" cargo clippy --all
+RUSTFLAGS="-D warnings" cargo clippy --all --features runtime-benchmarks
