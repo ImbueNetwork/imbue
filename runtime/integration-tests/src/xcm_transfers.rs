@@ -19,7 +19,6 @@ use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId}
 
 use common_runtime::{common_xcm::general_key, parachains};
 
-
 use crate::constants::SAFE_XCM_VERSION;
 use crate::kusama_test_net::{
     Development, ImbueKusamaReceiver, ImbueKusamaSender, Kusama, KusamaReceiver, KusamaSender,
@@ -140,8 +139,7 @@ fn test_xcm_refund_handler_to_kusama() {
         Kusama::account_data_of(kusama_treasury_address.clone()).free;
     let transfer_amount: Balance = ksm_amount(10);
     Development::execute_with(|| {
-        let ksm_balance =
-            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get());
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get());
         assert_eq!(ksm_balance, 0);
     });
 
@@ -161,8 +159,7 @@ fn test_xcm_refund_handler_to_kusama() {
         ));
     });
     Development::execute_with(|| {
-        let ksm_balance =
-            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get());
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get());
         assert!(ksm_balance > 0);
         assert_ok!(
             <R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(
@@ -174,8 +171,7 @@ fn test_xcm_refund_handler_to_kusama() {
         );
     });
 
-    let _kusama_treasury_balance_after =
-        Kusama::account_data_of(kusama_treasury_address).free;
+    let _kusama_treasury_balance_after = Kusama::account_data_of(kusama_treasury_address).free;
     #[cfg(not(feature = "runtime-benchmarks"))]
     assert!(_kusama_treasury_balance_after > _kusama_treasury_balance_before)
 }
@@ -185,8 +181,7 @@ fn transfer_ksm_from_sibling() {
     // TestNet::reset();
     let transfer_amount = native_amount(1);
     Development::execute_with(|| {
-        let ksm_balance =
-            OrmlTokens::free_balance(CurrencyId::KSM, &SiblingKusamaReceiver::get());
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &SiblingKusamaReceiver::get());
         assert_eq!(ksm_balance, 0);
     });
     Sibling::execute_with(|| {
@@ -219,8 +214,7 @@ fn transfer_ksm_from_sibling() {
 
     #[cfg(not(feature = "runtime-benchmarks"))]
     Development::execute_with(|| {
-        let ksm_balance =
-            OrmlTokens::free_balance(CurrencyId::KSM, &SiblingKusamaReceiver::get());
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &SiblingKusamaReceiver::get());
         assert!(ksm_balance > 0);
     });
 }
@@ -301,8 +295,7 @@ fn transfer_mgx_from_sibling() {
     // TestNet::reset();
     let transfer_amount = mgx_amount(1_000_000_000);
     Sibling::execute_with(|| {
-        let mgx_balance =
-            OrmlTokens::free_balance(CurrencyId::MGX, &SiblingKusamaReceiver::get());
+        let mgx_balance = OrmlTokens::free_balance(CurrencyId::MGX, &SiblingKusamaReceiver::get());
         assert_eq!(mgx_balance, 0);
     });
     Sibling::execute_with(|| {
@@ -332,8 +325,7 @@ fn transfer_mgx_from_sibling() {
         ));
     });
     Development::execute_with(|| {
-        let mgx_balance =
-            OrmlTokens::free_balance(CurrencyId::MGX, &SiblingKusamaReceiver::get());
+        let mgx_balance = OrmlTokens::free_balance(CurrencyId::MGX, &SiblingKusamaReceiver::get());
         assert!(mgx_balance > 0);
     });
 }

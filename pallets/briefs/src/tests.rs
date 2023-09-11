@@ -394,7 +394,6 @@ pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
     if n > max {
         n = max;
     }
-    
 
     (0..n)
         .map(|_| ProposedMilestone {

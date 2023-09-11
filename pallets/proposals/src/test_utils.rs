@@ -39,10 +39,7 @@ pub fn get_contributions<T: Config>(
     let mut contributions: ContributionsFor<T> = Default::default();
 
     accounts.iter().for_each(|account| {
-        let contribution = Contribution {
-            value,
-            timestamp,
-        };
+        let contribution = Contribution { value, timestamp };
         contributions
             .try_insert(account.clone(), contribution)
             .expect("bound should be ensured");
