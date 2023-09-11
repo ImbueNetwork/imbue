@@ -108,7 +108,7 @@ pub fn create_project<T: Config>(
 
     let project = Project {
         milestones: milestones.try_into().expect("too many milestones"),
-        contributions: contributions.try_into().expect("too many contributions"),
+        contributions: contributions,
         currency_id,
         withdrawn_funds: 0u32.into(),
         raised_funds,

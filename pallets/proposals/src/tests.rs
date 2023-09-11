@@ -615,7 +615,7 @@ fn store_project_info_after_project_is_completed() {
 
         if let Some((_account, projects)) = CompletedProjects::<Test>::iter().next() {
             assert_eq!(projects.len(), 1);
-            assert_eq!(projects.contains(&project_key), true);
+            assert!(projects.contains(&project_key));
         }
     });
 }
