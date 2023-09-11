@@ -17,6 +17,7 @@ use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
+#[allow(dead_code)]
 pub fn run_to_block<T: Config>(n: T::BlockNumber) {
     loop {
         let mut block = frame_system::Pallet::<T>::block_number();
@@ -108,7 +109,7 @@ pub fn create_project<T: Config>(
 
     let project = Project {
         milestones: milestones.try_into().expect("too many milestones"),
-        contributions: contributions,
+        contributions,
         currency_id,
         withdrawn_funds: 0u32.into(),
         raised_funds,
