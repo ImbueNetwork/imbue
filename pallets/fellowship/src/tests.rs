@@ -17,7 +17,7 @@ use sp_std::vec;
 
 // Saves a bit of typing.
 pub(crate) static DEP_CURRENCY: Lazy<CurrencyId> =
-    Lazy::new(|| <Test as Config>::DepositCurrencyId::get());
+    Lazy::new(<Test as Config>::DepositCurrencyId::get);
 fn add_to_fellowship_take_deposit(
     who: &AccountIdOf<Test>,
     role: Role,
@@ -190,8 +190,7 @@ fn force_add_fellowship_then_leave_fellowship_maintains_fellow_reserve() {
     new_test_ext().execute_with(|| {
         let alice_reserved_before =
             <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
-        let _ =
-            Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10)
+        Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10)
                 .expect("qed");
         assert_ok!(Fellowship::leave_fellowship(RuntimeOrigin::signed(*ALICE)));
         let alice_reserved_after =
@@ -210,8 +209,7 @@ fn force_add_fellowship_then_leave_fellowship_takes_no_deposit() {
 #[test]
 fn leave_fellowship_assert_event() {
     new_test_ext().execute_with(|| {
-        let _ =
-            Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10)
+        Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10)
                 .expect("qed");
         assert_ok!(Fellowship::leave_fellowship(RuntimeOrigin::signed(*ALICE)));
         System::<Test>::assert_last_event(Event::<Test>::FellowshipRemoved { who: *ALICE }.into());
@@ -257,7 +255,7 @@ fn add_to_fellowship_adds_to_pending_fellows_assert_event() {
     new_test_ext().execute_with(|| {
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
-        let _ = <Test as Config>::MultiCurrency::withdraw(
+        <Test as Config>::MultiCurrency::withdraw(
             *DEP_CURRENCY,
             &ALICE,
             free - minimum + minimum,
@@ -274,7 +272,7 @@ fn add_to_fellowship_adds_to_pending_fellows_assert_event() {
 fn add_to_fellowship_adds_vetter_if_exists() {
     new_test_ext().execute_with(|| {
         assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
-        assert_eq!(FellowToVetter::<Test>::get(&*ALICE).unwrap(), *BOB);
+        assert_eq!(FellowToVetter::<Test>::get(*ALICE).unwrap(), *BOB);
     });
 }
 
@@ -282,9 +280,9 @@ fn add_to_fellowship_adds_vetter_if_exists() {
 fn add_to_fellowship_edits_role_if_exists_already() {
     new_test_ext().execute_with(|| {
         assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
-        assert_eq!(Roles::<Test>::get(&*ALICE).unwrap(), (Role::Freelancer, 10));
+        assert_eq!(Roles::<Test>::get(*ALICE).unwrap(), (Role::Freelancer, 10));
         assert!(add_to_fellowship_take_deposit(&ALICE, Role::Vetter, 5, Some(&BOB)).is_ok());
-        assert_eq!(Roles::<Test>::get(&*ALICE).unwrap(), (Role::Vetter, 5));
+        assert_eq!(Roles::<Test>::get(*ALICE).unwrap(), (Role::Vetter, 5));
     });
 }
 
@@ -293,7 +291,7 @@ fn add_to_fellowship_maintains_vetter_if_exists_already() {
     new_test_ext().execute_with(|| {
         assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, Some(&BOB)).is_ok());
         assert!(add_to_fellowship_take_deposit(&ALICE, Role::Vetter, 5, Some(&CHARLIE)).is_ok());
-        assert_eq!(FellowToVetter::<Test>::get(&*ALICE).unwrap(), *BOB);
+        assert_eq!(FellowToVetter::<Test>::get(*ALICE).unwrap(), *BOB);
     });
 }
 
@@ -407,7 +405,7 @@ fn add_candidate_to_shortlist_candidate_lacks_deposit_fails() {
         assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Vetter, 5, None));
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
-        let _ = <Test as Config>::MultiCurrency::withdraw(
+        <Test as Config>::MultiCurrency::withdraw(
             *DEP_CURRENCY,
             &ALICE,
             free - minimum + minimum,
@@ -551,7 +549,7 @@ fn pay_deposit_and_remove_pending_status_not_enough_funds_to_reserve() {
     new_test_ext().execute_with(|| {
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
-        let _ = <Test as Config>::MultiCurrency::withdraw(
+        <Test as Config>::MultiCurrency::withdraw(
             *DEP_CURRENCY,
             &ALICE,
             free - minimum + minimum,
@@ -575,7 +573,7 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
     new_test_ext().execute_with(|| {
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
-        let _ = <Test as Config>::MultiCurrency::withdraw(
+        <Test as Config>::MultiCurrency::withdraw(
             *DEP_CURRENCY,
             &ALICE,
             free - minimum + minimum,
@@ -587,7 +585,7 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
             5,
             None
         ));
-        let _ = <Test as Config>::MultiCurrency::deposit(
+        <Test as Config>::MultiCurrency::deposit(
             *DEP_CURRENCY,
             &ALICE,
             <Test as Config>::MembershipDeposit::get() + 100_000,
@@ -624,7 +622,7 @@ fn on_initialize_adds_to_fellowship_from_shortlist() {
         run_to_block::<Test>(
             frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
         );
-        assert_eq!(Roles::<Test>::get(&*CHARLIE).unwrap(), (Role::Vetter, 10));
+        assert_eq!(Roles::<Test>::get(*CHARLIE).unwrap(), (Role::Vetter, 10));
     });
 }
 
@@ -650,7 +648,7 @@ fn on_initialize_doesnt_add_removed_shortlist_members() {
         run_to_block::<Test>(
             frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
         );
-        assert!(Roles::<Test>::get(&*CHARLIE).is_none());
+        assert!(Roles::<Test>::get(*CHARLIE).is_none());
     });
 }
 
@@ -741,10 +739,10 @@ fn e2e() {
 
         // ensure they are part of the fellowships or if without funds the pending fellows.
         assert_eq!(
-            PendingFellows::<Test>::get(&*EMPTY).unwrap(),
+            PendingFellows::<Test>::get(*EMPTY).unwrap(),
             (Role::Freelancer, 10)
         );
-        assert_eq!(Roles::<Test>::get(&*CHARLIE).unwrap(), (Role::Vetter, 10));
+        assert_eq!(Roles::<Test>::get(*CHARLIE).unwrap(), (Role::Vetter, 10));
 
         // Deposit the required funds and pay.
         assert_ok!(<Test as Config>::MultiCurrency::deposit(
@@ -755,6 +753,6 @@ fn e2e() {
         assert_ok!(Fellowship::pay_deposit_to_remove_pending_status(
             RuntimeOrigin::signed(*EMPTY)
         ));
-        assert_eq!(Roles::<Test>::get(&*EMPTY).unwrap(), (Role::Freelancer, 10));
+        assert_eq!(Roles::<Test>::get(*EMPTY).unwrap(), (Role::Freelancer, 10));
     });
 }

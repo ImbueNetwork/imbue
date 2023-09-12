@@ -8,7 +8,7 @@ use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::Pallet as System;
 use frame_system::RawOrigin;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::{MultiCurrency};
 use sp_runtime::SaturatedConversion;
 
 #[benchmarks( where <T as frame_system::Config>::AccountId: AsRef<[u8]>, crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
@@ -27,7 +27,7 @@ mod benchmarks {
         }
         System::<T>::assert_last_event(
             Event::<T>::FellowshipAdded {
-                who: alice.clone(),
+                who: alice,
                 role: Role::Vetter,
             }
             .into(),
@@ -42,7 +42,7 @@ mod benchmarks {
         force_add_fellowship(RawOrigin::Root, alice.clone(), Role::Freelancer, 10);
         System::<T>::assert_last_event(
             Event::<T>::FellowshipAdded {
-                who: alice.clone(),
+                who: alice,
                 role: Role::Vetter,
             }
             .into(),
@@ -59,7 +59,7 @@ mod benchmarks {
         #[extrinsic_call]
         leave_fellowship(RawOrigin::Signed(alice.clone()));
 
-        System::<T>::assert_last_event(Event::<T>::FellowshipRemoved { who: alice.clone() }.into());
+        System::<T>::assert_last_event(Event::<T>::FellowshipRemoved { who: alice }.into());
     }
 
     #[benchmark]
@@ -71,7 +71,7 @@ mod benchmarks {
 
         #[extrinsic_call]
         force_remove_and_slash_fellowship(RawOrigin::Root, alice.clone());
-        System::<T>::assert_last_event(Event::<T>::FellowshipRemoved { who: alice.clone() }.into());
+        System::<T>::assert_last_event(Event::<T>::FellowshipRemoved { who: alice }.into());
     }
 
     #[benchmark]
@@ -84,7 +84,7 @@ mod benchmarks {
         #[extrinsic_call]
         add_candidate_to_shortlist(RawOrigin::Signed(alice), bob.clone(), Role::Vetter, 10);
         System::<T>::assert_last_event(
-            Event::<T>::CandidateAddedToShortlist { who: bob.clone() }.into(),
+            Event::<T>::CandidateAddedToShortlist { who: bob }.into(),
         );
     }
 
@@ -94,12 +94,12 @@ mod benchmarks {
             create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
         <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
-        Fellowship::<T>::add_candidate_to_shortlist(
+        assert_ok!(Fellowship::<T>::add_candidate_to_shortlist(
             RawOrigin::Signed(alice.clone()).into(),
             bob.clone(),
             Role::Vetter,
             10,
-        );
+        ));
 
         #[extrinsic_call]
         remove_candidate_from_shortlist(RawOrigin::Signed(alice), bob.clone());
@@ -111,7 +111,7 @@ mod benchmarks {
     #[benchmark]
     fn pay_deposit_to_remove_pending_status() {
         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1);
-        let alice: T::AccountId =
+        let _alice: T::AccountId =
             create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
         let charlie: T::AccountId =
             create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
