@@ -185,7 +185,7 @@ pub mod pallet {
                 who: who.clone(),
                 role,
             });
-            Ok(().into())
+            Ok(())
         }
 
         /// Remove the account from the fellowship,
@@ -197,7 +197,7 @@ pub mod pallet {
             // TODO??: ensure that the fellow is not currently in a dispute.
             <Self as FellowshipHandle<AccountIdOf<T>>>::revoke_fellowship(&who, false)?;
             Self::deposit_event(Event::<T>::FellowshipRemoved { who });
-            Ok(().into())
+            Ok(())
         }
 
         /// Force remove a fellow and slashed their deposit as defined in the Config.
@@ -210,7 +210,7 @@ pub mod pallet {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
             <Self as FellowshipHandle<AccountIdOf<T>>>::revoke_fellowship(&who, true)?;
             Self::deposit_event(Event::<T>::FellowshipSlashed { who });
-            Ok(().into())
+            Ok(())
         }
 
         /// Add a candidate to a shortlist.
@@ -246,8 +246,7 @@ pub mod pallet {
                 ),
                 Error::<T>::CandidateDepositRequired
             );
-            let _ =
-                CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {
+            CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {
                     ensure!(
                         !m_shortlist.contains_key(&candidate),
                         Error::<T>::CandidateAlreadyOnShortlist
@@ -280,14 +279,13 @@ pub mod pallet {
                 .is_ok(),
                 Error::<T>::NotAVetter
             );
-            let _ =
-                CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {
+            CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {
                     m_shortlist.remove(&candidate);
                     Ok::<(), DispatchError>(())
                 })?;
 
             Self::deposit_event(Event::<T>::CandidateRemovedFromShortlist { who: candidate });
-            Ok(().into())
+            Ok(())
         }
 
         /// If the freelancer fails to have enough native token at the time of shortlist approval they are
@@ -310,7 +308,7 @@ pub mod pallet {
             Roles::<T>::insert(&who, (role, rank));
 
             Self::deposit_event(Event::<T>::FellowshipAdded { who, role });
-            Ok(().into())
+            Ok(())
         }
     }
 
@@ -374,7 +372,7 @@ pub mod pallet {
 
             // Deposits are only taken when a role is assigned
             if has_role {
-                if let Some(deposit_amount) = FellowshipReserves::<T>::get(&who) {
+                if let Some(deposit_amount) = FellowshipReserves::<T>::get(who) {
                     <T as Config>::MultiCurrency::unreserve(
                         CurrencyId::Native,
                         who,

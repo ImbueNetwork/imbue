@@ -64,14 +64,14 @@ impl<T: Config> Pallet<T> {
     /// If the deposit was taken, this will return true, else false.
     pub(crate) fn try_take_deposit(who: &AccountIdOf<T>) -> bool {
         let membership_deposit = <T as Config>::MembershipDeposit::get();
-        if let Ok(_) = <T as Config>::MultiCurrency::reserve(
+        if <T as Config>::MultiCurrency::reserve(
             T::DepositCurrencyId::get(),
             who,
             membership_deposit,
-        ) {
+        ).is_ok() {
             FellowshipReserves::<T>::insert(who, membership_deposit);
             return true;
         }
-        return false;
+        false
     }
 }
