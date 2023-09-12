@@ -2,12 +2,12 @@ use crate::traits::EnsureRole;
 use crate::*;
 use common_traits::MaybeConvert;
 use frame_support::{ensure, traits::Get};
+use orml_traits::MultiReservableCurrency;
 use sp_runtime::{
     traits::{BadOrigin, Convert},
     DispatchError, Percent,
 };
 use sp_std::vec::Vec;
-use orml_traits::MultiReservableCurrency;
 
 /// Ensure that a account is of a given role.
 /// Used in other pallets like an ensure origin.
@@ -70,10 +70,8 @@ impl<T: Config> Pallet<T> {
             membership_deposit,
         ) {
             FellowshipReserves::<T>::insert(who, membership_deposit);
-            return true
+            return true;
         }
-        return false
-    } 
-    
-    
+        return false;
+    }
 }

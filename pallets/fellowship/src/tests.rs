@@ -4,17 +4,15 @@ use crate::*;
 use crate::{mock::*, Error, Event, FellowToVetter, Role, Roles};
 use common_traits::MaybeConvert;
 use common_types::CurrencyId;
-use frame_support::{assert_noop, assert_ok, once_cell::sync::Lazy, BoundedBTreeMap, traits::Hooks};
+use frame_support::{
+    assert_noop, assert_ok, once_cell::sync::Lazy, traits::Hooks, BoundedBTreeMap,
+};
 use frame_system::Pallet as System;
 use orml_tokens::Error as TokensError;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_core::sr25519::Public;
-use sp_runtime::{
-    traits::BadOrigin,
-    DispatchError,
-    Saturating,
-};
 use sp_arithmetic::traits::One;
+use sp_core::sr25519::Public;
+use sp_runtime::{traits::BadOrigin, DispatchError, Saturating};
 use sp_std::vec;
 
 // Saves a bit of typing.
@@ -26,7 +24,9 @@ fn add_to_fellowship_take_deposit(
     rank: Rank,
     vetter: Option<&VetterIdOf<Test>>,
 ) -> Result<(), DispatchError> {
-    <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::add_to_fellowship(who, role, rank, vetter, true);
+    <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::add_to_fellowship(
+        who, role, rank, vetter, true,
+    );
     Ok(())
 }
 
@@ -35,7 +35,8 @@ fn revoke_fellowship(who: &AccountIdOf<Test>, slash_deposit: bool) -> Result<(),
 }
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber)
-where T::BlockNumber: Into<u64>
+where
+    T::BlockNumber: Into<u64>,
 {
     loop {
         let mut block: T::BlockNumber = frame_system::Pallet::<T>::block_number();
@@ -376,8 +377,18 @@ fn add_candidate_to_shortlist_not_a_vetter() {
 #[test]
 fn add_candidate_to_shortlist_already_fellow() {
     new_test_ext().execute_with(|| {
-        assert_ok!(add_to_fellowship_take_deposit(&ALICE, Role::Vetter, 5, Some(&CHARLIE)));
-        assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Freelancer, 5, Some(&CHARLIE)));
+        assert_ok!(add_to_fellowship_take_deposit(
+            &ALICE,
+            Role::Vetter,
+            5,
+            Some(&CHARLIE)
+        ));
+        assert_ok!(add_to_fellowship_take_deposit(
+            &BOB,
+            Role::Freelancer,
+            5,
+            Some(&CHARLIE)
+        ));
         assert_noop!(
             Fellowship::add_candidate_to_shortlist(
                 RuntimeOrigin::signed(*ALICE),
@@ -439,7 +450,12 @@ fn add_candidate_to_shortlist_candidate_already_on_shortlist() {
 #[test]
 fn add_candidate_to_shortlist_too_many_candidates() {
     new_test_ext().execute_with(|| {
-        assert_ok!(add_to_fellowship_take_deposit(&CHARLIE, Role::Vetter, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(
+            &CHARLIE,
+            Role::Vetter,
+            5,
+            None
+        ));
         let mut shortlist: BoundedShortlistPlaces<Test> = BoundedBTreeMap::new();
         (0..<Test as Config>::MaxCandidatesPerShortlist::get()).for_each(|i| {
             shortlist
@@ -541,7 +557,12 @@ fn pay_deposit_and_remove_pending_status_not_enough_funds_to_reserve() {
             free - minimum + minimum,
         )
         .unwrap();
-        assert_ok!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(
+            &ALICE,
+            Role::Freelancer,
+            5,
+            None
+        ));
         assert_noop!(
             Fellowship::pay_deposit_to_remove_pending_status(RuntimeOrigin::signed(*ALICE)),
             TokensError::<Test>::BalanceTooLow
@@ -560,7 +581,12 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
             free - minimum + minimum,
         )
         .unwrap();
-        assert_ok!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 5, None));
+        assert_ok!(add_to_fellowship_take_deposit(
+            &ALICE,
+            Role::Freelancer,
+            5,
+            None
+        ));
         let _ = <Test as Config>::MultiCurrency::deposit(
             *DEP_CURRENCY,
             &ALICE,
@@ -595,11 +621,12 @@ fn on_initialize_adds_to_fellowship_from_shortlist() {
             Role::Vetter,
             10
         ));
-        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get());
+        run_to_block::<Test>(
+            frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
+        );
         assert_eq!(Roles::<Test>::get(&*CHARLIE).unwrap(), (Role::Vetter, 10));
     });
 }
-
 
 #[test]
 fn on_initialize_doesnt_add_removed_shortlist_members() {
@@ -620,11 +647,12 @@ fn on_initialize_doesnt_add_removed_shortlist_members() {
             RuntimeOrigin::signed(*ALICE),
             *CHARLIE,
         ));
-        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get());
+        run_to_block::<Test>(
+            frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
+        );
         assert!(Roles::<Test>::get(&*CHARLIE).is_none());
     });
 }
-
 
 #[test]
 fn on_initialize_cleans_storage_for_next_round() {
@@ -642,12 +670,24 @@ fn on_initialize_cleans_storage_for_next_round() {
             10
         ));
         let pre_shortlist_round_key = ShortlistRound::<Test>::get();
-        assert!(CandidateShortlist::<Test>::get(pre_shortlist_round_key).iter().len() == 1);
-        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get());
-        
+        assert!(
+            CandidateShortlist::<Test>::get(pre_shortlist_round_key)
+                .iter()
+                .len()
+                == 1
+        );
+        run_to_block::<Test>(
+            frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
+        );
+
         let post_shortlist_round_key = ShortlistRound::<Test>::get();
         assert_eq!(post_shortlist_round_key, pre_shortlist_round_key + 1);
-        assert!(CandidateShortlist::<Test>::get(post_shortlist_round_key).iter().len() == 0);
+        assert!(
+            CandidateShortlist::<Test>::get(post_shortlist_round_key)
+                .iter()
+                .len()
+                == 0
+        );
     });
 }
 
@@ -677,27 +717,44 @@ fn e2e() {
         ));
 
         // Bypass the usual requirement of deposit so we can test the e2e for PendingFellows
-        assert_ok!(<Test as Config>::MultiCurrency::deposit(CurrencyId::Native, &*EMPTY, <Test as Config>::MembershipDeposit::get() * 2));
+        assert_ok!(<Test as Config>::MultiCurrency::deposit(
+            CurrencyId::Native,
+            &*EMPTY,
+            <Test as Config>::MembershipDeposit::get() * 2
+        ));
         assert_ok!(Fellowship::add_candidate_to_shortlist(
             RuntimeOrigin::signed(*BOB),
             *EMPTY,
             Role::Freelancer,
             10
         ));
-        assert_ok!(<Test as Config>::MultiCurrency::withdraw(CurrencyId::Native, &*EMPTY, <Test as Config>::MembershipDeposit::get() + 100));
-        
-        // wait for blocks to pass 
-        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get());
+        assert_ok!(<Test as Config>::MultiCurrency::withdraw(
+            CurrencyId::Native,
+            &*EMPTY,
+            <Test as Config>::MembershipDeposit::get() + 100
+        ));
+
+        // wait for blocks to pass
+        run_to_block::<Test>(
+            frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
+        );
 
         // ensure they are part of the fellowships or if without funds the pending fellows.
-        assert_eq!(PendingFellows::<Test>::get(&*EMPTY).unwrap(), (Role::Freelancer, 10));
+        assert_eq!(
+            PendingFellows::<Test>::get(&*EMPTY).unwrap(),
+            (Role::Freelancer, 10)
+        );
         assert_eq!(Roles::<Test>::get(&*CHARLIE).unwrap(), (Role::Vetter, 10));
 
         // Deposit the required funds and pay.
-        assert_ok!(<Test as Config>::MultiCurrency::deposit(CurrencyId::Native, &*EMPTY, <Test as Config>::MembershipDeposit::get() * 2));
-        assert_ok!(Fellowship::pay_deposit_to_remove_pending_status(RuntimeOrigin::signed(*EMPTY)));
+        assert_ok!(<Test as Config>::MultiCurrency::deposit(
+            CurrencyId::Native,
+            &*EMPTY,
+            <Test as Config>::MembershipDeposit::get() * 2
+        ));
+        assert_ok!(Fellowship::pay_deposit_to_remove_pending_status(
+            RuntimeOrigin::signed(*EMPTY)
+        ));
         assert_eq!(Roles::<Test>::get(&*EMPTY).unwrap(), (Role::Freelancer, 10));
     });
 }
-
-

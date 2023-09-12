@@ -32,8 +32,8 @@ pub mod pallet {
     use sp_std::{convert::TryInto, vec};
 
     use crate::impls::EnsureFellowshipRole;
-    use crate::traits::{DemocracyHandle, EnsureRole, FellowshipHandle};
     use crate::traits::WeightInfoT;
+    use crate::traits::{DemocracyHandle, EnsureRole, FellowshipHandle};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type VetterIdOf<T> = AccountIdOf<T>;
@@ -98,7 +98,7 @@ pub mod pallet {
     #[pallet::storage]
     pub type FellowshipReserves<T> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, OptionQuery>;
-    
+
     /// Keeps track of the accounts a fellow has recruited.
     /// Can be used to pay out completion fees.
     #[pallet::storage]
@@ -180,8 +180,13 @@ pub mod pallet {
             rank: Rank,
         ) -> DispatchResult {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
-            <Self as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&who, role, rank, None, false);
-            Self::deposit_event(Event::<T>::FellowshipAdded { who: who.clone(), role });
+            <Self as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
+                &who, role, rank, None, false,
+            );
+            Self::deposit_event(Event::<T>::FellowshipAdded {
+                who: who.clone(),
+                role,
+            });
             Ok(().into())
         }
 
@@ -398,6 +403,4 @@ pub mod pallet {
         BusinessDev,
         Approver,
     }
-
-
 }
