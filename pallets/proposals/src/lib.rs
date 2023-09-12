@@ -112,7 +112,7 @@ pub mod pallet {
         /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
         /// Maximum size of the accounts responsible for handling disputes.
-        type MaximumJurySize: Get<u32>;
+        type MaxJuryMembers: Get<u32>;
     }
 
     #[pallet::pallet]
@@ -414,16 +414,19 @@ pub mod pallet {
     where
         Project<T>: EncodeLike<Project<T>>,
     {
+        type MaximumContributorsPerProject = T::MaximumContributorsPerProject;
+        type MaxMilestonesPerProject = T::MaxMilestonesPerProject;
+        type MaxJuryMembers = T::MaxJuryMembers;
         /// The caller is used to take the storage deposit from.
         /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
         fn convert_to_proposal(
             currency_id: CurrencyId,
-            contributions: BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
+            contributions: BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>, Self::MaximumContributorsPerProject>,
             agreement_hash: H256,
             benificiary: AccountIdOf<T>,
-            proposed_milestones: Vec<ProposedMilestone>,
-            refund_locations: Vec<(Locality<AccountIdOf<T>>, Percent)>,
-            jury: Vec<AccountIdOf<T>>,
+            proposed_milestones: BoundedVec<ProposedMilestone, Self::MaxMilestonesPerProject>,
+            refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), Self::MaximumContributorsPerProject>,
+            jury: BoundedVec<AccountIdOf<T>, Self::MaxJuryMembers>,
             on_creation_funding: FundingPath,
         ) -> Result<(), DispatchError> {
             let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
@@ -491,12 +494,9 @@ pub mod pallet {
             Ok(())
         }
 
-        // TODO: TEST
-        /// Assumes contributions are on the local chain.
-        /// SAFETY: Does no check on the bounds of the Map so ensure a bound before.
         fn convert_contributions_to_refund_locations(
-            contributions: &BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
-        ) -> Vec<(Locality<AccountIdOf<T>>, Percent)> {
+            contributions: &BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>, Self::MaximumContributorsPerProject>,
+        ) -> BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> {
             let sum_of_contributions = contributions
                 .values()
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
@@ -504,7 +504,7 @@ pub mod pallet {
                 });
 
             let mut sum_of_percents: Percent = Zero::zero();
-            let mut ret = contributions
+            let mut ret: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = contributions
                 .iter()
                 .map(|c| {
                     let percent = Percent::from_rational(c.1.value, sum_of_contributions);
@@ -512,14 +512,16 @@ pub mod pallet {
                     // Since these are local we can use MultiLocation::Default;
                     (Locality::from_local(c.0.clone()), percent)
                 })
-                .collect::<Vec<(Locality<AccountIdOf<T>>, Percent)>>();
+                .collect::<Vec<(Locality<AccountIdOf<T>>, Percent)>>().try_into().expect("Both input and output are bound by the same quantifier; qed");
 
             // TEST THIS
             if sum_of_percents != One::one() {
                 // We are missing a part of the fund so take the remainder and use the pallet_id as the return address. 
                 //(as is used throughout the rest of the pallet for fees)
                 let diff = <Percent as One>::one().saturating_sub(sum_of_percents);
-                ret.push((Locality::from_local(Self::account_id()), diff));
+                // TODO: IF THE CONTRIBUTION BOUND IS MAX ALREADY THEN WE CANNOT PUSH THE DUST ACCOUNT ON
+                // FAIL SILENTLY AND CLEAN UP ON FINAL WITHDRAW INSTEAD.
+                let _ = ret.try_push((Locality::from_local(Self::account_id()), diff));
             }
 
             ret
@@ -605,7 +607,7 @@ pub struct Project<T: Config> {
     /// Where do the refunds end up and what percent they get.
     pub refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject>,
     /// Who should deal with disputes.
-    pub jury: BoundedVec<AccountIdOf<T>, T::MaximumJurySize>,
+    pub jury: BoundedVec<AccountIdOf<T>, T::MaxJuryMembers>,
     /// When is the project funded and how is it taken.
     pub on_creation_funding: FundingPath,
 }

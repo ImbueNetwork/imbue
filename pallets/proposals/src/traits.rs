@@ -1,6 +1,6 @@
 use crate::{AccountIdOf, BalanceOf, Contribution, FundingPath, ProposedMilestone, Locality};
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
-use frame_support::{inherent::Vec, pallet_prelude::*, transactional, PalletId};
+use frame_support::{inherent::Vec, pallet_prelude::*, transactional, PalletId, BoundedBTreeMap};
 use orml_traits::XcmTransfer;
 use orml_xtokens::Error;
 use sp_arithmetic::{traits::AtLeast32BitUnsigned, Percent};
@@ -11,7 +11,7 @@ use xcm::latest::{MultiLocation, WeightLimit};
 
 pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
     type MaximumContributorsPerProject: Get<u32>;
-    type MaxMilestones: Get<u32>;
+    type MaxMilestonesPerProject: Get<u32>;
     type MaxJuryMembers: Get<u32>;
     /// Convert the propoerties of a project into a project.
     /// This is the main method when wanting to use pallet_proposals and is how one configures a project.
@@ -20,7 +20,7 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
         current_contribution: BoundedBTreeMap<AccountId, Contribution<Balance, BlockNumber>, Self::MaximumContributorsPerProject>,
         brief_hash: H256,
         benificiary: AccountId,
-        milestones: BoundedVec<ProposedMilestone, Self::MaxMilestones>,
+        milestones: BoundedVec<ProposedMilestone, Self::MaxMilestonesPerProject>,
         refund_locations: BoundedVec<(Locality<AccountId>, Percent), Self::MaximumContributorsPerProject>,
         jury: BoundedVec<AccountId, Self::MaxJuryMembers>,
         on_creation_funding: FundingPath,
@@ -29,7 +29,7 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
     /// Convert a btreemap of contributions to multilocations with the Here junction.
     /// Use when the contributors are the refund locations.
     fn convert_contributions_to_refund_locations(
-        contributions: &BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
+        contributions: &BoundedBTreeMap<AccountId, Contribution<Balance, BlockNumber>, Self::MaximumContributorsPerProject>,
     ) -> BoundedVec<(Locality<AccountId>, Percent), Self::MaximumContributorsPerProject>;
 }
 

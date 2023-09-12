@@ -437,7 +437,7 @@ impl<T: Config> Pallet<T> {
     /// Try and convert some proposed milestones to milestones.
     /// Fails when the MaxMilestones bound is not respected
     pub(crate) fn try_convert_to_milestones(
-        proposed_milestones: Vec<ProposedMilestone>,
+        proposed_milestones: BoundedVec<ProposedMilestone, T::MaxMilestonesPerProject>,
         project_key: ProjectKey,
     ) -> Result<BoundedBTreeMilestones<T>, DispatchError> {
         let mut milestone_key: u32 = 0;
