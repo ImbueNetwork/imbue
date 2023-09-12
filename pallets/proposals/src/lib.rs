@@ -450,11 +450,7 @@ pub mod pallet {
             let converted_milestones =
                 Self::try_convert_to_milestones(proposed_milestones, project_key)
                     .map_err(|_| Error::<T>::MilestoneConversionFailed)?;
-            let bounded_contributions: ContributionsFor<T> = contributions
-                .try_into()
-                .map_err(|_| Error::<T>::TooManyContributions)?;
-
-            let sum_of_contributions = bounded_contributions
+            let sum_of_contributions = contributions
                 .values()
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
                     acc.saturating_add(x.value)
@@ -463,7 +459,7 @@ pub mod pallet {
             let project: Project<T> = Project {
                 agreement_hash,
                 milestones: converted_milestones,
-                contributions: bounded_contributions,
+                contributions,
                 currency_id,
                 withdrawn_funds: 0u32.into(),
                 raised_funds: sum_of_contributions,
