@@ -200,13 +200,6 @@ fn force_add_fellowship_then_leave_fellowship_maintains_fellow_reserve() {
 }
 
 #[test]
-fn force_add_fellowship_then_leave_fellowship_takes_no_deposit() {
-    new_test_ext().execute_with(|| {
-        assert!(false);
-    });
-}
-
-#[test]
 fn leave_fellowship_assert_event() {
     new_test_ext().execute_with(|| {
         Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10)

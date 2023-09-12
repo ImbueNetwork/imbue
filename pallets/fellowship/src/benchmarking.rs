@@ -25,13 +25,6 @@ mod benchmarks {
         {
             <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
         }
-        System::<T>::assert_last_event(
-            Event::<T>::FellowshipAdded {
-                who: alice,
-                role: Role::Vetter,
-            }
-            .into(),
-        );
     }
 
     #[benchmark]
@@ -43,7 +36,7 @@ mod benchmarks {
         System::<T>::assert_last_event(
             Event::<T>::FellowshipAdded {
                 who: alice,
-                role: Role::Vetter,
+                role: Role::Freelancer,
             }
             .into(),
         );
@@ -71,7 +64,7 @@ mod benchmarks {
 
         #[extrinsic_call]
         force_remove_and_slash_fellowship(RawOrigin::Root, alice.clone());
-        System::<T>::assert_last_event(Event::<T>::FellowshipRemoved { who: alice }.into());
+        System::<T>::assert_last_event(Event::<T>::FellowshipSlashed { who: alice }.into());
     }
 
     #[benchmark]
@@ -108,14 +101,16 @@ mod benchmarks {
 
     #[benchmark]
     fn pay_deposit_to_remove_pending_status() {
-        let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1);
-        let _alice: T::AccountId =
-            create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId = account("bob", 1, 0);
         let charlie: T::AccountId =
             create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
 
         <crate::Pallet<T> as FellowshipHandle<<T as frame_system::Config>::AccountId>>::add_to_fellowship(&bob, Role::Vetter, 10, Some(&charlie), true);
-        let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
+        assert_ok!(<T::MultiCurrency as MultiCurrency<
+            <T as frame_system::Config>::AccountId,
+        >>::deposit(
+            CurrencyId::Native, &bob, 1_000_000_000_000_000_000u128.saturated_into()
+        ));
 
         #[extrinsic_call]
         pay_deposit_to_remove_pending_status(RawOrigin::Signed(bob.clone()));

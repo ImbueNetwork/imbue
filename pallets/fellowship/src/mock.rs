@@ -108,6 +108,8 @@ pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
 pub static EMPTY: Lazy<Public> = Lazy::new(|| Public::from_raw([66u8; 32]));
+pub static TREASURY: Lazy<Public> = Lazy::new(|| Public::from_raw([1u8; 32]));
+
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()
@@ -121,6 +123,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &TREASURY, initial_balance);
+
     });
     ext
 }
