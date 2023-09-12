@@ -71,22 +71,12 @@ impl pallet_fellowship::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type MultiCurrency = Tokens;
     type ForceAuthority = EnsureRoot<AccountId>;
-    type DemocracyHandle = ();
     type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
     type ShortlistPeriod = ShortlistPeriod;
     type MembershipDeposit = MembershipDeposit;
     type DepositCurrencyId = DepositCurrencyId;
     type SlashAccount = SlashAccount;
     type WeightInfo = ();
-}
-
-impl crate::traits::DemocracyHandle<AccountId> for () {
-    fn initiate_shortlist_vote() -> () {
-        ()
-    }
-    fn cancel_shortlist_vote() -> () {
-        ()
-    }
 }
 
 orml_traits::parameter_type_with_key! {

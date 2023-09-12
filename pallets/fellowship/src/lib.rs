@@ -27,13 +27,13 @@ pub mod pallet {
     use common_types::CurrencyId;
     use frame_support::{pallet_prelude::*, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
-    use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
+    use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_runtime::traits::Zero;
     use sp_std::{convert::TryInto, vec};
 
     use crate::impls::EnsureFellowshipRole;
     use crate::traits::WeightInfoT;
-    use crate::traits::{DemocracyHandle, EnsureRole, FellowshipHandle};
+    use crate::traits::{EnsureRole, FellowshipHandle};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type VetterIdOf<T> = AccountIdOf<T>;
@@ -58,8 +58,6 @@ pub mod pallet {
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         /// The authority appropriate to do call force extrinsics.
         type ForceAuthority: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
-        /// The handle used to initiate democracy calls.
-        type DemocracyHandle: DemocracyHandle<AccountIdOf<Self>>;
         /// The max number of candidates per wave.
         type MaxCandidatesPerShortlist: Get<u32>;
         /// The amount of time before a shortlist is processed.
@@ -211,7 +209,7 @@ pub mod pallet {
         ) -> DispatchResult {
             <T as Config>::ForceAuthority::ensure_origin(origin)?;
             <Self as FellowshipHandle<AccountIdOf<T>>>::revoke_fellowship(&who, true)?;
-            Self::deposit_event(Event::<T>::FellowshipSlashed { who: who });
+            Self::deposit_event(Event::<T>::FellowshipSlashed { who });
             Ok(().into())
         }
 
