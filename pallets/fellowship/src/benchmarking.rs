@@ -109,7 +109,9 @@ mod benchmarks {
         assert_ok!(<T::MultiCurrency as MultiCurrency<
             <T as frame_system::Config>::AccountId,
         >>::deposit(
-            CurrencyId::Native, &bob, 1_000_000_000_000_000_000u128.saturated_into()
+            CurrencyId::Native,
+            &bob,
+            1_000_000_000_000_000_000u128.saturated_into()
         ));
 
         #[extrinsic_call]
