@@ -166,22 +166,20 @@ pub mod pallet {
                         .try_insert(who.clone(), is_yay)
                         .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
 
-                    if d.votes.iter().all(|v|{*v.1 == true}) {
-                        // Auto finalise an DisputeResult::Success
-                        Disputes::<T>::remove(dispute_key);
-                    }
-        
-                    if d.votes.iter().all(|v|{*v.1 == false}) {
-                        // Auto finalise an DisputeResult::Failed
-                        Disputes::<T>::remove(dispute_key);
-                    }
-        
-                    Ok::<(), DispatchError>(())
+                    //TODO: This is kinda messy, ideally we dont want to clone such a big data set. 
+                    Ok::<BoundedBTreeMap<AccountIdOf<T>, bool, T::MaxJurySize>, DispatchError>(d.votes.clone())
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist.into())
                 }
             })?;
+            
+            if votes.iter().all(|v|{*v.1 == true}) {
+                Dispute::<T>::try_autofinalise_with_result(dispute_key, DisputeResult::Success)?;
+            }
 
+            if votes.iter().all(|v|{*v.1 == false}) {
+                Dispute::<T>::try_autofinalise_with_result(dispute_key, DisputeResult::Failure)?;
+            }
             
             Self::deposit_event(Event::<T>::DisputeVotedOn { who });
             Ok(().into())
@@ -219,9 +217,10 @@ pub mod pallet {
             );
             // Ensure that the dispute does not end on the old date.
             DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
-                finalising.iter().filter(|finalising_id|{
+                // TODO: see if this works lol
+                let _ = finalising.iter().filter(|finalising_id|{
                     **finalising_id == dispute_key
-                });
+                }).collect::<Vec<_>>();
             });
 
             // Insert the new date.
@@ -296,19 +295,34 @@ pub mod pallet {
             Ok(())
         }
 
+        pub(crate) fn try_autofinalise_with_result(dispute_key: T::DisputeKey, result: DisputeResult) -> Result<(), DispatchError> {
+            let dispute = Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
+                // TODO: see if this works
+                let _ = finalising.iter().filter(|finalising_id|{
+                    **finalising_id == dispute_key
+                }).collect::<Vec<_>>();
+            });
+            T::DisputeHooks::on_dispute_complete(dispute_key, result);
+            Ok(())
+        }
 
-        pub(crate) fn remove(dispute_key: T::DisputeKey) {
-            //Disputes::<T>::insert(dispute_key, dispute);
-            // Dispute,
-            // DisputeFInaliseOm
+        pub(crate) fn calculate_winner(&self) -> DisputeResult {
+            if self.votes.values().filter(|&&x| x).count() >= self.votes.values().filter(|&&x| !x).count() {
+                DisputeResult::Success
+            } else {
+                DisputeResult::Failure
+            }
+        }
+
+        pub(crate) fn finalise(dispute_key: T::DisputeKey, result: DisputeResult) {
+
         }
     }
 
-    // A dispute vote contains what an account believes the outcome should be.
-    #[derive(Encode, Decode, PartialEq, Eq, Clone, Copy, Debug, TypeInfo, MaxEncodedLen)]
-    pub struct RefundVote {
-        pub to_initiator: u32,
-        pub to_refund: u32,
+    pub enum DisputeResult {
+        Success,
+        Failure,
     }
 
     pub trait WeightInfoT {
