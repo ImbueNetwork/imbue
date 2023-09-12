@@ -578,6 +578,12 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+struct ProjectVotingData<AccountId> {
+    votes: 
+}
+
 pub trait WeightInfoT {
     fn submit_milestone() -> Weight;
     fn vote_on_milestone() -> Weight;
