@@ -165,22 +165,24 @@ pub mod pallet {
                     d.votes
                         .try_insert(who.clone(), is_yay)
                         .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
-                    Ok::<&BoundedBTreeMap<<T as frame_system::Config>::AccountId, bool, <T as pallet::Config>::MaxJurySize>, DispatchError>(&d.votes)
+
+                    if d.votes.iter().all(|v|{*v.1 == true}) {
+                        // Auto finalise an DisputeResult::Success
+                        Disputes::<T>::remove(dispute_key);
+                    }
+        
+                    if d.votes.iter().all(|v|{*v.1 == false}) {
+                        // Auto finalise an DisputeResult::Failed
+                        Disputes::<T>::remove(dispute_key);
+                    }
+        
+                    Ok::<(), DispatchError>(())
                 } else {
-                    Err(Error::<T>::DisputeDoesNotExist)
+                    Err(Error::<T>::DisputeDoesNotExist.into())
                 }
             })?;
 
-            if votes.iter().all(|v|{*v.1 == true}) {
-                // Auto finalise an DisputeResult::Success
-                Disputes::<T>::remove(dispute_key);
-            }
-
-            if votes.iter().all(|v|{*v.1 == false}) {
-                // Auto finalise an DisputeResult::Failed
-                Disputes::<T>::remove(dispute_key);
-            }
-
+            
             Self::deposit_event(Event::<T>::DisputeVotedOn { who });
             Ok(().into())
         }
@@ -243,7 +245,7 @@ pub mod pallet {
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
     #[scale_info(skip_type_params(T))]
-    pub(crate) struct Dispute<T: Config> {
+    pub struct Dispute<T: Config> {
         /// Who this was raised by.
         pub raised_by: AccountIdOf<T>,
         /// The votes of each jury.
@@ -294,11 +296,11 @@ pub mod pallet {
             Ok(())
         }
 
-        pub(crate) fn remove(dispute_key: T::DisputeKey) -> Result<(), DispatchError> {
+
+        pub(crate) fn remove(dispute_key: T::DisputeKey) {
             //Disputes::<T>::insert(dispute_key, dispute);
             // Dispute,
             // DisputeFInaliseOm
-            Ok(())
         }
     }
 
