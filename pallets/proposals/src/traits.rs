@@ -10,18 +10,19 @@ use sp_std::collections::btree_map::BTreeMap;
 use xcm::latest::{MultiLocation, WeightLimit};
 
 pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
+    type MaximumContributorsPerProject: Get<u32>;
+    type MaxMilestones: Get<u32>;
+    type MaxJuryMembers: Get<u32>;
     /// Convert the propoerties of a project into a project.
-    /// This is the main method when wanting to use pallet_proposals and is how
-    /// You configure a Project
-    // TODO: change from proposal to project.
+    /// This is the main method when wanting to use pallet_proposals and is how one configures a project.
     fn convert_to_proposal(
         currency_id: CurrencyId,
-        current_contribution: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
+        current_contribution: BoundedBTreeMap<AccountId, Contribution<Balance, BlockNumber>, Self::MaximumContributorsPerProject>,
         brief_hash: H256,
         benificiary: AccountId,
-        milestones: Vec<ProposedMilestone>,
-        refund_locations: Vec<(Locality<AccountId>, Percent)>,
-        jury: Vec<AccountId>,
+        milestones: BoundedVec<ProposedMilestone, Self::MaxMilestones>,
+        refund_locations: BoundedVec<(Locality<AccountId>, Percent), Self::MaximumContributorsPerProject>,
+        jury: BoundedVec<AccountId, Self::MaxJuryMembers>,
         on_creation_funding: FundingPath,
     ) -> Result<(), DispatchError>;
 
@@ -29,7 +30,7 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
     /// Use when the contributors are the refund locations.
     fn convert_contributions_to_refund_locations(
         contributions: &BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
-    ) -> Vec<(Locality<AccountId>, Percent)>;
+    ) -> BoundedVec<(Locality<AccountId>, Percent), Self::MaximumContributorsPerProject>;
 }
 
 pub trait RefundHandler<AccountId, Balance, CurrencyId> {

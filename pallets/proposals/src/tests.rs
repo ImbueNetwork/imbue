@@ -208,7 +208,7 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
-        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let project_key = create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
@@ -261,7 +261,7 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
-        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let project_key = create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
@@ -314,7 +314,7 @@ fn users_can_submit_multiple_milestones_and_vote_independantly() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
-        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let project_key = create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key_0 = 0;
         let milestone_key_1 = 1;
         assert_ok!(Proposals::submit_milestone(
@@ -1165,9 +1165,10 @@ fn convert_to_proposal_too_many_contributions() {
     build_test_externality().execute_with(|| {
         let agreement_hash: H256 = Default::default();
         let mut contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>> = Default::default();
+        let proposed_milestones = get_milestones(10);
         (0..<Test as Config>::MaximumContributorsPerProject::get()).for_each(|nth| {
                     contributions.insert(
-                        [nth; 32], 
+                        sp_core::sr25519::Public::from_raw([nth.try_into().expect("lol if this fails"); 32]), 
                         Contribution {
                             value: 100_000,
                             timestamp: One::one(),
@@ -1175,14 +1176,13 @@ fn convert_to_proposal_too_many_contributions() {
                     );
         });
 
-        assert_noop!(<Proposals<Test> as IntoProposal<AccountId, Balance, BlockNumber>>::convert_to_proposal(
+        assert_noop!(<Proposals as IntoProposal<AccountId, Balance, BlockNumber>>::convert_to_proposal(
             CurrencyId::Native,
             contributions,
             agreement_hash,
             *ALICE,
             proposed_milestones,
-            refund_locations,
-            vec![(Locality::Foreign(treasury_account), Percent::from_parts(100u8))],
+            vec![(Locality::Foreign(<MultiLocation as Default>::default()), Percent::from_parts(100u8))],
             Vec::new(),
             FundingPath::WaitForFunding,
         ), Error::<Test>::TooManyContributions);
