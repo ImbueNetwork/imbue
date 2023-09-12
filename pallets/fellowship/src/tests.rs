@@ -191,7 +191,7 @@ fn force_add_fellowship_then_leave_fellowship_maintains_fellow_reserve() {
         let alice_reserved_before =
             <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
         Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10)
-                .expect("qed");
+            .expect("qed");
         assert_ok!(Fellowship::leave_fellowship(RuntimeOrigin::signed(*ALICE)));
         let alice_reserved_after =
             <Test as Config>::MultiCurrency::reserved_balance(*DEP_CURRENCY, &ALICE);
@@ -210,7 +210,7 @@ fn force_add_fellowship_then_leave_fellowship_takes_no_deposit() {
 fn leave_fellowship_assert_event() {
     new_test_ext().execute_with(|| {
         Fellowship::force_add_fellowship(RuntimeOrigin::root(), *ALICE, Role::Freelancer, 10)
-                .expect("qed");
+            .expect("qed");
         assert_ok!(Fellowship::leave_fellowship(RuntimeOrigin::signed(*ALICE)));
         System::<Test>::assert_last_event(Event::<Test>::FellowshipRemoved { who: *ALICE }.into());
     });
@@ -255,12 +255,8 @@ fn add_to_fellowship_adds_to_pending_fellows_assert_event() {
     new_test_ext().execute_with(|| {
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
-        <Test as Config>::MultiCurrency::withdraw(
-            *DEP_CURRENCY,
-            &ALICE,
-            free - minimum + minimum,
-        )
-        .unwrap();
+        <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, free - minimum + minimum)
+            .unwrap();
         assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, None).is_ok());
         System::<Test>::assert_last_event(
             Event::<Test>::MemberAddedToPendingFellows { who: *ALICE }.into(),
@@ -405,12 +401,8 @@ fn add_candidate_to_shortlist_candidate_lacks_deposit_fails() {
         assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Vetter, 5, None));
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
-        <Test as Config>::MultiCurrency::withdraw(
-            *DEP_CURRENCY,
-            &ALICE,
-            free - minimum + minimum,
-        )
-        .unwrap();
+        <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, free - minimum + minimum)
+            .unwrap();
         assert_noop!(
             Fellowship::add_candidate_to_shortlist(
                 RuntimeOrigin::signed(*BOB),
@@ -549,12 +541,8 @@ fn pay_deposit_and_remove_pending_status_not_enough_funds_to_reserve() {
     new_test_ext().execute_with(|| {
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
-        <Test as Config>::MultiCurrency::withdraw(
-            *DEP_CURRENCY,
-            &ALICE,
-            free - minimum + minimum,
-        )
-        .unwrap();
+        <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, free - minimum + minimum)
+            .unwrap();
         assert_ok!(add_to_fellowship_take_deposit(
             &ALICE,
             Role::Freelancer,
@@ -573,12 +561,8 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
     new_test_ext().execute_with(|| {
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(*DEP_CURRENCY);
         let free = <Test as Config>::MultiCurrency::free_balance(*DEP_CURRENCY, &ALICE);
-        <Test as Config>::MultiCurrency::withdraw(
-            *DEP_CURRENCY,
-            &ALICE,
-            free - minimum + minimum,
-        )
-        .unwrap();
+        <Test as Config>::MultiCurrency::withdraw(*DEP_CURRENCY, &ALICE, free - minimum + minimum)
+            .unwrap();
         assert_ok!(add_to_fellowship_take_deposit(
             &ALICE,
             Role::Freelancer,

@@ -8,7 +8,7 @@ use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::Pallet as System;
 use frame_system::RawOrigin;
-use orml_traits::{MultiCurrency};
+use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
 
 #[benchmarks( where <T as frame_system::Config>::AccountId: AsRef<[u8]>, crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
@@ -83,9 +83,7 @@ mod benchmarks {
 
         #[extrinsic_call]
         add_candidate_to_shortlist(RawOrigin::Signed(alice), bob.clone(), Role::Vetter, 10);
-        System::<T>::assert_last_event(
-            Event::<T>::CandidateAddedToShortlist { who: bob }.into(),
-        );
+        System::<T>::assert_last_event(Event::<T>::CandidateAddedToShortlist { who: bob }.into());
     }
 
     #[benchmark]
