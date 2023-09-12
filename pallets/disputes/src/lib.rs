@@ -67,10 +67,12 @@ pub mod pallet {
         type MaxReasonLength: Get<u32>;
         /// This is number of juries that can be assigned to a given dispute
         type MaxJurySize: Get<u32>;
+        /// This is number of specifics that can be assigned to a given dispute
+        type MaxSpecifics: Get<u32>;
         /// The amount of time a dispute takes to finalise.
         type VotingTimeLimit: Get<<Self as frame_system::Config>::BlockNumber>;
-
         type ForceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+        type DisputeHooks: traits::DisputeHooks<Self::DisputeKey>;
     }
 
     /// Used to store the disputes that is being raised, given the dispute key it returns the Dispute
@@ -127,16 +129,19 @@ pub mod pallet {
         /// There have been too many disputes on this block. Try next block.
         TooManyDisputesThisBlock,
         /// The dispute has already been extended. You can only extend a dispute once.
-        DisputeAlreadyExtended
+        DisputeAlreadyExtended,
+        ///There have been more than required votes for a given dispute
+        TooManyDisputeVotes
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
             let expiring_disputes = DisputesFinaliseOn::<T>::get(n);
-            expiring_disputes.iter().for_each(|dispute_id| {
-                <T::DisputeHooks as DisputeHooks>::on_dispute_complete()
-            })
+            // expiring_disputes.iter().for_each(|dispute_id| {
+            //     <T::DisputeHooks as DisputeHooks<DisputeKey>>::on_dispute_complete();
+            // })
+            Weight::default()
         }
     }
 
@@ -154,28 +159,26 @@ pub mod pallet {
             let votes = Disputes::<T>::try_mutate(dispute_key, |dispute| {
                 if let Some(d) = dispute {
                     ensure!(
-                        d.jury.iter().any(|e| e == &who),
+                        d.jury.iter().any(|e| e == &who.clone()),
                         Error::<T>::NotAJuryAccount
                     );
                     d.votes
-                        .try_insert(&who, is_yay)
+                        .try_insert(who.clone(), is_yay)
                         .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
-
-                    
-                    Ok::<&BoundedVec<bool, T::MaxJurySize>, DispatchError>(&d.votes)
+                    Ok::<&BoundedBTreeMap<<T as frame_system::Config>::AccountId, bool, <T as pallet::Config>::MaxJurySize>, DispatchError>(&d.votes)
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist)
                 }
             })?;
 
-            if votes.iter().all(|v|{v == true}) {
+            if votes.iter().all(|v|{*v.1 == true}) {
                 // Auto finalise an DisputeResult::Success
-                // Dispute::remove(dispute_key);
+                Disputes::<T>::remove(dispute_key);
             }
 
-            if votes.iter().all(|v|{v == false}) {
+            if votes.iter().all(|v|{*v.1 == false}) {
                 // Auto finalise an DisputeResult::Failed
-                // Dispute::remove(dispute_key);
+                Disputes::<T>::remove(dispute_key);
             }
 
             Self::deposit_event(Event::<T>::DisputeVotedOn { who });
@@ -199,23 +202,23 @@ pub mod pallet {
 
         /// Extend a given dispute by T::VotingTimeLimit.
         /// This can only be called once and must be called by a member of the jury.
-        #[pallet::call_index(1)]
-        #[pallet::weight(<T as Config>::WeightInfo::force_cancel_dispute())]
+        #[pallet::call_index(2)]
+        #[pallet::weight(<T as Config>::WeightInfo::extend_dispute())]
         pub fn extend_dispute(
             origin: OriginFor<T>,
             dispute_key: T::DisputeKey,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let mut dispute = Disputes::<T>::get(dipute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
-            ensure!(!dispute.is_extended, Error::<T>::DisputeAlreadyExtended)?;
+            let mut dispute = Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            ensure!(!dispute.is_extended, Error::<T>::DisputeAlreadyExtended);
             ensure!(
-                d.jury.iter().any(|e| e == &who),
+                dispute.jury.iter().any(|e| e == &who),
                 Error::<T>::NotAJuryAccount
             );
             // Ensure that the dispute does not end on the old date.
-            DisputesFinaliseOn::<T>::mutate(dispite.expiration, |finalising| {
+            DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
                 finalising.iter().filter(|finalising_id|{
-                    finalising_id == dispute_key
+                    **finalising_id == dispute_key
                 });
             });
 
@@ -292,7 +295,7 @@ pub mod pallet {
         }
 
         pub(crate) fn remove(dispute_key: T::DisputeKey) -> Result<(), DispatchError> {
-            Disputes::<T>::insert(dispute_key, dispute);
+            //Disputes::<T>::insert(dispute_key, dispute);
             // Dispute,
             // DisputeFInaliseOm
             Ok(())
@@ -309,6 +312,7 @@ pub mod pallet {
     pub trait WeightInfoT {
         fn vote_on_dispute() -> Weight;
         fn force_cancel_dispute() -> Weight;
+        fn extend_dispute() -> Weight;
         fn raise_dispute() -> Weight;
         fn on_dispute_complete() -> Weight;
         fn on_dispute_cancel() -> Weight;

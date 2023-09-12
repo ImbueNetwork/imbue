@@ -5,7 +5,7 @@ use sp_runtime::{traits::AtLeast32BitUnsigned, BoundedVec, DispatchError};
 
 pub trait DisputeRaiser<AccountId> {
     type DisputeKey: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
-    type SpecificId AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
+    type SpecificId: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
     type MaxReasonLength: Get<u32>;
     type MaxJurySize: Get<u32>;
     type MaxSpecifics: Get<u32>;
@@ -14,7 +14,7 @@ pub trait DisputeRaiser<AccountId> {
         dispute_key: Self::DisputeKey,
         raised_by: AccountId,
         jury: BoundedVec<AccountId, Self::MaxJurySize>,
-        specific_ids: BoundedVec<SpecificId, MaxSpecifics>, 
+        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>, 
     ) -> Result<(), DispatchError>;
 }
 
