@@ -11,7 +11,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 use frame_support::assert_ok;
-use xcm_emulator::TestExt;
+use frame_support::dispatch::RawOrigin;
+
+use xcm_emulator::{bx, TestExt};
 
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
 
@@ -32,17 +34,70 @@ use orml_traits::MultiCurrency;
 use pallet_proposals::traits::RefundHandler;
 
 #[test]
+fn transfer_treasury_to_parachain_grant_escrow_address() {
+    let transfer_amount: Balance = ksm_amount(1);
+    let treasury_origin = TreasuryOrigin::Kusama;
+    let kusama_treasury_address =
+        <R as pallet_proposals::Config>::RefundHandler::get_treasury_account_id(treasury_origin)
+            .unwrap();
+    Development::execute_with(|| {
+        assert_eq!(
+            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get()),
+            0
+        );
+    });
+
+    Kusama::execute_with(|| {
+        // First we ensure the treasury has enough balance to transfer
+        assert_ok!(kusama_runtime::Balances::force_set_balance(
+            kusama_runtime::RuntimeOrigin::root(),
+            kusama_treasury_address.clone().into(),
+            transfer_amount.saturating_mul(10)
+        ));
+
+        let call = Box::new(kusama_runtime::RuntimeCall::XcmPallet(
+            pallet_xcm::Call::<kusama_runtime::Runtime>::reserve_transfer_assets {
+                dest: Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
+                beneficiary: Box::new(
+                    Junction::AccountId32 {
+                        network: Some(NetworkId::Kusama),
+                        id: ImbueKusamaReceiver::get().into(),
+                    }
+                    .into(),
+                ),
+                assets: Box::new((Here, transfer_amount).into()),
+                fee_asset_item: 0,
+            },
+        ));
+
+        assert_ok!(kusama_runtime::Utility::dispatch_as(
+            kusama_runtime::RuntimeOrigin::root(),
+            bx!(kusama_runtime::OriginCaller::system(RawOrigin::Signed(
+                kusama_treasury_address
+            ))),
+            call,
+        ));
+    });
+
+    Development::execute_with(|| {
+        let para_receiver_balance_after =
+            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get());
+        assert!(para_receiver_balance_after > 0);
+    });
+}
+
+#[test]
 fn transfer_ksm_to_relay_chain() {
     let transfer_amount: Balance = ksm_amount(10);
     let _kusama_receiver_balance_before = Kusama::account_data_of(KusamaReceiver::get()).free;
     Kusama::execute_with(|| {
         assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
-            kusama_runtime::RuntimeOrigin::signed(KusamaSender::get().into()),
+            kusama_runtime::RuntimeOrigin::signed(KusamaSender::get()),
             Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
             Box::new(
                 Junction::AccountId32 {
                     network: Some(NetworkId::Kusama),
-                    id: ImbueKusamaSender::get().clone().into(),
+                    id: ImbueKusamaSender::get().into(),
                 }
                 .into()
             ),
@@ -53,14 +108,14 @@ fn transfer_ksm_to_relay_chain() {
 
     Development::execute_with(|| {
         assert_ok!(XTokens::transfer(
-            imbue_kusama_runtime::RuntimeOrigin::signed(ImbueKusamaSender::get().clone().into()),
+            imbue_kusama_runtime::RuntimeOrigin::signed(ImbueKusamaSender::get()),
             CurrencyId::KSM,
             transfer_amount,
             Box::new(
                 MultiLocation::new(
                     1,
                     X1(Junction::AccountId32 {
-                        id: KusamaReceiver::get().clone().into(),
+                        id: KusamaReceiver::get().into(),
                         network: Some(NetworkId::Kusama),
                     })
                 )
@@ -84,8 +139,7 @@ fn test_xcm_refund_handler_to_kusama() {
         Kusama::account_data_of(kusama_treasury_address.clone()).free;
     let transfer_amount: Balance = ksm_amount(10);
     Development::execute_with(|| {
-        let ksm_balance =
-            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get().into());
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get());
         assert_eq!(ksm_balance, 0);
     });
 
@@ -105,12 +159,11 @@ fn test_xcm_refund_handler_to_kusama() {
         ));
     });
     Development::execute_with(|| {
-        let ksm_balance =
-            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get().into());
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get());
         assert!(ksm_balance > 0);
         assert_ok!(
             <R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(
-                ImbueKusamaReceiver::get().into(),
+                ImbueKusamaReceiver::get(),
                 ksm_balance,
                 CurrencyId::KSM,
                 FundingType::Grant(TreasuryOrigin::Kusama)
@@ -118,8 +171,7 @@ fn test_xcm_refund_handler_to_kusama() {
         );
     });
 
-    let _kusama_treasury_balance_after =
-        Kusama::account_data_of(kusama_treasury_address.clone()).free;
+    let _kusama_treasury_balance_after = Kusama::account_data_of(kusama_treasury_address).free;
     #[cfg(not(feature = "runtime-benchmarks"))]
     assert!(_kusama_treasury_balance_after > _kusama_treasury_balance_before)
 }
@@ -129,19 +181,18 @@ fn transfer_ksm_from_sibling() {
     // TestNet::reset();
     let transfer_amount = native_amount(1);
     Development::execute_with(|| {
-        let ksm_balance =
-            OrmlTokens::free_balance(CurrencyId::KSM, &SiblingKusamaReceiver::get().into());
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &SiblingKusamaReceiver::get());
         assert_eq!(ksm_balance, 0);
     });
     Sibling::execute_with(|| {
         assert_ok!(OrmlTokens::deposit(
             CurrencyId::KSM,
-            &ImbueKusamaSender::get().into(),
+            &ImbueKusamaSender::get(),
             transfer_amount.saturating_mul(2)
         ));
 
         assert_ok!(XTokens::transfer(
-            RuntimeOrigin::signed(ImbueKusamaSender::get().into()),
+            RuntimeOrigin::signed(ImbueKusamaSender::get()),
             CurrencyId::KSM,
             transfer_amount,
             Box::new(
@@ -163,8 +214,7 @@ fn transfer_ksm_from_sibling() {
 
     #[cfg(not(feature = "runtime-benchmarks"))]
     Development::execute_with(|| {
-        let ksm_balance =
-            OrmlTokens::free_balance(CurrencyId::KSM, &SiblingKusamaReceiver::get().into());
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &SiblingKusamaReceiver::get());
         assert!(ksm_balance > 0);
     });
 }
@@ -174,14 +224,14 @@ fn transfer_from_relay_chain() {
     let transfer_amount: Balance = ksm_amount(1);
     Development::execute_with(|| {
         assert_eq!(
-            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get().into()),
+            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get()),
             0
         );
     });
 
     Kusama::execute_with(|| {
         assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
-            kusama_runtime::RuntimeOrigin::signed(KusamaSender::get().into()),
+            kusama_runtime::RuntimeOrigin::signed(KusamaSender::get()),
             Box::new(Parachain(PARA_ID_DEVELOPMENT).into()),
             Box::new(
                 Junction::AccountId32 {
@@ -190,14 +240,14 @@ fn transfer_from_relay_chain() {
                 }
                 .into()
             ),
-            Box::new((Here, transfer_amount.clone()).into()),
+            Box::new((Here, transfer_amount).into()),
             0,
         ));
     });
 
     Development::execute_with(|| {
         let para_receiver_balance_after =
-            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get().into());
+            OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get());
         assert!(para_receiver_balance_after > 0);
     });
 }
@@ -213,10 +263,10 @@ fn transfer_native_to_sibling() {
     });
     let transfer_amount: Balance = native_amount(10);
     let sibling_balance_before: Balance =
-        Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
+        Sibling::account_data_of(SiblingKusamaReceiver::get()).free;
     Development::execute_with(|| {
         assert_ok!(XTokens::transfer(
-            imbue_kusama_runtime::RuntimeOrigin::signed(ImbueKusamaSender::get().into()),
+            imbue_kusama_runtime::RuntimeOrigin::signed(ImbueKusamaSender::get()),
             CurrencyId::Native,
             transfer_amount,
             Box::new(
@@ -236,7 +286,7 @@ fn transfer_native_to_sibling() {
         ));
     });
 
-    let sibling_balance_after = Sibling::account_data_of(SiblingKusamaReceiver::get().into()).free;
+    let sibling_balance_after = Sibling::account_data_of(SiblingKusamaReceiver::get()).free;
     assert!(sibling_balance_after > sibling_balance_before);
 }
 
@@ -245,18 +295,17 @@ fn transfer_mgx_from_sibling() {
     // TestNet::reset();
     let transfer_amount = mgx_amount(1_000_000_000);
     Sibling::execute_with(|| {
-        let mgx_balance =
-            OrmlTokens::free_balance(CurrencyId::MGX, &SiblingKusamaReceiver::get().into());
+        let mgx_balance = OrmlTokens::free_balance(CurrencyId::MGX, &SiblingKusamaReceiver::get());
         assert_eq!(mgx_balance, 0);
     });
     Sibling::execute_with(|| {
         assert_ok!(OrmlTokens::deposit(
             CurrencyId::MGX,
-            &ImbueKusamaSender::get().into(),
+            &ImbueKusamaSender::get(),
             transfer_amount.saturating_mul(10)
         ));
         assert_ok!(XTokens::transfer(
-            RuntimeOrigin::signed(ImbueKusamaSender::get().into()),
+            RuntimeOrigin::signed(ImbueKusamaSender::get()),
             CurrencyId::MGX,
             transfer_amount,
             Box::new(
@@ -276,8 +325,7 @@ fn transfer_mgx_from_sibling() {
         ));
     });
     Development::execute_with(|| {
-        let mgx_balance =
-            OrmlTokens::free_balance(CurrencyId::MGX, &SiblingKusamaReceiver::get().into());
+        let mgx_balance = OrmlTokens::free_balance(CurrencyId::MGX, &SiblingKusamaReceiver::get());
         assert!(mgx_balance > 0);
     });
 }
@@ -296,7 +344,7 @@ fn currency_id_convert_imbu() {
     );
 
     assert_eq!(
-        CurrencyIdConvert::convert(imbu_location.clone()),
+        CurrencyIdConvert::convert(imbu_location),
         Some(CurrencyId::Native),
     );
 
@@ -304,7 +352,7 @@ fn currency_id_convert_imbu() {
         MultiLocation::new(0, X1(general_key(parachains::kusama::imbue::IMBU_KEY)));
 
     assert_eq!(
-        CurrencyIdConvert::convert(imbu_location_2.clone()),
+        CurrencyIdConvert::convert(imbu_location_2),
         Some(CurrencyId::Native),
     );
 }

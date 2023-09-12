@@ -22,79 +22,51 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn create_crowdfund() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn update_crowdfund() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn add_crowdfund_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
 
     fn remove_crowdfund_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
 
     fn open_contributions() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn contribute() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn approve_crowdfund_for_milestone_submission() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn create_crowdfund() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(2_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn update_crowdfund() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(2_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn add_crowdfund_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(2_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn remove_crowdfund_whitelist() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(2_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn open_contributions() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(2_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn contribute() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(2_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
     fn approve_crowdfund_for_milestone_submission() -> Weight {
-        Weight::from_ref_time(49_000_000_u64)
-            .saturating_add(RocksDbWeight::get().reads(2_u64))
-            .saturating_add(RocksDbWeight::get().writes(2_u64))
+        <Weight as Default>::default()
     }
 }

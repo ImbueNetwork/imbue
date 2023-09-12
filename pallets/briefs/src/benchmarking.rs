@@ -38,7 +38,7 @@ mod benchmarks {
             applicant,
             budget,
             initial_contribution,
-            brief_id.clone(),
+            brief_id,
             CurrencyId::Native,
             milestones,
         );
@@ -56,12 +56,12 @@ mod benchmarks {
         let brief_id = gen_hash(1);
         let milestones = get_max_milestones::<T>();
         assert_ok!(Briefs::<T>::create_brief(
-            RawOrigin::Signed(caller.clone()).into(),
+            RawOrigin::Signed(caller).into(),
             brief_owners.clone(),
             applicant,
             budget,
             initial_contribution,
-            brief_id.clone(),
+            brief_id,
             CurrencyId::Native,
             milestones
         ));
@@ -70,7 +70,7 @@ mod benchmarks {
         #[extrinsic_call]
         contribute_to_brief(
             RawOrigin::Signed(brief_owner.clone()),
-            brief_id.clone(),
+            brief_id,
             contribution,
         );
         assert_last_event::<T>(Event::<T>::BriefContribution(brief_owner, brief_id).into());
@@ -86,18 +86,18 @@ mod benchmarks {
         let brief_id = gen_hash(1);
         let milestones = get_max_milestones::<T>();
         assert_ok!(Briefs::<T>::create_brief(
-            RawOrigin::Signed(caller.clone()).into(),
+            RawOrigin::Signed(caller).into(),
             brief_owners,
             applicant.clone(),
             budget,
             initial_contribution,
-            brief_id.clone(),
+            brief_id,
             CurrencyId::Native,
             milestones
         ));
         // (origin, brief_id)
         #[extrinsic_call]
-        commence_work(RawOrigin::Signed(applicant), brief_id.clone());
+        commence_work(RawOrigin::Signed(applicant), brief_id);
         assert_last_event::<T>(Event::<T>::BriefEvolution(brief_id).into());
     }
 
@@ -113,16 +113,16 @@ mod benchmarks {
         assert_ok!(Briefs::<T>::create_brief(
             RawOrigin::Signed(caller.clone()).into(),
             brief_owners,
-            applicant.clone(),
+            applicant,
             budget,
             initial_contribution,
-            brief_id.clone(),
+            brief_id,
             CurrencyId::Native,
             milestones
         ));
         // (origin, brief_id)
         #[extrinsic_call]
-        cancel_brief(RawOrigin::Signed(caller), brief_id.clone());
+        cancel_brief(RawOrigin::Signed(caller), brief_id);
         assert_last_event::<T>(Event::<T>::BriefCanceled(brief_id).into());
     }
 
@@ -135,7 +135,7 @@ mod benchmarks {
 
 fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
     let user = account(suri, n, SEED);
-    let initial_balance: _ = 1_000_000_000_000_000u128;
+    let initial_balance = 1_000_000_000_000_000u128;
     assert_ok!(T::RMultiCurrency::deposit(
         CurrencyId::Native,
         &user,
@@ -177,15 +177,14 @@ fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
     if n > max {
         n = max;
     }
-    let milestones = (0..n)
+
+    (0..n)
         .map(|_| ProposedMilestone {
             percentage_to_unlock: Percent::from_percent((100 / n) as u8),
         })
         .collect::<Vec<ProposedMilestone>>()
         .try_into()
-        .expect("qed");
-
-    milestones
+        .expect("qed")
 }
 
 fn get_max_milestones<T: Config>() -> BoundedProposedMilestones<T> {

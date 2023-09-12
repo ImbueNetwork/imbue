@@ -1,5 +1,4 @@
 use core::default::Default;
-use polkadot_primitives::v4::{MAX_CODE_SIZE, MAX_POV_SIZE};
 
 use grandpa::AuthorityId as GrandpaId;
 pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
@@ -24,7 +23,7 @@ type AccountPublic = <MultiSignature as Verify>::Signer;
 
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
+    TPublic::Pair::from_string(&format!("//{seed}"), None)
         .expect("static values are valid; qed")
         .public()
 }
@@ -269,7 +268,7 @@ pub mod imbue {
                     .cloned()
                     .map(|(acc, _)| acc)
                     .collect(),
-                candidacy_bond: 1 * ED,
+                candidacy_bond: ED,
                 ..Default::default()
             },
             session: imbue_kusama_runtime::SessionConfig {
