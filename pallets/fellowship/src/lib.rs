@@ -247,15 +247,15 @@ pub mod pallet {
                 Error::<T>::CandidateDepositRequired
             );
             CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {
-                    ensure!(
-                        !m_shortlist.contains_key(&candidate),
-                        Error::<T>::CandidateAlreadyOnShortlist
-                    );
-                    m_shortlist
-                        .try_insert(candidate.clone(), ((role, rank), Some(who)))
-                        .map_err(|_| Error::<T>::TooManyCandidates)?;
-                    Ok::<(), DispatchError>(())
-                })?;
+                ensure!(
+                    !m_shortlist.contains_key(&candidate),
+                    Error::<T>::CandidateAlreadyOnShortlist
+                );
+                m_shortlist
+                    .try_insert(candidate.clone(), ((role, rank), Some(who)))
+                    .map_err(|_| Error::<T>::TooManyCandidates)?;
+                Ok::<(), DispatchError>(())
+            })?;
 
             Self::deposit_event(Event::<T>::CandidateAddedToShortlist { who: candidate });
             Ok(())
@@ -280,9 +280,9 @@ pub mod pallet {
                 Error::<T>::NotAVetter
             );
             CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {
-                    m_shortlist.remove(&candidate);
-                    Ok::<(), DispatchError>(())
-                })?;
+                m_shortlist.remove(&candidate);
+                Ok::<(), DispatchError>(())
+            })?;
 
             Self::deposit_event(Event::<T>::CandidateRemovedFromShortlist { who: candidate });
             Ok(())

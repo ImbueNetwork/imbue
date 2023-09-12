@@ -92,7 +92,6 @@ pub trait TokenMetadata {
 
 /// Fallible conversion trait returning an [Option]. Generic over both source and destination types.
 pub trait MaybeConvert<A, B> {
-	/// Attempt to make conversion.
-	fn maybe_convert(a: A) -> Option<B>;
+    /// Attempt to make conversion.
+    fn maybe_convert(a: A) -> Option<B>;
 }
-

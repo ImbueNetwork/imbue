@@ -68,7 +68,9 @@ impl<T: Config> Pallet<T> {
             T::DepositCurrencyId::get(),
             who,
             membership_deposit,
-        ).is_ok() {
+        )
+        .is_ok()
+        {
             FellowshipReserves::<T>::insert(who, membership_deposit);
             return true;
         }
