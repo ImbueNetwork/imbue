@@ -303,14 +303,7 @@ pub mod pallet {
             // DisputeFInaliseOm
         }
     }
-
-    // A dispute vote contains what an account believes the outcome should be.
-    #[derive(Encode, Decode, PartialEq, Eq, Clone, Copy, Debug, TypeInfo, MaxEncodedLen)]
-    pub struct RefundVote {
-        pub to_initiator: u32,
-        pub to_refund: u32,
-    }
-
+    
     pub trait WeightInfoT {
         fn vote_on_dispute() -> Weight;
         fn force_cancel_dispute() -> Weight;

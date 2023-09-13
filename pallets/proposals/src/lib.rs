@@ -15,6 +15,7 @@ use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
+use pallet_disputes::traits::DisputeRaiser;
 
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
@@ -102,7 +103,7 @@ pub mod pallet {
         /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
 
-        type DisputeRaiser: pallet_disputes::DisputeRaiser<AccountIdOf<Self>>;
+        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>>;
     }
 
     #[pallet::pallet]
