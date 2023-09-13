@@ -297,13 +297,15 @@ pub mod pallet {
         }
 
 
-        pub(crate) fn remove(dispute_key: T::DisputeKey) {
-            //Disputes::<T>::insert(dispute_key, dispute);
+        pub(crate) fn remove(dispute_key: T::DisputeKey) -> Result<(), DispatchError> {
+            let mut dispute = Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            //Disputes::<T>::remove(dispute_key);
             // Dispute,
             // DisputeFInaliseOm
+            Ok(())
         }
     }
-    
+
     pub trait WeightInfoT {
         fn vote_on_dispute() -> Weight;
         fn force_cancel_dispute() -> Weight;

@@ -1,5 +1,6 @@
 use crate::*;
 use common_types::milestone_origin::FundingType;
+use pallet_disputes::Disputes;
 use scale_info::prelude::format;
 use sp_runtime::traits::{Saturating, Zero};
 
@@ -422,10 +423,25 @@ impl<T: Config> Pallet<T> {
         fn on_dispute_complete(
             dispute_key: T::DisputeKey,
         ) -> Result<(), DispatchError> {
+            /// get the dispute using the dispute_key 
+            let dispute = Disputes::<T>::get(&dispute_key);
+            /// getting dispute raiser account to transfer the raised funds
+            /// in case of the dispute resolved in favor of the raiser
+            let raised_by = dispute.as_ref().unwrap().raised_by;
+            /// get the project based on the dispute_key 
+            let project = Projects::<T>::get(&dispute_key);
+            /// get the raised funds to return in case of the success resolution in favor of the raiser
+            let raised_funds = project.as_ref().unwrap().raised_funds;
+            /// making the transfer to the raiser
+            T::MultiCurrency::transfer(&raised_by, raised_funds)?;
+            /// once the transfer is done remove the disputes from the disputes storagemap
+            Disputes::<T>::remove(&dispute_key)?;
             Ok(())
         }
 
         fn on_dispute_cancel(dispute_key: T::DisputeKey) -> Result<(), DispatchError> {
+            /// remove the disputes from the disputes storagemap
+            Disputes::<T>::remove(&dispute_key)?;
             Ok(())
         }
     }
