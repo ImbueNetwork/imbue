@@ -18,7 +18,6 @@
 // 4: an extrinsic is called claim_back(parameter: who, where.)
 
 //pub mod impls;
-use frame_system::Pallet;
 pub mod traits;
 pub mod weights;
 
@@ -96,7 +95,6 @@ pub mod pallet {
     >;
 
     #[pallet::event]
-    // FELIX REVIEW: the below generate_deposit line is depricated in the 9.0.43 so you can remove it completely.
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         //This event is emitted whenever a dispute has been successfully raised
@@ -144,7 +142,7 @@ pub mod pallet {
                     let result = dispute.calculate_winner();
                     // TODO: Gonna have to do a trick to benchmark this correctly.
                     // Maybe return a weight from the method is a good idea and simple.
-                    <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(*dispute_id, result);
+                    let _ = <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(*dispute_id, result);
                 }
             });
             Weight::default()
@@ -180,11 +178,11 @@ pub mod pallet {
             })?;
             
             if votes.iter().all(|v|{*v.1 == true}) {
-                Dispute::<T>::try_autofinalise_with_result(dispute_key, DisputeResult::Success)?;
+                Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Success)?;
             }
 
             if votes.iter().all(|v|{*v.1 == false}) {
-                Dispute::<T>::try_autofinalise_with_result(dispute_key, DisputeResult::Failure)?;
+                Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Failure)?;
             }
             
             Self::deposit_event(Event::<T>::DisputeVotedOn { who });
@@ -197,12 +195,12 @@ pub mod pallet {
         pub fn force_cancel_dispute(
             origin: OriginFor<T>,
             dispute_key: T::DisputeKey,
-            is_yay: bool,
         ) -> DispatchResult {
+            // TODO: 
             //ensuring the cancelling authority
-            <T as Config>::ForceOrigin::ensure_origin(origin)?;
+            //<T as Config>::ForceOrigin::ensure_origin(origin)?;
             //calling the on_dispute cancel whenever the force cancel method is called
-            let res = T::DisputeHooks::on_dispute_cancel(dispute_key);
+            //let res = T::DisputeHooks::on_dispute_cancel(dispute_key);
             Ok(().into())
         }
 
@@ -265,7 +263,8 @@ pub mod pallet {
         pub expiration: BlockNumberFor<T>,
     }
 
-    impl<T: Config> Dispute<T> {
+    impl<T: Config> Dispute<T> 
+    {
         // Create a new dispute and setup state so that pallet will operate as intended.
         pub(crate) fn new(
             dispute_key: T::DisputeKey,
@@ -297,7 +296,7 @@ pub mod pallet {
                 },
             )?;
 
-            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeRaised { dispute_key });
+            //::deposit_event(Event::<T>::DisputeRaised { dispute_key }.into());
             Ok(())
         }
 
@@ -320,22 +319,14 @@ pub mod pallet {
                     **finalising_id == dispute_key
                 }).collect::<Vec<_>>();
             });
-            T::DisputeHooks::on_dispute_complete(dispute_key, result);
+            let _ = T::DisputeHooks::on_dispute_complete(dispute_key, result);
             Ok(())
         }
 
+        }
     pub enum DisputeResult {
         Success,
         Failure,
-    }
-
-        pub(crate) fn remove(dispute_key: T::DisputeKey) -> Result<(), DispatchError> {
-            let mut dispute = Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
-            //Disputes::<T>::remove(dispute_key);
-            // Dispute,
-            // DisputeFInaliseOm
-            Ok(())
-        }
     }
 
     pub trait WeightInfoT {

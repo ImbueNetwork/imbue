@@ -21,6 +21,6 @@ pub trait DisputeRaiser<AccountId> {
 pub trait DisputeHooks<DisputeKey> {
     // Outcome
     // handle the completed dispute
-    fn on_dispute_complete(dispute_key: DisputeKey, dispute_result: crate::DisputeResult) -> Result<(), DispatchError>;
+    fn on_dispute_complete(dispute_key: DisputeKey, dispute_result: crate::pallet::DisputeResult) -> Result<(), DispatchError>;
     fn on_dispute_cancel(dispute_key: DisputeKey) -> Result<(), DispatchError>;
 }
