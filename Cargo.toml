@@ -11,7 +11,11 @@ members = [
 	"pallets/grants",
 	"pallets/crowdfunding",
 	"pallets/deposits",
+<<<<<<< HEAD
 	"pallets/disputes",
+=======
+	"pallets/fellowship",
+>>>>>>> 0eda93403d2da87ddbadc3c71c69044918a7cb4a
 	"runtime/integration-tests",
 	"runtime/imbue-kusama",
 	"runtime/common",

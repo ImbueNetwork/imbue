@@ -22,26 +22,48 @@ mod benchmarks {
         let caller: T::AccountId = whitelisted_caller();
         let milestones = get_max_milestones::<T>();
         let required_funds = u32::MAX;
-        let currency_id = CurrencyId::Native;
+        let _currency_id = CurrencyId::Native;
         let agg_hash = H256::from([10u8; 32]);
         let crowdfund_key = 0;
         // (Origin, agg_hash, ProposedMilestones, RequiredFunds, CurrencyId)
         #[extrinsic_call]
-        create_crowdfund(RawOrigin::Signed(whitelisted_caller()), agg_hash, milestones, required_funds.into(), CurrencyId::Native);
-        assert_last_event::<T>(Event::<T>::CrowdFundCreated(caller, agg_hash, crowdfund_key, required_funds.into(), CurrencyId::Native).into());
+        create_crowdfund(
+            RawOrigin::Signed(whitelisted_caller()),
+            agg_hash,
+            milestones,
+            required_funds.into(),
+            CurrencyId::Native,
+        );
+        assert_last_event::<T>(
+            Event::<T>::CrowdFundCreated(
+                caller,
+                agg_hash,
+                crowdfund_key,
+                required_funds.into(),
+                CurrencyId::Native,
+            )
+            .into(),
+        );
     }
 
     #[benchmark]
     fn update_crowdfund() {
         let milestones = get_max_milestones::<T>();
         let required_funds = u32::MAX;
-        let caller = create_crowdfund_common::<T>(required_funds.into());
+        let caller = create_crowdfund_common::<T>(required_funds);
         let currency_id = CurrencyId::Native;
         let agg_hash = H256::from([2; 32]);
 
         // origin, crowdfund_key, proposed_milestones, required_funds, currency_id, agreement_hash
         #[extrinsic_call]
-        update_crowdfund(RawOrigin::Signed(caller.clone()), 0,  Some(milestones), Some(required_funds.into()), Some(currency_id), Some(agg_hash));
+        update_crowdfund(
+            RawOrigin::Signed(caller.clone()),
+            0,
+            Some(milestones),
+            Some(required_funds.into()),
+            Some(currency_id),
+            Some(agg_hash),
+        );
         assert_last_event::<T>(Event::CrowdFundUpdated(caller, 0).into());
     }
 
@@ -49,9 +71,9 @@ mod benchmarks {
     fn add_crowdfund_whitelist() {
         let required_funds = u32::MAX;
         let caller = create_crowdfund_common::<T>(required_funds);
-        let mut bbt : BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
+        let mut bbt: BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
 
-        for i in 0..<T as Config>::MaxWhitelistPerCrowdFund::get() {
+        for _i in 0..<T as Config>::MaxWhitelistPerCrowdFund::get() {
             bbt.try_insert(whitelisted_caller(), 100u32.into()).unwrap();
         }
         // (Origin, CrowdFundKey, BoundedWhitelistSpots)
@@ -64,12 +86,16 @@ mod benchmarks {
     fn remove_crowdfund_whitelist() {
         let required_funds = u32::MAX;
         let caller = create_crowdfund_common::<T>(required_funds);
-        let mut bbt : BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
+        let mut bbt: BoundedWhitelistSpots<T> = BTreeMap::new().try_into().unwrap();
 
-        for i in 0..<T as Config>::MaxWhitelistPerCrowdFund::get() {
+        for _i in 0..<T as Config>::MaxWhitelistPerCrowdFund::get() {
             bbt.try_insert(whitelisted_caller(), 100u32.into()).unwrap();
         }
-        let _ = CrowdFunding::<T>::add_crowdfund_whitelist(RawOrigin::Signed(caller.clone()).into(), 0, bbt);
+        let _ = CrowdFunding::<T>::add_crowdfund_whitelist(
+            RawOrigin::Signed(caller.clone()).into(),
+            0,
+            bbt,
+        );
 
         // (Origin, CrowdFundKey)
         #[extrinsic_call]
@@ -79,7 +105,7 @@ mod benchmarks {
 
     #[benchmark]
     fn open_contributions() {
-        create_crowdfund_common::<T>(u32::MAX.into());
+        create_crowdfund_common::<T>(u32::MAX);
         // (Origin, CrowdFundKey)
         #[extrinsic_call]
         open_contributions(RawOrigin::Root, 0);
@@ -91,7 +117,7 @@ mod benchmarks {
         let required_funds = u32::MAX;
         create_crowdfund_common::<T>(required_funds);
         let alice: T::AccountId = create_funded_user::<T>("candidate", 1, 100_000);
-        let caller: T::AccountId = whitelisted_caller();
+        let _caller: T::AccountId = whitelisted_caller();
         let _ = CrowdFunding::<T>::open_contributions(RawOrigin::Root.into(), 0);
 
         //(Origin, CrowdFundKey, Contribution)
@@ -104,19 +130,21 @@ mod benchmarks {
     fn approve_crowdfund_for_milestone_submission() {
         let required_funds: u32 = 100_000u32;
         create_crowdfund_common::<T>(required_funds);
-        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, required_funds.into());
+        let alice: T::AccountId = create_funded_user::<T>("candidate", 1, required_funds);
         let _ = CrowdFunding::<T>::open_contributions(RawOrigin::Root.into(), 0);
-        let _ = CrowdFunding::<T>::contribute(RawOrigin::Signed(alice.clone()).into(), 0u32, required_funds.into());
+        let _ = CrowdFunding::<T>::contribute(
+            RawOrigin::Signed(alice).into(),
+            0u32,
+            required_funds.into(),
+        );
 
         //(Origin, CrowdFundKey)
         #[extrinsic_call]
         approve_crowdfund_for_milestone_submission(RawOrigin::Root, 0);
-       assert_last_event::<T>(Event::<T>::CrowdFundApproved(0).into());
+        assert_last_event::<T>(Event::<T>::CrowdFundApproved(0).into());
     }
     impl_benchmark_test_suite!(CrowdFunding, crate::mock::new_test_ext(), crate::mock::Test);
 }
-
-
 
 fn create_funded_user<T: Config>(
     string: &'static str,
@@ -155,15 +183,14 @@ fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {
     if n > max {
         n = max;
     }
-    let milestones = (0..n)
+
+    (0..n)
         .map(|_| ProposedMilestone {
             percentage_to_unlock: Percent::from_percent((100 / n) as u8),
         })
         .collect::<Vec<ProposedMilestone>>()
         .try_into()
-        .expect("qed");
-
-    milestones
+        .expect("qed")
 }
 
 fn get_max_milestones<T: Config>() -> BoundedProposedMilestones<T> {

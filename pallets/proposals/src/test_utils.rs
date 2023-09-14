@@ -1,5 +1,3 @@
-#[allow(dead_code)]
-#[allow(unused)]
 use crate::Config;
 use crate::Pallet as Proposals;
 use crate::{
@@ -19,6 +17,7 @@ use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
+#[allow(dead_code)]
 pub fn run_to_block<T: Config>(n: T::BlockNumber) {
     loop {
         let mut block = frame_system::Pallet::<T>::block_number();
@@ -41,10 +40,7 @@ pub fn get_contributions<T: Config>(
     let mut contributions: ContributionsFor<T> = Default::default();
 
     accounts.iter().for_each(|account| {
-        let contribution = Contribution {
-            value: value,
-            timestamp,
-        };
+        let contribution = Contribution { value, timestamp };
         contributions
             .try_insert(account.clone(), contribution)
             .expect("bound should be ensured");
@@ -60,6 +56,7 @@ pub fn get_milestones(n: u8) -> Vec<ProposedMilestone> {
         .collect::<Vec<ProposedMilestone>>()
 }
 
+#[cfg(feature = "runtime-benchmarks")]
 pub fn get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
     get_milestones(<T as Config>::MaxMilestonesPerProject::get() as u8)
 }
@@ -112,11 +109,11 @@ pub fn create_project<T: Config>(
 
     let project = Project {
         milestones: milestones.try_into().expect("too many milestones"),
-        contributions: contributions.try_into().expect("too many contributions"),
+        contributions,
         currency_id,
         withdrawn_funds: 0u32.into(),
         raised_funds,
-        initiator: beneficiary.clone(),
+        initiator: beneficiary,
         created_on: frame_system::Pallet::<T>::block_number(),
         cancelled: false,
         agreement_hash,

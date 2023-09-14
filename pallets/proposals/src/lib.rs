@@ -211,6 +211,8 @@ pub mod pallet {
         NoConfidenceRoundVotedUpon(T::AccountId, ProjectKey),
         /// You have finalised a vote of no confidence.
         NoConfidenceRoundFinalised(T::AccountId, ProjectKey),
+        /// This milestone has been rejected.
+        MilestoneRejected(ProjectKey, MilestoneKey),
     }
 
     // Errors inform users that something went wrong.

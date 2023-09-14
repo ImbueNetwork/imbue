@@ -3,15 +3,15 @@
 use super::*;
 use crate::test_utils::*;
 use crate::Pallet as Proposals;
-use common_types::{CurrencyId, TreasuryOrigin};
+use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use sp_arithmetic::per_things::Percent;
+
 use sp_core::Get;
 use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
-use sp_std::{convert::TryInto, str, vec::Vec};
+use sp_std::convert::TryInto;
 
 #[benchmarks( where
     <T as frame_system::Config>::AccountId: AsRef<[u8]>,
@@ -36,13 +36,12 @@ mod benchmarks {
         );
 
         #[extrinsic_call]
-        submit_milestone(RawOrigin::Signed(bob.clone()), project_key, 0);
+        submit_milestone(RawOrigin::Signed(bob), project_key, 0);
         assert_last_event::<T>(Event::<T>::VotingRoundCreated(project_key).into());
     }
 
     #[benchmark]
-    fn vote_on_milestone()
-    {
+    fn vote_on_milestone() {
         let alice: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
@@ -72,8 +71,7 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn withdraw()
-    {
+    fn withdraw() {
         let alice: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
@@ -109,18 +107,19 @@ mod benchmarks {
         }
 
         // All the milestones are approved now
-        let fee: BalanceOf<T> = <T as Config>::ImbueFee::get()
-            .mul_floor(raised_funds)
-            .into();
+        let fee: BalanceOf<T> = <T as Config>::ImbueFee::get().mul_floor(raised_funds);
         let withdrawn: BalanceOf<T> = raised_funds.saturating_sub(fee);
 
         #[extrinsic_call]
         withdraw(RawOrigin::Signed(alice.clone()), project_key);
-        assert_last_event::<T>(Event::<T>::ProjectFundsWithdrawn(alice, project_key, withdrawn, CurrencyId::Native).into());
+        assert_last_event::<T>(
+            Event::<T>::ProjectFundsWithdrawn(alice, project_key, withdrawn, CurrencyId::Native)
+                .into(),
+        );
     }
 
     #[benchmark]
-    fn raise_vote_of_no_confidence(){
+    fn raise_vote_of_no_confidence() {
         let alice: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
@@ -128,20 +127,15 @@ mod benchmarks {
         // TODO: should update the contributors list to have maximum available length
         let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
-        let project_key = create_project::<T>(
-            alice.clone(),
-            contributions,
-            prop_milestones,
-            CurrencyId::Native,
-        );
+        let project_key =
+            create_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native);
         #[extrinsic_call]
         raise_vote_of_no_confidence(RawOrigin::Signed(bob.clone()), project_key);
         assert_last_event::<T>(Event::<T>::NoConfidenceRoundCreated(bob, project_key).into());
     }
 
     #[benchmark]
-    fn vote_on_no_confidence_round()
-    {
+    fn vote_on_no_confidence_round() {
         let alice: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
@@ -154,12 +148,8 @@ mod benchmarks {
             100_000_000_000_000_000u128,
         );
         let prop_milestones = get_max_milestones::<T>();
-        let project_key = create_project::<T>(
-            alice.clone(),
-            contributions,
-            prop_milestones,
-            CurrencyId::Native,
-        );
+        let project_key =
+            create_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native);
 
         assert_ok!(Pallet::<T>::raise_vote_of_no_confidence(
             RawOrigin::Signed(bob).into(),
@@ -173,16 +163,20 @@ mod benchmarks {
 
     // Benchmark for a single loop of on_initialise as a voting round (most expensive).
     #[benchmark]
-    fn on_initialize()
-    {
+    fn on_initialize() {
         let block_number: <T as frame_system::Config>::BlockNumber = 100u32.into();
-        let keys: BoundedVec<(ProjectKey, RoundType, MilestoneKey), <T as Config>::ExpiringProjectRoundsPerBlock>  = vec![(0, RoundType::VotingRound, 0)].try_into().expect("bound will be larger than 1;");
+        let keys: BoundedVec<
+            (ProjectKey, RoundType, MilestoneKey),
+            <T as Config>::ExpiringProjectRoundsPerBlock,
+        > = vec![(0, RoundType::VotingRound, 0)]
+            .try_into()
+            .expect("bound will be larger than 1;");
 
         RoundsExpiring::<T>::insert(block_number, keys);
         #[block]
-		{
+        {
             crate::Pallet::<T>::on_initialize(block_number);
-		}
+        }
     }
 
     impl_benchmark_test_suite!(

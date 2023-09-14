@@ -82,18 +82,13 @@ pub mod pallet {
     #[pallet::storage]
     pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
-    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
     #[repr(u32)]
     pub enum Release {
         V0,
         V1,
+        #[default]
         V2,
-    }
-
-    impl Default for Release {
-        fn default() -> Release {
-            Release::V1
-        }
     }
 
     #[pallet::event]
@@ -192,4 +187,3 @@ pub mod pallet {
         fn create_and_convert() -> Weight;
     }
 }
-

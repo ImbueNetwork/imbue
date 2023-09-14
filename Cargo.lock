@@ -4320,7 +4320,6 @@ dependencies = [
  "pallet-proposals-rpc-runtime-api",
  "pallet-scheduler",
  "pallet-session",
- "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -6910,6 +6909,26 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-staking",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-fellowship"
+version = "0.1.0"
+dependencies = [
+ "common-traits",
+ "common-types",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-tokens",
+ "orml-traits",
+ "parity-scale-codec 3.6.2",
+ "scale-info 2.8.0",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
  "sp-std",
 ]
 
