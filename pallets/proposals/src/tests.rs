@@ -385,6 +385,46 @@ fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone(
 }
 
 #[test]
+fn if_double_submission_and_one_finalises_voting_on_the_second_works() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let expiring_block = frame_system::Pallet::<Test>::block_number()
+            + <Test as Config>::MilestoneVotingWindow::get();
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            0
+        ));
+        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + 10);
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            1
+        ));
+        run_to_block::<Test>(expiring_block);
+        assert_noop!(
+            Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
+                project_key,
+                0,
+                true
+            ),
+            Error::<Test>::VotingRoundNotStarted
+        );
+        assert_ok!(
+            Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
+                project_key,
+                1,
+                true
+            )
+        );
+        });
+}
+
+#[test]
 fn vote_on_milestone_not_contributor() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
