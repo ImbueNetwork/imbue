@@ -17,8 +17,8 @@
 
 // 4: an extrinsic is called claim_back(parameter: who, where.)
 
-pub use pallet::*;
 //pub mod impls;
+use frame_system::Pallet;
 pub mod traits;
 pub mod weights;
 
@@ -138,9 +138,12 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
             let expiring_disputes = DisputesFinaliseOn::<T>::get(n);
-            // expiring_disputes.iter().for_each(|dispute_id| {
-            //     <T::DisputeHooks as DisputeHooks<DisputeKey>>::on_dispute_complete();
-            // })
+            expiring_disputes.iter().for_each(|dispute_id| {
+
+                <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(*dispute_id);
+                //removing the dispute once the on_dispute_complete it successfully executed
+                Disputes::<T>::remove(dispute_id);
+            });
             Weight::default()
         }
     }
@@ -318,11 +321,19 @@ pub mod pallet {
         pub(crate) fn finalise(dispute_key: T::DisputeKey, result: DisputeResult) {
 
         }
-    }
 
     pub enum DisputeResult {
         Success,
         Failure,
+    }
+
+        pub(crate) fn remove(dispute_key: T::DisputeKey) -> Result<(), DispatchError> {
+            let mut dispute = Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            //Disputes::<T>::remove(dispute_key);
+            // Dispute,
+            // DisputeFInaliseOm
+            Ok(())
+        }
     }
 
     pub trait WeightInfoT {
