@@ -136,13 +136,16 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        // TODO: WEIGHT + BENCHMARKS
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-            let expiring_disputes = DisputesFinaliseOn::<T>::get(n);
+            let expiring_disputes = DisputesFinaliseOn::<T>::take(n);
             expiring_disputes.iter().for_each(|dispute_id| {
-
-                <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(*dispute_id);
-                //removing the dispute once the on_dispute_complete it successfully executed
-                Disputes::<T>::remove(dispute_id);
+                if let Some(dispute) = Disputes::<T>::get(dispute_id) {
+                    let result = dispute.calculate_winner();
+                    // TODO: Gonna have to do a trick to benchmark this correctly.
+                    // Maybe return a weight from the method is a good idea and simple.
+                    <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(*dispute_id, result);
+                }
             });
             Weight::default()
         }
@@ -298,7 +301,18 @@ pub mod pallet {
             Ok(())
         }
 
-        pub(crate) fn try_autofinalise_with_result(dispute_key: T::DisputeKey, result: DisputeResult) -> Result<(), DispatchError> {
+        
+        pub(crate) fn calculate_winner(&self) -> DisputeResult {
+            if self.votes.values().filter(|&&x| x).count() >= self.votes.values().filter(|&&x| !x).count() {
+                DisputeResult::Success
+            } else {
+                DisputeResult::Failure
+            }
+        }
+
+        /// Falliably finalise a dispute.
+        /// This method will clean up storage associated with a dispute and the dispute itself.
+        pub(crate) fn try_finalise_with_result(dispute_key: T::DisputeKey, result: DisputeResult) -> Result<(), DispatchError> {
             let dispute = Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
                 // TODO: see if this works
@@ -308,18 +322,6 @@ pub mod pallet {
             });
             T::DisputeHooks::on_dispute_complete(dispute_key, result);
             Ok(())
-        }
-
-        pub(crate) fn calculate_winner(&self) -> DisputeResult {
-            if self.votes.values().filter(|&&x| x).count() >= self.votes.values().filter(|&&x| !x).count() {
-                DisputeResult::Success
-            } else {
-                DisputeResult::Failure
-            }
-        }
-
-        pub(crate) fn finalise(dispute_key: T::DisputeKey, result: DisputeResult) {
-
         }
 
     pub enum DisputeResult {
