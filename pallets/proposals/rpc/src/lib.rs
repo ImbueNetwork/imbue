@@ -11,9 +11,13 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 #[rpc(client, server)]
-pub trait ProposalsApi<BlockHash, AccountId> {
+pub trait ProposalsApi<BlockHash, AccountId, Balance> {
     #[method(name = "proposals_getProjectKitty")]
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId>;
+    #[method(name = "proposals_getProjectIndividualVotes")]
+    fn project_individuals_votes(project_id: u32) -> BTreeMap<MilestoneKey, BTreeMap<AccountId, (bool, Balance)>>;
+    #[method(name = "proposals_getProjectTotalVotes")]
+    fn project_total_votes(project_id: u32) -> BTreeMap<MilestoneKey, Vote<Balance>>;
 }
 
 pub struct Proposals<C, B> {
@@ -48,12 +52,12 @@ impl From<Error> for i32 {
     }
 }
 
-impl<C, B, AccountId> ProposalsApiServer<<B as BlockT>::Hash, AccountId> for Proposals<C, B>
+impl<C, B, AccountId, Balance> ProposalsApiServer<<B as BlockT>::Hash, AccountId, Balance> for Proposals<C, B>
 where
     C: sp_api::ProvideRuntimeApi<B>,
     C: HeaderBackend<B>,
     C: Send + Sync + 'static,
-    C::Api: ProposalsRuntimeApi<B, AccountId>,
+    C::Api: ProposalsRuntimeApi<B, AccountId, Balance>,
     B: BlockT,
     AccountId: Clone + Display + Codec + Send + 'static,
 {
@@ -64,6 +68,22 @@ where
         api.get_project_account_by_id(at, project_id)
             .map_err(runtime_error_into_rpc_err)
     }
+    fn project_individuals_votes(&self, project_id: u32) -> RpcResult<AccountId> {
+        let api = self.client.runtime_api();
+        let at = self.client.info().best_hash;
+
+        api.get_project_individuals_votes(at, project_id)
+            .map_err(runtime_error_into_rpc_err)
+    }
+
+    fn project_total_votes(&self, project_id: u32) -> RpcResult<AccountId> {
+        let api = self.client.runtime_api();
+        let at = self.client.info().best_hash;
+
+        api.get_project_total_votes(at, project_id)
+            .map_err(runtime_error_into_rpc_err)
+    }
+    
 }
 
 /// Converts a runtime trap into an RPC error.

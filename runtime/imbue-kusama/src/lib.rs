@@ -1105,9 +1105,16 @@ impl_runtime_apis! {
         }
     }
 
-    impl pallet_proposals_rpc_runtime_api::ProposalsApi<Block, AccountId> for Runtime {
+    impl pallet_proposals_rpc_runtime_api::ProposalsApi<Block, AccountId, Balance> for Runtime {
         fn get_project_account_by_id(project_id: u32) -> AccountId {
             ImbueProposals::project_account_id(project_id)
+        }
+
+        fn get_project_individuals_votes(project_id: u32) -> BTreeMap<MilestoneKey, BTreeMap<AccountId, (bool, Balance)>> {
+            ImbueProposals::get_project_individuals_votes(project_key)
+        }
+        fn get_project_total_votes(project_id: u32) -> BTreeMap<MilestoneKey, Vote<Balance>> {
+            ImbueProposals::get_project_total_votes(project_key)
         }
     }
 

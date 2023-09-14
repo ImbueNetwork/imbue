@@ -316,7 +316,7 @@ pub mod pallet {
             weight
         }
     }
-
+/*  */
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Submit a milestones to be voted on.
@@ -578,11 +578,6 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
-#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-#[scale_info(skip_type_params(T))]
-struct ProjectVotingData<AccountId> {
-    votes: 
-}
 
 pub trait WeightInfoT {
     fn submit_milestone() -> Weight;

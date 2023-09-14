@@ -434,5 +434,16 @@ impl<T: Config> Pallet<T> {
     }
 
 
+    // Get the individual votes of a project, return an empty map on error. 
+    //pub fn get_project_individuals_votes(project_key: ProjectKey) -> BTreeMap<MilestoneKey, BTreeMap<AccountId, (bool, Balance)>> {
+    //    let out = BTreeMap::new();
+    //    if let Some(project) = Projects::<T>::get(project_key) {
+    //        project.milestones.keys().for_each(|(_)| {
+    //            if let Some UserHasVoted::<T>::get()
+    //            (ProjectKey, RoundType, MilestoneKey)
+    //        })
+    //    }
+    //    out
+    //}
 
 }
