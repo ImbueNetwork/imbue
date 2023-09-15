@@ -33,7 +33,7 @@ impl<T: Config> Pallet<T> {
 
         let expiry_block =
             <T as Config>::MilestoneVotingWindow::get() + frame_system::Pallet::<T>::block_number();
-        Rounds::<T>::insert(project_key, RoundType::VotingRound, expiry_block);
+        Rounds::<T>::insert((project_key, milestone_key), RoundType::VotingRound, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
             keys.try_push((project_key, RoundType::VotingRound, milestone_key))
                 .map_err(|_| Error::<T>::Overflow)?;
@@ -56,7 +56,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(
-            Rounds::<T>::contains_key(project_key, RoundType::VotingRound),
+            Rounds::<T>::contains_key((project_key, milestone_key), RoundType::VotingRound),
             Error::<T>::VotingRoundNotStarted
         );
         let contribution_amount = project
@@ -196,7 +196,7 @@ impl<T: Config> Pallet<T> {
         let expiry_block = frame_system::Pallet::<T>::block_number()
             .saturating_add(<T as Config>::NoConfidenceTimeLimit::get());
 
-        Rounds::<T>::insert(project_key, RoundType::VoteOfNoConfidence, expiry_block);
+        Rounds::<T>::insert((project_key, milestone_key), RoundType::VoteOfNoConfidence, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
             // The milestone key does not matter here as we are voting on the entire project.
             keys.try_push((project_key, RoundType::VoteOfNoConfidence, 0))
@@ -223,7 +223,7 @@ impl<T: Config> Pallet<T> {
         is_yay: bool,
     ) -> DispatchResult {
         ensure!(
-            Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence),
+            Rounds::<T>::contains_key((project_key, 0), RoundType::VoteOfNoConfidence),
             Error::<T>::ProjectNotInRound
         );
         let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
@@ -310,7 +310,7 @@ impl<T: Config> Pallet<T> {
                 }
             }
             Projects::<T>::remove(project_key);
-            Rounds::<T>::remove(project_key, RoundType::VoteOfNoConfidence);
+            Rounds::<T>::remove((project_key, 0), RoundType::VoteOfNoConfidence);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
             Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
         }
@@ -325,7 +325,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
         ensure!(
-            Rounds::<T>::contains_key(project_key, RoundType::VoteOfNoConfidence),
+            Rounds::<T>::contains_key((project_key, 0), RoundType::VoteOfNoConfidence),
             Error::<T>::ProjectNotInRound
         );
         ensure!(
@@ -425,7 +425,7 @@ impl<T: Config> Pallet<T> {
 
     pub(crate) fn close_voting_round(project_key: ProjectKey, user_has_voted_key: (ProjectKey, RoundType, MilestoneKey)) -> Result<(), DispatchError> {
         // Prevent further voting.
-        let exp_block = Rounds::<T>::take(project_key, RoundType::VotingRound).ok_or(Error::<T>::VotingRoundNotStarted)?;
+        let exp_block = Rounds::<T>::take((project_key, user_has_voted_key.2), RoundType::VotingRound).ok_or(Error::<T>::VotingRoundNotStarted)?;
         // Prevent hook from calling.
         RoundsExpiring::<T>::remove(exp_block);
         // Allow future votes to occur on this milestone

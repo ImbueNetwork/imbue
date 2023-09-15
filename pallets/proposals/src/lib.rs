@@ -154,7 +154,7 @@ pub mod pallet {
     pub type Rounds<T> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        ProjectKey,
+        (ProjectKey, MilestoneKey),
         Blake2_128Concat,
         RoundType,
         BlockNumberFor<T>,
@@ -291,7 +291,7 @@ pub mod pallet {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
                 // Remove the round prevents further voting.
-                Rounds::<T>::remove(project_key, round_type);
+                Rounds::<T>::remove((project_key, milestone_key), round_type);
                 match round_type {
                     // Voting rounds automatically finalise if its reached its threshold.
                     // Therefore we can remove it on round end.

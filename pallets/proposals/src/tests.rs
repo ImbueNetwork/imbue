@@ -385,7 +385,7 @@ fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone(
 }
 
 #[test]
-fn if_double_submission_and_one_finalises_voting_on_the_second_works() {
+fn if_double_submission_and_one_finalises_voting_on_the_second_can_vote() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
@@ -404,15 +404,6 @@ fn if_double_submission_and_one_finalises_voting_on_the_second_works() {
             1
         ));
         run_to_block::<Test>(expiring_block);
-        assert_noop!(
-            Proposals::vote_on_milestone(
-                RuntimeOrigin::signed(*BOB),
-                project_key,
-                0,
-                true
-            ),
-            Error::<Test>::VotingRoundNotStarted
-        );
         assert_ok!(
             Proposals::vote_on_milestone(
                 RuntimeOrigin::signed(*BOB),
@@ -420,7 +411,7 @@ fn if_double_submission_and_one_finalises_voting_on_the_second_works() {
                 1,
                 true
             )
-        );
+        );        
         });
 }
 

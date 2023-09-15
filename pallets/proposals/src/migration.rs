@@ -405,6 +405,14 @@ pub mod v3 {
     }
 }
 
+mod v4 {
+    // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
+    pub(crate) fn migrate_rounds_to_include_milestone_key() -> Weight {
+
+    }
+
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
