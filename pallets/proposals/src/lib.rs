@@ -272,10 +272,7 @@ pub mod pallet {
         ///
         /// >
         fn on_runtime_upgrade() -> Weight {
-            let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            // Only supporting latest upgrade for now.
-            weight += migration::v3::migrate_all::<T>();
-            weight
+            migration::v4::migrate_rounds_to_include_milestone_key::<T>()
         }
 
         // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
