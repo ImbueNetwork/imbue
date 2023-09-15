@@ -1,5 +1,5 @@
 use crate::*;
-use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
+use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight, StorageDoubleMap};
 pub use pallet::*;
 pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 
@@ -385,7 +385,7 @@ pub mod v3 {
                     round.project_keys.iter().for_each(|k| {
                         // Insert per project_key
                         *weight += T::DbWeight::get().reads_writes(1, 1);
-                        Rounds::<T>::insert(k, round.round_type.into_new(), round.end);
+                        v4::Rounds::<T>::insert(k, round.round_type.into_new(), round.end);
                     })
                 }
             }
@@ -406,11 +406,38 @@ pub mod v3 {
 }
 
 mod v4 {
+    use super::*;
+    #[storage_alias]
+    pub type Rounds<T: Config> = StorageDoubleMap<
+        crate::Pallet<T>,
+        Blake2_128Concat,
+        ProjectKey,
+        Blake2_128Concat,
+        RoundType,
+        BlockNumberFor<T>,
+        OptionQuery,
+    >;
+    
     // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
-    pub(crate) fn migrate_rounds_to_include_milestone_key() -> Weight {
-
+    pub(crate) fn migrate_rounds_to_include_milestone_key<T: Config>() -> Weight {
+        let mut weight = <Weight as Default>::default();
+        if ProjectStorageVersion::<T>::get() == Release::V3 {
+            Rounds::<T>::drain().for_each(|(project_key, round_type, block_number)| {
+                crate::RoundsExpiring::<T>::remove(block_number);
+                if let Some(project) = crate::Projects::<T>::get(project_key) {
+                    for (milestone_key, _) in project.milestones.iter() {
+                        if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
+                            crate::MilestoneVotes::<T>::remove(project_key, milestone_key);
+                        } else {
+                            break
+                        }
+                    }
+                }
+            });
+            ProjectStorageVersion::<T>::set(Release::V4);
+        }
+        weight
     }
-
 }
 
 #[cfg(test)]
@@ -699,7 +726,7 @@ mod test {
             // #5
             assert!(OldRounds::<Test>::get(0).is_none());
             [1, 2, 3].iter().for_each(|k| {
-                let end = crate::Rounds::<Test>::get(k, crate::RoundType::VotingRound).unwrap();
+                let end = v4::Rounds::<Test>::get(k, crate::RoundType::VotingRound).unwrap();
                 assert_eq!(end, end_block_number);
             });
         })

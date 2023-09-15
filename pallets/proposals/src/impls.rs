@@ -196,7 +196,7 @@ impl<T: Config> Pallet<T> {
         let expiry_block = frame_system::Pallet::<T>::block_number()
             .saturating_add(<T as Config>::NoConfidenceTimeLimit::get());
 
-        Rounds::<T>::insert((project_key, milestone_key), RoundType::VoteOfNoConfidence, expiry_block);
+        Rounds::<T>::insert((project_key, 0), RoundType::VoteOfNoConfidence, expiry_block);
         RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
             // The milestone key does not matter here as we are voting on the entire project.
             keys.try_push((project_key, RoundType::VoteOfNoConfidence, 0))

@@ -173,7 +173,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
-    pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+    pub(super) type ProjectStorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -274,10 +274,7 @@ pub mod pallet {
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             // Only supporting latest upgrade for now.
-            if StorageVersion::<T>::get() == Release::V2 {
                 weight += migration::v3::migrate_all::<T>();
-                StorageVersion::<T>::set(Release::V3);
-            }
             weight
         }
 
