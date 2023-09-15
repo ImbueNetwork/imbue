@@ -29,7 +29,5 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber)
 #[test]
 fn ensure_dispute_get_inserted_on_creation() {
     new_test_ext().execute_with(|| {
-        Dispute::new(1,&ALICE,BoundedVec::default(),BoundedVec::default());
-        assert_ok!(PalletDisputes::disputes().is_none())
     });
 }

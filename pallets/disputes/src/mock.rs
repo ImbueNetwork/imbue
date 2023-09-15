@@ -65,22 +65,20 @@ parameter_types! {
     pub MaxReasonLength: u32 = 100;
     pub MaxJurySize: u32 = 9;
     pub MaxSpecifics: u32 = 10;
-    pub DisputeKey: u64 = 2;
-    pub SpecificId: u64 = 5;
     pub VotingTimeLimit: BlockNumber = 10;
 }
 
 impl pallet_disputes::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = ();
-    type DisputeKey = DisputeKey;
-    type SpecificId = SpecificId;
+    type DisputeKey = u32;
+    type SpecificId = u32;
     type MaxReasonLength = MaxReasonLength;
     type MaxJurySize = MaxJurySize;
     type MaxSpecifics = MaxSpecifics;
     type VotingTimeLimit = VotingTimeLimit;
     type ForceOrigin = EnsureRoot<AccountId>;
-    type DisputeHooks = ();
+    type DisputeHooks = Test;
 
 }
 
@@ -126,6 +124,36 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
     });
     ext
+}
+
+impl crate::traits::DisputeHooks<u32> for Test {
+    fn on_dispute_complete(dispute_key: u32, dispute_result: crate::pallet::DisputeResult) -> Result<(), DispatchError> {
+        Ok(())
+    }
+    fn on_dispute_cancel(dispute_key: u32) -> Result<(), DispatchError> {
+        Ok(())
+    }
+}
+
+impl crate::WeightInfoT for () {
+    fn vote_on_dispute() -> Weight {
+        <Weight as Default>::default()
+    }
+    fn force_cancel_dispute() -> Weight {
+        <Weight as Default>::default()
+    }
+    fn extend_dispute() -> Weight {
+        <Weight as Default>::default()
+    }
+    fn raise_dispute() -> Weight {
+        <Weight as Default>::default()
+    }
+    fn on_dispute_complete() -> Weight {
+        <Weight as Default>::default()
+    }
+    fn on_dispute_cancel() -> Weight {
+        <Weight as Default>::default()
+    }
 }
 
 
