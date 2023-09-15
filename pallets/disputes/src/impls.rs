@@ -1,8 +1,11 @@
- use crate::*;
+use frame_support::BoundedVec;
+use sp_runtime::DispatchError;
+use crate::*;
 
  use traits::{DisputeRaiser,DisputeHooks};
+ use crate::pallet::{AccountIdOf, Config,Dispute};
 
-    impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
+ impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
         type DisputeKey = T::DisputeKey;
         type SpecificId = T::SpecificId;
         type MaxReasonLength = <T as Config>::MaxReasonLength;
@@ -13,13 +16,13 @@
             dispute_key: Self::DisputeKey,
             raised_by: AccountIdOf<T>,
             jury: BoundedVec<AccountIdOf<T>, Self::MaxJurySize>,
-            specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>, 
+            specifiers: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
         ) -> Result<(), DispatchError> {
-            crate::Dispute::new(
+            Dispute::<T>::new(
                 dispute_key,
                 raised_by,
-                jury,
-                specifiers,
-            )?
+                jury, specifiers
+            )?;
+            Ok(())
         }
     }

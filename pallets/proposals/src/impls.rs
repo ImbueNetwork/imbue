@@ -477,7 +477,7 @@ impl<T: Config> DisputeHooks<T::DisputeKey> for Pallet<T> {
         // SHANKAR- Do we need the fund account from where the funds need to be refunded as the second parameter ask
         T::MultiCurrency::transfer(project.currency_id,todo!(), &raised_by, raised_funds)?;
         /// once the transfer is done remove the disputes from the disputes storagemap
-        Disputes::<T>::remove(&dispute_key)?;
+        //Disputes::<T>::remove(&dispute_key)?;
         Ok(())
     }
 
