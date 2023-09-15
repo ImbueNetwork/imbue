@@ -1,5 +1,5 @@
 use crate::*;
-use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight, StorageDoubleMap};
+use frame_support::*;
 pub use pallet::*;
 pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 
@@ -417,19 +417,26 @@ mod v4 {
         BlockNumberFor<T>,
         OptionQuery,
     >;
-    
+
     // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
     pub(crate) fn migrate_rounds_to_include_milestone_key<T: Config>() -> Weight {
         let mut weight = <Weight as Default>::default();
         if ProjectStorageVersion::<T>::get() == Release::V3 {
             Rounds::<T>::drain().for_each(|(project_key, round_type, block_number)| {
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                 crate::RoundsExpiring::<T>::remove(block_number);
+
+                weight = weight.saturating_add(T::DbWeight::get().reads(1));
                 if let Some(project) = crate::Projects::<T>::get(project_key) {
                     for (milestone_key, _) in project.milestones.iter() {
+                        weight = weight.saturating_add(T::DbWeight::get().reads(1));
                         if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
+                            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                             crate::MilestoneVotes::<T>::remove(project_key, milestone_key);
                         } else {
-                            break
+                            break;
                         }
                     }
                 }
@@ -444,6 +451,7 @@ mod v4 {
 mod test {
     use super::*;
     use mock::*;
+    use test_utils::*;
 
     use v0::{ContributionV0, MilestoneV0, ProjectV0};
 
@@ -729,6 +737,41 @@ mod test {
                 let end = v4::Rounds::<Test>::get(k, crate::RoundType::VotingRound).unwrap();
                 assert_eq!(end, end_block_number);
             });
+        })
+    }
+
+    #[test]
+    fn migrate_v3_to_v4() {
+        build_test_externality().execute_with(|| {
+
+            let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+            let prop_milestones = get_milestones(10);
+            let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+            let milestone_key: MilestoneKey = 0;
+            
+            assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+            assert_ok!(Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
+                project_key,
+                milestone_key,
+                true,
+            ));
+        
+            let _ = v4::migrate_rounds_to_include_milestone_key::<Test>();
+            assert_noop!(Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
+                project_key,
+                milestone_key,
+                true,
+            ), Error::<Test>::VotingRoundNotStarted);
+        
+            assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
+            assert_ok!(Proposals::vote_on_milestone(
+                RuntimeOrigin::signed(*BOB),
+                project_key,
+                milestone_key,
+                true,
+            ));
         })
     }
 }

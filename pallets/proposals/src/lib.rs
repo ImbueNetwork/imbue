@@ -274,7 +274,7 @@ pub mod pallet {
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             // Only supporting latest upgrade for now.
-                weight += migration::v3::migrate_all::<T>();
+            weight += migration::v3::migrate_all::<T>();
             weight
         }
 
