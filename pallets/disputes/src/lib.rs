@@ -183,7 +183,8 @@ pub mod pallet {
                     Err(Error::<T>::DisputeDoesNotExist.into())
                 }
             })?;
-            
+
+            //SHANKAR: This logic need to be recheck
             if votes.iter().all(|v|{*v.1 == true}) {
                 Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Success)?;
             }

@@ -47,3 +47,43 @@ fn test_trying_to_insert_create_a_dispute_with_existing_key() {
         );
     });
 }
+
+// #[test]
+// fn test_voting_on_a_dispute() {
+//     let mut jury_vec: BoundedVec<AccountIdOf<Test>, <mock::Test as pallet::Config>::MaxJurySize> = BoundedVec::new();
+//     jury_vec.try_push(*BOB);
+//     jury_vec.try_push(*CHARLIE);
+//     new_test_ext().execute_with(|| {
+//         Dispute::<Test>::new(10, *ALICE,jury_vec , BoundedVec::default()).expect("Creation Failed");
+//         assert_eq!(1, PalletDisputes::disputes(10).iter().count());
+//         PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*CHARLIE),10,true);
+//         PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*BOB),10,false);
+//
+//          // let dispute = PalletDisputes::disputes(10).unwrap();
+//          // assert_eq!(&true,dispute.votes.get(&CHARLIE).unwrap())
+//        // assert_eq!(true,dispute.votes.get(&CHARLIE))
+//
+//     });
+// }
+
+#[test]
+fn test_voting_on_a_dispute_from_a_not_jury_account() {
+    let mut jury_vec: BoundedVec<AccountIdOf<Test>, <mock::Test as pallet::Config>::MaxJurySize> = BoundedVec::new();
+    jury_vec.try_push(*BOB);
+   // jury_vec.try_push(*CHARLIE);
+    new_test_ext().execute_with(|| {
+        Dispute::<Test>::new(10, *ALICE,jury_vec , BoundedVec::default()).expect("Creation Failed");
+        assert_noop!(PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*CHARLIE),10,true),Error::<Test>::NotAJuryAccount);
+    });
+}
+
+#[test]
+fn test_voting_on_a_dispute_which_does_not_exists() {
+    let mut jury_vec: BoundedVec<AccountIdOf<Test>, <mock::Test as pallet::Config>::MaxJurySize> = BoundedVec::new();
+    jury_vec.try_push(*BOB);
+    new_test_ext().execute_with(|| {
+        Dispute::<Test>::new(10, *ALICE,jury_vec , BoundedVec::default()).expect("Creation Failed");
+        assert_noop!(PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*CHARLIE),1,true),Error::<Test>::DisputeDoesNotExist);
+    });
+}
+

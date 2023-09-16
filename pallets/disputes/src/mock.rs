@@ -122,6 +122,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         let initial_balance = 100_000_000_000_000u64;
         System::set_block_number(1);
         let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
     });
     ext
 }
