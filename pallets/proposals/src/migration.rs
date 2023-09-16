@@ -743,13 +743,16 @@ mod test {
     #[test]
     fn migrate_v3_to_v4() {
         build_test_externality().execute_with(|| {
-
             let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
             let prop_milestones = get_milestones(10);
-            let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+            let project_key =
+                create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
             let milestone_key: MilestoneKey = 0;
             let expiry_block: BlockNumber = 10;
-            let rounds_expiring: BoundedProjectKeysPerBlock<Test> =  vec![(project_key, RoundType::VotingRound, milestone_key)].try_into().unwrap();
+            let rounds_expiring: BoundedProjectKeysPerBlock<Test> =
+                vec![(project_key, RoundType::VotingRound, milestone_key)]
+                    .try_into()
+                    .unwrap();
 
             // insert a fake round to be mutated.
             v4::V4Rounds::<Test>::insert(project_key, crate::RoundType::VotingRound, expiry_block);
@@ -759,10 +762,13 @@ mod test {
 
             let _ = v4::migrate_rounds_to_include_milestone_key::<Test>();
             // assert that:
-            // 1: the round has been removed (to allow resubmission) 
+            // 1: the round has been removed (to allow resubmission)
             // 2: milestone votes have been reset (although resubmission resets this)
             // 3: the round doesnt try and autocomplete and remove itself inadvertantly. (RoundsExpiring)
-            assert!(!v4::V4Rounds::<Test>::contains_key(project_key, crate::RoundType::VotingRound));
+            assert!(!v4::V4Rounds::<Test>::contains_key(
+                project_key,
+                crate::RoundType::VotingRound
+            ));
             assert!(crate::RoundsExpiring::<Test>::get(expiry_block).is_empty());
             assert!(crate::MilestoneVotes::<Test>::get(project_key, milestone_key).is_none());
             assert!(crate::MilestoneVotes::<Test>::get(project_key, milestone_key + 1).is_none());
