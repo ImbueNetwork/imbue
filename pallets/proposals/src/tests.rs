@@ -211,9 +211,9 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
         ));
 
         // Assert that the state is good before auto finalisation
-        let exp_block = Rounds::<Test>::get(project_key, RoundType::VotingRound)
+        let exp_block = Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound)
             .expect("There should be a round here for the project_key");
-        assert!(RoundsExpiring::<Test>::get(exp_block).contains(&(
+        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(
             project_key,
             RoundType::VotingRound,
             milestone_key
@@ -231,9 +231,11 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
             true
         ));
 
-        assert!(Rounds::<Test>::get(project_key, RoundType::VotingRound).is_none());
+        assert!(
+            Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound).is_none()
+        );
         assert_eq!(
-            RoundsExpiring::<Test>::get(exp_block).len(),
+            RoundsExpiring::<Test>::get(&exp_block).len(),
             0,
             "This vec should have been emptied on auto finalisation."
         );
@@ -264,9 +266,9 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
         ));
 
         // Assert that the state is good before auto finalisation
-        let exp_block = Rounds::<Test>::get(project_key, RoundType::VotingRound)
+        let exp_block = Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound)
             .expect("There should be a round here for the project_key");
-        assert!(RoundsExpiring::<Test>::get(exp_block).contains(&(
+        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(
             project_key,
             RoundType::VotingRound,
             milestone_key
@@ -284,9 +286,11 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
             false
         ));
 
-        assert!(Rounds::<Test>::get(project_key, RoundType::VotingRound).is_none());
+        assert!(
+            Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound).is_none()
+        );
         assert_eq!(
-            RoundsExpiring::<Test>::get(exp_block).len(),
+            RoundsExpiring::<Test>::get(&exp_block).len(),
             0,
             "This vec should have been emptied on auto finalisation."
         );
@@ -410,6 +414,35 @@ fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone(
             Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true),
             Error::<Test>::VotingRoundNotStarted
         );
+    });
+}
+
+#[test]
+fn if_double_submission_and_one_finalises_voting_on_the_second_can_vote() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let expiring_block = frame_system::Pallet::<Test>::block_number()
+            + <Test as Config>::MilestoneVotingWindow::get();
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            0
+        ));
+        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + 10);
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            1
+        ));
+        run_to_block::<Test>(expiring_block);
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            1,
+            true
+        ));
     });
 }
 
@@ -1051,7 +1084,6 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
         let cont = get_contributions::<Test>(vec![*BOB, *DAVE, *CHARLIE, *ALICE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
-
         assert_ok!(Proposals::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key
@@ -1098,7 +1130,7 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
         );
         assert_eq!(Projects::<Test>::get(project_key), None);
         assert_eq!(
-            Rounds::<Test>::get(project_key, RoundType::VoteOfNoConfidence),
+            Rounds::<Test>::get((project_key, 0), RoundType::VoteOfNoConfidence),
             None
         );
     });
@@ -1107,7 +1139,7 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
 #[test]
 fn close_voting_round_works() {
     build_test_externality().execute_with(|| {
-        Rounds::<Test>::insert(0, RoundType::VotingRound, 100);
+        Rounds::<Test>::insert((0, 0), RoundType::VotingRound, 100);
         let r_expiring: BoundedVec<
             (ProjectKey, RoundType, MilestoneKey),
             <Test as Config>::ExpiringProjectRoundsPerBlock,
@@ -1121,7 +1153,7 @@ fn close_voting_round_works() {
             0,
             (0, RoundType::VotingRound, 0)
         ));
-        assert!(Rounds::<Test>::get(0, RoundType::VotingRound).is_none());
+        assert!(Rounds::<Test>::get((0, 0), RoundType::VotingRound).is_none());
         assert!(RoundsExpiring::<Test>::get(100).len() == 0);
         assert!(UserHasVoted::<Test>::get((0, RoundType::VotingRound, 0)).is_empty());
     })
