@@ -146,7 +146,7 @@ fn submit_milestone_can_submit_again_after_failed_vote() {
             1
         ));
         let expiry_block = frame_system::Pallet::<Test>::block_number()
-            + <Test as Config>::MilestoneVotingWindow::get() as u64;
+            + <Test as Config>::MilestoneVotingWindow::get();
         run_to_block::<Test>(expiry_block + 1);
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
@@ -182,7 +182,7 @@ fn submit_milestone_cannot_submit_again_after_success_vote() {
         ));
         // The auto approval should have approved it here.
         let expiry_block = frame_system::Pallet::<Test>::block_number()
-            + <Test as Config>::MilestoneVotingWindow::get() as u64;
+            + <Test as Config>::MilestoneVotingWindow::get();
         run_to_block::<Test>(expiry_block + 1);
         assert_noop!(
             Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key),
@@ -648,7 +648,7 @@ fn store_project_info_after_project_is_completed() {
 
         if let Some((_account, projects)) = CompletedProjects::<Test>::iter().next() {
             assert_eq!(projects.len(), 1);
-            assert_eq!(projects.contains(&project_key), true);
+            assert!(projects.contains(&project_key));
         }
     });
 }
@@ -669,13 +669,13 @@ fn store_too_many_projects_for_account() {
             );
             let _ = Proposals::submit_milestone(
                 RuntimeOrigin::signed(*ALICE),
-                project_key.clone(),
+                project_key,
                 milestone_key,
             )
             .unwrap();
             let _ = Proposals::vote_on_milestone(
                 RuntimeOrigin::signed(*BOB),
-                project_key.clone(),
+                project_key,
                 milestone_key,
                 true,
             )
@@ -684,11 +684,11 @@ fn store_too_many_projects_for_account() {
             if i != max {
                 assert_ok!(Proposals::withdraw(
                     RuntimeOrigin::signed(*ALICE),
-                    project_key.clone()
+                    project_key
                 ));
             } else {
                 assert_noop!(
-                    Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key.clone()),
+                    Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
                     Error::<Test>::TooManyProjects
                 );
             }

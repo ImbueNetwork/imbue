@@ -650,7 +650,7 @@ mod test {
             let project = v2::ProjectV2 {
                 agreement_hash: Default::default(),
                 milestones: old_milestones,
-                contributions: contributions,
+                contributions,
                 currency_id: CurrencyId::Native,
                 required_funds: 1_000_000,
                 withdrawn_funds: 0,
