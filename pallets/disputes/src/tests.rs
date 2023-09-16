@@ -26,8 +26,24 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber)
     }
 }
 
+
 #[test]
-fn ensure_dispute_get_inserted_on_creation() {
+fn test_create_a_dispute_get_and_check_insertion_within_the_storage() {
+    const DISPUTE_KEY: u32 = 10;
     new_test_ext().execute_with(|| {
+        Dispute::<Test>::new(DISPUTE_KEY, **&ALICE, BoundedVec::default(), BoundedVec::default()).expect("TODO: panic message");
+        assert!(PalletDisputes::disputes(DISPUTE_KEY).is_some());
+        assert_eq!(1, PalletDisputes::disputes(DISPUTE_KEY).iter().count());
+    });
+}
+
+#[test]
+fn test_trying_to_insert_create_a_dispute_with_existing_key() {
+    new_test_ext().execute_with(|| {
+        Dispute::<Test>::new(1, *ALICE, BoundedVec::default(), BoundedVec::default()).expect("Creation Failed");
+        assert_noop!(
+            Dispute::<Test>::new(1, *ALICE, BoundedVec::default(), BoundedVec::default()),
+            Error::<Test>::DisputeAlreadyExists
+        );
     });
 }
