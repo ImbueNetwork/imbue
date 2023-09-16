@@ -45,8 +45,7 @@ impl<T: Config> Pallet<T> {
         })?;
         UserHasVoted::<T>::remove((project_key, RoundType::VotingRound, milestone_key));
 
-        let vote = Vote::default();
-        <MilestoneVotes<T>>::insert(project_key, milestone_key, vote);
+        <MilestoneVotes<T>>::insert(project_key, milestone_key, Vote::default());
         Self::deposit_event(Event::MilestoneSubmitted(who, project_key, milestone_key));
         Self::deposit_event(Event::VotingRoundCreated(project_key));
         Ok(().into())

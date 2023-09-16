@@ -422,7 +422,7 @@ pub(crate) mod v4 {
     pub(crate) fn migrate_rounds_to_include_milestone_key<T: Config>() -> Weight {
         let mut weight = <Weight as Default>::default();
         if ProjectStorageVersion::<T>::get() == Release::V3 {
-            V4Rounds::<T>::drain().for_each(|(project_key, round_type, block_number)| {
+            V4Rounds::<T>::drain().for_each(|(project_key, _, block_number)| {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
@@ -748,19 +748,24 @@ mod test {
             let prop_milestones = get_milestones(10);
             let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
             let milestone_key: MilestoneKey = 0;
+            let expiry_block: BlockNumber = 10;
+            let rounds_expiring: BoundedProjectKeysPerBlock<Test> =  vec![(project_key, RoundType::VotingRound, milestone_key)].try_into().unwrap();
 
             // insert a fake round to be mutated.
-            v4::V4Rounds::<Test>::insert(project_key, crate::RoundType::VotingRound,<Test as crate::Config>::MilestoneVotingWindow::get());
-            let _ = v4::migrate_rounds_to_include_milestone_key::<Test>();
-            assert!()
+            v4::V4Rounds::<Test>::insert(project_key, crate::RoundType::VotingRound, expiry_block);
+            crate::RoundsExpiring::<Test>::insert(expiry_block, rounds_expiring);
+            crate::MilestoneVotes::<Test>::insert(project_key, milestone_key, Vote::default());
+            crate::MilestoneVotes::<Test>::insert(project_key, milestone_key + 1, Vote::default());
 
-            //assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key));
-            //assert_ok!(Proposals::vote_on_milestone(
-            //    RuntimeOrigin::signed(*BOB),
-            //    project_key,
-            //    milestone_key,
-            //    true,
-            //));
+            let _ = v4::migrate_rounds_to_include_milestone_key::<Test>();
+            // assert that:
+            // 1: the round has been removed (to allow resubmission) 
+            // 2: milestone votes have been reset (although resubmission resets this)
+            // 3: the round doesnt try and autocomplete and remove itself inadvertantly. (RoundsExpiring)
+            assert!(!v4::V4Rounds::<Test>::contains_key(project_key, crate::RoundType::VotingRound));
+            assert!(crate::RoundsExpiring::<Test>::get(expiry_block).is_empty());
+            assert!(crate::MilestoneVotes::<Test>::get(project_key, milestone_key).is_none());
+            assert!(crate::MilestoneVotes::<Test>::get(project_key, milestone_key + 1).is_none());
         })
     }
 }
