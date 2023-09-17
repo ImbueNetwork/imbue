@@ -99,17 +99,12 @@ pub mod pallet {
     #[pallet::storage]
     pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
-    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
     #[repr(u32)]
     pub enum Release {
         V0,
+        #[default]
         V1,
-    }
-
-    impl Default for Release {
-        fn default() -> Release {
-            Release::V0
-        }
     }
 
     #[pallet::event]
@@ -173,6 +168,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
+        #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::create_brief())]
         pub fn create_brief(
@@ -342,7 +338,7 @@ pub mod pallet {
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
             let contributions = BriefContributions::<T>::get(brief_id);
             for (who, c) in contributions.iter() {
-                <T as Config>::RMultiCurrency::unreserve(brief.currency_id, &who, c.value);
+                <T as Config>::RMultiCurrency::unreserve(brief.currency_id, who, c.value);
             }
 
             BriefContributions::<T>::remove(brief_id);

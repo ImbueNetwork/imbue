@@ -1,5 +1,4 @@
 use core::default::Default;
-use polkadot_primitives::v4::{ MAX_CODE_SIZE, MAX_POV_SIZE};
 
 use grandpa::AuthorityId as GrandpaId;
 pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
@@ -24,7 +23,7 @@ type AccountPublic = <MultiSignature as Verify>::Signer;
 
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
+    TPublic::Pair::from_string(&format!("//{seed}"), None)
         .expect("static values are valid; qed")
         .public()
 }
@@ -86,7 +85,6 @@ pub mod accounts {
 
 pub mod collators {
     use super::*;
-
 
     pub fn invulnerables() -> Vec<(AccountId, AuraId)> {
         vec![
@@ -270,7 +268,7 @@ pub mod imbue {
                     .cloned()
                     .map(|(acc, _)| acc)
                     .collect(),
-                candidacy_bond: 1 * ED,
+                candidacy_bond: ED,
                 ..Default::default()
             },
             session: imbue_kusama_runtime::SessionConfig {
@@ -295,9 +293,6 @@ pub mod imbue {
             parachain_system: Default::default(),
             polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig {
                 safe_xcm_version: Some(SAFE_XCM_VERSION),
-            },
-            sudo: imbue_kusama_runtime::SudoConfig {
-                key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
             },
             ..Default::default()
         };

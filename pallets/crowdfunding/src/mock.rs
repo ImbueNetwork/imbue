@@ -224,10 +224,10 @@ impl DepositHandler<Balance, AccountId> for MockDepositHandler {
         Ok(0u64)
     }
     fn return_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
-        Ok(().into())
+        Ok(())
     }
     fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
-        Ok(().into())
+        Ok(())
     }
 }
 

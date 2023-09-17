@@ -259,7 +259,7 @@ fn reserved_funds_are_transferred_to_project_kitty() {
             *ALICE,
             contribution_value,
             contribution_value,
-            brief_id.clone(),
+            brief_id,
             CurrencyId::Native,
             get_milestones(10),
         );
@@ -287,11 +287,11 @@ fn cancel_brief_works() {
 
         assert_ok!(BriefsMod::create_brief(
             RuntimeOrigin::signed(*ALICE),
-            owners.clone(),
+            owners,
             *BOB,
             budget,
             initial_contribution,
-            brief_id.clone(),
+            brief_id,
             CurrencyId::Native,
             get_milestones(10),
         ));
@@ -357,7 +357,7 @@ fn cancel_brief_not_brief_owner() {
             *ALICE,
             contribution_value,
             contribution_value,
-            brief_id.clone(),
+            brief_id,
             CurrencyId::Native,
             get_milestones(10),
         ));
@@ -395,13 +395,12 @@ pub(crate) fn get_milestones(mut n: u32) -> BoundedProposedMilestones<Test> {
     if n > max {
         n = max;
     }
-    let milestones = (0..n)
+
+    (0..n)
         .map(|_| ProposedMilestone {
             percentage_to_unlock: Percent::from_percent((100 / n) as u8),
         })
         .collect::<Vec<ProposedMilestone>>()
         .try_into()
-        .expect("qed");
-
-    milestones
+        .expect("qed")
 }

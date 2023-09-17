@@ -250,7 +250,7 @@ fn development_genesis(
                 .cloned()
                 .map(|(acc, _)| acc)
                 .collect(),
-            candidacy_bond: 1 * IMBU,
+            candidacy_bond: IMBU,
             ..Default::default()
         },
         council_membership: CouncilMembershipConfig {

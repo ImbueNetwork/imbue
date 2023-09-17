@@ -154,7 +154,7 @@ pub mod pallet {
     pub type Rounds<T> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        ProjectKey,
+        (ProjectKey, MilestoneKey),
         Blake2_128Concat,
         RoundType,
         BlockNumberFor<T>,
@@ -173,7 +173,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn storage_version)]
-    pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+    pub(super) type ProjectStorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -205,6 +205,8 @@ pub mod pallet {
         NoConfidenceRoundVotedUpon(T::AccountId, ProjectKey),
         /// You have finalised a vote of no confidence.
         NoConfidenceRoundFinalised(T::AccountId, ProjectKey),
+        /// This milestone has been rejected.
+        MilestoneRejected(ProjectKey, MilestoneKey),
     }
 
     // Errors inform users that something went wrong.
@@ -270,13 +272,7 @@ pub mod pallet {
         ///
         /// >
         fn on_runtime_upgrade() -> Weight {
-            let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            // Only supporting latest upgrade for now.
-            if StorageVersion::<T>::get() == Release::V2 {
-                weight += migration::v3::migrate_all::<T>();
-                StorageVersion::<T>::set(Release::V3);
-            }
-            weight
+            migration::v4::migrate_rounds_to_include_milestone_key::<T>()
         }
 
         // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
@@ -289,7 +285,7 @@ pub mod pallet {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
                 // Remove the round prevents further voting.
-                Rounds::<T>::remove(project_key, round_type);
+                Rounds::<T>::remove((project_key, milestone_key), round_type);
                 match round_type {
                     // Voting rounds automatically finalise if its reached its threshold.
                     // Therefore we can remove it on round end.

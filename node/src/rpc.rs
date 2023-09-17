@@ -58,6 +58,6 @@ where
 
     module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
     module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
-    module.merge(Proposals::new(client.clone()).into_rpc())?;
+    module.merge(Proposals::new(client).into_rpc())?;
     Ok(module)
 }

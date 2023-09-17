@@ -6886,6 +6886,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-fellowship"
+version = "0.1.0"
+dependencies = [
+ "common-traits",
+ "common-types",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-tokens",
+ "orml-traits",
+ "parity-scale-codec 3.6.2",
+ "scale-info 2.8.0",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-grandpa"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"

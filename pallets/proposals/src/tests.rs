@@ -3,7 +3,7 @@ use frame_support::{assert_noop, assert_ok};
 use common_types::CurrencyId;
 use test_utils::*;
 
-use crate::{*, mock::*};
+use crate::{mock::*, *};
 
 #[test]
 fn submit_milestone_milestone_doesnt_exist() {
@@ -146,7 +146,7 @@ fn submit_milestone_can_submit_again_after_failed_vote() {
             1
         ));
         let expiry_block = frame_system::Pallet::<Test>::block_number()
-            + <Test as Config>::MilestoneVotingWindow::get() as u64;
+            + <Test as Config>::MilestoneVotingWindow::get();
         run_to_block::<Test>(expiry_block + 1);
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(*ALICE),
@@ -182,12 +182,164 @@ fn submit_milestone_cannot_submit_again_after_success_vote() {
         ));
         // The auto approval should have approved it here.
         let expiry_block = frame_system::Pallet::<Test>::block_number()
-            + <Test as Config>::MilestoneVotingWindow::get() as u64;
+            + <Test as Config>::MilestoneVotingWindow::get();
         run_to_block::<Test>(expiry_block + 1);
         assert_noop!(
             Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key),
             Error::<Test>::MilestoneAlreadyApproved
         );
+    });
+}
+
+#[test]
+fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true
+        ));
+
+        // Assert that the state is good before auto finalisation
+        let exp_block = Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound)
+            .expect("There should be a round here for the project_key");
+        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(
+            project_key,
+            RoundType::VotingRound,
+            milestone_key
+        )));
+        assert!(
+            UserHasVoted::<Test>::get((&project_key, RoundType::VotingRound, milestone_key))
+                .contains_key(&BOB)
+        );
+
+        // Assert the storage has been cleared up after finalisation
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            milestone_key,
+            true
+        ));
+
+        assert!(
+            Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound).is_none()
+        );
+        assert_eq!(
+            RoundsExpiring::<Test>::get(&exp_block).len(),
+            0,
+            "This vec should have been emptied on auto finalisation."
+        );
+        assert!(
+            UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key))
+                .is_empty()
+        );
+    });
+}
+
+#[test]
+fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            false
+        ));
+
+        // Assert that the state is good before auto finalisation
+        let exp_block = Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound)
+            .expect("There should be a round here for the project_key");
+        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(
+            project_key,
+            RoundType::VotingRound,
+            milestone_key
+        )));
+        assert!(
+            UserHasVoted::<Test>::get((&project_key, RoundType::VotingRound, milestone_key))
+                .contains_key(&BOB)
+        );
+
+        // Assert the storage has been cleared up after finalisation
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            milestone_key,
+            false
+        ));
+
+        assert!(
+            Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound).is_none()
+        );
+        assert_eq!(
+            RoundsExpiring::<Test>::get(&exp_block).len(),
+            0,
+            "This vec should have been emptied on auto finalisation."
+        );
+        assert!(
+            UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key))
+                .is_empty()
+        );
+    });
+}
+
+#[test]
+fn users_can_submit_multiple_milestones_and_vote_independantly() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key_0 = 0;
+        let milestone_key_1 = 1;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key_0
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key_0,
+            true
+        ));
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key_1
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key_1,
+            true
+        ));
+        let vote_0 =
+            MilestoneVotes::<Test>::get(project_key, milestone_key_0).expect("vote should exist");
+        assert!(vote_0.yay == 100_000u64);
+        assert!(vote_0.nay == 0u64);
+
+        let vote_1 =
+            MilestoneVotes::<Test>::get(project_key, milestone_key_1).expect("vote should exist");
+        assert!(vote_1.yay == 100_000u64);
+        assert!(vote_1.nay == 0u64);
     });
 }
 
@@ -262,6 +414,35 @@ fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone(
             Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true),
             Error::<Test>::VotingRoundNotStarted
         );
+    });
+}
+
+#[test]
+fn if_double_submission_and_one_finalises_voting_on_the_second_can_vote() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let expiring_block = frame_system::Pallet::<Test>::block_number()
+            + <Test as Config>::MilestoneVotingWindow::get();
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            0
+        ));
+        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + 10);
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            1
+        ));
+        run_to_block::<Test>(expiring_block);
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            1,
+            true
+        ));
     });
 }
 
@@ -467,7 +648,7 @@ fn store_project_info_after_project_is_completed() {
 
         if let Some((_account, projects)) = CompletedProjects::<Test>::iter().next() {
             assert_eq!(projects.len(), 1);
-            assert_eq!(projects.contains(&project_key), true);
+            assert!(projects.contains(&project_key));
         }
     });
 }
@@ -488,13 +669,13 @@ fn store_too_many_projects_for_account() {
             );
             let _ = Proposals::submit_milestone(
                 RuntimeOrigin::signed(*ALICE),
-                project_key.clone(),
+                project_key,
                 milestone_key,
             )
             .unwrap();
             let _ = Proposals::vote_on_milestone(
                 RuntimeOrigin::signed(*BOB),
-                project_key.clone(),
+                project_key,
                 milestone_key,
                 true,
             )
@@ -503,11 +684,11 @@ fn store_too_many_projects_for_account() {
             if i != max {
                 assert_ok!(Proposals::withdraw(
                     RuntimeOrigin::signed(*ALICE),
-                    project_key.clone()
+                    project_key
                 ));
             } else {
                 assert_noop!(
-                    Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key.clone()),
+                    Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
                     Error::<Test>::TooManyProjects
                 );
             }
@@ -897,14 +1078,12 @@ fn vote_on_no_confidence_mutates_vote() {
     });
 }
 
-
 #[test]
 fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *DAVE,*CHARLIE,*ALICE], 100_000);
+        let cont = get_contributions::<Test>(vec![*BOB, *DAVE, *CHARLIE, *ALICE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
-
         assert_ok!(Proposals::raise_vote_of_no_confidence(
             RuntimeOrigin::signed(*BOB),
             project_key
@@ -940,15 +1119,45 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
             "Not all the votes has been recorded"
         );
         assert!(
-            has_voted.contains_key(&BOB) || has_voted.contains_key(&DAVE) || has_voted.contains_key(&ALICE) || has_voted.contains_key(&CHARLIE)  ,
+            has_voted.contains_key(&BOB)
+                || has_voted.contains_key(&DAVE)
+                || has_voted.contains_key(&ALICE)
+                || has_voted.contains_key(&CHARLIE),
             "Bob,Alice,Dave charlie have voted."
         );
-        assert_last_event::<Test>(Event::<Test>::NoConfidenceRoundFinalised(*ALICE, project_key).into());
-        assert_eq!(Projects::<Test>::get(project_key),None);
-        assert_eq!(Rounds::<Test>::get(project_key,RoundType::VoteOfNoConfidence),None);
+        assert_last_event::<Test>(
+            Event::<Test>::NoConfidenceRoundFinalised(*ALICE, project_key).into(),
+        );
+        assert_eq!(Projects::<Test>::get(project_key), None);
+        assert_eq!(
+            Rounds::<Test>::get((project_key, 0), RoundType::VoteOfNoConfidence),
+            None
+        );
     });
 }
 
+#[test]
+fn close_voting_round_works() {
+    build_test_externality().execute_with(|| {
+        Rounds::<Test>::insert((0, 0), RoundType::VotingRound, 100);
+        let r_expiring: BoundedVec<
+            (ProjectKey, RoundType, MilestoneKey),
+            <Test as Config>::ExpiringProjectRoundsPerBlock,
+        > = vec![(0, RoundType::VotingRound, 0)]
+            .try_into()
+            .expect("smaller than bound: qed.");
+        RoundsExpiring::<Test>::insert(100, r_expiring);
+        UserHasVoted::<Test>::insert((0, RoundType::VotingRound, 0), BoundedBTreeMap::new());
+
+        assert_ok!(crate::Pallet::<Test>::close_voting_round(
+            0,
+            (0, RoundType::VotingRound, 0)
+        ));
+        assert!(Rounds::<Test>::get((0, 0), RoundType::VotingRound).is_none());
+        assert!(RoundsExpiring::<Test>::get(100).len() == 0);
+        assert!(UserHasVoted::<Test>::get((0, RoundType::VotingRound, 0)).is_empty());
+    })
+}
 
 // todo: finalise voteof no confidence tests.
 // ^^ is connected to making the pallet generic over funding type.
