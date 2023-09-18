@@ -12,6 +12,7 @@ impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
     type MaxJurySize = <T as Config>::MaxJurySize;
     type MaxSpecifics = <T as Config>::MaxSpecifics;
 
+    /// Public interface for Dispute::new()
     fn raise_dispute(
         dispute_key: Self::DisputeKey,
         raised_by: AccountIdOf<T>,
