@@ -1,5 +1,5 @@
 use crate::traits::*;
-use crate::{mock::*, pallet::*, pallet};
+use crate::{mock::*, pallet, pallet::*};
 use frame_support::traits::Len;
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
 use sp_arithmetic::traits::One;
@@ -24,11 +24,15 @@ mod test_utils {
         }
     }
 
-    pub fn get_jury<T: Config>(accounts: Vec<AccountIdOf<T>>) -> BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize> {
+    pub fn get_jury<T: Config>(
+        accounts: Vec<AccountIdOf<T>>,
+    ) -> BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize> {
         accounts.try_into().expect("too many jury members")
     }
 
-    pub fn get_specifics<T: Config>(specifics: Vec<T::SpecificId>) -> BoundedVec<T::SpecificId, T::MaxSpecifics> {
+    pub fn get_specifics<T: Config>(
+        specifics: Vec<T::SpecificId>,
+    ) -> BoundedVec<T::SpecificId, T::MaxSpecifics> {
         specifics.try_into().expect("too many specific ids.")
     }
 }
@@ -52,11 +56,8 @@ fn raise_dispute_assert_state() {
 
 #[test]
 fn raise_dispute_assert_event() {
-    new_test_ext().execute_with(|| {
-        todo!()
-    });
+    new_test_ext().execute_with(|| todo!());
 }
-
 
 #[test]
 fn raise_dispute_already_exists() {
@@ -68,15 +69,19 @@ fn raise_dispute_already_exists() {
             dispute_key,
             *ALICE,
             jury.clone(),
-            specifics.clone(),  
+            specifics.clone(),
         ));
         assert_noop!(
-            <PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(dispute_key, *ALICE, jury, specifics),
+            <PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+                dispute_key,
+                *ALICE,
+                jury,
+                specifics
+            ),
             Error::<Test>::DisputeAlreadyExists
         );
     });
 }
-
 
 #[test]
 fn vote_on_dispute_assert_state() {
@@ -88,13 +93,16 @@ fn vote_on_dispute_assert_state() {
             dispute_key,
             *ALICE,
             jury,
-            specifics,  
+            specifics,
         ));
-        assert_ok!(PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*BOB), dispute_key, true));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*BOB),
+            dispute_key,
+            true
+        ));
         todo!()
     });
 }
-
 
 // TODO Working on this upon the approval of the finalization
 // FELIX: shankar what does this mean? ^^
@@ -108,10 +116,14 @@ fn vote_on_dispute_assert_last_event() {
             dispute_key,
             *ALICE,
             jury,
-            specifics,  
+            specifics,
         ));
 
-        assert_ok!(PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*BOB), dispute_key, true));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*BOB),
+            dispute_key,
+            true
+        ));
         System::assert_last_event(RuntimeEvent::PalletDisputes(
             Event::<Test>::DisputeVotedOn { who: *BOB },
         ));
@@ -124,9 +136,14 @@ fn vote_on_dispute_not_jury_account() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*BOB]);
-        let specific_ids =get_specifics::<Test>(vec![0]);
+        let specific_ids = get_specifics::<Test>(vec![0]);
 
-        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(dispute_key, *ALICE, jury, specific_ids));
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specific_ids
+        ));
         assert_noop!(
             PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*CHARLIE), dispute_key, true),
             Error::<Test>::NotAJuryAccount
@@ -140,8 +157,13 @@ fn vote_on_dispute_dispute_doesnt_exist() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*BOB]);
-        let specific_ids =get_specifics::<Test>(vec![0]);
-        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(dispute_key, *ALICE, jury, specific_ids));
+        let specific_ids = get_specifics::<Test>(vec![0]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specific_ids
+        ));
 
         assert_noop!(
             PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*BOB), 1, true),
@@ -156,12 +178,17 @@ fn extend_dispute_dispute_doesnt_exist() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*BOB]);
-        let specific_ids =get_specifics::<Test>(vec![0]);
-        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(dispute_key, *ALICE, jury, specific_ids));
+        let specific_ids = get_specifics::<Test>(vec![0]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specific_ids
+        ));
         assert_noop!(
-                PalletDisputes::extend_dispute(RuntimeOrigin::signed(*BOB), 1),
-                Error::<Test>::DisputeDoesNotExist
-            );
+            PalletDisputes::extend_dispute(RuntimeOrigin::signed(*BOB), 1),
+            Error::<Test>::DisputeDoesNotExist
+        );
     });
 }
 
@@ -171,8 +198,13 @@ fn extend_dispute_not_a_jury_account() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*BOB]);
-        let specific_ids =get_specifics::<Test>(vec![0]);
-        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(dispute_key, *ALICE, jury, specific_ids));
+        let specific_ids = get_specifics::<Test>(vec![0]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specific_ids
+        ));
         assert_noop!(
             PalletDisputes::extend_dispute(RuntimeOrigin::signed(*CHARLIE), dispute_key),
             Error::<Test>::NotAJuryAccount
@@ -186,8 +218,13 @@ fn test_extending_the_voting_which_has_already_been_extended() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*BOB]);
-        let specific_ids =get_specifics::<Test>(vec![0]);
-        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(dispute_key, *ALICE, jury, specific_ids));
+        let specific_ids = get_specifics::<Test>(vec![0]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specific_ids
+        ));
         assert_ok!(PalletDisputes::extend_dispute(
             RuntimeOrigin::signed(*BOB),
             dispute_key
@@ -205,8 +242,13 @@ fn test_successfully_extending_the_voting_on_a_dispute() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*BOB]);
-        let specific_ids =get_specifics::<Test>(vec![0]);
-        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(dispute_key, *ALICE, jury, specific_ids));
+        let specific_ids = get_specifics::<Test>(vec![0]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specific_ids
+        ));
         let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
         assert!(!d.is_extended);
         assert_ok!(PalletDisputes::extend_dispute(
