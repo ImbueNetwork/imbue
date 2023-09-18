@@ -199,14 +199,16 @@ pub mod pallet {
                 }
             })?;
 
-            if votes.len() == total_jury && votes.iter().all(|v| *v.1 == true) {
-                Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Success)?;
+            if votes.len() == total_jury {
+                if votes.iter().all(|v|*v.1) {
+                    Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Success)?;
+                }
+    
+                if votes.iter().all(|v|!*v.1) {
+                    Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Failure)?;
+                }
             }
-
-            if votes.len() == total_jury && votes.iter().all(|v| *v.1 == false) {
-                Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Failure)?;
-            }
-
+            
             Self::deposit_event(Event::<T>::DisputeVotedOn { who });
             Ok(().into())
         }
