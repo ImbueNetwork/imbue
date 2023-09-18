@@ -7214,6 +7214,7 @@ dependencies = [
  "hex",
  "integer-sqrt",
  "lite-json",
+ "log",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",

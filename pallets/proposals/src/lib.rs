@@ -485,7 +485,7 @@ pub enum RoundType {
     VoteOfNoConfidence,
 }
 
-#[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
+#[derive(Encode, Decode, TypeInfo, Debug, PartialEq, MaxEncodedLen)]
 #[repr(u32)]
 pub enum Release {
     V0,

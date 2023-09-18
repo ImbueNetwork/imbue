@@ -421,15 +421,27 @@ pub(crate) mod v4 {
     // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
     pub(crate) fn migrate_rounds_to_include_milestone_key<T: Config>() -> Weight {
         let mut weight = <Weight as Default>::default();
+
+        let test = ProjectStorageVersion::<T>::get();
+        log::info!("***** ProjectStorageVersion is : {:?}", test);
+
         if ProjectStorageVersion::<T>::get() == Release::V3 {
+            log::info!(
+                "***** V4 Rounds count is : {:?}",
+                V4Rounds::<T>::iter_values().count()
+            );
+
             V4Rounds::<T>::drain().for_each(|(project_key, _, block_number)| {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+
+                log::info!("***** project key is : {:?}", project_key);
 
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                 crate::RoundsExpiring::<T>::remove(block_number);
 
                 weight = weight.saturating_add(T::DbWeight::get().reads(1));
                 if let Some(project) = crate::Projects::<T>::get(project_key) {
+                    log::info!("***** project key exists is : {:?}", project_key);
                     for (milestone_key, _) in project.milestones.iter() {
                         weight = weight.saturating_add(T::DbWeight::get().reads(1));
                         if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
