@@ -1,9 +1,7 @@
 use crate as pallet_disputes;
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
-use frame_support::{
-    traits::{ConstU16, Nothing},
-};
+use frame_support::traits::{ConstU16, Nothing};
 use frame_support::{pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
@@ -32,7 +30,6 @@ frame_support::construct_runtime!(
         Tokens: orml_tokens,
     }
 );
-
 
 impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
@@ -79,7 +76,6 @@ impl pallet_disputes::Config for Test {
     type VotingTimeLimit = VotingTimeLimit;
     type ForceOrigin = EnsureRoot<AccountId>;
     type DisputeHooks = Test;
-
 }
 
 orml_traits::parameter_type_with_key! {
@@ -129,7 +125,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 impl crate::traits::DisputeHooks<u32> for Test {
-    fn on_dispute_complete(dispute_key: u32, dispute_result: crate::pallet::DisputeResult) -> Result<(), DispatchError> {
+    fn on_dispute_complete(
+        dispute_key: u32,
+        dispute_result: crate::pallet::DisputeResult,
+    ) -> Result<(), DispatchError> {
         Ok(())
     }
     fn on_dispute_cancel(dispute_key: u32) -> Result<(), DispatchError> {
@@ -157,6 +156,3 @@ impl crate::WeightInfoT for () {
         <Weight as Default>::default()
     }
 }
-
-
-

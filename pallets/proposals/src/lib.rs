@@ -10,12 +10,12 @@ use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
+use pallet_disputes::traits::DisputeRaiser;
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
-use pallet_disputes::traits::DisputeRaiser;
 
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
@@ -37,9 +37,9 @@ pub use weights::*;
 
 pub mod migration;
 
+mod benchmarking;
+mod benchmarking;
 pub mod impls;
-mod benchmarking;
-mod benchmarking;
 
 pub use impls::*;
 pub type ProjectKey = u32;

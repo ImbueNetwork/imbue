@@ -5,9 +5,9 @@
 // - It takes the raiser_id,project_id as dispute_key, list of jury(randomly selected upto 7 to 9 count), reason, fund_account
 // - Exisiting implementation looks good, need to update the votes while inserting the new dispute
 
-// 2: Vote on dispute. 
+// 2: Vote on dispute.
 // Get the vote as single yes or no and divide based on the number of the voters
-// Need to come up with a way to change the votes that might require the storing the votes of each voter 
+// Need to come up with a way to change the votes that might require the storing the votes of each voter
 
 // 3: finalise it in the on_initialize hook.
 // Signal that this is ready for continuation. pallet-refund/pallet-proposals.
@@ -18,11 +18,9 @@
 //pub mod impls;
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
+pub mod impls;
 pub mod traits;
 pub mod weights;
-pub mod impls;
-
-
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -34,14 +32,13 @@ mod tests;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use crate::traits::DisputeHooks;
     use codec::{FullCodec, FullEncode};
     use frame_support::{
         dispatch::fmt::Debug, pallet_prelude::*, weights::Weight, BoundedBTreeMap,
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating};
-    use crate::traits::DisputeHooks;
-
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -61,7 +58,7 @@ pub mod pallet {
             + TypeInfo
             + Debug
             + Copy;
-        /// Used to specify the milestones the dispute is being raised on. 
+        /// Used to specify the milestones the dispute is being raised on.
         type SpecificId: AtLeast32BitUnsigned
             + FullEncode
             + FullCodec
@@ -119,7 +116,7 @@ pub mod pallet {
         DisputeCancelled,
         /// A dispute has been extended.
         DisputeExtended {
-            dispute_key: T::DisputeKey
+            dispute_key: T::DisputeKey,
         },
     }
 
@@ -136,7 +133,7 @@ pub mod pallet {
         /// The dispute has already been extended. You can only extend a dispute once.
         DisputeAlreadyExtended,
         ///There have been more than required votes for a given dispute
-        TooManyDisputeVotes
+        TooManyDisputeVotes,
     }
 
     #[pallet::hooks]
@@ -149,7 +146,10 @@ pub mod pallet {
                     let result = dispute.calculate_winner();
                     // TODO: Gonna have to do a trick to benchmark this correctly.
                     // Maybe return a weight from the method is a good idea and simple.
-                    let _ = <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(*dispute_id, result);
+                    let _ = <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
+                        *dispute_id,
+                        result,
+                    );
                 }
             });
             Weight::default()
@@ -171,7 +171,7 @@ pub mod pallet {
             let votes = Disputes::<T>::try_mutate(dispute_key, |dispute| {
                 if let Some(d) = dispute {
                     total_jury = d.jury.len();
-                        ensure!(
+                    ensure!(
                         d.jury.iter().any(|e| e == &who.clone()),
                         Error::<T>::NotAJuryAccount
                     );
@@ -180,8 +180,10 @@ pub mod pallet {
                         .try_insert(who.clone(), is_yay)
                         .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
 
-                    //TODO: This is kinda messy, ideally we dont want to clone such a big data set. 
-                    Ok::<BoundedBTreeMap<AccountIdOf<T>, bool, T::MaxJurySize>, DispatchError>(d.votes.clone())
+                    //TODO: This is kinda messy, ideally we dont want to clone such a big data set.
+                    Ok::<BoundedBTreeMap<AccountIdOf<T>, bool, T::MaxJurySize>, DispatchError>(
+                        d.votes.clone(),
+                    )
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist.into())
                 }
@@ -189,14 +191,14 @@ pub mod pallet {
 
             //SHANKAR: Is this to check if all the voters has voted and its all true then unanimously finalize.
             //In that case we need to check the total votes has been casted right? if so i updated it to check. Please let me know thoughts
-            if votes.len() == total_jury && votes.iter().all(|v|{*v.1 == true}) {
+            if votes.len() == total_jury && votes.iter().all(|v| *v.1 == true) {
                 Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Success)?;
             }
 
-            if votes.len() == total_jury && votes.iter().all(|v|{*v.1 == false}) {
+            if votes.len() == total_jury && votes.iter().all(|v| *v.1 == false) {
                 Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Failure)?;
             }
-            
+
             Self::deposit_event(Event::<T>::DisputeVotedOn { who });
             Ok(().into())
         }
@@ -208,7 +210,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             dispute_key: T::DisputeKey,
         ) -> DispatchResult {
-            // TODO: 
+            // TODO:
             //ensuring the cancelling authority
             //<T as Config>::ForceOrigin::ensure_origin(origin)?;
             //calling the on_dispute cancel whenever the force cancel method is called
@@ -220,12 +222,10 @@ pub mod pallet {
         /// This can only be called once and must be called by a member of the jury.
         #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::extend_dispute())]
-        pub fn extend_dispute(
-            origin: OriginFor<T>,
-            dispute_key: T::DisputeKey,
-        ) -> DispatchResult {
+        pub fn extend_dispute(origin: OriginFor<T>, dispute_key: T::DisputeKey) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let mut dispute = Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            let mut dispute =
+                Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             ensure!(!dispute.is_extended, Error::<T>::DisputeAlreadyExtended);
             ensure!(
                 dispute.jury.iter().any(|e| e == &who),
@@ -234,15 +234,18 @@ pub mod pallet {
             // Ensure that the dispute does not end on the old date.
             DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
                 // TODO: see if this works lol
-                let _ = finalising.iter().filter(|finalising_id|{
-                    **finalising_id == dispute_key
-                }).collect::<Vec<_>>();
+                let _ = finalising
+                    .iter()
+                    .filter(|finalising_id| **finalising_id == dispute_key)
+                    .collect::<Vec<_>>();
             });
 
             // Insert the new date.
             let new_expiry = dispute.expiration.saturating_add(T::VotingTimeLimit::get());
             DisputesFinaliseOn::<T>::try_mutate(new_expiry, |finalising| {
-                finalising.try_push(dispute_key).map_err(|_|Error::<T>::TooManyDisputesThisBlock)?;
+                finalising
+                    .try_push(dispute_key)
+                    .map_err(|_| Error::<T>::TooManyDisputesThisBlock)?;
                 Ok::<(), DispatchError>(())
             })?;
 
@@ -251,9 +254,7 @@ pub mod pallet {
             dispute.is_extended = true;
             Disputes::<T>::insert(dispute_key, dispute);
 
-            Self::deposit_event(Event::<T>::DisputeExtended {
-                dispute_key
-            });
+            Self::deposit_event(Event::<T>::DisputeExtended { dispute_key });
 
             Ok(())
         }
@@ -276,18 +277,21 @@ pub mod pallet {
         pub expiration: BlockNumberFor<T>,
     }
 
-    impl<T: Config> Dispute<T> 
-    {
+    impl<T: Config> Dispute<T> {
         // Create a new dispute and setup state so that pallet will operate as intended.
-        pub fn new(
+        pub(crate) fn new(
             dispute_key: T::DisputeKey,
             raised_by: AccountIdOf<T>,
             jury: BoundedVec<AccountIdOf<T>, T::MaxJurySize>,
             specifiers: BoundedVec<T::SpecificId, T::MaxSpecifics>,
         ) -> Result<(), DispatchError> {
-            ensure!(!Disputes::<T>::contains_key(dispute_key), Error::<T>::DisputeAlreadyExists);
-            
-            let expiration_block = frame_system::Pallet::<T>::block_number().saturating_add(T::VotingTimeLimit::get());
+            ensure!(
+                !Disputes::<T>::contains_key(dispute_key),
+                Error::<T>::DisputeAlreadyExists
+            );
+
+            let expiration_block =
+                frame_system::Pallet::<T>::block_number().saturating_add(T::VotingTimeLimit::get());
             let dispute = Self {
                 raised_by,
                 jury,
@@ -298,24 +302,22 @@ pub mod pallet {
             };
 
             Disputes::<T>::insert(dispute_key, dispute);
-            DisputesFinaliseOn::<T>::try_mutate(
-                expiration_block,
-                |b_vec| {
-                    b_vec
-                        .try_push(dispute_key)
-                        .map_err(|_| Error::<T>::TooManyDisputesThisBlock)?;
+            DisputesFinaliseOn::<T>::try_mutate(expiration_block, |b_vec| {
+                b_vec
+                    .try_push(dispute_key)
+                    .map_err(|_| Error::<T>::TooManyDisputesThisBlock)?;
 
-                    Ok::<(), DispatchError>(())
-                },
-            )?;
+                Ok::<(), DispatchError>(())
+            })?;
 
             //::deposit_event(Event::<T>::DisputeRaised { dispute_key }.into());
             Ok(())
         }
 
-        
         pub(crate) fn calculate_winner(&self) -> DisputeResult {
-            if self.votes.values().filter(|&&x| x).count() >= self.votes.values().filter(|&&x| !x).count() {
+            if self.votes.values().filter(|&&x| x).count()
+                >= self.votes.values().filter(|&&x| !x).count()
+            {
                 DisputeResult::Success
             } else {
                 DisputeResult::Failure
@@ -324,19 +326,23 @@ pub mod pallet {
 
         /// Falliably finalise a dispute.
         /// This method will clean up storage associated with a dispute and the dispute itself.
-        pub(crate) fn try_finalise_with_result(dispute_key: T::DisputeKey, result: DisputeResult) -> Result<(), DispatchError> {
-            let dispute = Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+        pub(crate) fn try_finalise_with_result(
+            dispute_key: T::DisputeKey,
+            result: DisputeResult,
+        ) -> Result<(), DispatchError> {
+            let dispute =
+                Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
                 // TODO: see if this works
-                let _ = finalising.iter().filter(|finalising_id|{
-                    **finalising_id == dispute_key
-                }).collect::<Vec<_>>();
+                let _ = finalising
+                    .iter()
+                    .filter(|finalising_id| **finalising_id == dispute_key)
+                    .collect::<Vec<_>>();
             });
             let _ = T::DisputeHooks::on_dispute_complete(dispute_key, result);
             Ok(())
         }
-
-        }
+    }
     pub enum DisputeResult {
         Success,
         Failure,

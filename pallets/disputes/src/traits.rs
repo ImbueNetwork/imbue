@@ -14,13 +14,16 @@ pub trait DisputeRaiser<AccountId> {
         dispute_key: Self::DisputeKey,
         raised_by: AccountId,
         jury: BoundedVec<AccountId, Self::MaxJurySize>,
-        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>, 
+        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
     ) -> Result<(), DispatchError>;
 }
 
 pub trait DisputeHooks<DisputeKey> {
     // Outcome
     // handle the completed dispute
-    fn on_dispute_complete(dispute_key: DisputeKey, dispute_result: crate::pallet::DisputeResult) -> Result<(), DispatchError>;
+    fn on_dispute_complete(
+        dispute_key: DisputeKey,
+        dispute_result: crate::pallet::DisputeResult,
+    ) -> Result<(), DispatchError>;
     fn on_dispute_cancel(dispute_key: DisputeKey) -> Result<(), DispatchError>;
 }
