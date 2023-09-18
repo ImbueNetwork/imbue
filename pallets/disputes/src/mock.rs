@@ -63,7 +63,7 @@ impl frame_system::Config for Test {
 
 parameter_types! {
     pub MaxReasonLength: u32 = 100;
-    pub MaxJurySize: u32 = 9;
+    pub MaxJurySize: u32 = 2;
     pub MaxSpecifics: u32 = 10;
     pub VotingTimeLimit: BlockNumber = 10;
 }

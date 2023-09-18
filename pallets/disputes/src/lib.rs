@@ -166,13 +166,16 @@ pub mod pallet {
             dispute_key: T::DisputeKey,
             is_yay: bool,
         ) -> DispatchResult {
+            let mut total_jury = 0;
             let who = ensure_signed(origin)?;
             let votes = Disputes::<T>::try_mutate(dispute_key, |dispute| {
                 if let Some(d) = dispute {
-                    ensure!(
+                    total_jury = d.jury.len();
+                        ensure!(
                         d.jury.iter().any(|e| e == &who.clone()),
                         Error::<T>::NotAJuryAccount
                     );
+
                     d.votes
                         .try_insert(who.clone(), is_yay)
                         .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
@@ -184,12 +187,13 @@ pub mod pallet {
                 }
             })?;
 
-            //SHANKAR: This logic need to be recheck
-            if votes.iter().all(|v|{*v.1 == true}) {
+            //SHANKAR: Is this to check if all the voters has voted and its all true then unanimously finalize.
+            //In that case we need to check the total votes has been casted right? if so i updated it to check. Please let me know thoughts
+            if votes.len() == total_jury && votes.iter().all(|v|{*v.1 == true}) {
                 Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Success)?;
             }
 
-            if votes.iter().all(|v|{*v.1 == false}) {
+            if votes.len() == total_jury && votes.iter().all(|v|{*v.1 == false}) {
                 Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Failure)?;
             }
             
@@ -244,6 +248,7 @@ pub mod pallet {
 
             // Mutate the expiration date on the dispute itself.
             dispute.expiration = new_expiry;
+            dispute.is_extended = true;
             Disputes::<T>::insert(dispute_key, dispute);
 
             Self::deposit_event(Event::<T>::DisputeExtended {
