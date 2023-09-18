@@ -191,31 +191,31 @@ pub mod pallet {
 
             //SHANKAR: Is this to check if all the voters has voted and its all true then unanimously finalize.
             //In that case we need to check the total votes has been casted right? if so i updated it to check. Please let me know thoughts
-            if votes.len() == total_jury && votes.iter().all(|v| *v.1 == true) {
+            if votes.len() == total_jury && votes.iter().all(|v| *v.1) {
                 Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Success)?;
             }
 
-            if votes.len() == total_jury && votes.iter().all(|v| *v.1 == false) {
+            if votes.len() == total_jury && votes.iter().all(|v| !(*v.1)) {
                 Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Failure)?;
             }
 
             Self::deposit_event(Event::<T>::DisputeVotedOn { who });
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::call_index(1)]
         // FELIX REVIEW: Benchmarks
         #[pallet::weight(<T as Config>::WeightInfo::force_cancel_dispute())]
         pub fn force_cancel_dispute(
-            origin: OriginFor<T>,
-            dispute_key: T::DisputeKey,
+            _origin: OriginFor<T>,
+            _dispute_key: T::DisputeKey,
         ) -> DispatchResult {
             // TODO:
             //ensuring the cancelling authority
             //<T as Config>::ForceOrigin::ensure_origin(origin)?;
             //calling the on_dispute cancel whenever the force cancel method is called
             //let res = T::DisputeHooks::on_dispute_cancel(dispute_key);
-            Ok(().into())
+            Ok(())
         }
 
         /// Extend a given dispute by T::VotingTimeLimit.
