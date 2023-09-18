@@ -1,9 +1,9 @@
 use crate::traits::*;
 use crate::*;
 use crate::{mock::*, Error, Event};
-use frame_support::{assert_noop, assert_ok, once_cell::sync::Lazy, BoundedBTreeMap, traits::Hooks};
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::{traits::BadOrigin, DispatchError, Saturating, BoundedVec};
+use frame_support::{assert_noop, assert_ok, traits::Hooks};
+use frame_support::traits::Len;
+use sp_runtime::{Saturating, BoundedVec};
 use sp_arithmetic::traits::One;
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber)
@@ -51,14 +51,16 @@ fn test_trying_to_insert_create_a_dispute_with_existing_key() {
 fn test_voting_on_a_dispute() {
     let mut jury_vec: BoundedVec<AccountIdOf<Test>, <mock::Test as pallet::Config>::MaxJurySize> = BoundedVec::new();
     jury_vec.try_push(*BOB);
-    jury_vec.try_push(*CHARLIE);
     new_test_ext().execute_with(|| {
         Dispute::<Test>::new(10, *ALICE,jury_vec , BoundedVec::default()).expect("Creation Failed");
         assert_eq!(1, PalletDisputes::disputes(10).iter().count());
-        PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*CHARLIE),10,true);
-        PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*BOB),10,false);
-
-
+        PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*BOB),10,true);
+        if let Some(d) = Disputes::<Test>::get(10){
+            assert_eq!(1,d.votes.len());
+        }
+        System::assert_last_event(mock::RuntimeEvent::PalletDisputes(
+            Event::<Test>::DisputeVotedOn{ who: *BOB},
+        ));
     });
 }
 
@@ -84,7 +86,6 @@ fn test_voting_on_a_dispute_which_does_not_exists() {
         assert_noop!(PalletDisputes::vote_on_dispute(RuntimeOrigin::signed(*CHARLIE),1,true),Error::<Test>::DisputeDoesNotExist);
     });
 }
-
 
 
 ///trying to extend the voting time  on a dispute that doesn't exists which result in the error throwing dispute does not exists
