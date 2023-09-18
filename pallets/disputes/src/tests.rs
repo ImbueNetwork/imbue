@@ -98,7 +98,7 @@ fn test_extending_the_voting_time_on_a_dispute_that_does_not_exist() {
     });
 }
 
-///testing to extend the time for voting from a not jury account
+///testing to extend the time for voting from a not jury account, it should throw the error saying its not a jury account
 #[test]
 fn test_extending_the_voting_from_a_non_jury_account() {
     let mut jury_vec: BoundedVec<AccountIdOf<Test>, <mock::Test as pallet::Config>::MaxJurySize> = BoundedVec::new();
@@ -106,6 +106,35 @@ fn test_extending_the_voting_from_a_non_jury_account() {
     new_test_ext().execute_with(|| {
         Dispute::<Test>::new(10, *ALICE,jury_vec , BoundedVec::default()).expect("Creation Failed");
         assert_noop!(PalletDisputes::extend_dispute(RuntimeOrigin::signed(*CHARLIE),10),Error::<Test>::NotAJuryAccount);
+    });
+}
+
+/// testing trying to extend the voting on a dispute which has already been extended and should throw Dispute Already Extended error
+#[test]
+fn test_extending_the_voting_which_has_already_been_extended() {
+    let mut jury_vec: BoundedVec<AccountIdOf<Test>, <mock::Test as pallet::Config>::MaxJurySize> = BoundedVec::new();
+    jury_vec.try_push(*BOB);
+    new_test_ext().execute_with(|| {
+        Dispute::<Test>::new(10, *ALICE,jury_vec , BoundedVec::default()).expect("Creation Failed");
+        assert_ok!(PalletDisputes::extend_dispute(RuntimeOrigin::signed(*BOB),10));
+        assert_noop!(PalletDisputes::extend_dispute(RuntimeOrigin::signed(*BOB),10),Error::<Test>::DisputeAlreadyExtended);
+    });
+}
+
+/// testing trying to extend the voting time and it successfully extend by setting the flag to true
+#[test]
+fn test_successfully_extending_the_voting_on_a_dispute() {
+    let mut jury_vec: BoundedVec<AccountIdOf<Test>, <mock::Test as pallet::Config>::MaxJurySize> = BoundedVec::new();
+    jury_vec.try_push(*BOB);
+    new_test_ext().execute_with(|| {
+        Dispute::<Test>::new(10, *ALICE,jury_vec , BoundedVec::default()).expect("Creation Failed");
+        if let Some(d) = Disputes::<Test>::get(10){
+            assert_ne!(true,d.is_extended);
+        }
+        assert_ok!(PalletDisputes::extend_dispute(RuntimeOrigin::signed(*BOB),10));
+        if let Some(d) = Disputes::<Test>::get(10){
+            assert_eq!(true,d.is_extended);
+        }
     });
 }
 
