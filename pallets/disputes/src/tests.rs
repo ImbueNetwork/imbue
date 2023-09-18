@@ -130,6 +130,27 @@ fn vote_on_dispute_assert_last_event() {
     });
 }
 
+#[test]
+fn vote_on_dispute_autofinalises_on_unanimous_yes() {
+    new_test_ext().execute_with(|| {
+        todo!()
+    });
+}
+
+#[test]
+fn vote_on_dispute_autofinalises_on_unanimous_no() {
+    new_test_ext().execute_with(|| {
+        todo!()
+    });
+}
+
+#[test]
+fn try_auto_finalise_removes_autofinalise() {
+    new_test_ext().execute_with(|| {
+        todo!()
+    });
+}
+
 ///testing if the non jury account tries to vote it should throw the error saying its not a jury account
 #[test]
 fn vote_on_dispute_not_jury_account() {
@@ -214,7 +235,7 @@ fn extend_dispute_not_a_jury_account() {
 
 /// testing trying to extend the voting on a dispute which has already been extended and should throw Dispute Already Extended error
 #[test]
-fn test_extending_the_voting_which_has_already_been_extended() {
+fn extend_dispute_already_extended() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*BOB]);
@@ -238,7 +259,7 @@ fn test_extending_the_voting_which_has_already_been_extended() {
 
 /// testing trying to extend the voting time and it successfully extend by setting the flag to true
 #[test]
-fn test_successfully_extending_the_voting_on_a_dispute() {
+fn extend_dispute_works() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*BOB]);
@@ -249,7 +270,7 @@ fn test_successfully_extending_the_voting_on_a_dispute() {
             jury,
             specific_ids
         ));
-        let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
+            let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
         assert!(!d.is_extended);
         assert_ok!(PalletDisputes::extend_dispute(
             RuntimeOrigin::signed(*BOB),
@@ -257,5 +278,11 @@ fn test_successfully_extending_the_voting_on_a_dispute() {
         ));
         let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
         assert!(d.is_extended);
+    });
+}
+
+#[test]
+fn calculate_winner_works() {
+    new_test_ext().execute_with(|| {
     });
 }
