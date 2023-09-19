@@ -359,6 +359,8 @@ pub mod pallet {
                     .collect::<Vec<_>>();
             });
             let _ = T::DisputeHooks::on_dispute_complete(dispute_key, result);
+            ///remove the dispute once the hooks gets successfully completed
+            Disputes::<T>::remove(dispute_key);
             Ok(())
         }
     }

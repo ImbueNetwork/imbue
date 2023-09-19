@@ -56,7 +56,20 @@ fn raise_dispute_assert_state() {
 
 #[test]
 fn raise_dispute_assert_event() {
-    new_test_ext().execute_with(|| todo!());
+    new_test_ext().execute_with(||{
+        let dispute_key = 10;
+        let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
+        let specifics = get_specifics::<Test>(vec![0, 1]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specifics,
+        ));
+        System::assert_last_event(RuntimeEvent::PalletDisputes(
+            Event::<Test>::DisputeRaised{ dispute_key:dispute_key},
+        ));
+    });
 }
 
 #[test]
@@ -95,17 +108,23 @@ fn vote_on_dispute_assert_state() {
             jury,
             specifics,
         ));
+        let dispute_before_vote = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
+        assert_eq!(0,dispute_before_vote.votes.len());
         assert_ok!(PalletDisputes::vote_on_dispute(
             RuntimeOrigin::signed(*BOB),
             dispute_key,
             true
         ));
-        todo!()
+        let dispute_after_vote = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
+        let vote = dispute_after_vote.votes.get(&BOB).unwrap();
+        assert_eq!(true,*vote);
+        assert_eq!(1,dispute_after_vote.votes.len());
     });
 }
 
-// TODO Working on this upon the approval of the finalization
 // FELIX: shankar what does this mean? ^^
+//SHANKAR: Just telling when auto finalization comes we could extend by making more calls to check unanimous voting
+//But i think we have covered in the new test cases so we can ignore the comments above
 #[test]
 fn vote_on_dispute_assert_last_event() {
     new_test_ext().execute_with(|| {
@@ -133,17 +152,60 @@ fn vote_on_dispute_assert_last_event() {
 #[test]
 fn vote_on_dispute_autofinalises_on_unanimous_yes() {
     new_test_ext().execute_with(|| {
-        todo!()
+        let dispute_key = 10;
+        let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
+        let specifics = get_specifics::<Test>(vec![0, 1]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specifics,
+        ));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*BOB),
+            dispute_key,
+            true
+        ));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*CHARLIE),
+            dispute_key,
+            true
+        ));
+        //verify that the dispute has been removed once auto_finalization is done in case of unanimous yes
+        assert_eq!(0,PalletDisputes::disputes(dispute_key).iter().count());
     });
 }
 
 #[test]
 fn vote_on_dispute_autofinalises_on_unanimous_no() {
     new_test_ext().execute_with(|| {
-        todo!()
+        new_test_ext().execute_with(|| {
+            let dispute_key = 10;
+            let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
+            let specifics = get_specifics::<Test>(vec![0, 1]);
+            assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specifics,
+        ));
+            assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*BOB),
+            dispute_key,
+            false
+        ));
+            assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*CHARLIE),
+            dispute_key,
+            false
+        ));
+            //verify that the dispute has been removed once auto_finalization is done in case of unanimous no
+            assert_eq!(0,PalletDisputes::disputes(dispute_key).iter().count());
+        });
     });
 }
 
+///SHANKAR: What does this mean?
 #[test]
 fn try_auto_finalise_removes_autofinalise() {
     new_test_ext().execute_with(|| {
@@ -270,7 +332,7 @@ fn extend_dispute_works() {
             jury,
             specific_ids
         ));
-            let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
+        let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
         assert!(!d.is_extended);
         assert_ok!(PalletDisputes::extend_dispute(
             RuntimeOrigin::signed(*BOB),
