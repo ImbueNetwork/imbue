@@ -88,6 +88,7 @@ pub mod v2 {
     #[storage_alias]
     pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
     #[repr(u32)]
     pub enum Release {
         V0,

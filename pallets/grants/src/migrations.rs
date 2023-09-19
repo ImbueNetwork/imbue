@@ -81,3 +81,66 @@ pub(crate) mod v2 {
         }
     }
 }
+
+
+
+
+pub mod v3 {
+        use super::*;
+    
+        #[storage_alias]
+        pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+    
+        #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
+        #[repr(u32)]
+        pub enum Release {
+            V0,
+            V1,
+            #[default]
+            V2,
+        }
+
+        pub struct MigrateToV2<T: Config>(T);
+        impl<T: Config> OnRuntimeUpgrade<T> for MigrateToV2<T> {
+            #[cfg(feature = "try-runtime")]
+            fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+                frame_support::ensure!(
+                    StorageVersion::<T>::get() == Release::V2,
+                    "V2 is required before running V3"
+                );
+                
+                Ok(<Vec<u8> as Default>::default())
+            }
+            
+            fn on_runtime_upgrade() -> Weight {
+                let current = Pallet::<T>::get_storage_version();
+                let onchain = StorageVersion::<T>::get();
+    
+                if current == 3 && onchain == Release::V2 {
+                    StorageVersion::<T>::kill();
+                    current.put::<Pallet<T>>();
+    
+                    log!(warn, "v2 has been successfully applied");
+                    T::DbWeight::get().reads_writes(2, 1)
+                } else {
+                    log!(warn, "Skipping v2, should be removed");
+                    T::DbWeight::get().reads(1)
+                }
+            }
+    
+            #[cfg(feature = "try-runtime")]
+            fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+                frame_support::ensure!(
+                    Pallet::<T>::get_storage_version() == 3,
+                    "v2 has not been applied"
+                )
+    
+                ensure!(
+                    !StorageVersion::<T>::exists(),
+                    "old storage version has not been removed."
+                )
+    
+                Ok(())
+            }
+        }
+}

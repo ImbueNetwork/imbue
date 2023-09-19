@@ -477,22 +477,6 @@ pub enum RoundType {
     VoteOfNoConfidence,
 }
 
-#[derive(Encode, Decode, TypeInfo, Debug, PartialEq, MaxEncodedLen)]
-#[repr(u32)]
-pub enum Release {
-    V0,
-    V1,
-    V2,
-    V3,
-    V4,
-}
-
-impl Default for Release {
-    fn default() -> Self {
-        Self::V3
-    }
-}
-
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
 /// TODO: move these to a common repo (common_types will do)

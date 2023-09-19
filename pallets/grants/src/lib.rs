@@ -48,7 +48,10 @@ pub mod pallet {
     pub(crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
     pub type GrantId = H256;
 
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
+
     #[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -82,15 +85,7 @@ pub mod pallet {
     #[pallet::storage]
     pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
-    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
-    #[repr(u32)]
-    pub enum Release {
-        V0,
-        V1,
-        #[default]
-        V2,
-    }
-
+    
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
