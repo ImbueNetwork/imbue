@@ -61,7 +61,7 @@ pub mod pallet {
 
     pub type BriefHash = H256;
 
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new();
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     #[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]

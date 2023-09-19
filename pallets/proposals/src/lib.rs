@@ -61,6 +61,7 @@ type ContributionsFor<T> = BoundedBTreeMap<
     <T as Config>::MaximumContributorsPerProject,
 >;
 
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -100,7 +101,10 @@ pub mod pallet {
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
     }
 
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
+
     #[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
@@ -170,10 +174,6 @@ pub mod pallet {
         BoundedProjectKeysPerBlock<T>,
         ValueQuery,
     >;
-
-    #[pallet::storage]
-    #[pallet::getter(fn storage_version)]
-    pub(super) type ProjectStorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]

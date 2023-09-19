@@ -420,7 +420,7 @@ pub mod v4 {
     >;
 
     // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
-    pub fn migrate_to_v4<T: Config>(weight: &mut Weight) {
+    pub fn migrate_votes<T: Config>(weight: &mut Weight) {
         log::info!("***** starting migration in fn");
         let test = ProjectStorageVersion::<T>::get();
         log::info!("***** ProjectStorageVersion is : {:?}", test);
@@ -452,7 +452,22 @@ pub mod v4 {
                     }
                 }
             });
-            ProjectStorageVersion::<T>::set(Release::V4);
+    }
+
+    pub mod v2 {
+        use super::*;
+    
+    #[storage_alias]
+    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+        V2,
+        #[default]
+        V3,
+        V4,
     }
 
     pub struct MigrateToV4<T>(sp_std::marker::PhantomData<T>);
@@ -461,7 +476,7 @@ pub mod v4 {
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::info!(target: "pallet-proposals", "Running pre_upgrade()");
             ensure!(
-				ProjectStorageVersion::<T>::get() == Release::V4,
+				StorageVersion::<T>::get() == Release::V3,
 				"Required v3 before upgrading to v4"
 			);
             Ok(Vec::new())
@@ -471,7 +486,23 @@ pub mod v4 {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             log::info!("****** STARTING MIGRATION *****");
             log::warn!("****** STARTING MIGRATION *****");
-            crate::migration::v4::migrate_to_v4::<T>(&mut weight);
+
+            let current = Pallet::<T>::get_storage_version();
+            let onchain = StorageVersion::<T>::get();
+
+            if current == 4 && onchain == Release::V3 {
+                migrate_votes::<T>(&mut weight);
+                
+                StorageVersion::<T>::kill();
+                current.put::<Pallet<T>>();
+
+                log!(warn, "v4 has been successfully applied");
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
+            } else {
+                log!(warn, "Skipping v4, should be removed");
+                weight = weight.saturating_add(T::DbWeight::get().reads(1));
+            }
+
             log::warn!("****** ENDING MIGRATION *****");
             weight
         }
@@ -479,8 +510,13 @@ pub mod v4 {
         #[cfg(feature = "try-runtime")]
         fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
             log::info!(target:  "pallet-proposals", "Running post_upgrade()");
+
+            ensure!(!StorageVersion::<T>::exists(),
+                "Old storage version storage type should have been removed."        
+            );
+            
             ensure!(
-                ProjectStorageVersion::<T>::get() == Release::V4,
+                Pallet::<T>::get_storage_version() == 4,
                 "Storage version should be v4 after the migration"
             );
 
