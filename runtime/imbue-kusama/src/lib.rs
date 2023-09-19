@@ -544,7 +544,7 @@ impl pallet_democracy::Config for Runtime {
     type ExternalOrigin = HalfOfCouncil;
     /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
     /// be tabled immediately and with a shorter voting/enactment period.
-    type FastTrackOrigin = HalfOfCouncil;
+    type FastTrackOrigin = FastTrackOrigin;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     type InstantAllowed = InstantAllowed;
     type InstantOrigin = EnsureRootOr<HalfOfCouncil>;
