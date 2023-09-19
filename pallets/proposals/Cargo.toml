@@ -34,6 +34,7 @@ cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", branch = "
 
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.43" , default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+frame-executive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false, optional = true }
 
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43", default-features = false }
 
@@ -64,6 +65,12 @@ common-runtime = { path = "../../runtime/common"}
 [features]
 default = ['std']
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks",	"common-runtime/runtime-benchmarks"]
+try-runtime = [
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"sp-runtime/try-runtime",
+]
+
 std = [
 	"codec/std",
 	"serde/std",

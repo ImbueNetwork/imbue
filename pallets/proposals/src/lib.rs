@@ -272,43 +272,51 @@ pub mod pallet {
         ///
         /// >
         fn on_runtime_upgrade() -> Weight {
-            migration::v4::migrate_rounds_to_include_milestone_key::<T>()
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            log::info!(target: "pallet-proposals","****** STARTING MIGRATION *****");
+            log::warn!(target: "pallet-proposals","****** STARTING MIGRATION *****");
+            log::error!(target: "pallet-proposals", "****** STARTING MIGRATION *****");
+            crate::migration::v4::migrate_to_v4::<T>(&mut weight);
+            log::info!(target: "pallet-proposals", "****** ENDING MIGRATION *****");
+            log::warn!(target: "pallet-proposals", "****** ENDING MIGRATION *****");
+            log::error!(target: "pallet-proposals", "****** ENDING MIGRATION *****");
+            weight
         }
 
         // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
-        fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-            let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            let key_type_vec = RoundsExpiring::<T>::take(n);
-
-            key_type_vec.iter().for_each(|item| {
-                let (project_key, round_type, milestone_key) = item;
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-
-                // Remove the round prevents further voting.
-                Rounds::<T>::remove((project_key, milestone_key), round_type);
-                match round_type {
-                    // Voting rounds automatically finalise if its reached its threshold.
-                    // Therefore we can remove it on round end.
-                    RoundType::VotingRound => {
-                        weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
-
-                        MilestoneVotes::<T>::remove(project_key, milestone_key);
-                        UserHasVoted::<T>::remove((
-                            project_key,
-                            RoundType::VotingRound,
-                            milestone_key,
-                        ));
-                    }
-                    // Votes of no confidence do not finaliese automatically
-                    RoundType::VoteOfNoConfidence => {
-                        // for now keep the round in tact and let them finalise.
-                        // todo, this should be handled in pallet-dispute.
-                    }
-                }
-            });
-
-            weight
-        }
+        // fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+        //     let mut weight = T::DbWeight::get().reads_writes(1, 1);
+        //     let key_type_vec = RoundsExpiring::<T>::take(n);
+        //
+        //     key_type_vec.iter().for_each(|item| {
+        //         let (project_key, round_type, milestone_key) = item;
+        //         weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+        //
+        //         // Remove the round prevents further voting.
+        //         Rounds::<T>::remove((project_key, milestone_key), round_type);
+        //         match round_type {
+        //             // Voting rounds automatically finalise if its reached its threshold.
+        //             // Therefore we can remove it on round end.
+        //             RoundType::VotingRound => {
+        //                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
+        //
+        //                 MilestoneVotes::<T>::remove(project_key, milestone_key);
+        //                 UserHasVoted::<T>::remove((
+        //                     project_key,
+        //                     RoundType::VotingRound,
+        //                     milestone_key,
+        //                 ));
+        //             }
+        //             // Votes of no confidence do not finaliese automatically
+        //             RoundType::VoteOfNoConfidence => {
+        //                 // for now keep the round in tact and let them finalise.
+        //                 // todo, this should be handled in pallet-dispute.
+        //             }
+        //         }
+        //     });
+        //
+        //     weight
+        // }
     }
 
     #[pallet::call]

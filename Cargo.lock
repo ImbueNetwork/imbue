@@ -1284,6 +1284,7 @@ name = "common-traits"
 version = "0.1.0"
 dependencies = [
  "frame-support",
+ "frame-system",
  "parity-scale-codec 3.6.2",
  "sp-core",
  "sp-io",
@@ -3336,6 +3337,7 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43#5e
 dependencies = [
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "parity-scale-codec 3.6.2",
  "scale-info 2.8.0",
  "sp-core",
@@ -4282,6 +4284,7 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
  "hex",
  "hex-literal 0.3.4",
  "log",
@@ -6657,6 +6660,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -7209,6 +7213,7 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-primitives-core",
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
  "hex",
@@ -7242,6 +7247,8 @@ dependencies = [
 name = "pallet-proposals-rpc"
 version = "0.1.0"
 dependencies = [
+ "frame-support",
+ "frame-system",
  "jsonrpsee",
  "pallet-proposals-rpc-runtime-api",
  "parity-scale-codec 3.6.2",
@@ -7255,8 +7262,11 @@ dependencies = [
 name = "pallet-proposals-rpc-runtime-api"
 version = "0.1.0"
 dependencies = [
+ "frame-support",
+ "frame-system",
  "parity-scale-codec 3.6.2",
  "sp-api",
+ "sp-runtime",
 ]
 
 [[package]]

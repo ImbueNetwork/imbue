@@ -1,4 +1,5 @@
 use crate::*;
+use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::*;
 pub use pallet::*;
 pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
@@ -405,7 +406,7 @@ pub mod v3 {
     }
 }
 
-pub(crate) mod v4 {
+pub mod v4 {
     use super::*;
     #[storage_alias]
     pub type V4Rounds<T: Config> = StorageDoubleMap<
@@ -419,9 +420,8 @@ pub(crate) mod v4 {
     >;
 
     // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
-    pub(crate) fn migrate_rounds_to_include_milestone_key<T: Config>() -> Weight {
-        let mut weight = <Weight as Default>::default();
-
+    pub fn migrate_to_v4<T: Config>(weight: &mut Weight) {
+        log::info!("***** starting migration in fn");
         let test = ProjectStorageVersion::<T>::get();
         log::info!("***** ProjectStorageVersion is : {:?}", test);
 
@@ -432,20 +432,20 @@ pub(crate) mod v4 {
             );
 
             V4Rounds::<T>::drain().for_each(|(project_key, _, block_number)| {
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
                 log::info!("***** project key is : {:?}", project_key);
 
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                 crate::RoundsExpiring::<T>::remove(block_number);
 
-                weight = weight.saturating_add(T::DbWeight::get().reads(1));
+                *weight = weight.saturating_add(T::DbWeight::get().reads(1));
                 if let Some(project) = crate::Projects::<T>::get(project_key) {
                     log::info!("***** project key exists is : {:?}", project_key);
                     for (milestone_key, _) in project.milestones.iter() {
-                        weight = weight.saturating_add(T::DbWeight::get().reads(1));
+                        *weight = weight.saturating_add(T::DbWeight::get().reads(1));
                         if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
-                            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                             crate::MilestoneVotes::<T>::remove(project_key, milestone_key);
                         } else {
                             break;
@@ -455,7 +455,35 @@ pub(crate) mod v4 {
             });
             ProjectStorageVersion::<T>::set(Release::V4);
         }
-        weight
+    }
+
+    pub struct MigrateToV4<T>(sp_std::marker::PhantomData<T>);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV4<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
+            log::info!(target: "pallet-proposals", "Running pre_upgrade()");
+            Ok(Vec::new())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            log::info!("****** STARTING MIGRATION *****");
+            log::warn!("****** STARTING MIGRATION *****");
+            crate::migration::v4::migrate_to_v4::<T>(&mut weight);
+            log::warn!("****** ENDING MIGRATION *****");
+            weight
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
+            log::info!(target:  "pallet-proposals", "Running post_upgrade()");
+            ensure!(
+                StorageVersion::get::<Pallet<T>>() >= 7,
+                "Storage version should be >= 7 after the migration"
+            );
+
+            Ok(())
+        }
     }
 }
 
@@ -772,7 +800,7 @@ mod test {
             crate::MilestoneVotes::<Test>::insert(project_key, milestone_key, Vote::default());
             crate::MilestoneVotes::<Test>::insert(project_key, milestone_key + 1, Vote::default());
 
-            let _ = v4::migrate_rounds_to_include_milestone_key::<Test>();
+            let _ = v4::migrate_to_v4::<Test>();
             // assert that:
             // 1: the round has been removed (to allow resubmission)
             // 2: milestone votes have been reset (although resubmission resets this)
