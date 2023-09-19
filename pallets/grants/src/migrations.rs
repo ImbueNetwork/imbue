@@ -100,8 +100,8 @@ pub mod v3 {
             V2,
         }
 
-        pub struct MigrateToV2<T: Config>(T);
-        impl<T: Config> OnRuntimeUpgrade<T> for MigrateToV2<T> {
+        pub struct MigrateToV3<T: Config>(T);
+        impl<T: Config> OnRuntimeUpgrade<T> for MigrateToV3<T> {
             #[cfg(feature = "try-runtime")]
             fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
                 frame_support::ensure!(

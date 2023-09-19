@@ -182,6 +182,7 @@ pub mod migrations {
     pub type Unreleased = (
         pallet_proposals::migration::v4::MigrateToV4<Runtime>,
         pallet_briefs::migration::v2::MigrateToV2<Runtime>,
+        pallet_grants::migration::v3::MigrateToV3<Runtime>,
     );
 }
 

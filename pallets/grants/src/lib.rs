@@ -82,10 +82,6 @@ pub mod pallet {
     #[pallet::storage]
     pub type GrantCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
-    #[pallet::storage]
-    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
-
-    
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
