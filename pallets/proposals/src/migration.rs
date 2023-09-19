@@ -425,7 +425,6 @@ pub mod v4 {
         let test = ProjectStorageVersion::<T>::get();
         log::info!("***** ProjectStorageVersion is : {:?}", test);
 
-        if ProjectStorageVersion::<T>::get() == Release::V3 {
             log::info!(
                 "***** V4 Rounds count is : {:?}",
                 V4Rounds::<T>::iter_values().count()
@@ -454,7 +453,6 @@ pub mod v4 {
                 }
             });
             ProjectStorageVersion::<T>::set(Release::V4);
-        }
     }
 
     pub struct MigrateToV4<T>(sp_std::marker::PhantomData<T>);
@@ -462,6 +460,10 @@ pub mod v4 {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::info!(target: "pallet-proposals", "Running pre_upgrade()");
+            ensure!(
+				ProjectStorageVersion::<T>::get() == Release::V4,
+				"Required v3 before upgrading to v4"
+			);
             Ok(Vec::new())
         }
 
@@ -478,8 +480,8 @@ pub mod v4 {
         fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
             log::info!(target:  "pallet-proposals", "Running post_upgrade()");
             ensure!(
-                StorageVersion::get::<Pallet<T>>() >= 7,
-                "Storage version should be >= 7 after the migration"
+                ProjectStorageVersion::<T>::get() == Release::V4,
+                "Storage version should be v4 after the migration"
             );
 
             Ok(())
