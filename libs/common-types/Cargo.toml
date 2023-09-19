@@ -24,7 +24,7 @@ sp-std = { git = "https://github.com/paritytech/substrate" , branch = "polkadot-
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43", default-features = false}
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0", default-features = false}
 
 # local dependencies
 common-traits = { path = '../common-traits', default-features = false }
@@ -34,6 +34,12 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 
 [features]
 default = ['std']
+try-runtime = [
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"sp-runtime/try-runtime",
+	"common-traits/try-runtime"
+]
 std = [
     'codec/std',
     'sp-std/std',

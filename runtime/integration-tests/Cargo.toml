@@ -22,15 +22,15 @@ sp-consensus-babe = { git = "https://github.com/paritytech/substrate", branch = 
 sp-authority-discovery = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0" }
 
 # Polkadot
-kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
-polkadot-parachain = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
-polkadot-primitives = {git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
-polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
-polkadot-service = {  git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
+kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0" }
+polkadot-parachain = {git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0" }
+polkadot-primitives = {git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0" }
+polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0" }
+polkadot-service = {  git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0" }
 
 # Cumulus
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v1.0.0"  }
@@ -53,7 +53,7 @@ pallet-proposals = { path = "../../pallets/proposals", default-features = false 
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0" }
 xcm-emulator = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v1.0.0" }
 grandpa = { package = "sc-consensus-grandpa", git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0" }
-polkadot-test-service = {  git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43", default-features = false }
+polkadot-test-service = {  git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0", default-features = false }
 
 
 [features]

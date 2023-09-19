@@ -15,6 +15,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
 	"derive",
 ] }
+log = { version = "0.4.17", default-features = false }
+
 serde = { version = "1.0.101", default-features=false}
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0", default-features = false, optional = true }
@@ -49,16 +51,17 @@ common-types = { path = "../../libs/common-types" }
 pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
 pallet-proposals = {path= "../proposals"}
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1.0.0"}
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0"}
 pallet-deposits = {path= "../deposits"}
 common-runtime = { path = "../../runtime/common"}
 
 [features]
 default = ['std']
+
 std = [
 	"codec/std",
 	"serde/std",
-	"frame-benchmarking?/std",
+	"frame-benchmarking/std",
  	"frame-support/std", 
 	"frame-system/std", 
 	"scale-info/std", 
@@ -79,4 +82,21 @@ runtime-benchmarks = [
 	"common-runtime/runtime-benchmarks",
 ]
 
-try-runtime = ["frame-support/try-runtime"]
+try-runtime = [
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"sp-runtime/try-runtime",
+	"pallet-balances/try-runtime",
+	"pallet-proposals/try-runtime",
+	"common-runtime/try-runtime",
+	"pallet-xcm/try-runtime",
+	"pallet-deposits/try-runtime",
+	"pallet-deposits/try-runtime",
+	"common-traits/try-runtime",
+	"common-types/try-runtime",
+	"orml-currencies/try-runtime",
+	"orml-tokens/try-runtime",
+	"pallet-identity/try-runtime",
+	"pallet-timestamp/try-runtime",
+	"pallet-transaction-payment/try-runtime"
+]

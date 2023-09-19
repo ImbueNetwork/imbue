@@ -40,7 +40,7 @@ mod v0 {
 pub(crate) mod v1 {
     use super::*;
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
-        if crate::StorageVersion::<T>::get() == Release::V0 {
+        if v2::StorageVersion::<T>::get() == v2::Release::V0 {
             crate::Briefs::<T>::translate(|_, brief: v0::BriefDataV0<T>| {
                 *weight += T::DbWeight::get().reads_writes(2, 1);
                 let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief
@@ -78,9 +78,70 @@ pub(crate) mod v1 {
                 }
             })
         }
-        crate::StorageVersion::<T>::put(Release::V1)
+        v2::StorageVersion::<T>::put(v2::Release::V1)
     }
 }
+
+pub(crate) mod v2 {
+    use super::*;
+
+    #[storage_alias]
+    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
+
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        #[default]
+        V1,
+    }
+
+    struct MigrateToV2<T: Config>(T);
+    impl<T: Config> OnRuntimeUpgrade<T> for MigrateToV2<T> {
+		#[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+            frame_support::ensure!(
+                StorageVersion::<T>::get() == Release::V1,
+                "V1 is required before running V2"
+            );
+            
+            Ok(<Vec<u8> as Default>::default())
+        }
+        
+        fn on_runtime_upgrade() -> Weight {
+            let current = Pallet::<T>::get_storage_version();
+            let onchain = StorageVersion::<T>::get();
+
+            if current == 2 && onchain == Release::V1 {
+                StorageVersion::<T>::kill();
+                current.put::<Pallet<T>>();
+
+                log!(warn, "v2 has been successfully applied");
+				T::DbWeight::get().reads_writes(2, 1)
+            } else {
+                log!(warn, "Skipping v2, should be removed");
+				T::DbWeight::get().reads(1)
+            }
+        }
+
+		#[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+            frame_support::ensure!(
+                Pallet::<T>::get_storage_version() == 2,
+                "v2 has not been applied"
+            )
+
+            ensure!(
+                !StorageVersion::<T>::exists(),
+                "old storage version has not been removed."
+            )
+
+            Ok(())
+        }
+    }
+
+}
+
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -32,7 +32,7 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v1
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.0.0"}
 common-types = { path = "../../libs/common-types" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.0.0" }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v1.0.0"}
 common-runtime = { path = "../../runtime/common"}
 
 [features]
@@ -48,4 +48,12 @@ std = [
 	"common-runtime/std"
 ]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks"]
-try-runtime = ["frame-support/try-runtime"]
+try-runtime = [
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"sp-runtime/try-runtime",
+	"common-runtime/try-runtime",
+	"common-types/try-runtime",
+	"orml-tokens/try-runtime",
+	"pallet-xcm/try-runtime"
+]
