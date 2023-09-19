@@ -266,24 +266,16 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        /// <HB SBP Review:
-        ///
-        /// I see this hook valid on testnet but if you will deploy this with weights v2 already, you can totally remove this.
-        ///
-        /// >
-        fn on_runtime_upgrade() -> Weight {
-            migration::v4::migrate_rounds_to_include_milestone_key::<T>()
-        }
 
         // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             let key_type_vec = RoundsExpiring::<T>::take(n);
-
+        
             key_type_vec.iter().for_each(|item| {
                 let (project_key, round_type, milestone_key) = item;
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-
+        
                 // Remove the round prevents further voting.
                 Rounds::<T>::remove((project_key, milestone_key), round_type);
                 match round_type {
@@ -291,7 +283,7 @@ pub mod pallet {
                     // Therefore we can remove it on round end.
                     RoundType::VotingRound => {
                         weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
-
+        
                         MilestoneVotes::<T>::remove(project_key, milestone_key);
                         UserHasVoted::<T>::remove((
                             project_key,
@@ -306,7 +298,7 @@ pub mod pallet {
                     }
                 }
             });
-
+        
             weight
         }
     }
@@ -485,7 +477,7 @@ pub enum RoundType {
     VoteOfNoConfidence,
 }
 
-#[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
+#[derive(Encode, Decode, TypeInfo, Debug, PartialEq, MaxEncodedLen)]
 #[repr(u32)]
 pub enum Release {
     V0,
