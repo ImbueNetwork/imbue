@@ -62,7 +62,6 @@ pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "po
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false, optional = true }
 
-
 # Cumulus Dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.43"  , default-features = false }
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.43"  , default-features = false }
@@ -155,7 +154,7 @@ try-runtime = [
 	'pallet-scheduler/try-runtime',
 	'pallet-vesting/try-runtime',
 	'pallet-utility/try-runtime',
-	'frame-try-runtime',
+	'frame-try-runtime/try-runtime',
 	'cumulus-pallet-aura-ext/try-runtime',
 	'cumulus-pallet-parachain-system/try-runtime',
 	'cumulus-pallet-dmp-queue/try-runtime',
@@ -193,7 +192,7 @@ try-runtime = [
 	'common-traits/try-runtime',
 	'common-types/try-runtime',
 	'pallet-proposals-rpc-runtime-api/try-runtime',
-
+	"pallet-transaction-payment/try-runtime"
 ]
 std = [
 	'codec/std',
@@ -214,6 +213,7 @@ std = [
 	'frame-support/std',
 	'frame-executive/std',
 	'frame-system/std',
+	'frame-try-runtime/std',
 	'frame-system-rpc-runtime-api/std',
 	"orml-asset-registry/std",
 	"orml-tokens/std",
