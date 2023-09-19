@@ -35,9 +35,10 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 [features]
 default = ['std']
 try-runtime = [
-    "frame-support/try-runtime",
-    "frame-system/try-runtime",
-    "sp-runtime/try-runtime",
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"sp-runtime/try-runtime",
+	"common-traits/try-runtime"
 ]
 std = [
     'codec/std',

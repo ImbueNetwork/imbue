@@ -67,4 +67,13 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"sp-runtime/try-runtime",
+	"common-runtime/try-runtime",
+	"common-types/try-runtime",
+	"orml-tokens/try-runtime",
+	"pallet-balances/try-runtime",
+	"pallet-deposits/try-runtime",
+	"pallet-identity/try-runtime",
+	"pallet-proposals/try-runtime",
+	"pallet-timestamp/try-runtime",
+	"pallet-xcm/try-runtime"
 ]

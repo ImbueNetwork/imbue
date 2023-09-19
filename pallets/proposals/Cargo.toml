@@ -69,6 +69,20 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"sp-runtime/try-runtime",
+	"common-runtime/try-runtime",
+	"common-traits/try-runtime",
+	"common-types/try-runtime",
+	"cumulus-pallet-xcm/try-runtime",
+	"frame-executive?/try-runtime",
+	"orml-currencies/try-runtime",
+	"orml-tokens/try-runtime",
+	"orml-xtokens/try-runtime",
+	"pallet-balances/try-runtime",
+	"pallet-deposits/try-runtime",
+	"pallet-identity/try-runtime",
+	"pallet-timestamp/try-runtime",
+	"pallet-transaction-payment/try-runtime",
+	"pallet-xcm/try-runtime"
 ]
 
 std = [

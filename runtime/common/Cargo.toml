@@ -55,6 +55,10 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"sp-runtime/try-runtime",
+	"common-traits/try-runtime",
+	"common-types/try-runtime",
+	"pallet-authorship/try-runtime",
+	"pallet-balances/try-runtime"
 ]
 std = [
 	"serde/std",

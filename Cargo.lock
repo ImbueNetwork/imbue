@@ -4259,6 +4259,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "trie-root 0.15.2",
+ "try-runtime-cli",
  "xcm",
  "xcm-builder",
 ]
@@ -13982,6 +13983,7 @@ dependencies = [
  "async-trait",
  "clap 4.3.10",
  "frame-remote-externalities",
+ "frame-try-runtime",
  "hex",
  "log",
  "parity-scale-codec 3.6.2",

@@ -61,7 +61,7 @@ default = ['std']
 std = [
 	"codec/std",
 	"serde/std",
-	"frame-benchmarking?/std",
+	"frame-benchmarking/std",
  	"frame-support/std", 
 	"frame-system/std", 
 	"scale-info/std", 
@@ -86,4 +86,17 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"sp-runtime/try-runtime",
+	"pallet-balances/try-runtime",
+	"pallet-proposals/try-runtime",
+	"common-runtime/try-runtime",
+	"pallet-xcm/try-runtime",
+	"pallet-deposits/try-runtime",
+	"pallet-deposits/try-runtime",
+	"common-traits/try-runtime",
+	"common-types/try-runtime",
+	"orml-currencies/try-runtime",
+	"orml-tokens/try-runtime",
+	"pallet-identity/try-runtime",
+	"pallet-timestamp/try-runtime",
+	"pallet-transaction-payment/try-runtime"
 ]

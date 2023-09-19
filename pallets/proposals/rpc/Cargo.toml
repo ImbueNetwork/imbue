@@ -24,9 +24,10 @@ pallet-proposals-rpc-runtime-api = {path = "./runtime-api" }
 [features]
 default = ["std"]
 try-runtime = [
-    "frame-support/try-runtime",
-    "frame-system/try-runtime",
-    "sp-runtime/try-runtime",
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"sp-runtime/try-runtime",
+	"pallet-proposals-rpc-runtime-api/try-runtime"
 ]
 std = [
   "sp-api/std",
