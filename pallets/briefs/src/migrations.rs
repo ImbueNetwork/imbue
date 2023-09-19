@@ -82,7 +82,7 @@ pub(crate) mod v1 {
     }
 }
 
-pub(crate) mod v2 {
+pub mod v2 {
     use super::*;
 
     #[storage_alias]
@@ -95,7 +95,7 @@ pub(crate) mod v2 {
         V1,
     }
 
-    struct MigrateToV2<T: Config>(T);
+    pub struct MigrateToV2<T: Config>(T);
     impl<T: Config> OnRuntimeUpgrade<T> for MigrateToV2<T> {
 		#[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
