@@ -16,6 +16,7 @@ use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 
+
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
 
@@ -61,6 +62,7 @@ type ContributionsFor<T> = BoundedBTreeMap<
     <T as Config>::MaximumContributorsPerProject,
 >;
 
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -75,15 +77,15 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         type WeightInfo: WeightInfoT;
-        type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
+        type MaxWithdrawalExpiration: Get<BlockNumberFor<Self>>;
         /// The amount of time given, up to point of decision, when a vote of no confidence is held.
-        type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
+        type NoConfidenceTimeLimit: Get<BlockNumberFor<Self>>;
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<Percent>;
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
         /// Defines the length that a milestone can be voted on.
-        type MilestoneVotingWindow: Get<Self::BlockNumber>;
+        type MilestoneVotingWindow: Get<BlockNumberFor<Self>>;
         /// The type responisble for handling refunds.
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
         type MaxMilestonesPerProject: Get<u32>;
@@ -100,7 +102,10 @@ pub mod pallet {
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
     }
 
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
+
     #[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
@@ -171,10 +176,6 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    #[pallet::storage]
-    #[pallet::getter(fn storage_version)]
-    pub(super) type ProjectStorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
-
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -196,9 +197,9 @@ pub mod pallet {
         /// Successfully withdrawn funds from the project.
         ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyId),
         /// Vote submited successfully.
-        VoteSubmitted(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
+        VoteSubmitted(T::AccountId, ProjectKey, MilestoneKey, bool, BlockNumberFor<T>),
         /// A milestone has been approved.
-        MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, T::BlockNumber),
+        MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, BlockNumberFor<T>),
         /// You have created a vote of no confidence.
         NoConfidenceRoundCreated(T::AccountId, ProjectKey),
         /// You have voted upon a round of no confidence.
@@ -265,7 +266,7 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 
         // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
@@ -475,22 +476,6 @@ pub mod pallet {
 pub enum RoundType {
     VotingRound,
     VoteOfNoConfidence,
-}
-
-#[derive(Encode, Decode, TypeInfo, Debug, PartialEq, MaxEncodedLen)]
-#[repr(u32)]
-pub enum Release {
-    V0,
-    V1,
-    V2,
-    V3,
-    V4,
-}
-
-impl Default for Release {
-    fn default() -> Self {
-        Self::V3
-    }
 }
 
 /// The milestones provided by the user to define the milestones of a project.

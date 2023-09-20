@@ -421,20 +421,7 @@ pub mod v4 {
         OptionQuery,
     >;
 
-    #[storage_alias]
-    pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
-
-    #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-    #[repr(u32)]
-    pub enum Release {
-        V0,
-        V1,
-        V2,
-        #[default]
-        V3,
-        V4,
-    }
-
+    
     // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
     pub fn migrate_votes<T: Config>(weight: &mut Weight) {
         log::warn!( "***** starting migration in fn");
@@ -469,15 +456,70 @@ pub mod v4 {
                 }
             });
     }
-    
+
     pub struct MigrateToV4<T>(sp_std::marker::PhantomData<T>);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV4<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
+            log::info!(target: "pallet-proposals", "Running pre_upgrade()");
+            ensure!(
+                v5::StorageVersion::<T>::get() == v5::Release::V3, 
+                "v3 is required to run this migration."
+            );
+            Ok(Vec::new())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            log::info!("****** STARTING MIGRATION *****");
+            log::warn!("****** STARTING MIGRATION *****");
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+
+            if v5::StorageVersion::<T>::get() == v5::Release::V3 {
+                crate::migration::v4::migrate_to_v4::<T>(&mut weight);
+                v5::StorageVersion::<T>::put(v5::Release::V4);
+            } else {
+                log::warn!("skipping pallet-proposals v4 migration, should be removed");
+            }
+            log::warn!("****** ENDING MIGRATION *****");
+            weight
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
+            log::info!(target:  "pallet-proposals", "Running post_upgrade()");
+            ensure!(
+                v5::StorageVersion::<T>::get() == v5::Release::V4,
+                "Storage version should be V4 after the migration"
+            );
+            Ok(())
+        }
+    }
+}
+
+
+pub mod v5 {
+    #[storage_alias]
+    pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
+
+    #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+        V2,
+        #[default]
+        V3,
+        V4,
+    }
+
+    pub struct MigrateToV5<T>(sp_std::marker::PhantomData<T>);
     impl<T: Config> OnRuntimeUpgrade for MigrateToV4<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
             ensure!(
-				StorageVersion::<T>::get() == Release::V3,
-				"Required v3 before upgrading to v4"
+				StorageVersion::<T>::get() == Release::V4,
+				"Required v4 before upgrading to v5"
 			);
             Ok(Vec::new())
         }
@@ -490,16 +532,16 @@ pub mod v4 {
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
             let onchain = StorageVersion::<T>::get();
 
-            if current == 4 && onchain == Release::V3 {
+            if current == 5 && onchain == Release::V4 {
                 migrate_votes::<T>(&mut weight);
                 
                 StorageVersion::<T>::kill();
                 current.put::<Pallet<T>>();
 
-                log::warn!( "v4 has been successfully applied");
+                log::warn!( "v5 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
             } else {
-                log::warn!( "Skipping v4, should be removed");
+                log::warn!( "Skipping v5, should be removed from Executive");
                 weight = weight.saturating_add(T::DbWeight::get().reads(1));
             }
 
@@ -516,8 +558,8 @@ pub mod v4 {
             );
             
             ensure!(
-                Pallet::<T>::current_storage_version() == 4,
-                "Storage version should be v4 after the migration"
+                Pallet::<T>::current_storage_version() == 5,
+                "Storage version should be v5 after the migration"
             );
 
             Ok(())

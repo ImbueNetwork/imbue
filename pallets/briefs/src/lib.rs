@@ -61,7 +61,10 @@ pub mod pallet {
 
     pub type BriefHash = H256;
 
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+
     #[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -98,16 +101,6 @@ pub mod pallet {
     pub type BriefContributions<T> =
         StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
 
-    #[pallet::storage]
-    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
-
-    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
-    #[repr(u32)]
-    pub enum Release {
-        V0,
-        #[default]
-        V1,
-    }
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -155,18 +148,6 @@ pub mod pallet {
         FreelancerApprovalRequired,
         /// Milestones total do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_runtime_upgrade() -> Weight {
-            log::info!(target: "pallet-briefs", "****** STARTING MIGRATION in briefs *****");
-            log::warn!(target: "pallet-briefs", "****** STARTING MIGRATION in briefs *****");
-            log::error!(target: "pallet-briefs", "****** STARTING MIGRATION in briefs *****");
-            let mut weight: Weight = Zero::zero();
-            crate::migrations::v1::migrate_to_v1::<T>(&mut weight);
-            weight
-        }
     }
 
     #[pallet::call]

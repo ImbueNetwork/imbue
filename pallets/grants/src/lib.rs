@@ -17,8 +17,8 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
+#[cfg(test)]
 mod migrations;
-pub use migrations::v2::*;
 
 pub mod weights;
 pub use weights::*;
@@ -48,7 +48,10 @@ pub mod pallet {
     pub(crate) type BoundedApprovers<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxApprovers>;
     pub type GrantId = H256;
 
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
+
     #[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -79,18 +82,6 @@ pub mod pallet {
     #[pallet::storage]
     pub type GrantCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
-    #[pallet::storage]
-    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
-
-    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
-    #[repr(u32)]
-    pub enum Release {
-        V0,
-        V1,
-        #[default]
-        V2,
-    }
-
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -110,15 +101,6 @@ pub mod pallet {
         GrantAlreadyExists,
         /// There are too many milestones.
         TooManyMilestones,
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_runtime_upgrade() -> Weight {
-            let mut weight: Weight = Zero::zero();
-            crate::migrations::v2::migrate_to_v2::<T>(&mut weight, 50);
-            weight
-        }
     }
 
     #[pallet::call]
