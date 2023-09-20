@@ -156,7 +156,7 @@ mod test {
     #[test]
     fn migrate_v0_to_v1() {
         build_test_externality().execute_with(|| {
-            crate::StorageVersion::<Test>::put(Release::V0);
+            v2::StorageVersion::<Test>::put(v2::Release::V0);
             let milestones: BoundedVec<
                 v0::ProposedMilestoneV0,
                 <Test as Config>::MaxMilestonesPerBrief,
