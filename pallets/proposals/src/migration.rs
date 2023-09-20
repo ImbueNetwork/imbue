@@ -876,7 +876,8 @@ mod test {
             crate::MilestoneVotes::<Test>::insert(project_key, milestone_key, Vote::default());
             crate::MilestoneVotes::<Test>::insert(project_key, milestone_key + 1, Vote::default());
 
-            let _ = v4::migrate_votes::<Test>();
+            let mut weight = <Weight as Default>::default();
+            v4::migrate_votes::<Test>(&mut weight);
             // assert that:
             // 1: the round has been removed (to allow resubmission)
             // 2: milestone votes have been reset (although resubmission resets this)
