@@ -1,7 +1,9 @@
 use crate::*;
 use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::*;
+use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
+
 pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 
 #[allow(unused)]
@@ -114,7 +116,7 @@ mod v1 {
             let migrated_project: ProjectV1<
                 T::AccountId,
                 BalanceOf<T>,
-                T::BlockNumber,
+                BlockNumberFor<T>,
                 TimestampOf<T>,
             > = ProjectV1 {
                 name: project.name,
@@ -419,13 +421,27 @@ pub mod v4 {
         OptionQuery,
     >;
 
-    // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
-    pub fn migrate_to_v4<T: Config>(weight: &mut Weight) {
-        log::info!("***** starting migration in fn");
-        let test = ProjectStorageVersion::<T>::get();
-        log::info!("***** ProjectStorageVersion is : {:?}", test);
+    #[storage_alias]
+    pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
 
-            log::info!(
+    #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+        V2,
+        #[default]
+        V3,
+        V4,
+    }
+
+    // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
+    pub fn migrate_votes<T: Config>(weight: &mut Weight) {
+        log::warn!( "***** starting migration in fn");
+        let test = StorageVersion::<T>::get();
+        log::warn!( "***** onchain storage version is is : {:?}", test);
+
+            log::warn!(
                 "***** V4 Rounds count is : {:?}",
                 V4Rounds::<T>::iter_values().count()
             );
@@ -433,14 +449,14 @@ pub mod v4 {
             V4Rounds::<T>::drain().for_each(|(project_key, _, block_number)| {
                 *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
-                log::info!("***** project key is : {:?}", project_key);
+                log::warn!( "***** project key is : {:?}", project_key);
 
                 *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                 crate::RoundsExpiring::<T>::remove(block_number);
 
                 *weight = weight.saturating_add(T::DbWeight::get().reads(1));
                 if let Some(project) = crate::Projects::<T>::get(project_key) {
-                    log::info!("***** project key exists is : {:?}", project_key);
+                    log::warn!( "***** project key exists is : {:?}", project_key);
                     for (milestone_key, _) in project.milestones.iter() {
                         *weight = weight.saturating_add(T::DbWeight::get().reads(1));
                         if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
@@ -452,16 +468,15 @@ pub mod v4 {
                     }
                 }
             });
-            ProjectStorageVersion::<T>::set(Release::V4);
     }
-
+    
     pub struct MigrateToV4<T>(sp_std::marker::PhantomData<T>);
     impl<T: Config> OnRuntimeUpgrade for MigrateToV4<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
-            log::info!(target: "pallet-proposals", "Running pre_upgrade()");
+            log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
             ensure!(
-				ProjectStorageVersion::<T>::get() == Release::V4,
+				StorageVersion::<T>::get() == Release::V3,
 				"Required v3 before upgrading to v4"
 			);
             Ok(Vec::new())
@@ -469,18 +484,39 @@ pub mod v4 {
 
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            log::info!("****** STARTING MIGRATION *****");
-            log::warn!("****** STARTING MIGRATION *****");
-            crate::migration::v4::migrate_to_v4::<T>(&mut weight);
-            log::warn!("****** ENDING MIGRATION *****");
+            log::warn!( "****** STARTING MIGRATION *****");
+            log::warn!( "****** STARTING MIGRATION *****");
+
+            let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
+            let onchain = StorageVersion::<T>::get();
+
+            if current == 4 && onchain == Release::V3 {
+                migrate_votes::<T>(&mut weight);
+                
+                StorageVersion::<T>::kill();
+                current.put::<Pallet<T>>();
+
+                log::warn!( "v4 has been successfully applied");
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
+            } else {
+                log::warn!( "Skipping v4, should be removed");
+                weight = weight.saturating_add(T::DbWeight::get().reads(1));
+            }
+
+            log::warn!( "****** ENDING MIGRATION *****");
             weight
         }
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
-            log::info!(target:  "pallet-proposals", "Running post_upgrade()");
+            log::warn!( target:  "pallet-proposals", "Running post_upgrade()");
+
+            ensure!(!StorageVersion::<T>::exists(),
+                "Old storage version storage type should have been removed."        
+            );
+            
             ensure!(
-                ProjectStorageVersion::<T>::get() == Release::V4,
+                Pallet::<T>::current_storage_version() == 4,
                 "Storage version should be v4 after the migration"
             );
 
