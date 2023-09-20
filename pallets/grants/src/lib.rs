@@ -32,7 +32,7 @@ pub mod pallet {
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
     use sp_arithmetic::{
         per_things::Percent,
-        traits::{One, Zero},
+        traits::{One},
     };
     use sp_core::H256;
     use sp_runtime::Saturating;
