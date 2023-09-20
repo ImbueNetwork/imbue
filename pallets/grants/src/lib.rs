@@ -17,8 +17,7 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
-#[cfg(test)]
-mod migrations;
+pub mod migrations;
 
 pub mod weights;
 pub use weights::*;
@@ -51,7 +50,7 @@ pub mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     #[pallet::pallet]
-	#[pallet::storage_version(STORAGE_VERSION)]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -169,4 +168,3 @@ pub mod pallet {
         fn create_and_convert() -> Weight;
     }
 }
-

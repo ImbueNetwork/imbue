@@ -1,8 +1,8 @@
 use crate::*;
-pub use pallet::*;
 use common_types::{CurrencyId, TreasuryOrigin};
-use frame_support::{pallet_prelude::*, storage_alias, weights::Weight};
+use frame_support::{pallet_prelude::*, storage_alias, traits::OnRuntimeUpgrade, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
+pub use pallet::*;
 
 #[allow(unused)]
 #[allow(dead_code)]
@@ -81,65 +81,62 @@ pub(crate) mod v2 {
     }
 }
 
-
-
-
 pub mod v3 {
-        use super::*;
-    
-        #[storage_alias]
-        pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
-    
-        #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
-        #[repr(u32)]
-        pub enum Release {
-            V0,
-            V1,
-            #[default]
-            V2,
+    use super::*;
+
+    #[storage_alias]
+    pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
+
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+        #[default]
+        V2,
+    }
+
+    pub struct MigrateToV3<T: Config>(T);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV3<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+            frame_support::ensure!(
+                StorageVersion::<T>::get() == v3::Release::V2,
+                "V2 is required before running V3"
+            );
+
+            Ok(<Vec<u8> as Default>::default())
         }
 
-        pub struct MigrateToV3<T: Config>(T);
-        impl<T: Config> OnRuntimeUpgrade<T> for MigrateToV3<T> {
-            #[cfg(feature = "try-runtime")]
-            fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
-                frame_support::ensure!(
-                    StorageVersion::<T>::get() == v3::Release::V2,
-                    "V2 is required before running V3"
-                );
-                
-                Ok(<Vec<u8> as Default>::default())
-            }
-            
-            fn on_runtime_upgrade() -> Weight {
-                let current = Pallet::<T>::current_storage_version();
-                let onchain = StorageVersion::<T>::get();
-    
-                if current == 3 && onchain == v3::Release::V2 {
-                    StorageVersion::<T>::kill();
-                    current.put::<Pallet<T>>();
-    
-                    log::warn!("v2 has been successfully applied");
-                    T::DbWeight::get().reads_writes(2, 1)
-                } else {
-                    log::warn!("Skipping v2, should be removed");
-                    T::DbWeight::get().reads(1)
-                }
-            }
-    
-            #[cfg(feature = "try-runtime")]
-            fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
-                frame_support::ensure!(
-                    Pallet::<T>::current_storage_version() == 3,
-                    "v2 has not been applied"
-                );
-    
-                ensure!(
-                    !StorageVersion::<T>::exists(),
-                    "old storage version has not been removed."
-                );
-    
-                Ok(())
+        fn on_runtime_upgrade() -> Weight {
+            let current = Pallet::<T>::current_storage_version();
+            let onchain = StorageVersion::<T>::get();
+
+            if current == 3 && onchain == v3::Release::V2 {
+                StorageVersion::<T>::kill();
+                current.put::<Pallet<T>>();
+
+                log::warn!("v2 has been successfully applied");
+                T::DbWeight::get().reads_writes(2, 1)
+            } else {
+                log::warn!("Skipping v2, should be removed");
+                T::DbWeight::get().reads(1)
             }
         }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+            frame_support::ensure!(
+                Pallet::<T>::current_storage_version() == 3,
+                "v2 has not been applied"
+            );
+
+            ensure!(
+                !StorageVersion::<T>::exists(),
+                "old storage version has not been removed."
+            );
+
+            Ok(())
+        }
+    }
 }

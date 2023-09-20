@@ -20,7 +20,7 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
-mod migrations;
+pub mod migrations;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -64,7 +64,7 @@ pub mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     #[pallet::pallet]
-	#[pallet::storage_version(STORAGE_VERSION)]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -100,7 +100,6 @@ pub mod pallet {
     #[pallet::getter(fn brief_contributions)]
     pub type BriefContributions<T> =
         StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
-
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]

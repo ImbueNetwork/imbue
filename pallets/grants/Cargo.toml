@@ -29,6 +29,7 @@ pallet-proposals = { path = "../proposals", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+log = { version = "0.4.17", default-features = false }
 
 # Local
 common-traits = { path = "../../libs/common-traits", default-features = false }

@@ -1,6 +1,7 @@
 use crate::*;
 use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::*;
+
 use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
 
@@ -421,40 +422,36 @@ pub mod v4 {
         OptionQuery,
     >;
 
-    
     // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
     pub fn migrate_votes<T: Config>(weight: &mut Weight) {
-        log::warn!( "***** starting migration in fn");
-        let test = StorageVersion::<T>::get();
-        log::warn!( "***** onchain storage version is is : {:?}", test);
+        log::warn!("***** starting migration in fn");
+        log::warn!(
+            "***** V4 Rounds count is : {:?}",
+            V4Rounds::<T>::iter_values().count()
+        );
 
-            log::warn!(
-                "***** V4 Rounds count is : {:?}",
-                V4Rounds::<T>::iter_values().count()
-            );
+        V4Rounds::<T>::drain().for_each(|(project_key, _, block_number)| {
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
-            V4Rounds::<T>::drain().for_each(|(project_key, _, block_number)| {
-                *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            log::warn!("***** project key is : {:?}", project_key);
 
-                log::warn!( "***** project key is : {:?}", project_key);
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            crate::RoundsExpiring::<T>::remove(block_number);
 
-                *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                crate::RoundsExpiring::<T>::remove(block_number);
-
-                *weight = weight.saturating_add(T::DbWeight::get().reads(1));
-                if let Some(project) = crate::Projects::<T>::get(project_key) {
-                    log::warn!( "***** project key exists is : {:?}", project_key);
-                    for (milestone_key, _) in project.milestones.iter() {
-                        *weight = weight.saturating_add(T::DbWeight::get().reads(1));
-                        if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
-                            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                            crate::MilestoneVotes::<T>::remove(project_key, milestone_key);
-                        } else {
-                            break;
-                        }
+            *weight = weight.saturating_add(T::DbWeight::get().reads(1));
+            if let Some(project) = crate::Projects::<T>::get(project_key) {
+                log::warn!("***** project key exists is : {:?}", project_key);
+                for (milestone_key, _) in project.milestones.iter() {
+                    *weight = weight.saturating_add(T::DbWeight::get().reads(1));
+                    if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
+                        *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                        crate::MilestoneVotes::<T>::remove(project_key, milestone_key);
+                    } else {
+                        break;
                     }
                 }
-            });
+            }
+        });
     }
 
     pub struct MigrateToV4<T>(sp_std::marker::PhantomData<T>);
@@ -463,7 +460,7 @@ pub mod v4 {
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::info!(target: "pallet-proposals", "Running pre_upgrade()");
             ensure!(
-                v5::StorageVersion::<T>::get() == v5::Release::V3, 
+                v5::StorageVersion::<T>::get() == v5::Release::V3,
                 "v3 is required to run this migration."
             );
             Ok(Vec::new())
@@ -475,7 +472,7 @@ pub mod v4 {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
 
             if v5::StorageVersion::<T>::get() == v5::Release::V3 {
-                crate::migration::v4::migrate_to_v4::<T>(&mut weight);
+                crate::migration::v4::migrate_votes::<T>(&mut weight);
                 v5::StorageVersion::<T>::put(v5::Release::V4);
             } else {
                 log::warn!("skipping pallet-proposals v4 migration, should be removed");
@@ -496,8 +493,8 @@ pub mod v4 {
     }
 }
 
-
 pub mod v5 {
+    use super::*;
     #[storage_alias]
     pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
 
@@ -513,39 +510,37 @@ pub mod v5 {
     }
 
     pub struct MigrateToV5<T>(sp_std::marker::PhantomData<T>);
-    impl<T: Config> OnRuntimeUpgrade for MigrateToV4<T> {
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV5<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
             ensure!(
-				StorageVersion::<T>::get() == Release::V4,
-				"Required v4 before upgrading to v5"
-			);
+                StorageVersion::<T>::get() == Release::V4,
+                "Required v4 before upgrading to v5"
+            );
             Ok(Vec::new())
         }
 
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            log::warn!( "****** STARTING MIGRATION *****");
-            log::warn!( "****** STARTING MIGRATION *****");
+            log::warn!("****** STARTING MIGRATION *****");
+            log::warn!("****** STARTING MIGRATION *****");
 
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
             let onchain = StorageVersion::<T>::get();
 
             if current == 5 && onchain == Release::V4 {
-                migrate_votes::<T>(&mut weight);
-                
                 StorageVersion::<T>::kill();
                 current.put::<Pallet<T>>();
 
-                log::warn!( "v5 has been successfully applied");
+                log::warn!("v5 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
             } else {
-                log::warn!( "Skipping v5, should be removed from Executive");
+                log::warn!("Skipping v5, should be removed from Executive");
                 weight = weight.saturating_add(T::DbWeight::get().reads(1));
             }
 
-            log::warn!( "****** ENDING MIGRATION *****");
+            log::warn!("****** ENDING MIGRATION *****");
             weight
         }
 
@@ -553,10 +548,11 @@ pub mod v5 {
         fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
             log::warn!( target:  "pallet-proposals", "Running post_upgrade()");
 
-            ensure!(!StorageVersion::<T>::exists(),
-                "Old storage version storage type should have been removed."        
+            ensure!(
+                !StorageVersion::<T>::exists(),
+                "Old storage version storage type should have been removed."
             );
-            
+
             ensure!(
                 Pallet::<T>::current_storage_version() == 5,
                 "Storage version should be v5 after the migration"

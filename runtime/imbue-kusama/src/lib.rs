@@ -41,7 +41,7 @@ pub use frame_support::{
     dispatch::DispatchClass,
     ensure, parameter_types,
     traits::{
-        fungibles, ConstU128, ConstU16, ConstU32, Contains, Currency as PalletCurrency,
+        fungibles, ConstBool, ConstU128, ConstU16, ConstU32, Contains, Currency as PalletCurrency,
         EitherOfDiverse, EnsureOriginWithArg, EqualPrivilegeOnly, Everything, Get, Imbalance,
         IsInVec, Nothing, OnUnbalanced, Randomness, WithdrawReasons,
     },
@@ -181,8 +181,8 @@ pub mod migrations {
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
         pallet_proposals::migration::v5::MigrateToV5<Runtime>,
-        pallet_briefs::migration::v2::MigrateToV2<Runtime>,
-        pallet_grants::migration::v3::MigrateToV3<Runtime>,
+        pallet_briefs::migrations::v2::MigrateToV2<Runtime>,
+        pallet_grants::migrations::v3::MigrateToV3<Runtime>,
     );
 }
 
@@ -665,7 +665,6 @@ impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
     type DisabledValidators = ();
     type MaxAuthorities = MaxAuthorities;
-    type AllowMultipleBlocksPerSlot = ConstBool<false>;
 }
 
 parameter_type_with_key! {

@@ -16,7 +16,6 @@ use sp_core::H256;
 use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 
-
 pub mod traits;
 use traits::{IntoProposal, RefundHandler};
 
@@ -62,7 +61,6 @@ type ContributionsFor<T> = BoundedBTreeMap<
     <T as Config>::MaximumContributorsPerProject,
 >;
 
-
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -105,7 +103,7 @@ pub mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
 
     #[pallet::pallet]
-	#[pallet::storage_version(STORAGE_VERSION)]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
@@ -197,7 +195,13 @@ pub mod pallet {
         /// Successfully withdrawn funds from the project.
         ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyId),
         /// Vote submited successfully.
-        VoteSubmitted(T::AccountId, ProjectKey, MilestoneKey, bool, BlockNumberFor<T>),
+        VoteSubmitted(
+            T::AccountId,
+            ProjectKey,
+            MilestoneKey,
+            bool,
+            BlockNumberFor<T>,
+        ),
         /// A milestone has been approved.
         MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, BlockNumberFor<T>),
         /// You have created a vote of no confidence.
@@ -267,16 +271,15 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-
         // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             let key_type_vec = RoundsExpiring::<T>::take(n);
-        
+
             key_type_vec.iter().for_each(|item| {
                 let (project_key, round_type, milestone_key) = item;
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-        
+
                 // Remove the round prevents further voting.
                 Rounds::<T>::remove((project_key, milestone_key), round_type);
                 match round_type {
@@ -284,7 +287,7 @@ pub mod pallet {
                     // Therefore we can remove it on round end.
                     RoundType::VotingRound => {
                         weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
-        
+
                         MilestoneVotes::<T>::remove(project_key, milestone_key);
                         UserHasVoted::<T>::remove((
                             project_key,
@@ -299,7 +302,7 @@ pub mod pallet {
                     }
                 }
             });
-        
+
             weight
         }
     }

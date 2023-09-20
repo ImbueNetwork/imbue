@@ -1,8 +1,13 @@
 use crate::*;
-pub use pallet::*;
 use common_types::CurrencyId;
-use frame_support::{pallet_prelude::*, storage_alias, traits::{Get, OnRuntimeUpgrade}, weights::Weight};
+use frame_support::{
+    pallet_prelude::*,
+    storage_alias,
+    traits::{Get, OnRuntimeUpgrade},
+    weights::Weight,
+};
 use frame_system::pallet_prelude::BlockNumberFor;
+pub use pallet::*;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::Percent;
 use sp_std::convert::TryInto;
@@ -98,16 +103,16 @@ pub mod v2 {
 
     pub struct MigrateToV2<T: Config>(T);
     impl<T: Config> OnRuntimeUpgrade for MigrateToV2<T> {
-		#[cfg(feature = "try-runtime")]
+        #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
             frame_support::ensure!(
                 StorageVersion::<T>::get() == Release::V1,
                 "V1 is required before running V2"
             );
-            
+
             Ok(<Vec<u8> as Default>::default())
         }
-        
+
         fn on_runtime_upgrade() -> Weight {
             let current = Pallet::<T>::current_storage_version();
             let onchain = StorageVersion::<T>::get();
@@ -117,14 +122,14 @@ pub mod v2 {
                 current.put::<Pallet<T>>();
 
                 log::warn!("v2 has been successfully applied");
-				T::DbWeight::get().reads_writes(2, 1)
+                T::DbWeight::get().reads_writes(2, 1)
             } else {
                 log::warn!("Skipping v2, should be removed");
-				T::DbWeight::get().reads(1)
+                T::DbWeight::get().reads(1)
             }
         }
 
-		#[cfg(feature = "try-runtime")]
+        #[cfg(feature = "try-runtime")]
         fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
             frame_support::ensure!(
                 Pallet::<T>::current_storage_version() == 2,
@@ -139,9 +144,7 @@ pub mod v2 {
             Ok(())
         }
     }
-
 }
-
 
 #[cfg(test)]
 mod test {
