@@ -30,10 +30,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
-    use sp_arithmetic::{
-        per_things::Percent,
-        traits::{One},
-    };
+    use sp_arithmetic::{per_things::Percent, traits::One};
     use sp_core::H256;
     use sp_runtime::Saturating;
     use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
