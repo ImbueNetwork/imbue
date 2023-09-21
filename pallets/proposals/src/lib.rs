@@ -555,6 +555,7 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
+
 pub trait WeightInfoT {
     fn submit_milestone() -> Weight;
     fn vote_on_milestone() -> Weight;

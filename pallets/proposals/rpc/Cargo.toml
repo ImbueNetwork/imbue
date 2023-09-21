@@ -10,7 +10,6 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 
 jsonrpsee = { version = "0.16.2", features = ["server", "macros"] }
 
-
 # Substrate packages
 sp-api = { default-features = false, version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.43" }
 sp-rpc = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.43" }

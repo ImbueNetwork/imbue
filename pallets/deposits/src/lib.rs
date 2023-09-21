@@ -172,4 +172,6 @@ pub mod pallet {
         amount: BalanceOf<T>,
         currency_id: CurrencyId,
     }
+
 }
+

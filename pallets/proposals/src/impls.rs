@@ -472,7 +472,7 @@ impl<T: Config> Pallet<T> {
     /// Get the individual votes of a project, return an empty map on error.
     pub fn get_project_individuals_votes(
         project_key: ProjectKey,
-    ) -> BTreeMap<MilestoneKey, BTreeMap<AccountIdOf<T>, (bool, BalanceOf<T>)>> {
+    ) -> pallet_proposals_rpc_runtime_api::IndividualVotes<AccountIdOf<T>, BalanceOf<T>> {
         let mut out = BTreeMap::new();
         if let Some(project) = Projects::<T>::get(project_key) {
             project.milestones.keys().for_each(|milestone_key| {
