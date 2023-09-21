@@ -45,7 +45,12 @@ impl<T: Config> Pallet<T> {
         })?;
         UserHasVoted::<T>::remove((project_key, RoundType::VotingRound, milestone_key));
 
-        <MilestoneVotes<T>>::insert(project_key, milestone_key, Vote::default());
+        MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
+            vote_btree.try_insert(milestone_key, Vote::default()).map_err(|_|Error::<T>::TooManyMilestoneVotes)?;
+
+            Ok::<(), DispatchError>(())
+        })?;
+
         Self::deposit_event(Event::MilestoneSubmitted(who, project_key, milestone_key));
         Self::deposit_event(Event::VotingRoundCreated(project_key));
         Ok(().into())
@@ -79,14 +84,14 @@ impl<T: Config> Pallet<T> {
         })?;
 
         let vote: Vote<BalanceOf<T>> =
-            MilestoneVotes::<T>::try_mutate(project_key, milestone_key, |vote| {
-                if let Some(v) = vote {
+            MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
+                if let Some(vote) = vote_btree.get_mut(&milestone_key) {
                     if approve_milestone {
-                        v.yay = v.yay.saturating_add(contribution_amount);
+                        vote.yay = vote.yay.saturating_add(contribution_amount);
                     } else {
-                        v.nay = v.nay.saturating_add(contribution_amount);
+                        vote.nay = vote.nay.saturating_add(contribution_amount);
                     }
-                    Ok::<Vote<BalanceOf<T>>, DispatchError>(v.clone())
+                    Ok::<Vote<BalanceOf<T>>, DispatchError>(vote.clone())
                 } else {
                     Err(Error::<T>::VotingRoundNotStarted.into())
                 }
@@ -102,6 +107,7 @@ impl<T: Config> Pallet<T> {
             user_has_voted_key,
             who.clone(),
         )?;
+
         Self::deposit_event(Event::VoteSubmitted(
             who,
             project_key,

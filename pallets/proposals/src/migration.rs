@@ -346,7 +346,7 @@ pub mod v3 {
         v3::OldMilestoneVotes::<T>::drain().for_each(|(old_key, vote)| {
             *weight += T::DbWeight::get().reads(1);
             let (project_key, milestone_key) = old_key;
-            crate::MilestoneVotes::<T>::insert(project_key, milestone_key, vote);
+            v5::MilestoneVotes::<T>::insert(project_key, milestone_key, vote);
             *weight += T::DbWeight::get().reads_writes(1, 1);
         });
     }
@@ -443,9 +443,9 @@ pub mod v4 {
                 log::warn!("***** project key exists is : {:?}", project_key);
                 for (milestone_key, _) in project.milestones.iter() {
                     *weight = weight.saturating_add(T::DbWeight::get().reads(1));
-                    if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
+                    if v5::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
                         *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                        crate::MilestoneVotes::<T>::remove(project_key, milestone_key);
+                        v5::MilestoneVotes::<T>::remove(project_key, milestone_key);
                     } else {
                         break;
                     }
@@ -495,8 +495,20 @@ pub mod v4 {
 
 pub mod v5 {
     use super::*;
+
     #[storage_alias]
     pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
+
+    #[storage_alias]
+    pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
+        Pallet<T>,
+        Identity,
+        ProjectKey,
+        Identity,
+        MilestoneKey,
+        Vote<BalanceOf<T>>,
+        OptionQuery,
+    >;
 
     #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
     #[repr(u32)]
@@ -509,6 +521,34 @@ pub mod v5 {
         V4,
     }
 
+    fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
+        // Highly in-memory intensive but on the plus side not many reads/writes to db.
+        // I can write a less in memory one if anyone wants using crate::MilestoneVotes::mutate().
+        let mut parent: BTreeMap<ProjectKey, BTreeMap<MilestoneKey, Vote<BalanceOf<T>>>> = Default::default();
+        v5::MilestoneVotes::<T>::drain().for_each(|(project_key, milestone_key, vote)| {
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            if let Some(child) = parent.get_mut(&project_key) {
+                child.insert(milestone_key, vote);
+            } else {
+                let mut child: BTreeMap<MilestoneKey, Vote<BalanceOf<T>>> = Default::default();
+                child.insert(milestone_key, vote);
+                parent.insert(project_key, child);
+            }
+        });
+
+        parent.iter().for_each(|(key, btree)|{
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            if let Ok(bounded_btree) = TryInto::<BoundedBTreeMap<_, _, T::MaxMilestonesPerProject>>::try_into(btree.to_owned()) {
+                crate::MilestoneVotes::<T>::insert(key, bounded_btree);
+            } else {
+                // chill bruh the bound has been violated.
+                // probs wont happen.
+            }
+        })
+    } 
+
+    /// 1: Custom StorageVersion is removed, macro StorageVersion is used: https://github.com/ImbueNetwork/imbue/issues/178
+    /// 2: MilestoneVotes migration to use a BTree instead of a double map: https://github.com/ImbueNetwork/imbue/issues/213
     pub struct MigrateToV5<T>(sp_std::marker::PhantomData<T>);
     impl<T: Config> OnRuntimeUpgrade for MigrateToV5<T> {
         #[cfg(feature = "try-runtime")]
@@ -530,8 +570,12 @@ pub mod v5 {
             let onchain = StorageVersion::<T>::get();
 
             if current == 5 && onchain == Release::V4 {
+                // 1
                 StorageVersion::<T>::kill();
                 current.put::<Pallet<T>>();
+
+                // 2
+                migrate_milestone_votes::<T>(&mut weight);
 
                 log::warn!("v5 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
@@ -841,8 +885,8 @@ mod test {
                 v3::OldMilestoneVotes::<Test>::get((10, 10)),
                 Default::default()
             );
-            assert!(crate::MilestoneVotes::<Test>::contains_key(10, 10));
-            let v = crate::MilestoneVotes::<Test>::get(10, 10).unwrap();
+            assert!(v5::MilestoneVotes::<Test>::contains_key(10, 10));
+            let v = v5::MilestoneVotes::<Test>::get(10, 10).unwrap();
             assert_eq!(v.yay, 100_000);
             assert_eq!(v.nay, 50_000);
             assert!(!v.is_approved);
@@ -873,8 +917,8 @@ mod test {
             // insert a fake round to be mutated.
             v4::V4Rounds::<Test>::insert(project_key, crate::RoundType::VotingRound, expiry_block);
             crate::RoundsExpiring::<Test>::insert(expiry_block, rounds_expiring);
-            crate::MilestoneVotes::<Test>::insert(project_key, milestone_key, Vote::default());
-            crate::MilestoneVotes::<Test>::insert(project_key, milestone_key + 1, Vote::default());
+            v5::MilestoneVotes::<Test>::insert(project_key, milestone_key, Vote::default());
+            v5::MilestoneVotes::<Test>::insert(project_key, milestone_key + 1, Vote::default());
 
             let mut weight = <Weight as Default>::default();
             v4::migrate_votes::<Test>(&mut weight);
@@ -887,8 +931,8 @@ mod test {
                 crate::RoundType::VotingRound
             ));
             assert!(crate::RoundsExpiring::<Test>::get(expiry_block).is_empty());
-            assert!(crate::MilestoneVotes::<Test>::get(project_key, milestone_key).is_none());
-            assert!(crate::MilestoneVotes::<Test>::get(project_key, milestone_key + 1).is_none());
+            assert!(v5::MilestoneVotes::<Test>::get(project_key, milestone_key).is_none());
+            assert!(v5::MilestoneVotes::<Test>::get(project_key, milestone_key + 1).is_none());
         })
     }
 }

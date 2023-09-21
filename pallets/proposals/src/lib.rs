@@ -122,14 +122,12 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
-    pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
+    pub(super) type MilestoneVotes<T: Config> = StorageMap<
         _,
         Identity,
         ProjectKey,
-        Identity,
-        MilestoneKey,
-        Vote<BalanceOf<T>>,
-        OptionQuery,
+        BoundedBTreeMap<MilestoneKey, Vote<BalanceOf<T>>, T::MaxMilestonesPerProject>,
+        ValueQuery,
     >;
 
     #[pallet::storage]
@@ -267,6 +265,8 @@ pub mod pallet {
         TooManyMilestones,
         /// There are too many projects for a given account
         TooManyProjects,
+        /// There are too many milestone votes, this generally shouldnt be hit.
+        TooManyMilestoneVotes,
     }
 
     #[pallet::hooks]
@@ -288,7 +288,10 @@ pub mod pallet {
                     RoundType::VotingRound => {
                         weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
 
-                        MilestoneVotes::<T>::remove(project_key, milestone_key);
+                        MilestoneVotes::<T>::mutate(project_key, |vote_btree|{
+                            vote_btree.remove(&milestone_key);
+                        });
+
                         UserHasVoted::<T>::remove((
                             project_key,
                             RoundType::VotingRound,
@@ -306,7 +309,7 @@ pub mod pallet {
             weight
         }
     }
-/*  */
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Submit a milestones to be voted on.

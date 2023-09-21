@@ -86,7 +86,8 @@ fn submit_milestone_creates_non_bias_vote() {
             project_key,
             1
         ));
-        let created_vote = MilestoneVotes::<Test>::get(project_key, 1).expect("should exist");
+        let total_vote = MilestoneVotes::<Test>::get(project_key);
+        let created_vote = total_vote.get(&1).expect("should exist");
 
         assert_eq!(created_vote.nay, 0, "initial vote should be default");
         assert_eq!(created_vote.yay, 0, "initial vote should be default");
@@ -124,11 +125,11 @@ fn submit_milestone_can_resubmit_during_voting_round() {
             0usize,
             "User votes should be defaulted on resubmission."
         );
-        let group_vote = MilestoneVotes::<Test>::get(project_key, milestone_key)
+        let group_vote = MilestoneVotes::<Test>::get(project_key).get(&milestone_key)
             .expect("group vote should exist.");
         assert_eq!(
             group_vote,
-            Default::default(),
+            &<Vote<Balance> as Default>::default(),
             "Group vote should have defaulted on resubmission"
         );
     });
@@ -332,12 +333,12 @@ fn users_can_submit_multiple_milestones_and_vote_independantly() {
             true
         ));
         let vote_0 =
-            MilestoneVotes::<Test>::get(project_key, milestone_key_0).expect("vote should exist");
+            MilestoneVotes::<Test>::get(project_key).get(&milestone_key_0).expect("vote should exist");
         assert!(vote_0.yay == 100_000u64);
         assert!(vote_0.nay == 0u64);
 
         let vote_1 =
-            MilestoneVotes::<Test>::get(project_key, milestone_key_1).expect("vote should exist");
+            MilestoneVotes::<Test>::get(project_key).get(&milestone_key_1).expect("vote should exist");
         assert!(vote_1.yay == 100_000u64);
         assert!(vote_1.nay == 0u64);
     });
@@ -491,7 +492,7 @@ fn vote_on_milestone_actually_adds_to_vote() {
             true
         ));
         let vote =
-            MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
+            MilestoneVotes::<Test>::get(project_key).get(&milestone_key).expect("vote should exist");
         assert!(vote.yay == 100_000u64);
         assert!(vote.nay == 0u64);
         assert_ok!(Proposals::vote_on_milestone(
@@ -501,7 +502,7 @@ fn vote_on_milestone_actually_adds_to_vote() {
             false
         ));
         let vote =
-            MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
+            MilestoneVotes::<Test>::get(project_key).get(&milestone_key).expect("vote should exist");
         assert!(vote.yay == 100_000u64);
         assert!(vote.nay == 100_000u64);
     });
