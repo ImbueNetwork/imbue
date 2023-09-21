@@ -7252,6 +7252,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "jsonrpsee",
+ "pallet-proposals",
  "pallet-proposals-rpc-runtime-api",
  "parity-scale-codec 3.6.2",
  "sp-api",
@@ -7266,9 +7267,11 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-proposals",
  "parity-scale-codec 3.6.2",
  "sp-api",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

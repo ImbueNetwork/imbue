@@ -5,19 +5,28 @@ use jsonrpsee::{
     types::error::{CallError, ErrorObject},
 };
 pub use pallet_proposals_rpc_runtime_api::ProposalsApi as ProposalsRuntimeApi;
+use pallet_proposals::MilestoneKey;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::traits::Block as BlockT;
+use frame_support::{BoundedBTreeMap, pallet_prelude::Get, Serialize};
+use sp_api::Decode;
+
 use std::fmt::Display;
 use std::sync::Arc;
 
+#[derive(Serialize, Deserialize)]
+type IndividualVotes<AccountId, Balance, MaxContributors, MaxMilestones> = BoundedBTreeMap<u32, BoundedBTreeMap<AccountId, (bool, Balance), MaxContributors>, MaxMilestones>
+
 #[rpc(client, server)]
-pub trait ProposalsApi<BlockHash, AccountId, Balance> {
+pub trait ProposalsApi<BlockHash, AccountId, Balance, MaxMilestones: Get<u32>, MaxContributors: Get<u32>> {
+
     #[method(name = "proposals_getProjectKitty")]
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId>;
     #[method(name = "proposals_getProjectIndividualVotes")]
     fn project_individuals_votes(
+        &self,
         project_id: u32,
-    ) -> BTreeMap<MilestoneKey, BTreeMap<AccountId, (bool, Balance)>>;
+    ) -> RpcResult<IndividualVotes<AccountId, Balance, MaxContributors, MaxMilestones>>;
 }
 
 pub struct Proposals<C, B> {
@@ -52,15 +61,18 @@ impl From<Error> for i32 {
     }
 }
 
-impl<C, B, AccountId, Balance> ProposalsApiServer<<B as BlockT>::Hash, AccountId, Balance>
+impl<C, B, AccountId, Balance, MilestoneBound, ContributorBound> ProposalsApiServer<<B as BlockT>::Hash, AccountId, Balance, MilestoneBound, ContributorBound>
     for Proposals<C, B>
 where
     C: sp_api::ProvideRuntimeApi<B>,
     C: HeaderBackend<B>,
     C: Send + Sync + 'static,
-    C::Api: ProposalsRuntimeApi<B, AccountId, Balance>,
+    C::Api: ProposalsRuntimeApi<B, AccountId, Balance, MilestoneBound, ContributorBound>,
     B: BlockT,
     AccountId: Clone + Display + Codec + Send + 'static,
+    MilestoneBound: Get<u32>,
+    ContributorBound: Get<u32>,
+    BoundedBTreeMap<u32, BoundedBTreeMap<AccountId, (bool, Balance), ContributorBound>, MilestoneBound>: Decode + Serialize
 {
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId> {
         let api = self.client.runtime_api();
@@ -69,7 +81,7 @@ where
         api.get_project_account_by_id(at, project_id)
             .map_err(runtime_error_into_rpc_err)
     }
-    fn project_individuals_votes(&self, project_id: u32) -> RpcResult<AccountId> {
+    fn project_individuals_votes(&self, project_id: u32) -> RpcResult<BoundedBTreeMap<u32, BoundedBTreeMap<AccountId, (bool, Balance), ContributorBound>, MilestoneBound>> {
         let api = self.client.runtime_api();
         let at = self.client.info().best_hash;
 
