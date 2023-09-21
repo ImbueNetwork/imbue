@@ -1,13 +1,17 @@
 use crate::*;
 use common_types::CurrencyId;
-use frame_support::{pallet_prelude::*, storage_alias, traits::Get, weights::Weight};
+use frame_support::{
+    pallet_prelude::*,
+    storage_alias,
+    traits::{Get, OnRuntimeUpgrade},
+    weights::Weight,
+};
+use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::Percent;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
-
-type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
 mod v0 {
     use super::*;
@@ -37,16 +41,17 @@ mod v0 {
 // Migrate the proposed milestones to use Percent over a u32.
 // Add a deposit id to BriefData.
 // Should be run with pallet_proposals::migrations::v3
+#[allow(dead_code)]
 pub(crate) mod v1 {
     use super::*;
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
-        if crate::StorageVersion::<T>::get() == Release::V0 {
+        if v2::StorageVersion::<T>::get() == v2::Release::V0 {
             crate::Briefs::<T>::translate(|_, brief: v0::BriefDataV0<T>| {
                 *weight += T::DbWeight::get().reads_writes(2, 1);
                 let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief
                     .milestones
                     .iter()
-                    .map(|ms| {
+                    .filter_map(|ms| {
                         let convert: Result<u8, _> = ms.percentage_to_unlock.try_into();
                         if let Ok(n) = convert {
                             Some(ProposedMilestone {
@@ -56,7 +61,6 @@ pub(crate) mod v1 {
                             None
                         }
                     })
-                    .flatten()
                     .collect::<Vec<ProposedMilestone>>()
                     .try_into();
 
@@ -79,9 +83,69 @@ pub(crate) mod v1 {
                 }
             })
         }
-        crate::StorageVersion::<T>::put(Release::V1)
+        v2::StorageVersion::<T>::put(v2::Release::V1)
     }
 }
+
+pub mod v2 {
+    use super::*;
+
+    #[storage_alias]
+    pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
+
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        #[default]
+        V1,
+    }
+
+    pub struct MigrateToV2<T: Config>(T);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV2<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+            frame_support::ensure!(
+                StorageVersion::<T>::get() == Release::V1,
+                "V1 is required before running V2"
+            );
+
+            Ok(<Vec<u8> as Default>::default())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let current = Pallet::<T>::current_storage_version();
+            let onchain = StorageVersion::<T>::get();
+
+            if current == 2 && onchain == Release::V1 {
+                StorageVersion::<T>::kill();
+                current.put::<Pallet<T>>();
+
+                log::warn!("v2 has been successfully applied");
+                T::DbWeight::get().reads_writes(2, 1)
+            } else {
+                log::warn!("Skipping v2, should be removed");
+                T::DbWeight::get().reads(1)
+            }
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+            frame_support::ensure!(
+                Pallet::<T>::current_storage_version() == 2,
+                "v2 has not been applied"
+            );
+
+            ensure!(
+                !StorageVersion::<T>::exists(),
+                "old storage version has not been removed."
+            );
+
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -92,6 +156,7 @@ mod test {
     #[test]
     fn migrate_v0_to_v1() {
         build_test_externality().execute_with(|| {
+            v2::StorageVersion::<Test>::put(v2::Release::V0);
             let milestones: BoundedVec<
                 v0::ProposedMilestoneV0,
                 <Test as Config>::MaxMilestonesPerBrief,

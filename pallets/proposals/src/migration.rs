@@ -1,6 +1,10 @@
 use crate::*;
-use frame_support::{pallet_prelude::OptionQuery, storage_alias, traits::Get, weights::Weight};
+use frame_support::traits::OnRuntimeUpgrade;
+use frame_support::*;
+
+use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
+
 pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 
 #[allow(unused)]
@@ -113,7 +117,7 @@ mod v1 {
             let migrated_project: ProjectV1<
                 T::AccountId,
                 BalanceOf<T>,
-                T::BlockNumber,
+                BlockNumberFor<T>,
                 TimestampOf<T>,
             > = ProjectV1 {
                 name: project.name,
@@ -385,7 +389,7 @@ pub mod v3 {
                     round.project_keys.iter().for_each(|k| {
                         // Insert per project_key
                         *weight += T::DbWeight::get().reads_writes(1, 1);
-                        Rounds::<T>::insert(k, round.round_type.into_new(), round.end);
+                        v4::V4Rounds::<T>::insert(k, round.round_type.into_new(), round.end);
                     })
                 }
             }
@@ -405,10 +409,165 @@ pub mod v3 {
     }
 }
 
+pub mod v4 {
+    use super::*;
+    #[storage_alias]
+    pub type V4Rounds<T: Config> = StorageDoubleMap<
+        crate::Pallet<T>,
+        Blake2_128Concat,
+        ProjectKey,
+        Blake2_128Concat,
+        crate::RoundType,
+        BlockNumberFor<T>,
+        OptionQuery,
+    >;
+
+    // Essentially remove all votes that currenctly exist and force a resubmission of milestones.
+    pub fn migrate_votes<T: Config>(weight: &mut Weight) {
+        log::warn!("***** starting migration in fn");
+        log::warn!(
+            "***** V4 Rounds count is : {:?}",
+            V4Rounds::<T>::iter_values().count()
+        );
+
+        V4Rounds::<T>::drain().for_each(|(project_key, _, block_number)| {
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+
+            log::warn!("***** project key is : {:?}", project_key);
+
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            crate::RoundsExpiring::<T>::remove(block_number);
+
+            *weight = weight.saturating_add(T::DbWeight::get().reads(1));
+            if let Some(project) = crate::Projects::<T>::get(project_key) {
+                log::warn!("***** project key exists is : {:?}", project_key);
+                for (milestone_key, _) in project.milestones.iter() {
+                    *weight = weight.saturating_add(T::DbWeight::get().reads(1));
+                    if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
+                        *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                        crate::MilestoneVotes::<T>::remove(project_key, milestone_key);
+                    } else {
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    pub struct MigrateToV4<T>(sp_std::marker::PhantomData<T>);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV4<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
+            log::info!(target: "pallet-proposals", "Running pre_upgrade()");
+            ensure!(
+                v5::StorageVersion::<T>::get() == v5::Release::V3,
+                "v3 is required to run this migration."
+            );
+            Ok(Vec::new())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            log::info!("****** STARTING MIGRATION *****");
+            log::warn!("****** STARTING MIGRATION *****");
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+
+            if v5::StorageVersion::<T>::get() == v5::Release::V3 {
+                crate::migration::v4::migrate_votes::<T>(&mut weight);
+                v5::StorageVersion::<T>::put(v5::Release::V4);
+            } else {
+                log::warn!("skipping pallet-proposals v4 migration, should be removed");
+            }
+            log::warn!("****** ENDING MIGRATION *****");
+            weight
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
+            log::info!(target:  "pallet-proposals", "Running post_upgrade()");
+            ensure!(
+                v5::StorageVersion::<T>::get() == v5::Release::V4,
+                "Storage version should be V4 after the migration"
+            );
+            Ok(())
+        }
+    }
+}
+
+pub mod v5 {
+    use super::*;
+    #[storage_alias]
+    pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
+
+    #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+        V2,
+        #[default]
+        V3,
+        V4,
+    }
+
+    pub struct MigrateToV5<T>(sp_std::marker::PhantomData<T>);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV5<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
+            log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
+            ensure!(
+                StorageVersion::<T>::get() == Release::V4,
+                "Required v4 before upgrading to v5"
+            );
+            Ok(Vec::new())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            log::warn!("****** STARTING MIGRATION *****");
+            log::warn!("****** STARTING MIGRATION *****");
+
+            let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
+            let onchain = StorageVersion::<T>::get();
+
+            if current == 5 && onchain == Release::V4 {
+                StorageVersion::<T>::kill();
+                current.put::<Pallet<T>>();
+
+                log::warn!("v5 has been successfully applied");
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
+            } else {
+                log::warn!("Skipping v5, should be removed from Executive");
+                weight = weight.saturating_add(T::DbWeight::get().reads(1));
+            }
+
+            log::warn!("****** ENDING MIGRATION *****");
+            weight
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
+            log::warn!( target:  "pallet-proposals", "Running post_upgrade()");
+
+            ensure!(
+                !StorageVersion::<T>::exists(),
+                "Old storage version storage type should have been removed."
+            );
+
+            ensure!(
+                Pallet::<T>::current_storage_version() == 5,
+                "Storage version should be v5 after the migration"
+            );
+
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use mock::*;
+    use test_utils::*;
 
     use v0::{ContributionV0, MilestoneV0, ProjectV0};
 
@@ -607,7 +766,7 @@ mod test {
             let project = v2::ProjectV2 {
                 agreement_hash: Default::default(),
                 milestones: old_milestones,
-                contributions: contributions,
+                contributions,
                 currency_id: CurrencyId::Native,
                 required_funds: 1_000_000,
                 withdrawn_funds: 0,
@@ -691,9 +850,45 @@ mod test {
             // #5
             assert!(OldRounds::<Test>::get(0).is_none());
             [1, 2, 3].iter().for_each(|k| {
-                let end = crate::Rounds::<Test>::get(k, crate::RoundType::VotingRound).unwrap();
+                let end = v4::V4Rounds::<Test>::get(k, crate::RoundType::VotingRound).unwrap();
                 assert_eq!(end, end_block_number);
             });
+        })
+    }
+
+    #[test]
+    fn migrate_v3_to_v4() {
+        build_test_externality().execute_with(|| {
+            let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+            let prop_milestones = get_milestones(10);
+            let project_key =
+                create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+            let milestone_key: MilestoneKey = 0;
+            let expiry_block: BlockNumber = 10;
+            let rounds_expiring: BoundedProjectKeysPerBlock<Test> =
+                vec![(project_key, RoundType::VotingRound, milestone_key)]
+                    .try_into()
+                    .unwrap();
+
+            // insert a fake round to be mutated.
+            v4::V4Rounds::<Test>::insert(project_key, crate::RoundType::VotingRound, expiry_block);
+            crate::RoundsExpiring::<Test>::insert(expiry_block, rounds_expiring);
+            crate::MilestoneVotes::<Test>::insert(project_key, milestone_key, Vote::default());
+            crate::MilestoneVotes::<Test>::insert(project_key, milestone_key + 1, Vote::default());
+
+            let mut weight = <Weight as Default>::default();
+            v4::migrate_votes::<Test>(&mut weight);
+            // assert that:
+            // 1: the round has been removed (to allow resubmission)
+            // 2: milestone votes have been reset (although resubmission resets this)
+            // 3: the round doesnt try and autocomplete and remove itself inadvertantly. (RoundsExpiring)
+            assert!(!v4::V4Rounds::<Test>::contains_key(
+                project_key,
+                crate::RoundType::VotingRound
+            ));
+            assert!(crate::RoundsExpiring::<Test>::get(expiry_block).is_empty());
+            assert!(crate::MilestoneVotes::<Test>::get(project_key, milestone_key).is_none());
+            assert!(crate::MilestoneVotes::<Test>::get(project_key, milestone_key + 1).is_none());
         })
     }
 }

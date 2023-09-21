@@ -89,3 +89,9 @@ pub trait TokenMetadata {
 
     fn decimals(&self) -> u8;
 }
+
+/// Fallible conversion trait returning an [Option]. Generic over both source and destination types.
+pub trait MaybeConvert<A, B> {
+    /// Attempt to make conversion.
+    fn maybe_convert(a: A) -> Option<B>;
+}

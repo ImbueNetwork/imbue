@@ -20,7 +20,7 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
-mod migrations;
+pub mod migrations;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -61,7 +61,10 @@ pub mod pallet {
 
     pub type BriefHash = H256;
 
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -97,22 +100,6 @@ pub mod pallet {
     #[pallet::getter(fn brief_contributions)]
     pub type BriefContributions<T> =
         StorageMap<_, Blake2_128Concat, BriefHash, BoundedBriefContributions<T>, ValueQuery>;
-
-    #[pallet::storage]
-    pub type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
-
-    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
-    #[repr(u32)]
-    pub enum Release {
-        V0,
-        V1,
-    }
-
-    impl Default for Release {
-        fn default() -> Release {
-            Release::V0
-        }
-    }
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -162,19 +149,11 @@ pub mod pallet {
         MilestonesTotalPercentageMustEqual100,
     }
 
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_runtime_upgrade() -> Weight {
-            let mut weight: Weight = Zero::zero();
-            crate::migrations::v1::migrate_to_v1::<T>(&mut weight);
-            weight
-        }
-    }
-
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Create a brief to be funded or amended.
         /// In the current state the applicant must be approved.
+        #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::create_brief())]
         pub fn create_brief(
@@ -344,7 +323,7 @@ pub mod pallet {
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
             let contributions = BriefContributions::<T>::get(brief_id);
             for (who, c) in contributions.iter() {
-                <T as Config>::RMultiCurrency::unreserve(brief.currency_id, &who, c.value);
+                <T as Config>::RMultiCurrency::unreserve(brief.currency_id, who, c.value);
             }
 
             BriefContributions::<T>::remove(brief_id);

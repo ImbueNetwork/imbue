@@ -15,12 +15,7 @@ targets = ['x86_64-unknown-linux-gnu']
 [[bin]]
 name = 'imbue'
 
-[features]
-default = []
-runtime-benchmarks = [
-    'polkadot-cli/runtime-benchmarks',
-	'imbue-kusama-runtime/runtime-benchmarks',
-]
+
 
 [dependencies]
 async-trait = "0.1.57"
@@ -78,6 +73,7 @@ sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = 
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 substrate-state-trie-migration-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", optional = true , branch = "polkadot-v0.9.43" }
 
 # RPC related dependencies
 jsonrpsee = { version = "0.16.2", features = ["ws-client"] }
@@ -124,3 +120,22 @@ rand = "0.7.3"
 tempfile = "3.2.0"
 tokio = { version = "1.10.0", features = ["macros"] }
 cargo-llvm-cov = "0.1.13"
+
+[features]
+default = []
+runtime-benchmarks = [
+    "try-runtime-cli/try-runtime",
+    "imbue-kusama-runtime/runtime-benchmarks",
+    "polkadot-cli/runtime-benchmarks",
+]
+try-runtime = [
+	"try-runtime-cli/try-runtime",
+	"imbue-kusama-runtime/try-runtime",
+	"common-runtime/try-runtime",
+	"pallet-collective/try-runtime",
+	"pallet-proposals-rpc/try-runtime",
+	"pallet-xcm/try-runtime",
+	"polkadot-cli/try-runtime",
+	"polkadot-service/try-runtime",
+	"sp-runtime/try-runtime"
+]

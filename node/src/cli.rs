@@ -2,6 +2,7 @@ use clap::Parser;
 use std::path::PathBuf;
 
 /// Sub-commands supported by the collator.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Parser)]
 pub enum Subcommand {
     /// Export the genesis state of the parachain.
@@ -34,6 +35,14 @@ pub enum Subcommand {
     /// The custom benchmark subcommmand benchmarking runtime pallets.
     #[clap(subcommand)]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+
+    /// Try some testing command against a specified runtime state.
+    #[cfg(feature = "try-runtime")]
+    TryRuntime(try_runtime_cli::TryRuntimeCmd),
+
+    /// Errors since the binary was not build with `--features try-runtime`.
+    #[cfg(not(feature = "try-runtime"))]
+    TryRuntime,
 }
 
 #[derive(Debug, Parser)]
