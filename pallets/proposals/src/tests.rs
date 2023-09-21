@@ -126,8 +126,9 @@ fn submit_milestone_can_resubmit_during_voting_round() {
             "User votes should be defaulted on resubmission."
         );
         let total_vote = MilestoneVotes::<Test>::get(project_key);
-        
-        let group_vote = total_vote.get(&milestone_key)
+
+        let group_vote = total_vote
+            .get(&milestone_key)
             .expect("group vote should exist.");
         assert_eq!(
             group_vote,
@@ -334,15 +335,18 @@ fn users_can_submit_multiple_milestones_and_vote_independantly() {
             milestone_key_1,
             true
         ));
-        let total_votes =
-            MilestoneVotes::<Test>::get(project_key);
+        let total_votes = MilestoneVotes::<Test>::get(project_key);
 
-        let vote_0 = total_votes.get(&milestone_key_0).expect("vote 0 should exist");
+        let vote_0 = total_votes
+            .get(&milestone_key_0)
+            .expect("vote 0 should exist");
 
         assert!(vote_0.yay == 100_000u64);
         assert!(vote_0.nay == 0u64);
 
-        let vote_1 = total_votes.get(&milestone_key_1).expect("vote 1 should exist");
+        let vote_1 = total_votes
+            .get(&milestone_key_1)
+            .expect("vote 1 should exist");
         assert!(vote_1.yay == 100_000u64);
         assert!(vote_1.nay == 0u64);
     });
@@ -403,8 +407,6 @@ fn vote_on_milestone_after_round_end_fails() {
         );
     });
 }
-
-
 
 #[test]
 fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone() {

@@ -46,7 +46,9 @@ impl<T: Config> Pallet<T> {
         UserHasVoted::<T>::remove((project_key, RoundType::VotingRound, milestone_key));
 
         MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
-            vote_btree.try_insert(milestone_key, Vote::default()).map_err(|_|Error::<T>::TooManyMilestoneVotes)?;
+            vote_btree
+                .try_insert(milestone_key, Vote::default())
+                .map_err(|_| Error::<T>::TooManyMilestoneVotes)?;
 
             Ok::<(), DispatchError>(())
         })?;
@@ -467,18 +469,20 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-
-    /// Get the individual votes of a project, return an empty map on error. 
-    pub fn get_project_individuals_votes(project_key: ProjectKey) -> BTreeMap<MilestoneKey, BTreeMap<AccountIdOf<T>, (bool, BalanceOf<T>)>> {
+    /// Get the individual votes of a project, return an empty map on error.
+    pub fn get_project_individuals_votes(
+        project_key: ProjectKey,
+    ) -> BTreeMap<MilestoneKey, BTreeMap<AccountIdOf<T>, (bool, BalanceOf<T>)>> {
         let mut out = BTreeMap::new();
         if let Some(project) = Projects::<T>::get(project_key) {
             project.milestones.keys().for_each(|milestone_key| {
-                let user_votes = UserHasVoted::<T>::get((project_key, RoundType::VotingRound, milestone_key));
-                let mut inner: BTreeMap<AccountIdOf<T>, (bool, BalanceOf<T>)> = BTreeMap::new(); 
+                let user_votes =
+                    UserHasVoted::<T>::get((project_key, RoundType::VotingRound, milestone_key));
+                let mut inner: BTreeMap<AccountIdOf<T>, (bool, BalanceOf<T>)> = BTreeMap::new();
                 user_votes.into_iter().for_each(|(acc, boolean_vote)| {
                     match project.contributions.get(&acc) {
                         Some(c) => inner.insert(acc, (boolean_vote, c.value)),
-                        None => inner.insert(acc, (boolean_vote, Zero::zero()))
+                        None => inner.insert(acc, (boolean_vote, Zero::zero())),
                     };
                 });
                 out.insert(milestone_key.to_owned(), inner);
@@ -487,6 +491,4 @@ impl<T: Config> Pallet<T> {
 
         out
     }
-
-    pub fn get_project_total_votes(project_key) -> BTreeMap<MilestoneKey, Vote<BalanceOf<T>>>
 }

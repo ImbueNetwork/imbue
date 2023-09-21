@@ -1,5 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-use crate::pallet::{MilestoneKey, };
+use crate::pallet::MilestoneKey;
 
 sp_api::decl_runtime_apis! {
     pub trait ProposalsApi<AccountId, Balance> where AccountId: codec::Codec {

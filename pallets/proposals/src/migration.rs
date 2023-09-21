@@ -524,7 +524,8 @@ pub mod v5 {
     fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
         // Highly in-memory intensive but on the plus side not many reads/writes to db.
         // I can write a less in memory one if anyone wants using crate::MilestoneVotes::mutate().
-        let mut parent: BTreeMap<ProjectKey, BTreeMap<MilestoneKey, Vote<BalanceOf<T>>>> = Default::default();
+        let mut parent: BTreeMap<ProjectKey, BTreeMap<MilestoneKey, Vote<BalanceOf<T>>>> =
+            Default::default();
         v5::MilestoneVotes::<T>::drain().for_each(|(project_key, milestone_key, vote)| {
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             if let Some(child) = parent.get_mut(&project_key) {
@@ -536,16 +537,20 @@ pub mod v5 {
             }
         });
 
-        parent.iter().for_each(|(key, btree)|{
+        parent.iter().for_each(|(key, btree)| {
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-            if let Ok(bounded_btree) = TryInto::<BoundedBTreeMap<_, _, T::MaxMilestonesPerProject>>::try_into(btree.to_owned()) {
+            if let Ok(bounded_btree) =
+                TryInto::<BoundedBTreeMap<_, _, T::MaxMilestonesPerProject>>::try_into(
+                    btree.to_owned(),
+                )
+            {
                 crate::MilestoneVotes::<T>::insert(key, bounded_btree);
             } else {
                 // chill bruh the bound has been violated.
                 // probs wont happen.
             }
         })
-    } 
+    }
 
     /// 1: Custom StorageVersion is removed, macro StorageVersion is used: https://github.com/ImbueNetwork/imbue/issues/178
     /// 2: MilestoneVotes migration to use a BTree instead of a double map: https://github.com/ImbueNetwork/imbue/issues/213

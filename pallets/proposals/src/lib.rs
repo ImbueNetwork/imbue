@@ -288,7 +288,7 @@ pub mod pallet {
                     RoundType::VotingRound => {
                         weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
 
-                        MilestoneVotes::<T>::mutate(project_key, |vote_btree|{
+                        MilestoneVotes::<T>::mutate(project_key, |vote_btree| {
                             vote_btree.remove(&milestone_key);
                         });
 
@@ -554,7 +554,6 @@ pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,
 }
-
 
 pub trait WeightInfoT {
     fn submit_milestone() -> Weight;
