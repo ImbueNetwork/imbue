@@ -487,4 +487,6 @@ impl<T: Config> Pallet<T> {
 
         out
     }
+
+    pub fn get_project_total_votes(project_key) -> BTreeMap<MilestoneKey, Vote<BalanceOf<T>>>
 }

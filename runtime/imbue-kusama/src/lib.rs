@@ -1162,9 +1162,6 @@ impl_runtime_apis! {
         fn get_project_individuals_votes(project_id: u32) -> BTreeMap<MilestoneKey, BTreeMap<AccountId, (bool, Balance)>> {
             ImbueProposals::get_project_individuals_votes(project_key)
         }
-        fn get_project_total_votes(project_id: u32) -> BTreeMap<MilestoneKey, Vote<Balance>> {
-            ImbueProposals::get_project_total_votes(project_key)
-        }
     }
 
 

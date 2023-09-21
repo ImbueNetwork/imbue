@@ -16,8 +16,6 @@ pub trait ProposalsApi<BlockHash, AccountId, Balance> {
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId>;
     #[method(name = "proposals_getProjectIndividualVotes")]
     fn project_individuals_votes(project_id: u32) -> BTreeMap<MilestoneKey, BTreeMap<AccountId, (bool, Balance)>>;
-    #[method(name = "proposals_getProjectTotalVotes")]
-    fn project_total_votes(project_id: u32) -> BTreeMap<MilestoneKey, Vote<Balance>>;
 }
 
 pub struct Proposals<C, B> {
@@ -75,15 +73,6 @@ where
         api.get_project_individuals_votes(at, project_id)
             .map_err(runtime_error_into_rpc_err)
     }
-
-    fn project_total_votes(&self, project_id: u32) -> RpcResult<AccountId> {
-        let api = self.client.runtime_api();
-        let at = self.client.info().best_hash;
-
-        api.get_project_total_votes(at, project_id)
-            .map_err(runtime_error_into_rpc_err)
-    }
-    
 }
 
 /// Converts a runtime trap into an RPC error.
