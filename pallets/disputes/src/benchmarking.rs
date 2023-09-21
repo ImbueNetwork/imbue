@@ -11,7 +11,6 @@ use common_types::CurrencyId;
 
 
 #[benchmarks( where <T as frame_system::Config>::AccountId: AsRef<[u8]>, crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
-#[benchmarks]
 mod benchmarks {
     use super::*;
     #[benchmark]
@@ -22,12 +21,16 @@ mod benchmarks {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![alice, bob]);
         let specifics = get_specifics::<Test>(vec![0, 1]);
-        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
-            dispute_key,
-            alice,
-            jury,
-            specifics,
-        ));
+        #[block] 
+        {
+            <PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+                dispute_key,
+                alice,
+                jury,
+                specifics,
+            );
+        }
+        
         assert!(PalletDisputes::disputes(dispute_key).is_some());
         assert_eq!(1, PalletDisputes::disputes(dispute_key).iter().count());
     }
