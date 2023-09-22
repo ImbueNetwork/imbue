@@ -73,6 +73,38 @@ fn raise_dispute_assert_event() {
     });
 }
 
+
+///testing when trying to insert more than max number of disputes allowed in a block
+#[test]
+fn raise_dispute_assert_event_too_many_disputes() {
+    new_test_ext().execute_with(|| {
+        let dispute_key = 10;
+        (0..=1000).for_each(|i| {
+            let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
+            let specifics = get_specifics::<Test>(vec![0, 1]);
+            if i != 1000 {
+                assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            i,
+            *ALICE,
+            jury,
+            specifics,
+              ));
+                System::assert_last_event(RuntimeEvent::PalletDisputes(
+                    Event::<Test>::DisputeRaised { dispute_key: i },
+                ));
+            } else {
+                let actual_result = <PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+                    i,
+                    *ALICE,
+                    jury,
+                    specifics,
+                );
+                assert_noop!(actual_result,Error::<Test>::TooManyDisputesThisBlock);
+            }
+        });
+    });
+}
+
 #[test]
 fn raise_dispute_already_exists() {
     new_test_ext().execute_with(|| {
@@ -382,14 +414,14 @@ fn extend_dispute_works_assert_state() {
         ));
         let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
         assert!(!d.is_extended);
-        assert_eq!(11,d.expiration);
+        assert_eq!(11, d.expiration);
         assert_ok!(PalletDisputes::extend_dispute(
             RuntimeOrigin::signed(*BOB),
             10
         ));
         let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
         assert!(d.is_extended);
-        assert_eq!(21,d.expiration);
+        assert_eq!(21, d.expiration);
     });
 }
 

@@ -2,11 +2,11 @@
 name = "pallet-disputes"
 version = "0.1.0"
 description = "Disputes pallet for handling the disputes within the imbue ecosystem"
-authors = ["Substrate DevHub <https://github.com/substrate-developer-hub>"]
+authors = ['Imbue <https://github.com/ImbueNetwork>']
 homepage = 'https://github.com/ImbueNetwork/imbue'
 repository = "https://github.com/ImbueNetwork/imbue"
 edition = "2021"
-license = "MIT-0"
+license = 'Apache 2.0'
 publish = false
 
 [package.metadata.docs.rs]

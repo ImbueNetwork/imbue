@@ -158,6 +158,8 @@ pub mod pallet {
                         *dispute_id,
                         result,
                     );
+
+                    Self::deposit_event(Event::<T>::DisputeCompleted { dispute_key: *dispute_id });
                 }
             });
             Weight::default()

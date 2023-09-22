@@ -19,11 +19,11 @@ mod benchmarks {
         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
         let charlie: T::AccountId = create_funded_user::<T>("charlie", 1, 1_000_000_000_000_000_000u128);
         let dispute_key = 10;
-        let jury = get_jury::<Test>(vec![alice, bob]);
-        let specifics = get_specifics::<Test>(vec![0, 1]);
+        let jury = get_jury::<T>(vec![alice, bob]);
+        let specifics = get_specifics::<T>(vec![0, 1]);
         #[block] 
         {
-            <PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            <PalletDisputes<T> as DisputeRaiser<AccountId>>::raise_dispute(
                 dispute_key,
                 alice,
                 jury,
