@@ -1,15 +1,15 @@
 use codec::Codec;
+use frame_support::{pallet_prelude::Get, BoundedBTreeMap, Serialize};
 use jsonrpsee::{
     core::{Error as JsonRpseeError, RpcResult},
     proc_macros::rpc,
     types::error::{CallError, ErrorObject},
 };
-pub use pallet_proposals_rpc_runtime_api::{ProposalsApi as ProposalsRuntimeApi, IndividualVotes};
-use pallet_proposals::MilestoneKey;
+pub use pallet_proposals_rpc_runtime_api::ProposalsApi as ProposalsRuntimeApi;
+use sp_api::Decode;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::traits::Block as BlockT;
-use frame_support::{BoundedBTreeMap, pallet_prelude::Get, Serialize};
-use sp_api::Decode;
+use sp_std::vec::Vec;
 
 use std::fmt::Display;
 use std::sync::Arc;
@@ -17,15 +17,14 @@ use std::sync::Arc;
 // Runtime api return type.
 
 #[rpc(client, server)]
-pub trait ProposalsApi<BlockHash, AccountId: Ord, Balance> {
-
+pub trait ProposalsApi<BlockHash, AccountId: Ord, Balance>
+where
+    AccountId: Ord,
+{
     #[method(name = "proposals_getProjectKitty")]
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId>;
     #[method(name = "proposals_getProjectIndividualVotes")]
-    fn project_individuals_votes(
-        &self,
-        project_id: u32,
-    ) -> RpcResult<IndividualVotes<AccountId, Balance>>;
+    fn project_individuals_votes(&self, project_id: u32) -> RpcResult<Vec<u8>>;
 }
 
 pub struct Proposals<C, B> {
@@ -69,7 +68,6 @@ where
     C::Api: ProposalsRuntimeApi<B, AccountId, Balance>,
     B: BlockT,
     AccountId: Clone + Display + Codec + Send + 'static + Ord,
-    IndividualVotes<AccountId, Balance>: sp_api::Decode + sp_api::Encode
 {
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId> {
         let api = self.client.runtime_api();
@@ -78,7 +76,7 @@ where
         api.get_project_account_by_id(at, project_id)
             .map_err(runtime_error_into_rpc_err)
     }
-    fn project_individuals_votes(&self, project_id: u32) -> RpcResult<IndividualVotes<AccountId, Balance>> {
+    fn project_individuals_votes(&self, project_id: u32) -> RpcResult<Vec<u8>> {
         let api = self.client.runtime_api();
         let at = self.client.info().best_hash;
 

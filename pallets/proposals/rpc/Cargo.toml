@@ -18,7 +18,8 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.43" }
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.43" }
 pallet-proposals-rpc-runtime-api = { default-features = false, path = "./runtime-api" }
-pallet-proposals = {default-features = false, path = "../"}
+sp-std = {default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.43"}
+
 
 [features]
 default = ["std"]

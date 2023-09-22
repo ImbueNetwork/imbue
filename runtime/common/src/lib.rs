@@ -283,6 +283,24 @@ pub mod common_xcm {
     }
 }
 
+pub mod runtime_support {
+    use codec::{Decode, Encode};
+    use frame_support::{pallet_prelude::*, BoundedBTreeMap};
+    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+    pub struct IndividualVotes<
+        AccountId: Ord,
+        Balance,
+        MaxMilestones: Get<u32>,
+        MaxContributions: Get<u32>,
+    > {
+        pub inner: BoundedBTreeMap<
+            u32,
+            BoundedBTreeMap<AccountId, (bool, Balance), MaxContributions>,
+            MaxMilestones,
+        >,
+    }
+}
+
 pub mod storage_deposits {
     #[derive(PartialEq, Eq, Debug, Copy, Clone)]
     pub enum StorageDepositItems {

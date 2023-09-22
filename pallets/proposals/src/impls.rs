@@ -1,4 +1,5 @@
 use crate::*;
+use common_runtime::runtime_support::IndividualVotes;
 use common_types::milestone_origin::FundingType;
 use scale_info::prelude::format;
 use sp_runtime::traits::{Saturating, Zero};
@@ -472,7 +473,12 @@ impl<T: Config> Pallet<T> {
     /// Get the individual votes of a project, return an empty map on error.
     pub fn get_project_individuals_votes(
         project_key: ProjectKey,
-    ) -> pallet_proposals_rpc_runtime_api::IndividualVotes<AccountIdOf<T>, BalanceOf<T>> {
+    ) -> IndividualVotes<
+        AccountIdOf<T>,
+        BalanceOf<T>,
+        T::MaxMilestonesPerProject,
+        T::MaximumContributorsPerProject,
+    > {
         let mut out = BTreeMap::new();
         if let Some(project) = Projects::<T>::get(project_key) {
             project.milestones.keys().for_each(|milestone_key| {
@@ -485,10 +491,26 @@ impl<T: Config> Pallet<T> {
                         None => inner.insert(acc, (boolean_vote, Zero::zero())),
                     };
                 });
-                out.insert(milestone_key.to_owned(), inner);
+                let bounded_inner: BoundedBTreeMap<
+                    AccountIdOf<T>,
+                    (bool, BalanceOf<T>),
+                    T::MaximumContributorsPerProject,
+                > = match inner.try_into() {
+                    Ok(b) => b,
+                    Err(_) => BoundedBTreeMap::new(),
+                };
+                out.insert(milestone_key.to_owned(), bounded_inner);
             })
         }
+        let bounded_out: BoundedBTreeMap<
+            u32,
+            BoundedBTreeMap<AccountIdOf<T>, (bool, BalanceOf<T>), T::MaximumContributorsPerProject>,
+            T::MaxMilestonesPerProject,
+        > = match out.try_into() {
+            Ok(b) => b,
+            Err(_) => BoundedBTreeMap::new(),
+        };
 
-        out
+        IndividualVotes { inner: bounded_out }
     }
 }

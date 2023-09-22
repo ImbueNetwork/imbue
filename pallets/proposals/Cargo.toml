@@ -47,6 +47,7 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 # Local Dependencies
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
+common-runtime = { path = "../../runtime/common", default-features = false }
 pallet-deposits = { path = "../deposits", default-features = false }
 
 [dev-dependencies]

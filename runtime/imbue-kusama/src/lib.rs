@@ -12,7 +12,7 @@ mod sanity;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
-use sp_api::impl_runtime_apis;
+use sp_api::{impl_runtime_apis, Encode};
 use sp_core::OpaqueMetadata;
 
 use common_runtime::storage_deposits::StorageDepositItems;
@@ -1159,8 +1159,9 @@ impl_runtime_apis! {
             ImbueProposals::project_account_id(project_id)
         }
 
-        fn get_project_individuals_votes(project_id: u32) -> pallet_proposals_rpc_runtime_api::IndividualVotes<AccountId, Balance> {
-            ImbueProposals::get_project_individuals_votes(project_id)
+        fn get_project_individuals_votes(project_id: u32) -> Vec<u8> {
+            let individual_votes = ImbueProposals::get_project_individuals_votes(project_id);
+            <common_runtime::runtime_support::IndividualVotes<AccountId, Balance, MaxMilestonesPerProject, MaximumContributorsPerProject> as Encode>::encode(&individual_votes)
         }
 
     }
