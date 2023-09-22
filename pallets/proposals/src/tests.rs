@@ -211,9 +211,9 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
         ));
 
         // Assert that the state is good before auto finalisation
-        let exp_block = Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound)
+        let exp_block = Rounds::<Test>::get((project_key, milestone_key), RoundType::VotingRound)
             .expect("There should be a round here for the project_key");
-        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(
+        assert!(RoundsExpiring::<Test>::get(exp_block).contains(&(
             project_key,
             RoundType::VotingRound,
             milestone_key
@@ -232,10 +232,10 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
         ));
 
         assert!(
-            Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound).is_none()
+            Rounds::<Test>::get((project_key, milestone_key), RoundType::VotingRound).is_none()
         );
         assert_eq!(
-            RoundsExpiring::<Test>::get(&exp_block).len(),
+            RoundsExpiring::<Test>::get(exp_block).len(),
             0,
             "This vec should have been emptied on auto finalisation."
         );
@@ -266,9 +266,9 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
         ));
 
         // Assert that the state is good before auto finalisation
-        let exp_block = Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound)
+        let exp_block = Rounds::<Test>::get((project_key, milestone_key), RoundType::VotingRound)
             .expect("There should be a round here for the project_key");
-        assert!(RoundsExpiring::<Test>::get(&exp_block).contains(&(
+        assert!(RoundsExpiring::<Test>::get(exp_block).contains(&(
             project_key,
             RoundType::VotingRound,
             milestone_key
@@ -287,10 +287,10 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
         ));
 
         assert!(
-            Rounds::<Test>::get(&(project_key, milestone_key), RoundType::VotingRound).is_none()
+            Rounds::<Test>::get((project_key, milestone_key), RoundType::VotingRound).is_none()
         );
         assert_eq!(
-            RoundsExpiring::<Test>::get(&exp_block).len(),
+            RoundsExpiring::<Test>::get(exp_block).len(),
             0,
             "This vec should have been emptied on auto finalisation."
         );

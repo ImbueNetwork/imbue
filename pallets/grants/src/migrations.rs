@@ -1,9 +1,8 @@
 use crate::*;
 use common_types::{CurrencyId, TreasuryOrigin};
-use frame_support::{pallet_prelude::*, storage_alias, weights::Weight};
+use frame_support::{pallet_prelude::*, storage_alias, traits::OnRuntimeUpgrade, weights::Weight};
+use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
-
-type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
 
 #[allow(unused)]
 #[allow(dead_code)]
@@ -59,11 +58,11 @@ mod v1 {
 
     pub fn rococo_migrate_to_v1<T: Config>(weight: &mut Weight) {
         // This is only for rococo so just clear the lot, (there were only 4 at time of writing)
-        if crate::StorageVersion::<T>::get() == Release::V0 {
+        if v3::StorageVersion::<T>::get() == v3::Release::V0 {
             let limit: u32 = 10;
             *weight += T::DbWeight::get().reads_writes(limit.into(), limit.into());
             let _ = v0::PendingGrants::<T>::clear(limit, None);
-            crate::StorageVersion::<T>::put(Release::V1);
+            v3::StorageVersion::<T>::put(v3::Release::V1);
         }
     }
 }
@@ -74,10 +73,70 @@ pub(crate) mod v2 {
     use super::*;
     // We are not storing pending grants anymore and grants are going directly into projects.
     pub fn migrate_to_v2<T: Config>(weight: &mut Weight, limit: u32) {
-        if crate::StorageVersion::<T>::get() == Release::V1 {
+        if v3::StorageVersion::<T>::get() == v3::Release::V1 {
             *weight += T::DbWeight::get().reads_writes(limit.into(), limit.into());
             let _ = v1::PendingGrants::<T>::clear(limit, None);
-            crate::StorageVersion::<T>::put(Release::V2);
+            v3::StorageVersion::<T>::put(v3::Release::V2);
+        }
+    }
+}
+
+pub mod v3 {
+    use super::*;
+
+    #[storage_alias]
+    pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
+
+    #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+        #[default]
+        V2,
+    }
+
+    pub struct MigrateToV3<T: Config>(T);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV3<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+            frame_support::ensure!(
+                StorageVersion::<T>::get() == v3::Release::V2,
+                "V2 is required before running V3"
+            );
+
+            Ok(<Vec<u8> as Default>::default())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let current = Pallet::<T>::current_storage_version();
+            let onchain = StorageVersion::<T>::get();
+
+            if current == 3 && onchain == v3::Release::V2 {
+                StorageVersion::<T>::kill();
+                current.put::<Pallet<T>>();
+
+                log::warn!("v2 has been successfully applied");
+                T::DbWeight::get().reads_writes(2, 1)
+            } else {
+                log::warn!("Skipping v2, should be removed");
+                T::DbWeight::get().reads(1)
+            }
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+            frame_support::ensure!(
+                Pallet::<T>::current_storage_version() == 3,
+                "v2 has not been applied"
+            );
+
+            ensure!(
+                !StorageVersion::<T>::exists(),
+                "old storage version has not been removed."
+            );
+
+            Ok(())
         }
     }
 }
