@@ -432,9 +432,9 @@ pub mod v4 {
             if let Some(project) = crate::Projects::<T>::get(project_key) {
                 for (milestone_key, _) in project.milestones.iter() {
                     *weight = weight.saturating_add(T::DbWeight::get().reads(1));
-                    if crate::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
+                    if v5::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
                         *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                        crate::MilestoneVotes::<T>::remove(project_key, milestone_key);
+                        v5::MilestoneVotes::<T>::remove(project_key, milestone_key);
                     } else {
                         break;
                     }
