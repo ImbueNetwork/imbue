@@ -289,7 +289,7 @@ pub mod pallet {
                         weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
 
                         MilestoneVotes::<T>::mutate(project_key, |vote_btree| {
-                            vote_btree.remove(&milestone_key);
+                            vote_btree.remove(milestone_key);
                         });
 
                         UserHasVoted::<T>::remove((

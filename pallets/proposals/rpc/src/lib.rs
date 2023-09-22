@@ -1,12 +1,12 @@
 use codec::Codec;
-use frame_support::{pallet_prelude::Get, BoundedBTreeMap, Serialize};
+
 use jsonrpsee::{
     core::{Error as JsonRpseeError, RpcResult},
     proc_macros::rpc,
     types::error::{CallError, ErrorObject},
 };
 pub use pallet_proposals_rpc_runtime_api::ProposalsApi as ProposalsRuntimeApi;
-use sp_api::Decode;
+
 use sp_blockchain::HeaderBackend;
 use sp_runtime::traits::Block as BlockT;
 use sp_std::vec::Vec;

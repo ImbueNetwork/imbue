@@ -471,6 +471,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Get the individual votes of a project, return an empty map on error.
+    #[allow(clippy::type_complexity)]
     pub fn get_project_individuals_votes(
         project_key: ProjectKey,
     ) -> IndividualVotes<
