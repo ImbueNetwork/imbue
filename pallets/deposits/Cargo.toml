@@ -2,11 +2,11 @@
 name = "pallet-deposits"
 version = "4.0.0-dev"
 description = "A very simple pallet used to deal with storage deposits of a type."
-authors = ["Imbue Network"]
 homepage = 'https://github.com/ImbueNetwork/imbue'
-repository = "https://github.com/ImbueNetwork/imbue"
-edition = "2021"
-license = 'Apache 2.0'
+authors.workspace = true
+repository.workspace = true
+edition.workspace = true
+license.workspace = true
 publish = false
 
 [package.metadata.docs.rs]
