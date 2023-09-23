@@ -1,12 +1,10 @@
 [package]
 name = "runtime-integration-tests"
 version = "0.1.0"
-authors = ["Imbue <contact@imbue.network>"]
-edition = "2021"
-license = "LGPL-3.0"
-homepage = "https://imbue.network"
-repository = "https://github.com/ImbueNetwork/imbue"
-
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 # Substrate
