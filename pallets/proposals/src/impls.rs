@@ -1,5 +1,4 @@
 use crate::*;
-use common_runtime::runtime_support::IndividualVotes;
 use common_types::milestone_origin::FundingType;
 use scale_info::prelude::format;
 use sp_runtime::traits::{Saturating, Zero};

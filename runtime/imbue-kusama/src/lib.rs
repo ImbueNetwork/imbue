@@ -1161,7 +1161,7 @@ impl_runtime_apis! {
 
         fn get_project_individuals_votes(project_id: u32) -> Vec<u8> {
             let individual_votes = ImbueProposals::get_project_individuals_votes(project_id);
-            <common_runtime::runtime_support::IndividualVotes<AccountId, Balance, MaxMilestonesPerProject, MaximumContributorsPerProject> as Encode>::encode(&individual_votes)
+            <pallet_proposals::IndividualVotes<AccountId, Balance, MaxMilestonesPerProject, MaximumContributorsPerProject> as Encode>::encode(&individual_votes)
         }
 
     }

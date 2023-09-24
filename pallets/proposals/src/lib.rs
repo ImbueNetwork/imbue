@@ -120,6 +120,13 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    pub type IndividualVoteStore<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        ProjectKey,
+        IndividualVotes<T>
+    >
+
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
     pub(super) type MilestoneVotes<T: Config> = StorageMap<
@@ -196,7 +203,7 @@ pub mod pallet {
         VoteSubmitted(
             T::AccountId,
             ProjectKey,
-            MilestoneKey,
+                MilestoneKey,
             bool,
             BlockNumberFor<T>,
         ),
@@ -554,6 +561,20 @@ pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,
 }
+
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+    pub struct IndividualVotes<
+        AccountId: Ord,
+        Balance,
+        MaxMilestones: Get<u32>,
+        MaxContributions: Get<u32>,
+    > {
+        pub inner: BoundedBTreeMap<
+            u32,
+            BoundedBTreeMap<AccountId, (bool, Balance), MaxContributions>,
+            MaxMilestones,
+        >,
+    }
 
 pub trait WeightInfoT {
     fn submit_milestone() -> Weight;
