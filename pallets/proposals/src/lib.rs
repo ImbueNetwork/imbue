@@ -274,6 +274,8 @@ pub mod pallet {
         TooManyProjects,
         /// There are too many milestone votes, this generally shouldnt be hit.
         TooManyMilestoneVotes,
+        /// An internal error, a collection of votes for a milestone has been lost.s
+        IndividualVoteNotFound, 
     }
 
     #[pallet::hooks]
@@ -435,8 +437,12 @@ pub mod pallet {
                 FundingType::Grant(_) => {}
             }
 
+
+            // TODO: this milestone key has no relation to the milestones coming in except the order they come in.
+            // This could be a bug somewhere.
             let mut milestone_key: u32 = 0;
             let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
+            let bounded_milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject> = 
             for milestone in proposed_milestones {
                 let milestone = Milestone {
                     project_key,
@@ -447,8 +453,15 @@ pub mod pallet {
                 milestones
                     .try_insert(milestone_key, milestone)
                     .map_err(|_| Error::<T>::TooManyMilestones)?;
+                
+                bounded_milestone_keys.try_push(milestone_key)
+                .map_err(|_| Error::<T>::TooManyMilestones)?;
+                
                 milestone_key = milestone_key.saturating_add(1);
             }
+
+            let individual_votes = IndividualVotes::new(bounded_milestone_keys)?;
+            IndividualVoteStore::<T>::insert(project_key, individual_votes);
 
             let bounded_contributions: ContributionsFor<T> = contributions
                 .try_into()
@@ -563,18 +576,16 @@ pub struct Whitelist<AccountId, Balance> {
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-    pub struct IndividualVotes<
-        AccountId: Ord,
-        Balance,
-        MaxMilestones: Get<u32>,
-        MaxContributions: Get<u32>,
-    > {
-        pub inner: BoundedBTreeMap<
-            u32,
-            BoundedBTreeMap<AccountId, (bool, Balance), MaxContributions>,
-            MaxMilestones,
-        >,
-    }
+#[scale_info(skip_type_params(T))]
+struct IndividualVotes<T: Config>
+{
+    inner: BoundedBTreeMap<
+        MilestoneKey,
+        BoundedBTreeMap<AccountIdOf<T>, bool, T::MaximumContributorsPerProject>,
+        T::MaxMilestonesPerProject,
+    >,
+    with_mutable_votes: bool,
+}
 
 pub trait WeightInfoT {
     fn submit_milestone() -> Weight;

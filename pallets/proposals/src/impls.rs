@@ -486,10 +486,7 @@ impl<T: Config> Pallet<T> {
                     UserHasVoted::<T>::get((project_key, RoundType::VotingRound, milestone_key));
                 let mut inner: BTreeMap<AccountIdOf<T>, (bool, BalanceOf<T>)> = BTreeMap::new();
                 user_votes.into_iter().for_each(|(acc, boolean_vote)| {
-                    match project.contributions.get(&acc) {
-                        Some(c) => inner.insert(acc, (boolean_vote, c.value)),
-                        None => inner.insert(acc, (boolean_vote, Zero::zero())),
-                    };
+                    inner.insert(acc, boolean_vote)
                 });
                 let bounded_inner: BoundedBTreeMap<
                     AccountIdOf<T>,
@@ -503,8 +500,8 @@ impl<T: Config> Pallet<T> {
             })
         }
         let bounded_out: BoundedBTreeMap<
-            u32,
-            BoundedBTreeMap<AccountIdOf<T>, (bool, BalanceOf<T>), T::MaximumContributorsPerProject>,
+            MilestoneKey,
+            BoundedBTreeMap<AccountIdOf<T>, bool, T::MaximumContributorsPerProject>,
             T::MaxMilestonesPerProject,
         > = match out.try_into() {
             Ok(b) => b,
@@ -512,5 +509,42 @@ impl<T: Config> Pallet<T> {
         };
 
         IndividualVotes { inner: bounded_out }
+    }
+
+    impl<T: Config> IndividualVotes<T>
+    {
+        /// Create a new set of individual votes bound to a set of milestone keys.
+        /// Instantiates the votes as defaults.
+        fn new(milestone_keys: BoundedVec<MilestoneKey, MaxMilestonesPerProject>) -> Self {
+            let outer_votes: BoundedBTreeMap<
+                MilestoneKey,
+                BoundedBTreeMap<AccountIdOf<T>, bool, T::MaximumContributorsPerProject>,
+                T::MaxMilestonesPerProject> = BTreeMap::new();
+            
+            milestones.iter().for_each(|milestone_key|{
+                let inner_votes: BoundedBTreeMap<AccountIdOf<T>, bool, T::MaximumContributorsPerProject> = BoundedBTreeMap::new();
+                outer_votes.try_insert(milestone_key, inner_votes).map_err(|_|Error::<T>::TooManyContributions)?;
+            })
+
+            Self {inner: outer_votes}
+        }
+
+        fn insert_individual_vote(&mut self, milestone_key: MilestoneKey, account_id: AccountIdOf<T>, vote: bool) -> Result<(), DispatchError> {
+            if let Some(votes) = self.get_mut(&milestone_key) {  
+                if let Some(single_vote) =  votes.get_mut(&account_id) {
+                    if self.with_mutable_votes {
+                        votes.insert(account_id, vote);
+                    } else {
+                        return Err(Error::<T>::VotesAreImmutable)
+                    }                    
+                } else {
+                    votes.insert(account_id, vote);
+                }
+            } else {
+                Err(Error::<T>::IndividualVoteNotFound)
+            }
+
+            Ok(())
+        }
     }
 }
