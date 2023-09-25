@@ -120,12 +120,14 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    #[pallet::storage]
     pub type IndividualVoteStore<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
         ProjectKey,
-        IndividualVotes<T>
-    >
+        IndividualVotes<T>,
+        OptionQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
@@ -442,7 +444,8 @@ pub mod pallet {
             // This could be a bug somewhere.
             let mut milestone_key: u32 = 0;
             let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
-            let bounded_milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject> = 
+            let mut bounded_milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject> = BoundedVec::new();
+
             for milestone in proposed_milestones {
                 let milestone = Milestone {
                     project_key,
@@ -458,7 +461,7 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::TooManyMilestones)?;
                 
                 milestone_key = milestone_key.saturating_add(1);
-            }
+            };
 
             let individual_votes = IndividualVotes::new(bounded_milestone_keys)?;
             IndividualVoteStore::<T>::insert(project_key, individual_votes);
@@ -577,7 +580,7 @@ pub struct Whitelist<AccountId, Balance> {
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
-struct IndividualVotes<T: Config>
+pub struct IndividualVotes<T: Config>
 {
     inner: BoundedBTreeMap<
         MilestoneKey,
