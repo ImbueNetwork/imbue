@@ -77,13 +77,12 @@ impl<T: Config> Pallet<T> {
         let now = frame_system::Pallet::<T>::block_number();
         let user_has_voted_key = (project_key, RoundType::VotingRound, milestone_key);
 
-        UserHasVoted::<T>::try_mutate(user_has_voted_key, |votes| {
-            ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
-            votes
-                .try_insert(who.clone(), approve_milestone)
-                .map_err(|_| Error::<T>::Overflow)?;
-            Ok::<(), DispatchError>(())
-        })?;
+        IndividualVoteStore::<T>::try_mutate(project_key, |maybe_individual_votes| {
+            if let Some(individual_votes) = maybe_individual_votes {
+                individual_votes.insert_individual_vote(milestone_key, &who, approve_milestone)?;
+            }
+            Ok::<(), DispatchError>(());
+        });
 
         let vote: Vote<BalanceOf<T>> =
             MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
@@ -98,6 +97,7 @@ impl<T: Config> Pallet<T> {
                     Err(Error::<T>::VotingRoundNotStarted.into())
                 }
             })?;
+        
 
         let funding_threshold: BalanceOf<T> =
             T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
@@ -507,8 +507,9 @@ impl<T: Config> Pallet<T> {
     // }
 }
 
-impl<T: Config> IndividualVotes<T>
+impl<T: Config> ImmutableIndividualVotes<T>
 {
+    // TODO: Test
     /// Create a new set of individual votes bound to a set of milestone keys.
     /// Instantiates the votes as defaults.
     pub(crate) fn new(milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject>) -> Result<Self, DispatchError> {
@@ -525,18 +526,15 @@ impl<T: Config> IndividualVotes<T>
         // Always set as mutable votes for now.
         Ok(Self {
             inner: outer_votes,
-            with_mutable_votes: false,
         })
     }
 
-    pub(crate) fn insert_individual_vote(&mut self, milestone_key: MilestoneKey, account_id: AccountIdOf<T>, vote: bool) -> Result<(), DispatchError> {
+    // TODO: Test
+    /// Insert the vote from an individual on a milestone.
+    pub(crate) fn insert_individual_vote(&mut self, milestone_key: MilestoneKey, account_id: &AccountIdOf<T>, vote: bool) -> Result<(), DispatchError> {
         if let Some(votes) = self.inner.get_mut(&milestone_key) {  
             if let Some(_existing_vote) =  votes.get_mut(&account_id) {
-                if self.with_mutable_votes {
-                    votes.try_insert(account_id, vote).map_err(|_|Error::<T>::TooManyContributions)?;
-                } else {
-                    return Err(Error::<T>::VotesAreImmutable.into())
-                }                    
+                return Err(Error::<T>::VotesAreImmutable.into())
             } else {
                 votes.try_insert(account_id, vote).map_err(|_|Error::<T>::TooManyContributions)?;
             }
@@ -545,5 +543,14 @@ impl<T: Config> IndividualVotes<T>
         }
 
         Ok(())
+    }
+
+    /// Clear the votes for a given milestone.
+    /// Used when a milestone is submitted.
+    /// Skips if the milestone is not found.
+    pub(crate) fn clear_milestone_votes(&mut self, milestone_key: MilestoneKey) {
+        if let Some(btree) = self.inner.get_mut(milestone_key) {
+            btree = Default::default()
+        } 
     }
 }

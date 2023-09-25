@@ -125,7 +125,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         ProjectKey,
-        IndividualVotes<T>,
+        ImmutableIndividualVotes<T>,
         OptionQuery,
     >;
 
@@ -463,7 +463,7 @@ pub mod pallet {
                 milestone_key = milestone_key.saturating_add(1);
             };
 
-            let individual_votes = IndividualVotes::new(bounded_milestone_keys)?;
+            let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys)?;
             IndividualVoteStore::<T>::insert(project_key, individual_votes);
 
             let bounded_contributions: ContributionsFor<T> = contributions
@@ -578,9 +578,11 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
+// TODO: migrate so that current projects contain an individual vote that correctly represents the current state.
+/// Stores the btree for each individual vote.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
-pub struct IndividualVotes<T: Config>
+pub struct ImmutableIndividualVotes<T: Config>
 {
     inner: BoundedBTreeMap<
         MilestoneKey,
