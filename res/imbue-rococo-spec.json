@@ -3,11 +3,10 @@
   "id": "imbue-rococo-dev-testnet",
   "chainType": "Live",
   "bootNodes": [
-    "/ip4/3.15.205.222/tcp/30333/p2p/12D3KooWN6YqZYsyGKUbagdnomGgDAwDaUZjwjc5HM7z47Vua3sA",
-    "/ip4/3.15.205.222/tcp/31333/p2p/12D3KooWBWudxLGQJxURspWLTAZbno3JfMjbVdokDQoprRFdz4Bt",
-    "/ip4/3.15.205.222/tcp/32333/p2p/12D3KooWLHKb4vNFRCj2B998arS852XqprVEmU1xwuv2PibrvFWJ",
-    "/ip4/52.14.196.149/tcp/30333/p2p/12D3KooWS9zjsa3GMzxX3AueGrRZCHvCsSJwVd91r5kHxUgXReww",
-    "/ip4/3.140.84.14/tcp/30333/p2p/12D3KooWQ6vrxiriYMzqxd7RW7BJRmdGheWW7aJ4wN1YHKYu1BJV",
+    "/ip4/35.202.116.137/tcp/30333/p2p/12D3KooWKACbWMmVtJqJqjWCRkYbDmgcMwhJWpdjX5QXLQBTeLLb",
+    "/ip4/35.224.189.112/tcp/30333/p2p/12D3KooWP1m47oWWvCY29V36CHnTMF3KREU1MRZPEBBSqgweRSGm",
+    "/ip4/34.28.204.132/tcp/30333/p2p/12D3KooWBnekDUnzmHaDFrNRVv1cNXzBnfdEjARAUBFuj4SUvk6h",
+    "/ip4/35.225.22.148/tcp/30333/p2p/12D3KooWB9cYv8D6jcg1kW8fiPF1vGPLVQQmWxdpuidF8HD1Dgfk",
     "/ip4/3.18.221.77/tcp/32333/p2p/12D3KooWSmAthU2YayEt2mRmuG3tjScWQsqHoyaCQvgb1z8bi94K"
   ],
   "telemetryEndpoints": [
