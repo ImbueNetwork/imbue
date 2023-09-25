@@ -1,11 +1,10 @@
 [package]
-authors = ['imbue <https://github.com/ImbueNetwork>']
-edition = '2018'
-homepage = 'https://imbue.network'
-license = 'Apache 2.0'
 name = 'imbue-kusama-runtime'
-repository = 'https://github.com/ImbueNetwork/imbue/'
 version = '2.0.0'
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
