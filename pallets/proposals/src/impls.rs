@@ -43,7 +43,14 @@ impl<T: Config> Pallet<T> {
                 .map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
-        UserHasVoted::<T>::remove((project_key, RoundType::VotingRound, milestone_key));
+        IndividualVoteStore::<T>::mutate(|project_key, |maybe_votes| {
+            if let Some(individual_votes) = maybe_votes {
+                individual_votes.clear_milestone_votes(milestone_key);
+            } else {
+                Err(Error::<T>::IndividualVoteNotFound.into())
+            }
+            Ok::<(), DispatchError>(())
+        })
 
         MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
             vote_btree
@@ -81,7 +88,7 @@ impl<T: Config> Pallet<T> {
             if let Some(individual_votes) = maybe_individual_votes {
                 individual_votes.insert_individual_vote(milestone_key, &who, approve_milestone)?;
             }
-            Ok::<(), DispatchError>(());
+            Ok::<(), DispatchError>(())
         });
 
         let vote: Vote<BalanceOf<T>> =
@@ -434,14 +441,14 @@ impl<T: Config> Pallet<T> {
                 }
             });
 
+            Self::close_voting_round(project_key, user_has_voted_key)?;
+
             Self::deposit_event(Event::MilestoneApproved(
                 who,
                 project_key,
                 user_has_voted_key.2,
                 <frame_system::Pallet<T>>::block_number(),
             ));
-
-            Self::close_voting_round(project_key, user_has_voted_key)?;
         }
 
         if vote.nay >= funding_threshold {
@@ -465,7 +472,11 @@ impl<T: Config> Pallet<T> {
         // Prevent hook from calling.
         RoundsExpiring::<T>::remove(exp_block);
         // Allow future votes to occur on this milestone
-        UserHasVoted::<T>::remove(user_has_voted_key);
+        IndividualVoteStore::<T>::mutate(project_key, |maybe_individual_votes| {
+            if let Some(individual_votes) = maybe_individual_votes {
+                individual_votes.clear_milestone_votes(user_has_voted_key.2);
+            }
+        })
         Ok(())
     }
 

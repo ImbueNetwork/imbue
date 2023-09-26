@@ -303,11 +303,11 @@ pub mod pallet {
                             vote_btree.remove(milestone_key);
                         });
 
-                        UserHasVoted::<T>::remove((
-                            project_key,
-                            RoundType::VotingRound,
-                            milestone_key,
-                        ));
+                        IndividualVoteStore::<T>::mutate(project_key, |m_votes| {
+                            if let Some(individual_votes) = m_votes {
+                                individual_votes.clear_milestone_votes(mielstone_key);
+                            }
+                        });
                     }
                     // Votes of no confidence do not finaliese automatically
                     RoundType::VoteOfNoConfidence => {

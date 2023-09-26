@@ -488,6 +488,74 @@ pub mod v5 {
     #[storage_alias]
     pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
 
+    #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+    #[repr(u32)]
+    pub enum Release {
+        V0,
+        V1,
+        V2,
+        #[default]
+        V3,
+        V4,
+    }
+
+    /// 1: Custom StorageVersion is removed, macro StorageVersion is used: https://github.com/ImbueNetwork/imbue/issues/178
+    /// 2: MilestoneVotes migration to use a BTree instead of a double map: https://github.com/ImbueNetwork/imbue/issues/213
+    pub struct MigrateToV5<T>(sp_std::marker::PhantomData<T>);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV5<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
+            log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
+            ensure!(
+                StorageVersion::<T>::get() == Release::V4,
+                "Required v4 before upgrading to v5"
+            );
+            Ok(Vec::new())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            log::warn!("****** STARTING MIGRATION *****");
+            log::warn!("****** STARTING MIGRATION *****");
+
+            let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
+            let onchain = StorageVersion::<T>::get();
+
+            if current == 5 && onchain == Release::V4 {
+                StorageVersion::<T>::kill();
+                current.put::<Pallet<T>>();
+                
+                log::warn!("v5 has been successfully applied");
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
+            } else {
+                log::warn!("Skipping v5, should be removed from Executive");
+                weight = weight.saturating_add(T::DbWeight::get().reads(1));
+            }
+
+            log::warn!("****** ENDING MIGRATION *****");
+            weight
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
+            log::warn!( target:  "pallet-proposals", "Running post_upgrade()");
+
+            ensure!(
+                !StorageVersion::<T>::exists(),
+                "Old storage version storage type should have been removed."
+            );
+
+            ensure!(
+                Pallet::<T>::current_storage_version() == 5,
+                "Storage version should be v5 after the migration"
+            );
+
+            Ok(())
+        }
+    }
+}
+
+pub mod v6 {
     #[storage_alias]
     pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
         Pallet<T>,
@@ -499,16 +567,6 @@ pub mod v5 {
         OptionQuery,
     >;
 
-    #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-    #[repr(u32)]
-    pub enum Release {
-        V0,
-        V1,
-        V2,
-        #[default]
-        V3,
-        V4,
-    }
 
     fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
         // Highly in-memory intensive but on the plus side not many reads/writes to db.
@@ -541,16 +599,17 @@ pub mod v5 {
         })
     }
 
-    /// 1: Custom StorageVersion is removed, macro StorageVersion is used: https://github.com/ImbueNetwork/imbue/issues/178
-    /// 2: MilestoneVotes migration to use a BTree instead of a double map: https://github.com/ImbueNetwork/imbue/issues/213
-    pub struct MigrateToV5<T>(sp_std::marker::PhantomData<T>);
-    impl<T: Config> OnRuntimeUpgrade for MigrateToV5<T> {
+
+    pub struct MigrateToV6<T: Config>(T);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
+            let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
+            let onchain = StorageVersion::<T>::get();
             ensure!(
-                StorageVersion::<T>::get() == Release::V4,
-                "Required v4 before upgrading to v5"
+                current == 6 && onchain == 5,
+                "Current version must be set to v6 and onchain to v5"
             );
             Ok(Vec::new())
         }
@@ -558,23 +617,16 @@ pub mod v5 {
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             log::warn!("****** STARTING MIGRATION *****");
-            log::warn!("****** STARTING MIGRATION *****");
 
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
             let onchain = StorageVersion::<T>::get();
-
-            if current == 5 && onchain == Release::V4 {
-                // 1
-                StorageVersion::<T>::kill();
-                current.put::<Pallet<T>>();
-
-                // 2
+            if current == 6 && onchain == 5, {
                 migrate_milestone_votes::<T>(&mut weight);
 
-                log::warn!("v5 has been successfully applied");
+                log::warn!("v6 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
             } else {
-                log::warn!("Skipping v5, should be removed from Executive");
+                log::warn!("Skipping v6 due to mismatched version, this be removed from Executive");
                 weight = weight.saturating_add(T::DbWeight::get().reads(1));
             }
 
@@ -587,19 +639,17 @@ pub mod v5 {
             log::warn!( target:  "pallet-proposals", "Running post_upgrade()");
 
             ensure!(
-                !StorageVersion::<T>::exists(),
-                "Old storage version storage type should have been removed."
-            );
-
-            ensure!(
-                Pallet::<T>::current_storage_version() == 5,
-                "Storage version should be v5 after the migration"
+                Pallet::<T>::current_storage_version() == 6,
+                "Storage version should be v6 after the migration"
             );
 
             Ok(())
         }
     }
+
 }
+
+
 
 #[cfg(test)]
 mod test {
