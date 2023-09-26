@@ -43,14 +43,14 @@ impl<T: Config> Pallet<T> {
                 .map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
-        IndividualVoteStore::<T>::mutate(|project_key, |maybe_votes| {
+        IndividualVoteStore::<T>::mutate(project_key, |maybe_votes| {
             if let Some(individual_votes) = maybe_votes {
                 individual_votes.clear_milestone_votes(milestone_key);
             } else {
-                Err(Error::<T>::IndividualVoteNotFound.into())
-            }
+                return Err(Error::<T>::IndividualVoteNotFound.into());
+            };
             Ok::<(), DispatchError>(())
-        })
+        });
 
         MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
             vote_btree
@@ -476,7 +476,7 @@ impl<T: Config> Pallet<T> {
             if let Some(individual_votes) = maybe_individual_votes {
                 individual_votes.clear_milestone_votes(user_has_voted_key.2);
             }
-        })
+        });
         Ok(())
     }
 
@@ -547,7 +547,7 @@ impl<T: Config> ImmutableIndividualVotes<T>
             if let Some(_existing_vote) =  votes.get_mut(&account_id) {
                 return Err(Error::<T>::VotesAreImmutable.into())
             } else {
-                votes.try_insert(account_id, vote).map_err(|_|Error::<T>::TooManyContributions)?;
+                votes.try_insert(account_id.clone(), vote).map_err(|_|Error::<T>::TooManyContributions)?;
             }
         } else {
             return Err(Error::<T>::IndividualVoteNotFound.into())
@@ -560,8 +560,8 @@ impl<T: Config> ImmutableIndividualVotes<T>
     /// Used when a milestone is submitted.
     /// Skips if the milestone is not found.
     pub(crate) fn clear_milestone_votes(&mut self, milestone_key: MilestoneKey) {
-        if let Some(btree) = self.inner.get_mut(milestone_key) {
-            btree = Default::default()
+        if let Some(btree) = self.inner.get_mut(&milestone_key) {
+            *btree = Default::default()
         } 
     }
 }

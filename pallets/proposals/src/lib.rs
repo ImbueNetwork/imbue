@@ -100,7 +100,7 @@ pub mod pallet {
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
     }
 
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(5);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -305,7 +305,7 @@ pub mod pallet {
 
                         IndividualVoteStore::<T>::mutate(project_key, |m_votes| {
                             if let Some(individual_votes) = m_votes {
-                                individual_votes.clear_milestone_votes(mielstone_key);
+                                individual_votes.clear_milestone_votes(*milestone_key);
                             }
                         });
                     }
@@ -589,7 +589,6 @@ pub struct ImmutableIndividualVotes<T: Config>
         BoundedBTreeMap<AccountIdOf<T>, bool, T::MaximumContributorsPerProject>,
         T::MaxMilestonesPerProject,
     >,
-    with_mutable_votes: bool,
 }
 
 pub trait WeightInfoT {

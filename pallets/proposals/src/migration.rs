@@ -346,7 +346,7 @@ pub mod v3 {
         v3::OldMilestoneVotes::<T>::drain().for_each(|(old_key, vote)| {
             *weight += T::DbWeight::get().reads(1);
             let (project_key, milestone_key) = old_key;
-            v5::MilestoneVotes::<T>::insert(project_key, milestone_key, vote);
+            v6::MilestoneVotes::<T>::insert(project_key, milestone_key, vote);
             *weight += T::DbWeight::get().reads_writes(1, 1);
         });
     }
@@ -432,9 +432,9 @@ pub mod v4 {
             if let Some(project) = crate::Projects::<T>::get(project_key) {
                 for (milestone_key, _) in project.milestones.iter() {
                     *weight = weight.saturating_add(T::DbWeight::get().reads(1));
-                    if v5::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
+                    if v6::MilestoneVotes::<T>::contains_key(project_key, milestone_key) {
                         *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                        v5::MilestoneVotes::<T>::remove(project_key, milestone_key);
+                        v6::MilestoneVotes::<T>::remove(project_key, milestone_key);
                     } else {
                         break;
                     }
@@ -500,7 +500,6 @@ pub mod v5 {
     }
 
     /// 1: Custom StorageVersion is removed, macro StorageVersion is used: https://github.com/ImbueNetwork/imbue/issues/178
-    /// 2: MilestoneVotes migration to use a BTree instead of a double map: https://github.com/ImbueNetwork/imbue/issues/213
     pub struct MigrateToV5<T>(sp_std::marker::PhantomData<T>);
     impl<T: Config> OnRuntimeUpgrade for MigrateToV5<T> {
         #[cfg(feature = "try-runtime")]
@@ -556,6 +555,8 @@ pub mod v5 {
 }
 
 pub mod v6 {
+    use super::*;
+
     #[storage_alias]
     pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
         Pallet<T>,
@@ -567,13 +568,20 @@ pub mod v6 {
         OptionQuery,
     >;
 
+    // Since we are keeping the depricated vote of no confidence for the meantime 
+    // only migrate the voting rounds awaiting the migration to remove no confidence rounds.
+    // User votes is now handled by IndividualVoteStore::<T>
+    fn migrate_user_has_voted<T: Config>(weight: &mut Weight) {
+        
+    }
 
+    /// 2: MilestoneVotes migration to use a BTree instead of a double map: https://github.com/ImbueNetwork/imbue/issues/213
     fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
         // Highly in-memory intensive but on the plus side not many reads/writes to db.
         // I can write a less in memory one if anyone wants using crate::MilestoneVotes::mutate().
         let mut parent: BTreeMap<ProjectKey, BTreeMap<MilestoneKey, Vote<BalanceOf<T>>>> =
             Default::default();
-        v5::MilestoneVotes::<T>::drain().for_each(|(project_key, milestone_key, vote)| {
+        v6::MilestoneVotes::<T>::drain().for_each(|(project_key, milestone_key, vote)| {
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             if let Some(child) = parent.get_mut(&project_key) {
                 child.insert(milestone_key, vote);
@@ -599,14 +607,13 @@ pub mod v6 {
         })
     }
 
-
     pub struct MigrateToV6<T: Config>(T);
     impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
-            let onchain = StorageVersion::<T>::get();
+            let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
             ensure!(
                 current == 6 && onchain == 5,
                 "Current version must be set to v6 and onchain to v5"
@@ -619,9 +626,12 @@ pub mod v6 {
             log::warn!("****** STARTING MIGRATION *****");
 
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
-            let onchain = StorageVersion::<T>::get();
-            if current == 6 && onchain == 5, {
+            let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
+            if current == 6 && onchain == 5 {
+                
+                // Migrations
                 migrate_milestone_votes::<T>(&mut weight);
+                migrate_user_has_voted::<T>(&mut weight);
 
                 log::warn!("v6 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
@@ -929,8 +939,8 @@ mod test {
                 v3::OldMilestoneVotes::<Test>::get((10, 10)),
                 Default::default()
             );
-            assert!(v5::MilestoneVotes::<Test>::contains_key(10, 10));
-            let v = v5::MilestoneVotes::<Test>::get(10, 10).unwrap();
+            assert!(v6::MilestoneVotes::<Test>::contains_key(10, 10));
+            let v = v6::MilestoneVotes::<Test>::get(10, 10).unwrap();
             assert_eq!(v.yay, 100_000);
             assert_eq!(v.nay, 50_000);
             assert!(!v.is_approved);
@@ -961,8 +971,8 @@ mod test {
             // insert a fake round to be mutated.
             v4::V4Rounds::<Test>::insert(project_key, crate::RoundType::VotingRound, expiry_block);
             crate::RoundsExpiring::<Test>::insert(expiry_block, rounds_expiring);
-            v5::MilestoneVotes::<Test>::insert(project_key, milestone_key, Vote::default());
-            v5::MilestoneVotes::<Test>::insert(project_key, milestone_key + 1, Vote::default());
+            v6::MilestoneVotes::<Test>::insert(project_key, milestone_key, Vote::default());
+            v6::MilestoneVotes::<Test>::insert(project_key, milestone_key + 1, Vote::default());
 
             let mut weight = <Weight as Default>::default();
             v4::migrate_votes::<Test>(&mut weight);
@@ -975,8 +985,8 @@ mod test {
                 crate::RoundType::VotingRound
             ));
             assert!(crate::RoundsExpiring::<Test>::get(expiry_block).is_empty());
-            assert!(v5::MilestoneVotes::<Test>::get(project_key, milestone_key).is_none());
-            assert!(v5::MilestoneVotes::<Test>::get(project_key, milestone_key + 1).is_none());
+            assert!(v6::MilestoneVotes::<Test>::get(project_key, milestone_key).is_none());
+            assert!(v6::MilestoneVotes::<Test>::get(project_key, milestone_key + 1).is_none());
         })
     }
 }
