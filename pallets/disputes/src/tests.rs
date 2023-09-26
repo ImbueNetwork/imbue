@@ -3,7 +3,7 @@ use crate::{mock::*, pallet, pallet::*};
 use frame_support::traits::Len;
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
 use sp_arithmetic::traits::One;
-use sp_runtime::{BoundedVec, Saturating};
+use sp_runtime::{BoundedBTreeMap, BoundedVec, Saturating};
 use test_utils::*;
 
 mod test_utils {
@@ -424,6 +424,38 @@ fn extend_dispute_works_assert_state() {
         assert_eq!(21, d.expiration);
     });
 }
+
+#[test]
+fn extend_dispute_too_many_disputes() {
+    new_test_ext().execute_with(|| {
+        let dispute_key = 10;
+        (0..=1000).for_each(|i| {
+            let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
+            let specifics = get_specifics::<Test>(vec![0, 1]);
+         {
+                let dispute = Dispute{
+                    raised_by: *ALICE,
+                    votes: BoundedBTreeMap::default(),
+                    jury: jury,
+                    specifiers: Default::default(),
+                    is_extended: false,
+                    expiration: 27,
+                };
+                Disputes::<Test>::insert(i,dispute);
+                let actual_result = PalletDisputes::extend_dispute(
+                 RuntimeOrigin::signed(*BOB),
+                 i
+               );
+         if i==1000 {
+             assert_noop!(actual_result,Error::<Test>::TooManyDisputesThisBlock);
+         }
+        };
+    });
+});
+}
+
+
+
 
 #[test]
 fn calculate_winner_works() {
