@@ -512,7 +512,6 @@ pub enum RoundType {
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
 /// TODO: move these to a common repo (common_types will do)
-// MIGRATION! for briefs and grants
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
     pub percentage_to_unlock: Percent,
@@ -580,7 +579,6 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
-// TODO: migrate so that current projects contain an individual vote that correctly represents the current state.
 /// Stores the btree for each individual vote.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]

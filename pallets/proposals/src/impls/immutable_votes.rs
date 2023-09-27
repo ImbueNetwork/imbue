@@ -1,6 +1,5 @@
 use crate::*;
 impl<T: Config> ImmutableIndividualVotes<T> {
-    // TODO: Test
     /// Create a new set of individual votes bound to a set of milestone keys.
     /// Instantiates the votes as defaults.
     #[allow(clippy::type_complexity)]
