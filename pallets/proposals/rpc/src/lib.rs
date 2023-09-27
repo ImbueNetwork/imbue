@@ -23,8 +23,8 @@ where
 {
     #[method(name = "proposals_getProjectKitty")]
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId>;
-    #[method(name = "proposals_getProjectIndividualVotes")]
-    fn project_individuals_votes(&self, project_id: u32) -> RpcResult<Vec<u8>>;
+    #[method(name = "proposals_getAllProjectData")]
+    fn all_project_data(&self, project_id: u32) -> RpcResult<Option<(Vec<u8>, Vec<u8>)>>;
 }
 
 pub struct Proposals<C, B> {
@@ -76,11 +76,11 @@ where
         api.get_project_account_by_id(at, project_id)
             .map_err(runtime_error_into_rpc_err)
     }
-    fn project_individuals_votes(&self, project_id: u32) -> RpcResult<Vec<u8>> {
+    fn all_project_data(&self, project_id: u32) -> RpcResult<Option<(Vec<u8>, Vec<u8>)>> {
         let api = self.client.runtime_api();
         let at = self.client.info().best_hash;
 
-        api.get_project_individuals_votes(at, project_id)
+        api.get_all_project_data(at, project_id)
             .map_err(runtime_error_into_rpc_err)
     }
 }

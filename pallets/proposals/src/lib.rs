@@ -37,7 +37,7 @@ pub use weights::*;
 pub mod migration;
 
 pub mod impls;
-pub use impls::*;
+
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 pub type IndividualVotes<T> = BoundedBTreeMap<

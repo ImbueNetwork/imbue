@@ -1159,11 +1159,20 @@ impl_runtime_apis! {
             ImbueProposals::project_account_id(project_id)
         }
 
-        fn get_project_individuals_votes(project_id: u32) -> Vec<u8> {
-            let individual_votes = ImbueProposals::get_project_individuals_votes(project_id);
-            <pallet_proposals::IndividualVotes<AccountId, Balance, MaxMilestonesPerProject, MaximumContributorsPerProject> as Encode>::encode(&individual_votes)
-        }
+        /// (Project<T>, ImmutableindividualVotes<T>)
+        fn get_all_project_data(project_key: u32) -> Option<(Vec<u8>, Vec<u8>)> {
+            use pallet_proposals::{Project, Projects, ImmutableIndividualVotes, IndividualVoteStore};
 
+            if let Some(project) = Projects::<Runtime>::get(project_key) {
+                if let Some(individual_votes) = IndividualVoteStore::<Runtime>::get(project_key) {
+                    Some((<Project<Runtime> as Encode>::encode(&project), <ImmutableIndividualVotes<Runtime> as Encode>::encode(&individual_votes)))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
     }
 
 

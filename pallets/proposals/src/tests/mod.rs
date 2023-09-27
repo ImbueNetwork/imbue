@@ -1,2 +1,2 @@
 pub mod pallet;
-pub mod individual_votes;
+pub mod immutable_votes;
