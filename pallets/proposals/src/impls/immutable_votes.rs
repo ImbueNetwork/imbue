@@ -24,7 +24,6 @@ impl<T: Config> ImmutableIndividualVotes<T> {
                 .expect("milestone_keys and outer_votes have been bound by the same binding; qed");
         }
 
-        // Always set as mutable votes for now.
         Self { inner: outer_votes }
     }
 
