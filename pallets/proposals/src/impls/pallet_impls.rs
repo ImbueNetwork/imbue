@@ -476,7 +476,7 @@ impl<T: Config> Pallet<T> {
             if let Some(individual_votes) = maybe_individual_votes {
                 individual_votes.clear_milestone_votes(user_has_voted_key.2);
             } else {
-                return Err(Error::<T>::IndividualVoteNotFound.into())
+                return Err(Error::<T>::IndividualVoteNotFound.into());
             }
             Ok::<(), DispatchError>(())
         })?;
