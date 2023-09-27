@@ -107,7 +107,7 @@ pub fn create_project<T: Config>(
         milestone_key = milestone_key.saturating_add(1);
     }
 
-    let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys).unwrap();
+    let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
     IndividualVoteStore::<T>::insert(project_key, individual_votes);
 
     let project = Project {
