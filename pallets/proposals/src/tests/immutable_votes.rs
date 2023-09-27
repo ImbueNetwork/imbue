@@ -1,7 +1,7 @@
 use crate::{mock::*, *};
-use common_types::CurrencyId;
+
 use frame_support::{assert_noop, assert_ok};
-use test_utils::*;
+
 
 #[test]
 fn individual_votes_new_inserts_all_milestone_keys() {
@@ -28,7 +28,7 @@ fn individual_votes_insert_vote_works() {
                 .try_into()
                 .expect("should be smaller than bound.");
         let voting_key = milestone_keys[0];
-        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
+        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys);
         assert_ok!(i.insert_individual_vote(voting_key, &ALICE, true));
         assert_ok!(i.insert_individual_vote(voting_key, &BOB, false));
         assert_eq!(
@@ -52,7 +52,7 @@ fn individual_votes_votes_are_immutable() {
                 .try_into()
                 .expect("should be smaller than bound.");
         let voting_key = milestone_keys[0];
-        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
+        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys);
         i.insert_individual_vote(voting_key, &ALICE, true).unwrap();
         assert_noop!(
             i.insert_individual_vote(voting_key, &ALICE, false),
@@ -69,7 +69,7 @@ fn individual_votes_cannot_vote_on_non_existant_milestone() {
                 .try_into()
                 .expect("should be smaller than bound.");
         let voting_key = 4;
-        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
+        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys);
         assert_noop!(
             i.insert_individual_vote(voting_key, &ALICE, true),
             Error::<Test>::IndividualVoteNotFound
@@ -85,7 +85,7 @@ fn individual_votes_clear_votes_actually_clears() {
                 .try_into()
                 .expect("should be smaller than bound.");
         let voting_key = milestone_keys[0];
-        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
+        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys);
         i.insert_individual_vote(voting_key, &ALICE, true).unwrap();
         i.insert_individual_vote(voting_key, &BOB, true).unwrap();
         i.clear_milestone_votes(voting_key);

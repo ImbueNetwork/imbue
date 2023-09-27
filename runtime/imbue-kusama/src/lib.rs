@@ -1164,11 +1164,7 @@ impl_runtime_apis! {
             use pallet_proposals::{Project, Projects, ImmutableIndividualVotes, IndividualVoteStore};
 
             if let Some(project) = Projects::<Runtime>::get(project_key) {
-                if let Some(individual_votes) = IndividualVoteStore::<Runtime>::get(project_key) {
-                    Some((<Project<Runtime> as Encode>::encode(&project), <ImmutableIndividualVotes<Runtime> as Encode>::encode(&individual_votes)))
-                } else {
-                    None
-                }
+                IndividualVoteStore::<Runtime>::get(project_key).map(|individual_votes| (<Project<Runtime> as Encode>::encode(&project), <ImmutableIndividualVotes<Runtime> as Encode>::encode(&individual_votes)))
             } else {
                 None
             }
