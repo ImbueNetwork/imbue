@@ -3,6 +3,7 @@ impl<T: Config> ImmutableIndividualVotes<T> {
     // TODO: Test
     /// Create a new set of individual votes bound to a set of milestone keys.
     /// Instantiates the votes as defaults.
+    #[allow(clippy::type_complexity)]
     pub(crate) fn new(
         milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject>,
     ) -> Result<Self, DispatchError> {
@@ -36,7 +37,7 @@ impl<T: Config> ImmutableIndividualVotes<T> {
         vote: bool,
     ) -> Result<(), DispatchError> {
         if let Some(votes) = self.inner.get_mut(&milestone_key) {
-            if let Some(_existing_vote) = votes.get_mut(&account_id) {
+            if let Some(_existing_vote) = votes.get_mut(account_id) {
                 return Err(Error::<T>::VotesAreImmutable.into());
             } else {
                 votes

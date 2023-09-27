@@ -571,7 +571,7 @@ pub mod v6 {
     // Since we are keeping the depricated vote of no confidence for the meantime
     // only migrate the voting rounds awaiting the migration to remove no confidence rounds.
     // User votes is now handled by IndividualVoteStore::<T>
-    fn migrate_user_has_voted<T: Config>(weight: &mut Weight) {}
+    fn migrate_user_has_voted<T: Config>(_weight: &mut Weight) {}
 
     /// 2: MilestoneVotes migration to use a BTree instead of a double map: https://github.com/ImbueNetwork/imbue/issues/213
     fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
