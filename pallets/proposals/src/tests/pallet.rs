@@ -225,8 +225,14 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
 
         let individual_votes = IndividualVoteStore::<Test>::get(project_key).unwrap();
         assert!(
-                individual_votes.as_ref().get(&milestone_key).unwrap().get(&BOB).unwrap() == &true,
-                "IndividualVotesStore has not been mutated correctly."
+            individual_votes
+                .as_ref()
+                .get(&milestone_key)
+                .unwrap()
+                .get(&BOB)
+                .unwrap()
+                == &true,
+            "IndividualVotesStore has not been mutated correctly."
         );
 
         // Assert the storage has been cleared up after finalisation
@@ -246,9 +252,11 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
             "This vec should have been emptied on auto finalisation."
         );
         let individual_votes = IndividualVoteStore::<Test>::get(project_key).unwrap();
-        assert!(
-            !individual_votes.as_ref().get(&milestone_key).unwrap().contains_key(&BOB)
-        );
+        assert!(!individual_votes
+            .as_ref()
+            .get(&milestone_key)
+            .unwrap()
+            .contains_key(&BOB));
     });
 }
 
@@ -282,8 +290,14 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
 
         let individual_votes = IndividualVoteStore::<Test>::get(project_key).unwrap();
         assert!(
-                individual_votes.as_ref().get(&milestone_key).unwrap().get(&BOB).unwrap() == &false,
-                "IndividualVotesStore has not been mutated correctly."
+            individual_votes
+                .as_ref()
+                .get(&milestone_key)
+                .unwrap()
+                .get(&BOB)
+                .unwrap()
+                == &false,
+            "IndividualVotesStore has not been mutated correctly."
         );
         // Assert the storage has been cleared up after finalisation
         assert_ok!(Proposals::vote_on_milestone(
@@ -302,9 +316,11 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
             "This vec should have been emptied on auto finalisation."
         );
         let individual_votes = IndividualVoteStore::<Test>::get(project_key).unwrap();
-        assert!(
-            !individual_votes.as_ref().get(&milestone_key).unwrap().contains_key(&BOB)
-        );
+        assert!(!individual_votes
+            .as_ref()
+            .get(&milestone_key)
+            .unwrap()
+            .contains_key(&BOB));
     });
 }
 

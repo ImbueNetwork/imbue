@@ -523,7 +523,7 @@ pub mod v5 {
             if current == 5 && onchain == Release::V4 {
                 StorageVersion::<T>::kill();
                 current.put::<Pallet<T>>();
-                
+
                 log::warn!("v5 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
             } else {
@@ -568,12 +568,10 @@ pub mod v6 {
         OptionQuery,
     >;
 
-    // Since we are keeping the depricated vote of no confidence for the meantime 
+    // Since we are keeping the depricated vote of no confidence for the meantime
     // only migrate the voting rounds awaiting the migration to remove no confidence rounds.
     // User votes is now handled by IndividualVoteStore::<T>
-    fn migrate_user_has_voted<T: Config>(weight: &mut Weight) {
-        
-    }
+    fn migrate_user_has_voted<T: Config>(weight: &mut Weight) {}
 
     /// 2: MilestoneVotes migration to use a BTree instead of a double map: https://github.com/ImbueNetwork/imbue/issues/213
     fn migrate_milestone_votes<T: Config>(weight: &mut Weight) {
@@ -628,7 +626,6 @@ pub mod v6 {
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
             if current == 6 && onchain == 5 {
-                
                 // Migrations
                 migrate_milestone_votes::<T>(&mut weight);
                 migrate_user_has_voted::<T>(&mut weight);
@@ -656,10 +653,7 @@ pub mod v6 {
             Ok(())
         }
     }
-
 }
-
-
 
 #[cfg(test)]
 mod test {

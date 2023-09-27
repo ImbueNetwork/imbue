@@ -43,7 +43,8 @@ pub type MilestoneKey = u32;
 pub type IndividualVotes<T> = BoundedBTreeMap<
     MilestoneKey,
     BoundedBTreeMap<AccountIdOf<T>, bool, <T as Config>::MaximumContributorsPerProject>,
-    <T as Config>::MaxMilestonesPerProject>;
+    <T as Config>::MaxMilestonesPerProject,
+>;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -126,13 +127,8 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
-    pub type IndividualVoteStore<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        ProjectKey,
-        ImmutableIndividualVotes<T>,
-        OptionQuery,
-    >;
+    pub type IndividualVoteStore<T: Config> =
+        StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
@@ -210,7 +206,7 @@ pub mod pallet {
         VoteSubmitted(
             T::AccountId,
             ProjectKey,
-                MilestoneKey,
+            MilestoneKey,
             bool,
             BlockNumberFor<T>,
         ),
@@ -282,7 +278,7 @@ pub mod pallet {
         /// There are too many milestone votes, this generally shouldnt be hit.
         TooManyMilestoneVotes,
         /// An internal error, a collection of votes for a milestone has been lost.s
-        IndividualVoteNotFound, 
+        IndividualVoteNotFound,
     }
 
     #[pallet::hooks]
@@ -444,12 +440,12 @@ pub mod pallet {
                 FundingType::Grant(_) => {}
             }
 
-
             // TODO: this milestone key has no relation to the milestones coming in except the order they come in.
             // This could be a bug somewhere.
             let mut milestone_key: u32 = 0;
             let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
-            let mut bounded_milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject> = BoundedVec::new();
+            let mut bounded_milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject> =
+                BoundedVec::new();
 
             for milestone in proposed_milestones {
                 let milestone = Milestone {
@@ -461,12 +457,13 @@ pub mod pallet {
                 milestones
                     .try_insert(milestone_key, milestone)
                     .map_err(|_| Error::<T>::TooManyMilestones)?;
-                
-                bounded_milestone_keys.try_push(milestone_key)
-                .map_err(|_| Error::<T>::TooManyMilestones)?;
-                
+
+                bounded_milestone_keys
+                    .try_push(milestone_key)
+                    .map_err(|_| Error::<T>::TooManyMilestones)?;
+
                 milestone_key = milestone_key.saturating_add(1);
-            };
+            }
 
             let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys)?;
             IndividualVoteStore::<T>::insert(project_key, individual_votes);

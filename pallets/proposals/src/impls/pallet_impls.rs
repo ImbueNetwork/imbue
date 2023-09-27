@@ -48,7 +48,7 @@ impl<T: Config> Pallet<T> {
             if let Some(individual_votes) = maybe_votes {
                 individual_votes.clear_milestone_votes(milestone_key);
             } else {
-                return Err(Error::<T>::IndividualVoteNotFound.into())
+                return Err(Error::<T>::IndividualVoteNotFound.into());
             };
             Ok::<(), DispatchError>(())
         })?;
@@ -105,7 +105,6 @@ impl<T: Config> Pallet<T> {
                     Err(Error::<T>::VotingRoundNotStarted.into())
                 }
             })?;
-        
 
         let funding_threshold: BalanceOf<T> =
             T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
@@ -518,5 +517,3 @@ impl<T: Config> Pallet<T> {
     //     IndividualVotes { inner: bounded_out }
     // }
 }
-
-
