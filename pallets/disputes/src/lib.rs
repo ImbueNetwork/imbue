@@ -115,7 +115,7 @@ pub mod pallet {
         /// A dispute has been completed.
         // TODO: Not in use
         DisputeCompleted {
-            dispute_key: T::DisputeKey,
+            dispute_key: T::DisputeKey, dispute_result: DisputeResult
         },
         /// A dispute has been cancelled.
         // TODO: Not in use
@@ -156,10 +156,9 @@ pub mod pallet {
                     // Maybe return a weight from the method is a good idea and simple.
                     let _ = <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
                         *dispute_id,
-                        result,
+                        result.clone(),
                     );
-
-                    Self::deposit_event(Event::<T>::DisputeCompleted { dispute_key: *dispute_id });
+                    Self::deposit_event(Event::<T>::DisputeCompleted { dispute_key: *dispute_id, dispute_result: result});
                 }
             });
             Weight::default()
@@ -366,6 +365,8 @@ pub mod pallet {
             Ok(())
         }
     }
+
+    #[derive(Clone,PartialEq,Debug,Encode,Decode,TypeInfo)]
     pub enum DisputeResult {
         Success,
         Failure,

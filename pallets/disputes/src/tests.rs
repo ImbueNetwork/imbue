@@ -182,6 +182,33 @@ fn vote_on_dispute_assert_last_event() {
     });
 }
 
+
+#[test]
+fn vote_on_dispute_assert_last_event_on_initialize() {
+    new_test_ext().execute_with(|| {
+        let dispute_key = 10;
+        let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
+        let specifics = get_specifics::<Test>(vec![0, 1]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specifics,
+        ));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*BOB),
+            dispute_key,
+            true
+        ));
+        ///trying to expire the timelimit for the given dispute
+        run_to_block::<Test>(11);
+        System::assert_last_event(RuntimeEvent::PalletDisputes(
+            Event::<Test>::DisputeCompleted { dispute_key,dispute_result: DisputeResult::Success}
+        ));
+    });
+}
+
+
 #[test]
 fn vote_on_dispute_autofinalises_on_unanimous_yes() {
     new_test_ext().execute_with(|| {
@@ -454,12 +481,72 @@ fn extend_dispute_too_many_disputes() {
 });
 }
 
-
-
+#[test]
+fn calculate_winner_works_dispute_success() {
+    new_test_ext().execute_with(|| {
+        let dispute_key = 10;
+        let jury = get_jury::<Test>(vec![*CHARLIE, *BOB, *FERDIE]);
+        let specifics = get_specifics::<Test>(vec![0, 1]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specifics,
+        ));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*BOB),
+            dispute_key,
+            true
+        ));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*CHARLIE),
+            dispute_key,
+            false
+        ));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*FERDIE),
+            dispute_key,
+            true
+        ));
+        run_to_block::<Test>(11);
+        System::assert_last_event(RuntimeEvent::PalletDisputes(
+            Event::<Test>::DisputeCompleted { dispute_key,dispute_result: DisputeResult::Success},
+        ));
+    });
+}
 
 #[test]
-fn calculate_winner_works() {
-    new_test_ext().execute_with(|| {});
+fn calculate_winner_works_dispute_failure() {
+    new_test_ext().execute_with(|| {
+        let dispute_key = 10;
+        let jury = get_jury::<Test>(vec![*CHARLIE, *BOB, *FERDIE]);
+        let specifics = get_specifics::<Test>(vec![0, 1]);
+        assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+            dispute_key,
+            *ALICE,
+            jury,
+            specifics,
+        ));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*BOB),
+            dispute_key,
+            true
+        ));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*CHARLIE),
+            dispute_key,
+            false
+        ));
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*FERDIE),
+            dispute_key,
+            false
+        ));
+        run_to_block::<Test>(11);
+        System::assert_last_event(RuntimeEvent::PalletDisputes(
+            Event::<Test>::DisputeCompleted { dispute_key,dispute_result: DisputeResult::Failure},
+        ));
+    });
 }
 
 
