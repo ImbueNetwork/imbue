@@ -472,48 +472,14 @@ impl<T: Config> Pallet<T> {
         // Prevent hook from calling.
         RoundsExpiring::<T>::remove(exp_block);
         // Allow future votes to occur on this milestone
-        IndividualVoteStore::<T>::mutate(project_key, |maybe_individual_votes| {
+        IndividualVoteStore::<T>::trymutate(project_key, |maybe_individual_votes| {
             if let Some(individual_votes) = maybe_individual_votes {
                 individual_votes.clear_milestone_votes(user_has_voted_key.2);
+            } else {
+                return Err(Error::<T>::IndividualVoteNotFound.into())
             }
-        });
+        })?;
+        
         Ok(())
     }
-
-    // Get the individual votes of a project, return an empty map on error.
-    // #[allow(clippy::type_complexity)]
-    // pub fn get_project_individuals_votes(
-    //     project_key: ProjectKey,
-    // ) -> IndividualVotes<T> {
-    //     let mut out = BTreeMap::new();
-    //     if let Some(project) = Projects::<T>::get(project_key) {
-    //         project.milestones.keys().for_each(|milestone_key| {
-    //             let user_votes =
-    //                 UserHasVoted::<T>::get((project_key, RoundType::VotingRound, milestone_key));
-    //             let mut inner: BTreeMap<AccountIdOf<T>, (bool, BalanceOf<T>)> = BTreeMap::new();
-    //             user_votes.into_iter().for_each(|(acc, boolean_vote)| {
-    //                 inner.insert(acc, boolean_vote)
-    //             });
-    //             let bounded_inner: BoundedBTreeMap<
-    //                 AccountIdOf<T>,
-    //                 (bool, BalanceOf<T>),
-    //                 T::MaximumContributorsPerProject,
-    //             > = match inner.try_into() {
-    //                 Ok(b) => b,
-    //                 Err(_) => BoundedBTreeMap::new(),
-    //             };
-    //             out.insert(milestone_key.to_owned(), bounded_inner);
-    //         })
-    //     }
-    //     let bounded_out: BoundedBTreeMap<
-    //         MilestoneKey,
-    //         BoundedBTreeMap<AccountIdOf<T>, bool, T::MaximumContributorsPerProject>,
-    //         T::MaxMilestonesPerProject,
-    //     > = match out.try_into() {
-    //         Ok(b) => b,
-    //         Err(_) => BoundedBTreeMap::new(),
-    //     };
-
-    //     IndividualVotes { inner: bounded_out }
-    // }
 }
