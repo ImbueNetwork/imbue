@@ -2,7 +2,6 @@ use crate::{mock::*, *};
 
 use frame_support::{assert_noop, assert_ok};
 
-
 #[test]
 fn individual_votes_new_inserts_all_milestone_keys() {
     build_test_externality().execute_with(|| {
