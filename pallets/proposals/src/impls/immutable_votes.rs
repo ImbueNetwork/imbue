@@ -60,6 +60,7 @@ impl<T: Config> ImmutableIndividualVotes<T> {
     }
 
     /// Take a mutable reference to the inner individual votes item.
+    #[allow(dead_code)]
     pub(crate) fn as_mut(&mut self) -> &mut IndividualVotes<T> {
         &mut self.inner
     }
