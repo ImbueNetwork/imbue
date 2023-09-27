@@ -43,14 +43,15 @@ impl<T: Config> Pallet<T> {
                 .map_err(|_| Error::<T>::Overflow)?;
             Ok::<(), DispatchError>(())
         })?;
-        IndividualVoteStore::<T>::mutate(project_key, |maybe_votes| {
+
+        IndividualVoteStore::<T>::try_mutate(project_key, |maybe_votes| {
             if let Some(individual_votes) = maybe_votes {
                 individual_votes.clear_milestone_votes(milestone_key);
             } else {
-                return Err(Error::<T>::IndividualVoteNotFound.into());
+                return Err(Error::<T>::IndividualVoteNotFound.into())
             };
             Ok::<(), DispatchError>(())
-        });
+        })?;
 
         MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
             vote_btree
@@ -89,7 +90,7 @@ impl<T: Config> Pallet<T> {
                 individual_votes.insert_individual_vote(milestone_key, &who, approve_milestone)?;
             }
             Ok::<(), DispatchError>(())
-        });
+        })?;
 
         let vote: Vote<BalanceOf<T>> =
             MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
@@ -531,7 +532,8 @@ impl<T: Config> ImmutableIndividualVotes<T>
         
         for milestone_key in milestone_keys.iter() {
             let inner_votes: BoundedBTreeMap<AccountIdOf<T>, bool, T::MaximumContributorsPerProject> = BoundedBTreeMap::new();
-            outer_votes.try_insert(milestone_key.to_owned(), inner_votes).map_err(|_|Error::<T>::TooManyContributions)?;
+            // outer_votes and milestone_keys are bounded by the same binding so this will never fail.
+            outer_votes.try_insert(milestone_key.to_owned(), inner_votes).expect("milestone_keys and outer_votes have been bound by the same binding; qed");
         };
 
         // Always set as mutable votes for now.
@@ -540,7 +542,6 @@ impl<T: Config> ImmutableIndividualVotes<T>
         })
     }
 
-    // TODO: Test
     /// Insert the vote from an individual on a milestone.
     pub(crate) fn insert_individual_vote(&mut self, milestone_key: MilestoneKey, account_id: &AccountIdOf<T>, vote: bool) -> Result<(), DispatchError> {
         if let Some(votes) = self.inner.get_mut(&milestone_key) {  
@@ -564,4 +565,17 @@ impl<T: Config> ImmutableIndividualVotes<T>
             *btree = Default::default()
         } 
     }
+
+    /// Take a mutable reference to the inner individual votes item.
+    pub(crate) fn as_mut(&mut self) -> &mut IndividualVotes<T> {
+        &mut self.inner
+    }
 }
+
+impl<T: Config> AsRef<IndividualVotes<T>> for ImmutableIndividualVotes<T> {
+    fn as_ref(&self) -> &IndividualVotes<T> {
+        &self.inner
+    }
+}
+
+

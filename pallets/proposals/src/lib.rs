@@ -40,6 +40,11 @@ pub mod impls;
 pub use impls::*;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
+pub type IndividualVotes<T> = BoundedBTreeMap<
+    MilestoneKey,
+    BoundedBTreeMap<AccountIdOf<T>, bool, <T as Config>::MaximumContributorsPerProject>,
+    <T as Config>::MaxMilestonesPerProject>;
+
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 pub type StorageItemOf<T> =
@@ -582,13 +587,8 @@ pub struct Whitelist<AccountId, Balance> {
 /// Stores the btree for each individual vote.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
-pub struct ImmutableIndividualVotes<T: Config>
-{
-    inner: BoundedBTreeMap<
-        MilestoneKey,
-        BoundedBTreeMap<AccountIdOf<T>, bool, T::MaximumContributorsPerProject>,
-        T::MaxMilestonesPerProject,
-    >,
+pub struct ImmutableIndividualVotes<T: Config> {
+    inner: IndividualVotes<T>,
 }
 
 pub trait WeightInfoT {
