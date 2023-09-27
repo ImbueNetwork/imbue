@@ -572,15 +572,19 @@ pub mod v6 {
     // only migrate the voting rounds awaiting the migration to remove no confidence rounds.
     // User votes is now handled by IndividualVoteStore::<T>
     fn migrate_user_has_voted<T: Config>(weight: &mut Weight) {
-        let mut out = BTreeMap::new();
-        Projects::<T>::iter().for_each(project_key, {
+        Projects::<T>::iter().for_each(|(project_key, project)|{
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             project.milestones.keys().for_each(|milestone_key| {
                 *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                 UserHasVoted::<T>::remove((project_key, RoundType::VotingRound, milestone_key));
-            })
-            IndividualVoteStore::<T>::insert(project_key, )
-
+                if let Some(expiry) = Rounds::<T>::take((project_key, milestone_key), RoundType::VotingRound) {
+                    RoundsExpiring::<T>::remove(expiry);
+                };
+            });
+            let bounded_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject> = project.milestones.keys().copied().collect::<Vec<MilestoneKey>>().try_into().expect("milestone keys and bounded keys have the same bound; qed");
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            let individual_votes = ImmutableIndividualVotes::<T>::new(bounded_keys);
+            IndividualVoteStore::<T>::insert(project_key, individual_votes);
         })
     }
 

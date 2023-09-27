@@ -465,7 +465,7 @@ pub mod pallet {
                 milestone_key = milestone_key.saturating_add(1);
             }
 
-            let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys)?;
+            let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
             IndividualVoteStore::<T>::insert(project_key, individual_votes);
 
             let bounded_contributions: ContributionsFor<T> = contributions

@@ -6,7 +6,7 @@ impl<T: Config> ImmutableIndividualVotes<T> {
     #[allow(clippy::type_complexity)]
     pub(crate) fn new(
         milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject>,
-    ) -> Result<Self, DispatchError> {
+    ) -> Self {
         let mut outer_votes: BoundedBTreeMap<
             MilestoneKey,
             BoundedBTreeMap<AccountIdOf<T>, bool, T::MaximumContributorsPerProject>,
@@ -26,7 +26,7 @@ impl<T: Config> ImmutableIndividualVotes<T> {
         }
 
         // Always set as mutable votes for now.
-        Ok(Self { inner: outer_votes })
+        Self { inner: outer_votes }
     }
 
     /// Insert the vote from an individual on a milestone.

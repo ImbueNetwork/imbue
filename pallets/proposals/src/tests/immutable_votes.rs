@@ -10,7 +10,7 @@ fn individual_votes_new_inserts_all_milestone_keys() {
             vec![0, 1, 2, 3]
                 .try_into()
                 .expect("should be smaller than bound.");
-        let i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone()).unwrap();
+        let i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
         for key in milestone_keys {
             assert!(
                 i.as_ref().get(&key).unwrap().is_empty(),
@@ -28,7 +28,7 @@ fn individual_votes_insert_vote_works() {
                 .try_into()
                 .expect("should be smaller than bound.");
         let voting_key = milestone_keys[0];
-        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone()).unwrap();
+        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
         assert_ok!(i.insert_individual_vote(voting_key, &ALICE, true));
         assert_ok!(i.insert_individual_vote(voting_key, &BOB, false));
         assert_eq!(
@@ -52,7 +52,7 @@ fn individual_votes_votes_are_immutable() {
                 .try_into()
                 .expect("should be smaller than bound.");
         let voting_key = milestone_keys[0];
-        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone()).unwrap();
+        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
         i.insert_individual_vote(voting_key, &ALICE, true).unwrap();
         assert_noop!(
             i.insert_individual_vote(voting_key, &ALICE, false),
@@ -69,7 +69,7 @@ fn individual_votes_cannot_vote_on_non_existant_milestone() {
                 .try_into()
                 .expect("should be smaller than bound.");
         let voting_key = 4;
-        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone()).unwrap();
+        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
         assert_noop!(
             i.insert_individual_vote(voting_key, &ALICE, true),
             Error::<Test>::IndividualVoteNotFound
@@ -85,7 +85,7 @@ fn individual_votes_clear_votes_actually_clears() {
                 .try_into()
                 .expect("should be smaller than bound.");
         let voting_key = milestone_keys[0];
-        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone()).unwrap();
+        let mut i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
         i.insert_individual_vote(voting_key, &ALICE, true).unwrap();
         i.insert_individual_vote(voting_key, &BOB, true).unwrap();
         i.clear_milestone_votes(voting_key);

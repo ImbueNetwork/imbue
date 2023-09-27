@@ -472,14 +472,15 @@ impl<T: Config> Pallet<T> {
         // Prevent hook from calling.
         RoundsExpiring::<T>::remove(exp_block);
         // Allow future votes to occur on this milestone
-        IndividualVoteStore::<T>::trymutate(project_key, |maybe_individual_votes| {
+        IndividualVoteStore::<T>::try_mutate(project_key, |maybe_individual_votes| {
             if let Some(individual_votes) = maybe_individual_votes {
                 individual_votes.clear_milestone_votes(user_has_voted_key.2);
             } else {
                 return Err(Error::<T>::IndividualVoteNotFound.into())
             }
+            Ok::<(), DispatchError>(())
         })?;
-        
+
         Ok(())
     }
 }
