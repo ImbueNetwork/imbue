@@ -100,7 +100,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 9433,
+    spec_version: 9434,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -181,9 +181,7 @@ pub mod migrations {
 
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
-        pallet_proposals::migration::v5::MigrateToV5<Runtime>,
-        pallet_briefs::migrations::v2::MigrateToV2<Runtime>,
-        pallet_grants::migrations::v3::MigrateToV3<Runtime>,
+        pallet_proposals::migration::v6::MigrateToV6<Runtime>,
     );
 }
 
