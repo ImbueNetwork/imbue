@@ -762,7 +762,7 @@ fn withdraw_takes_imbue_fee() {
             create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
                 .unwrap();
         let milestone_key = 0;
-        let pallet_account = crate::Pallet::<Test>::account_id();
+        let fee_account = crate::Pallet::<Test>::ImbueFeeAccount::get();
         let _ =
             Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
                 .unwrap();
@@ -779,7 +779,7 @@ fn withdraw_takes_imbue_fee() {
         ));
         let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10_000);
         assert_eq!(
-            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &pallet_account),
+            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &fee_account),
             expected_fee,
             "fee hasnt been taken out of project as expected."
         );

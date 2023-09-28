@@ -82,42 +82,41 @@ pub mod pallet {
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        /// The weights generated using the cli.
+        type WeightInfo: WeightInfoT;
+        /// The pallet_id used to generate sub accounts for each project fund pot.
         type PalletId: Get<PalletId>;
-        type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// The currency type.
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-        type WeightInfo: WeightInfoT;
-        type MaxWithdrawalExpiration: Get<BlockNumberFor<Self>>;
         /// The amount of time given, up to point of decision, when a vote of no confidence is held.
         type NoConfidenceTimeLimit: Get<BlockNumberFor<Self>>;
-        /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
-        type PercentRequiredForVoteToPass: Get<Percent>;
-        /// Maximum number of contributors per project.
-        type MaximumContributorsPerProject: Get<u32>;
         /// Defines the length that a milestone can be voted on.
         type MilestoneVotingWindow: Get<BlockNumberFor<Self>>;
-        /// The type responisble for handling refunds.
-        type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+        /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
+        type PercentRequiredForVoteToPass: Get<Percent>;
+        /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
+        type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
+        /// Maximum number of contributors per project.
+        type MaximumContributorsPerProject: Get<u32>;
         /// Maximum milestones allowed in a project.
         type MaxMilestonesPerProject: Get<u32>;
         /// Maximum project a user can submit, make sure its pretty big.
         type MaxProjectsPerAccount: Get<u32>;
-        /// Imbue fee in percent 0-99
-        type ImbueFee: Get<Percent>;
+        /// Maximum size of the accounts responsible for handling disputes.
+        type MaxJuryMembers: Get<u32>;
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
         type ExpiringProjectRoundsPerBlock: Get<u32>;
+        /// Imbue fee in percent 0-99
+        type ImbueFee: Get<Percent>;
+        /// The account the imbue fee goes to.
+        type ImbueFeeAccount: Get<AccountIdOf<Self>>
+        /// The type responisble for handling refunds.
+        type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
         /// The type responsible for storage deposits.
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
-        /// If possible find the vetter responsible for the freelancer.
-        type ProjectToVetter: for<'a> MaybeConvert<&'a AccountIdOf<Self>, VetterIdOf<Self>>;
-        /// Turn an account role into a fee percentage. Handled in the fellowship pallet usually.
-        type RoleToPercentFee: Convert<Role, Percent>;
-        /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
-        type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
-        /// Maximum size of the accounts responsible for handling disputes.
-        type MaxJuryMembers: Get<u32>;
+        
     }
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
@@ -532,7 +531,7 @@ pub mod pallet {
                 let diff = <Percent as One>::one().saturating_sub(sum_of_percents);
                 // TODO: IF THE CONTRIBUTION BOUND IS MAX ALREADY THEN WE CANNOT PUSH THE DUST ACCOUNT ON
                 // FAIL SILENTLY AND CLEAN UP ON FINAL WITHDRAW INSTEAD.
-                let _ = ret.try_push((Locality::from_local(Self::account_id()), diff));
+                let _ = ret.try_push((Locality::from_local(<T as Config>::ImbueFeeAccount::get()), diff));
             }
 
             ret

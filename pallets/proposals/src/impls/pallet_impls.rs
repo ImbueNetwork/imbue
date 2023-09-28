@@ -8,10 +8,6 @@ impl<T: Config> Pallet<T> {
     ///
     /// This actually does computation. If you need to keep using it, then make sure you cache the
     /// value and only call this once.
-    pub fn account_id() -> T::AccountId {
-        T::PalletId::get().into_account_truncating()
-    }
-
     pub fn project_account_id(key: ProjectKey) -> AccountIdOf<T> {
         T::PalletId::get().into_sub_account_truncating(format!("//{key}"))
     }
@@ -155,8 +151,13 @@ impl<T: Config> Pallet<T> {
         let withdrawn = withdrawable.saturating_sub(fee);
         let project_account = Self::project_account_id(project_key);
 
-        //TODO: Fee is not taken.
-        let pallet_account = Self::account_id();
+        // Take the fee and send to ImbueFeeAccount   
+        T::MultiCurrency::transfer(
+            project.currency_id,
+            &project_account,
+            &<T as Config>::ImbueFeeAccount::get(),
+            fee,
+        )?;
 
         // Transfer to initiator
         T::MultiCurrency::transfer(
