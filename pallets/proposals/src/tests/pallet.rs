@@ -232,7 +232,7 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
                 .get(&BOB)
                 .unwrap()
                 == &true,
-            "IndividualVotesStore has not been mutated correctly."
+            "IndividualVoteStore has not been mutated correctly."
         );
 
         // Assert the storage has been cleared up after finalisation
@@ -297,7 +297,7 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
                 .get(&BOB)
                 .unwrap()
                 == &false,
-            "IndividualVotesStore has not been mutated correctly."
+            "IndividualVoteStore has not been mutated correctly."
         );
         // Assert the storage has been cleared up after finalisation
         assert_ok!(Proposals::vote_on_milestone(
@@ -1176,15 +1176,22 @@ fn close_voting_round_works() {
             .try_into()
             .expect("smaller than bound: qed.");
         RoundsExpiring::<Test>::insert(100, r_expiring);
-        UserHasVoted::<Test>::insert((0, RoundType::VotingRound, 0), BoundedBTreeMap::new());
+        
+        let milestone_keys = vec![0];
+        let mut i_v = ImmutableIndividualVotes::<Test>::new(milestone_keys.try_into().unwrap());
+        assert_ok!(i_v.insert_individual_vote(0, &ALICE, true));
 
+        IndividualVoteStore::<Test>::insert(0, i_v);
         assert_ok!(crate::Pallet::<Test>::close_voting_round(
             0,
             (0, RoundType::VotingRound, 0)
         ));
+
         assert!(Rounds::<Test>::get((0, 0), RoundType::VotingRound).is_none());
         assert!(RoundsExpiring::<Test>::get(100).len() == 0);
-        assert!(UserHasVoted::<Test>::get((0, RoundType::VotingRound, 0)).is_empty());
+        let individual_votes = IndividualVoteStore::<Test>::get(0);
+        assert!(individual_votes.is_some());
+        assert!(individual_votes.unwrap().as_ref().get(&0).unwrap().is_empty());
     })
 }
 
