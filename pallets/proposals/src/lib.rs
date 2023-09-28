@@ -452,7 +452,7 @@ pub mod pallet {
             )
             .map_err(|_| Error::<T>::ProjectFundingFailed)?;
             let converted_milestones =
-                Self::try_convert_to_milestones(proposed_milestones, project_key)
+                Self::try_convert_to_milestones(proposed_milestones.clone(), project_key)
                     .map_err(|_| Error::<T>::MilestoneConversionFailed)?;
             let sum_of_contributions = contributions
                 .values()

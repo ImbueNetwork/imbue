@@ -468,7 +468,7 @@ fn if_double_submission_and_one_finalises_voting_on_the_second_can_vote() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
-        let project_key = create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+        let project_key = create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let expiring_block = frame_system::Pallet::<Test>::block_number()
             + <Test as Config>::MilestoneVotingWindow::get();
         assert_ok!(Proposals::submit_milestone(
@@ -1222,34 +1222,6 @@ fn auto_finalizing_vote_on_no_confidence_when_threshold_is_met() {
     });
 }
 
-#[test]
-fn convert_to_proposal_too_many_contributions() {
-    build_test_externality().execute_with(|| {
-        let agreement_hash: H256 = Default::default();
-        let mut contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>> = Default::default();
-        let proposed_milestones = get_milestones(10);
-        (0..<Test as Config>::MaximumContributorsPerProject::get()).for_each(|nth| {
-                    contributions.insert(
-                        sp_core::sr25519::Public::from_raw([nth.try_into().expect("lol if this fails"); 32]), 
-                        Contribution {
-                            value: 100_000,
-                            timestamp: One::one(),
-                        }
-                    );
-        });
-
-        assert_noop!(<Proposals as IntoProposal<AccountId, Balance, BlockNumber>>::convert_to_proposal(
-            CurrencyId::Native,
-            contributions,
-            agreement_hash,
-            *ALICE,
-            proposed_milestones,
-            vec![(Locality::Foreign(<MultiLocation as Default>::default()), Percent::from_parts(100u8))],
-            Vec::new(),
-            FundingPath::WaitForFunding,
-        ), Error::<Test>::TooManyContributions);
-    });
-}
 #[test]
 fn convert_to_proposal_too_many_refund_locations() {
     build_test_externality().execute_with(|| {

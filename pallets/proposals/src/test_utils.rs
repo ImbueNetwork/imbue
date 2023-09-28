@@ -1,6 +1,7 @@
 use crate::Config;
 use crate::Pallet as Proposals;
 use crate::*;
+use crate::mock::*;
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, Vec};
@@ -76,18 +77,18 @@ pub fn create_and_fund_project<T: Config>(
         BalanceOf<T>,
         BlockNumberFor<T>,
     >>::convert_contributions_to_refund_locations(
-        &contributions.clone().into_inner()
+        &contributions.clone()
     );
 
     // Reserve the assets from the contributors used.
     <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
-        contributions.into_inner(),
+        contributions,
         agreement_hash,
         beneficiary,
-        proposed_milestones,
+        proposed_milestones.try_into().map_err(|_|Error::<Test>::TooManyMilestones)?,
         refund_locations,
-        Vec::new(),
+        BoundedVec::new(),
         FundingPath::TakeFromReserved,
     )?;
 
@@ -106,12 +107,12 @@ pub fn create_project_awaiting_funding<T: Config>(
     // Reserve the assets from the contributors used.
     <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
-        contributions.into_inner(),
+        contributions,
         agreement_hash,
         beneficiary,
-        proposed_milestones,
-        vec![(Locality::Foreign(treasury_account), Percent::from_parts(100u8))],
-        Vec::new(),
+        proposed_milestones.try_into().map_err(|_|Error::<Test>::TooManyMilestones)?,
+        vec![(Locality::Foreign(treasury_account), Percent::from_parts(100u8))].try_into().map_err(|_|Error::<Test>::TooManyRefundLocations)?,
+        BoundedVec::new(),
         FundingPath::WaitForFunding,
     )?;
 
