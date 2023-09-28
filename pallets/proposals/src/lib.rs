@@ -40,10 +40,15 @@ pub use weights::*;
 //pub mod migration;
 
 pub mod impls;
-pub use impls::*;
 
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
+pub type IndividualVotes<T> = BoundedBTreeMap<
+    MilestoneKey,
+    BoundedBTreeMap<AccountIdOf<T>, bool, <T as Config>::MaximumContributorsPerProject>,
+    <T as Config>::MaxMilestonesPerProject,
+>;
+
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type VetterIdOf<T> = AccountIdOf<T>;
 
@@ -115,7 +120,7 @@ pub mod pallet {
         type MaxJuryMembers: Get<u32>;
     }
 
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(5);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -136,15 +141,17 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
+    pub type IndividualVoteStore<T: Config> =
+        StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
-    pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
+    pub(super) type MilestoneVotes<T: Config> = StorageMap<
         _,
         Identity,
         ProjectKey,
-        Identity,
-        MilestoneKey,
-        Vote<BalanceOf<T>>,
-        OptionQuery,
+        BoundedBTreeMap<MilestoneKey, Vote<BalanceOf<T>>, T::MaxMilestonesPerProject>,
+        ValueQuery,
     >;
 
     #[pallet::storage]
@@ -292,6 +299,10 @@ pub mod pallet {
         TooManyRefundLocations,
         /// This project has too many jury members.
         TooManyJuryMembers,
+        /// There are too many milestone votes, this generally shouldnt be hit.
+        TooManyMilestoneVotes,
+        /// An internal error, a collection of votes for a milestone has been lost.s
+        IndividualVoteNotFound,
     }
 
     #[pallet::hooks]
@@ -313,12 +324,15 @@ pub mod pallet {
                     RoundType::VotingRound => {
                         weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
 
-                        MilestoneVotes::<T>::remove(project_key, milestone_key);
-                        UserHasVoted::<T>::remove((
-                            project_key,
-                            RoundType::VotingRound,
-                            milestone_key,
-                        ));
+                        MilestoneVotes::<T>::mutate(project_key, |vote_btree| {
+                            vote_btree.remove(milestone_key);
+                        });
+
+                        IndividualVoteStore::<T>::mutate(project_key, |m_votes| {
+                            if let Some(individual_votes) = m_votes {
+                                individual_votes.clear_milestone_votes(*milestone_key);
+                            }
+                        });
                     }
                     // Votes of no confidence do not finaliese automatically
                     RoundType::VoteOfNoConfidence => {
@@ -445,6 +459,17 @@ pub mod pallet {
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
                     acc.saturating_add(x.value)
                 });
+            
+            let bounded_milestone_keys = proposed_milestones
+                .iter()
+                .enumerate()
+                .map(|(i, ms)|{i as u32})
+                .collect::<Vec<MilestoneKey>>()
+                .try_into()
+                .map_err(|_|Error::<T>::TooManyMilestones)?;
+
+            let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
+            IndividualVoteStore::<T>::insert(project_key, individual_votes);
 
             let project: Project<T> = Project {
                 agreement_hash,
@@ -524,7 +549,6 @@ pub enum RoundType {
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
 /// TODO: move these to a common repo (common_types will do)
-// MIGRATION! for briefs and grants
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
     pub percentage_to_unlock: Percent,
@@ -619,6 +643,13 @@ pub enum FundingPath {
     #[default]
     TakeFromReserved,
     WaitForFunding,
+}
+
+/// Stores the btree for each individual vote.
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+pub struct ImmutableIndividualVotes<T: Config> {
+    inner: IndividualVotes<T>,
 }
 
 pub trait WeightInfoT {

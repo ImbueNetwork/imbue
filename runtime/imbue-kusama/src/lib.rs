@@ -12,7 +12,7 @@ mod sanity;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
-use sp_api::impl_runtime_apis;
+use sp_api::{impl_runtime_apis, Encode};
 use sp_core::OpaqueMetadata;
 
 use common_runtime::storage_deposits::StorageDepositItems;
@@ -100,7 +100,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 9432,
+    spec_version: 9434,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -180,11 +180,7 @@ pub mod migrations {
     use super::*;
 
     /// Unreleased migrations. Add new ones here:
-    pub type Unreleased = (
-        pallet_proposals::migration::v5::MigrateToV5<Runtime>,
-        pallet_briefs::migrations::v2::MigrateToV2<Runtime>,
-        pallet_grants::migrations::v3::MigrateToV3<Runtime>,
-    );
+    pub type Unreleased = (pallet_proposals::migration::v6::MigrateToV6<Runtime>,);
 }
 
 /// Executive: handles dispatch to the various modules.
@@ -1154,9 +1150,20 @@ impl_runtime_apis! {
         }
     }
 
-    impl pallet_proposals_rpc_runtime_api::ProposalsApi<Block, AccountId> for Runtime {
+    impl pallet_proposals_rpc_runtime_api::ProposalsApi<Block, AccountId, Balance> for Runtime {
         fn get_project_account_by_id(project_id: u32) -> AccountId {
             ImbueProposals::project_account_id(project_id)
+        }
+
+        /// (Project<T>, ImmutableindividualVotes<T>)
+        fn get_all_project_data(project_key: u32) -> Option<(Vec<u8>, Vec<u8>)> {
+            use pallet_proposals::{Project, Projects, ImmutableIndividualVotes, IndividualVoteStore};
+
+            if let Some(project) = Projects::<Runtime>::get(project_key) {
+                IndividualVoteStore::<Runtime>::get(project_key).map(|individual_votes| (<Project<Runtime> as Encode>::encode(&project), <ImmutableIndividualVotes<Runtime> as Encode>::encode(&individual_votes)))
+            } else {
+                None
+            }
         }
     }
 

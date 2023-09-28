@@ -1,10 +1,6 @@
 use crate::Config;
 use crate::Pallet as Proposals;
-use crate::{
-    traits::IntoProposal, AccountIdOf, BalanceOf, BlockNumberFor, Contribution, ContributionsFor,
-    FundingPath, Milestone, MilestoneKey, MultiLocation, Project, ProjectCount, ProjectKey,
-    ProposedMilestone, Locality
-};
+use crate::*;
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, Vec};
