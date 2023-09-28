@@ -125,11 +125,14 @@ pub mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
+    /// Stores the projects of the pallet.
     #[pallet::storage]
     #[pallet::getter(fn projects)]
     pub type Projects<T: Config> = StorageMap<_, Identity, ProjectKey, Project<T>, OptionQuery>;
 
-    // BTree of users that has voted, bounded by the number of contributors in a project.
+    /// BTree of users that has voted, bounded by the number of contributors in a project.
+    /// Now only stores the UserHasVoted for votes of no confidence. 
+    // TODO: Remove this with vote of no confidence.
     #[pallet::storage]
     pub(super) type UserHasVoted<T: Config> = StorageMap<
         _,
@@ -139,10 +142,12 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    /// Stores the individuals votes on a given milestone key
     #[pallet::storage]
     pub type IndividualVoteStore<T: Config> =
         StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
 
+    /// Stores the total votes on a milestone.
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
     pub(super) type MilestoneVotes<T: Config> = StorageMap<
@@ -153,6 +158,7 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    /// Stores the completed project by a given initiator.
     #[pallet::storage]
     #[pallet::getter(fn completed_projects)]
     pub type CompletedProjects<T: Config> = StorageMap<
@@ -169,6 +175,7 @@ pub mod pallet {
     pub(super) type NoConfidenceVotes<T: Config> =
         StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
 
+    /// The project count, used as an id for new projects on instantiation.
     #[pallet::storage]
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
@@ -589,13 +596,21 @@ impl<Balance: From<u32>> Default for Vote<Balance> {
 pub struct Project<T: Config> {
     pub agreement_hash: H256,
     pub milestones: BoundedBTreeMilestones<T>,
+    /// The contributions to a project, also known as milestone approvers. TODO: discuss name change.
     pub contributions: ContributionsFor<T>,
+    /// The currency id of the Project's funds.
     pub currency_id: common_types::CurrencyId,
+    /// The amount of funds already withdrawn from the project.
     pub withdrawn_funds: BalanceOf<T>,
+    /// The amount of money actually raised on instantiation of the Project.
     pub raised_funds: BalanceOf<T>,
+    /// The initiator of the project, also known as the beneficiary: TODO: discuss name change.
     pub initiator: AccountIdOf<T>,
+    /// The blocknumber the Project was created on
     pub created_on: BlockNumberFor<T>,
+    /// is the project cancelled TODO: make an issue this is from legacy.
     pub cancelled: bool,
+    /// The deposit_id is reponsible for returning deposits held in pallet-deposits.
     pub deposit_id: DepositIdOf<T>,
     /// Where do the refunds end up and what percent they get.
     pub refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject>,
@@ -637,10 +652,16 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
+/// Defines how a project is funded on its instantiation.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen, Default)]
 pub enum FundingPath {
+    // TODO: Possibly wise to change this to actually define where the reserves are coming from.
+    // This allows us to break the notion of a "contributor" finally and worry only about the "approvers".
+
+    /// Take from the reserved amounts of the contributors account.
     #[default]
     TakeFromReserved,
+    /// Take nothing from the contributors and await funding from some outside source.
     WaitForFunding,
 }
 
