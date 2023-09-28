@@ -1176,7 +1176,7 @@ fn close_voting_round_works() {
             .try_into()
             .expect("smaller than bound: qed.");
         RoundsExpiring::<Test>::insert(100, r_expiring);
-        
+
         let milestone_keys = vec![0];
         let mut i_v = ImmutableIndividualVotes::<Test>::new(milestone_keys.try_into().unwrap());
         assert_ok!(i_v.insert_individual_vote(0, &ALICE, true));
@@ -1191,7 +1191,12 @@ fn close_voting_round_works() {
         assert!(RoundsExpiring::<Test>::get(100).len() == 0);
         let individual_votes = IndividualVoteStore::<Test>::get(0);
         assert!(individual_votes.is_some());
-        assert!(individual_votes.unwrap().as_ref().get(&0).unwrap().is_empty());
+        assert!(individual_votes
+            .unwrap()
+            .as_ref()
+            .get(&0)
+            .unwrap()
+            .is_empty());
     })
 }
 
