@@ -73,6 +73,9 @@ pub mod pallet {
         type MaxJurySize: Get<u32>;
         /// This is number of specifics that can be assigned to a given dispute
         type MaxSpecifics: Get<u32>;
+
+
+        type MaxDisputesPerBlock: Get<u32>;
         /// The amount of time a dispute takes to finalise.
         type VotingTimeLimit: Get<<Self as frame_system::Config>::BlockNumber>;
         /// The origin used to force cancel and pass disputes.

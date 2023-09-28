@@ -1,9 +1,10 @@
 use crate::traits::*;
-use crate::{mock::*, pallet, pallet::*};
+use crate::{mock::*, mock, pallet, pallet::*};
 use frame_support::traits::Len;
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
 use sp_arithmetic::traits::One;
 use sp_runtime::{BoundedBTreeMap, BoundedVec, Saturating};
+use sp_runtime::traits::BlockNumberProvider;
 use test_utils::*;
 
 mod test_utils {
@@ -79,10 +80,11 @@ fn raise_dispute_assert_event() {
 fn raise_dispute_assert_event_too_many_disputes() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
-        (0..=1000).for_each(|i| {
+        let disputes_limit = <Test as Config>::MaxDisputesPerBlock::get();
+        (0..=disputes_limit).for_each(|i| {
             let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
             let specifics = get_specifics::<Test>(vec![0, 1]);
-            if i != 1000 {
+            if i != disputes_limit {
                 assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             i,
             *ALICE,
@@ -201,7 +203,8 @@ fn vote_on_dispute_assert_last_event_on_initialize() {
             true
         ));
         ///trying to expire the timelimit for the given dispute
-        run_to_block::<Test>(11);
+        let current_block = frame_system::Pallet::<Test>::current_block_number();
+        run_to_block::<Test>(current_block + <Test as Config>::VotingTimeLimit::get());
         System::assert_last_event(RuntimeEvent::PalletDisputes(
             Event::<Test>::DisputeCompleted { dispute_key,dispute_result: DisputeResult::Success}
         ));
@@ -456,7 +459,8 @@ fn extend_dispute_works_assert_state() {
 fn extend_dispute_too_many_disputes() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
-        (0..=1000).for_each(|i| {
+        let disputes_limit = <Test as Config>::MaxDisputesPerBlock::get();
+        (0u32..=disputes_limit).for_each(|i| {
             let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
             let specifics = get_specifics::<Test>(vec![0, 1]);
          {
@@ -473,7 +477,7 @@ fn extend_dispute_too_many_disputes() {
                  RuntimeOrigin::signed(*BOB),
                  i
                );
-         if i==1000 {
+         if i==disputes_limit {
              assert_noop!(actual_result,Error::<Test>::TooManyDisputesThisBlock);
          }
         };
@@ -508,7 +512,8 @@ fn calculate_winner_works_dispute_success() {
             dispute_key,
             true
         ));
-        run_to_block::<Test>(11);
+        let current_block = frame_system::Pallet::<Test>::current_block_number();
+        run_to_block::<Test>(current_block + <Test as Config>::VotingTimeLimit::get());
         System::assert_last_event(RuntimeEvent::PalletDisputes(
             Event::<Test>::DisputeCompleted { dispute_key,dispute_result: DisputeResult::Success},
         ));
@@ -542,7 +547,8 @@ fn calculate_winner_works_dispute_failure() {
             dispute_key,
             false
         ));
-        run_to_block::<Test>(11);
+        let current_block = frame_system::Pallet::<Test>::current_block_number();
+        run_to_block::<Test>(current_block + <Test as Config>::VotingTimeLimit::get());
         System::assert_last_event(RuntimeEvent::PalletDisputes(
             Event::<Test>::DisputeCompleted { dispute_key,dispute_result: DisputeResult::Failure},
         ));

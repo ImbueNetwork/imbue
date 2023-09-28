@@ -63,6 +63,7 @@ parameter_types! {
     pub MaxJurySize: u32 = 3;
     pub MaxSpecifics: u32 = 10;
     pub VotingTimeLimit: BlockNumber = 10;
+    pub MaxDisputesPerBlock: u32 = 1000;
 }
 
 impl pallet_disputes::Config for Test {
@@ -73,6 +74,7 @@ impl pallet_disputes::Config for Test {
     type MaxReasonLength = MaxReasonLength;
     type MaxJurySize = MaxJurySize;
     type MaxSpecifics = MaxSpecifics;
+    type MaxDisputesPerBlock = MaxDisputesPerBlock;
     type VotingTimeLimit = VotingTimeLimit;
     type ForceOrigin = EnsureRoot<AccountId>;
     type DisputeHooks = Test;
