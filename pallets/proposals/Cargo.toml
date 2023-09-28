@@ -46,6 +46,7 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 pallet-deposits = { path = "../deposits", default-features = false }
+pallet-fellowship = { path = "../fellowship", default-features = false }
 
 [dev-dependencies]
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43"}
@@ -59,6 +60,7 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}
 common-runtime = { path = "../../runtime/common"}
+pallet-fellowship = { path = "../fellowship"}
 
 [features]
 default = ['std']

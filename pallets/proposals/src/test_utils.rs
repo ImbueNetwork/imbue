@@ -1,20 +1,21 @@
 use crate::Config;
 use crate::Pallet as Proposals;
 use crate::{
-    AccountIdOf, BalanceOf, Contribution, ContributionsFor, Milestone, MilestoneKey, Project,
-    ProjectKey, ProposedMilestone,
+    traits::IntoProposal, AccountIdOf, BalanceOf, BlockNumberFor, Contribution, ContributionsFor,
+    FundingPath, Milestone, MilestoneKey, MultiLocation, Project, ProjectCount, ProjectKey,
+    ProposedMilestone, Locality
 };
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, Vec};
-use frame_support::{assert_ok, traits::Hooks};
+use frame_support::{assert_ok, traits::Hooks, BoundedVec};
 use frame_system::EventRecord;
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use pallet_deposits::traits::DepositHandler;
 use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
-use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
+use sp_runtime::{DispatchError, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
 #[allow(dead_code)]
@@ -61,70 +62,64 @@ pub fn get_max_milestones<T: Config>() -> Vec<ProposedMilestone> {
     get_milestones(<T as Config>::MaxMilestonesPerProject::get() as u8)
 }
 
-/// Create a project for test purposes, this will not test the paths coming into this pallet via
-/// the IntoProposal trait.
-pub fn create_project<T: Config>(
+// Using the FundingPath::TakeFromReserved create a project for testing funded milestones
+// This will be called in the majority of test cases.
+// IntoProposal assumes that funds have been reserved before calling it.
+pub fn create_and_fund_project<T: Config>(
     beneficiary: AccountIdOf<T>,
     contributions: ContributionsFor<T>,
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
-) -> ProjectKey {
-    let deposit_id = <T as Config>::DepositHandler::take_deposit(
-        beneficiary.clone(),
-        <T as Config>::ProjectStorageItem::get(),
-        CurrencyId::Native,
-    )
-    .expect("this should work");
+) -> Result<ProjectKey, DispatchError> {
+    contributions.iter().for_each(|(acc, c)| {
+        <T as Config>::MultiCurrency::reserve(currency_id, acc, c.value).unwrap();
+    });
     let agreement_hash: H256 = Default::default();
+    let refund_locations = <Proposals<T> as IntoProposal<
+        AccountIdOf<T>,
+        BalanceOf<T>,
+        BlockNumberFor<T>,
+    >>::convert_contributions_to_refund_locations(
+        &contributions.clone().into_inner()
+    );
 
-    let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
-
-    let mut raised_funds: BalanceOf<T> = 0u32.into();
-    let project_account_id = Proposals::<T>::project_account_id(project_key);
-
-    for (account, contribution) in contributions.iter() {
-        let amount = contribution.value;
-        assert_ok!(<T as crate::Config>::MultiCurrency::transfer(
-            currency_id,
-            account,
-            &project_account_id,
-            amount
-        ));
-        raised_funds = raised_funds.saturating_add(amount);
-    }
-
-    let mut milestone_key: u32 = 0;
-    let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
-
-    for ms in proposed_milestones {
-        let milestone = Milestone {
-            project_key,
-            milestone_key,
-            percentage_to_unlock: ms.percentage_to_unlock,
-            is_approved: false,
-        };
-        milestones.insert(milestone_key, milestone);
-        milestone_key = milestone_key.saturating_add(1);
-    }
-
-    let project = Project {
-        milestones: milestones.try_into().expect("too many milestones"),
-        contributions,
+    // Reserve the assets from the contributors used.
+    <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
-        withdrawn_funds: 0u32.into(),
-        raised_funds,
-        initiator: beneficiary,
-        created_on: frame_system::Pallet::<T>::block_number(),
-        cancelled: false,
+        contributions.into_inner(),
         agreement_hash,
-        funding_type: FundingType::Brief,
-        deposit_id,
-    };
+        beneficiary,
+        proposed_milestones,
+        refund_locations,
+        Vec::new(),
+        FundingPath::TakeFromReserved,
+    )?;
 
-    crate::Projects::<T>::insert(project_key, project);
-    crate::ProjectCount::<T>::put(project_key);
+    Ok(ProjectCount::<T>::get())
+}
 
-    project_key
+// For testing grants and errors pre funding
+pub fn create_project_awaiting_funding<T: Config>(
+    beneficiary: AccountIdOf<T>,
+    contributions: ContributionsFor<T>,
+    proposed_milestones: Vec<ProposedMilestone>,
+    currency_id: CurrencyId,
+    treasury_account: MultiLocation,
+) -> Result<ProjectKey, DispatchError> {
+    let agreement_hash: H256 = Default::default();
+    // Reserve the assets from the contributors used.
+    <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
+        currency_id,
+        contributions.into_inner(),
+        agreement_hash,
+        beneficiary,
+        proposed_milestones,
+        vec![(Locality::Foreign(treasury_account), Percent::from_parts(100u8))],
+        Vec::new(),
+        FundingPath::WaitForFunding,
+    )?;
+
+    Ok(ProjectCount::<T>::get())
 }
 
 #[cfg(feature = "runtime-benchmarks")]

@@ -183,7 +183,7 @@ parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
-    pub MaximumContributorsPerProject: u32 = 5000;
+    pub MaximumContributorsPerProject: u32 = 50;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
@@ -193,6 +193,7 @@ parameter_types! {
     pub ProjectStorageItem: StorageItems = StorageItems::Project;
     pub MaxProjectsPerAccount: u16 = 50;
     pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
+    pub MaxJuryMembers: u32 = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -215,6 +216,9 @@ impl pallet_proposals::Config for Test {
     type DepositHandler = MockDepositHandler<Test>;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
     type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
+    type ProjectToVetter = Test;
+    type RoleToPercentFee = pallet_fellowship::impls::RoleToPercentFee;
+    type MaxJuryMembers = MaxJuryMembers;
 }
 
 parameter_types! {
@@ -242,34 +246,31 @@ impl pallet_identity::Config for Test {
 }
 
 parameter_types! {
+    pub MaxCandidatesPerShortlist: u32 = 100;
+    pub ShortlistPeriod: BlockNumber = 100;
+    pub MembershipDeposit: Balance = 50_000_000;
+    pub SlashAccount: AccountId = sr25519::Public::from_raw([1u8; 32]);
+    pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
+}
+
+
+parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
+
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
 pub static DAVE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([128u8; 32]));
 pub static JOHN: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([255u8; 32]));
+pub static EMPTY: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([123u8; 32]));
+pub static VETTER: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([123u8; 32]));
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
-
-    // orml_tokens::GenesisConfig::<Test>::default()
-    //     .assimilate_storage(&mut t)
-    //     .unwrap();
-
-    // orml_tokens::GenesisConfig::<Test> {
-    //     balances: {
-    //         vec![*ALICE, *BOB, *CHARLIE]
-    //             .into_iter()
-    //             .map(|id| (id, CurrencyId::Native, 1000000))
-    //             .collect::<Vec<_>>()
-    //     },
-    // }
-    // .assimilate_storage(&mut t)
-    // .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
@@ -280,6 +281,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &DAVE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &JOHN, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &VETTER, initial_balance);
     });
     ext
 }
@@ -307,5 +309,12 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
     }
     fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
         Ok(())
+    }
+}
+
+type VetterId = AccountId;
+impl MaybeConvert<&AccountId, VetterId> for Test {
+    fn maybe_convert(fellow: &AccountId) -> Option<VetterId> {
+        Some(*VETTER)
     }
 }
