@@ -1,14 +1,14 @@
 pub(crate) use crate::traits::*;
-pub(crate) use crate::{mock::*, mock, pallet, pallet::*};
+pub(crate) use crate::{mock, mock::*, pallet, pallet::*};
 pub(crate) use frame_support::traits::Len;
 pub(crate) use frame_support::{assert_noop, assert_ok, traits::Hooks};
 pub(crate) use sp_arithmetic::traits::One;
-pub(crate) use sp_runtime::{BoundedBTreeMap, BoundedVec, Saturating};
 pub(crate) use sp_runtime::traits::BlockNumberProvider;
+pub(crate) use sp_runtime::{BoundedBTreeMap, BoundedVec, Saturating};
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber)
-    where
-        T::BlockNumber: Into<u64>,
+where
+    T::BlockNumber: Into<u64>,
 {
     loop {
         let mut block: T::BlockNumber = frame_system::Pallet::<T>::block_number();

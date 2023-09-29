@@ -1,4 +1,3 @@
-
-mod test_utils;
-mod pallet_tests;
 mod dispute;
+mod pallet_tests;
+mod test_utils;

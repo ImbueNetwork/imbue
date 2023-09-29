@@ -41,7 +41,8 @@ pub mod pallet {
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating, Zero};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub type BoundedVotes<T> = BoundedBTreeMap<<T as frame_system::Config>::AccountId, bool, <T as Config>::MaxJurySize>;
+    pub type BoundedVotes<T> =
+        BoundedBTreeMap<<T as frame_system::Config>::AccountId, bool, <T as Config>::MaxJurySize>;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -108,27 +109,20 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A dispute has been raised.
-        DisputeRaised {
-            dispute_key: T::DisputeKey,
-        },
+        DisputeRaised { dispute_key: T::DisputeKey },
         /// A disute has been voted on
-        DisputeVotedOn {
-            who: AccountIdOf<T>,
-        },
+        DisputeVotedOn { who: AccountIdOf<T> },
         /// A dispute has been completed.
         // TODO: Not in use
         DisputeCompleted {
-            dispute_key: T::DisputeKey, dispute_result: DisputeResult
+            dispute_key: T::DisputeKey,
+            dispute_result: DisputeResult,
         },
         /// A dispute has been cancelled.
         // TODO: Not in use
-        DisputeCancelled {
-            dispute_key: T::DisputeKey,
-        },
+        DisputeCancelled { dispute_key: T::DisputeKey },
         /// A dispute has been extended.
-        DisputeExtended {
-            dispute_key: T::DisputeKey,
-        },
+        DisputeExtended { dispute_key: T::DisputeKey },
     }
 
     #[pallet::error]
@@ -160,13 +154,17 @@ pub mod pallet {
                     let result = dispute.calculate_winner();
                     // TODO: Gonna have to do a trick to benchmark this correctly.
                     // Maybe return a weight from the method is a good idea and simple.
-                    let hook_weight = <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
-                        *dispute_id,
-                        result.clone(),
-                    );
+                    let hook_weight =
+                        <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
+                            *dispute_id,
+                            result.clone(),
+                        );
 
                     weight = weight.saturating_add(hook_weight);
-                    Self::deposit_event(Event::<T>::DisputeCompleted { dispute_key: *dispute_id, dispute_result: result});
+                    Self::deposit_event(Event::<T>::DisputeCompleted {
+                        dispute_key: *dispute_id,
+                        dispute_result: result,
+                    });
                 }
             });
             weight
@@ -175,7 +173,6 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-
         /// Vote on a dispute that already exists.
         /// If all votes are unanimous and everyone has voted, the dispute is autofinalised.
         #[pallet::call_index(0)]
@@ -197,20 +194,20 @@ pub mod pallet {
             })?;
 
             if votes.len() == total_jury {
-                if votes.iter().all(|v|*v.1) {
+                if votes.iter().all(|v| *v.1) {
                     Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Success)?;
                 }
-    
-                if votes.iter().all(|v|!*v.1) {
+
+                if votes.iter().all(|v| !*v.1) {
                     Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Failure)?;
                 }
             }
-            
+
             Self::deposit_event(Event::<T>::DisputeVotedOn { who });
             Ok(().into())
         }
 
-        /// Force a dispute to fail. 
+        /// Force a dispute to fail.
         /// Must be called by T::ForceOrigin
         #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::force_fail_dispute())]
@@ -362,7 +359,11 @@ pub mod pallet {
             Ok(())
         }
 
-        pub(crate) fn try_add_vote(&mut self, who: AccountIdOf<T>, is_yay: bool) -> Result<BoundedVotes<T>, DispatchError> {
+        pub(crate) fn try_add_vote(
+            &mut self,
+            who: AccountIdOf<T>,
+            is_yay: bool,
+        ) -> Result<BoundedVotes<T>, DispatchError> {
             ensure!(
                 self.jury.iter().any(|e| e == &who),
                 Error::<T>::NotAJuryAccount
@@ -373,13 +374,11 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
 
             //TODO: This is kinda messy, ideally we dont want to clone such a big data set.
-            Ok::<BoundedVotes<T>, DispatchError>(
-                self.votes.clone(),
-            )
+            Ok::<BoundedVotes<T>, DispatchError>(self.votes.clone())
         }
     }
 
-    #[derive(Clone,PartialEq,Debug,Encode,Decode,TypeInfo)]
+    #[derive(Clone, PartialEq, Debug, Encode, Decode, TypeInfo)]
     pub enum DisputeResult {
         Success,
         Failure,

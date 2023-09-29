@@ -6,7 +6,8 @@ fn raise_dispute_assert_state() {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
         let specifics = get_specifics::<Test>(vec![0, 1]);
-        let expiration_block = <Test as Config>::VotingTimeLimit::get() + frame_system::Pallet::<Test>::block_number();
+        let expiration_block =
+            <Test as Config>::VotingTimeLimit::get() + frame_system::Pallet::<Test>::block_number();
         assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             dispute_key,
             *ALICE,
@@ -31,12 +32,11 @@ fn raise_dispute_assert_event() {
             jury,
             specifics,
         ));
-        System::assert_last_event(RuntimeEvent::PalletDisputes(
-            Event::<Test>::DisputeRaised { dispute_key: dispute_key },
-        ));
+        System::assert_last_event(RuntimeEvent::PalletDisputes(Event::<Test>::DisputeRaised {
+            dispute_key: dispute_key,
+        }));
     });
 }
-
 
 ///testing when trying to insert more than max number of disputes allowed in a block
 #[test]
@@ -49,22 +49,16 @@ fn raise_dispute_assert_event_too_many_disputes() {
             let specifics = get_specifics::<Test>(vec![0, 1]);
             if i != disputes_limit {
                 assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
-            i,
-            *ALICE,
-            jury,
-            specifics,
-              ));
+                    i, *ALICE, jury, specifics,
+                ));
                 System::assert_last_event(RuntimeEvent::PalletDisputes(
                     Event::<Test>::DisputeRaised { dispute_key: i },
                 ));
             } else {
                 let actual_result = <PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
-                    i,
-                    *ALICE,
-                    jury,
-                    specifics,
+                    i, *ALICE, jury, specifics,
                 );
-                assert_noop!(actual_result,Error::<Test>::TooManyDisputesThisBlock);
+                assert_noop!(actual_result, Error::<Test>::TooManyDisputesThisBlock);
             }
         });
     });
@@ -144,7 +138,6 @@ fn vote_on_dispute_assert_last_event() {
     });
 }
 
-
 #[test]
 fn vote_on_dispute_assert_last_event_on_initialize() {
     new_test_ext().execute_with(|| {
@@ -166,11 +159,13 @@ fn vote_on_dispute_assert_last_event_on_initialize() {
         let current_block = frame_system::Pallet::<Test>::current_block_number();
         run_to_block::<Test>(current_block + <Test as Config>::VotingTimeLimit::get());
         System::assert_last_event(RuntimeEvent::PalletDisputes(
-            Event::<Test>::DisputeCompleted { dispute_key,dispute_result: DisputeResult::Success}
+            Event::<Test>::DisputeCompleted {
+                dispute_key,
+                dispute_result: DisputeResult::Success,
+            },
         ));
     });
 }
-
 
 #[test]
 fn vote_on_dispute_autofinalises_on_unanimous_yes() {
@@ -235,26 +230,29 @@ fn try_auto_finalise_removes_autofinalise() {
             let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
             let specifics = get_specifics::<Test>(vec![0, 1]);
             assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
-            dispute_key,
-            *ALICE,
-            jury,
-            specifics,
-        ));
+                dispute_key,
+                *ALICE,
+                jury,
+                specifics,
+            ));
             assert_ok!(PalletDisputes::vote_on_dispute(
-            RuntimeOrigin::signed(*BOB),
-            dispute_key,
-            false
-        ));
+                RuntimeOrigin::signed(*BOB),
+                dispute_key,
+                false
+            ));
             assert_ok!(PalletDisputes::vote_on_dispute(
-            RuntimeOrigin::signed(*CHARLIE),
-            dispute_key,
-            false
-        ));
+                RuntimeOrigin::signed(*CHARLIE),
+                dispute_key,
+                false
+            ));
             //verify that the dispute has been removed once auto_finalization is done in case of unanimous no
             assert_eq!(0, PalletDisputes::disputes(dispute_key).iter().count());
             //After the dispute has been autofinalized and the we again tru to autofinalize it throws an error saying that
             // the dispute doesnt exists as it has been removed
-            assert_noop!(Dispute::<Test>::try_finalise_with_result(dispute_key,DisputeResult::Success),Error::<Test>::DisputeDoesNotExist);
+            assert_noop!(
+                Dispute::<Test>::try_finalise_with_result(dispute_key, DisputeResult::Success),
+                Error::<Test>::DisputeDoesNotExist
+            );
         });
     });
 }
@@ -385,7 +383,9 @@ fn extend_dispute_works_assert_last_event() {
             10
         ));
         System::assert_last_event(RuntimeEvent::PalletDisputes(
-            Event::<Test>::DisputeExtended { dispute_key: dispute_key },
+            Event::<Test>::DisputeExtended {
+                dispute_key: dispute_key,
+            },
         ));
     });
 }
@@ -423,8 +423,8 @@ fn extend_dispute_too_many_disputes() {
         (0u32..=disputes_limit).for_each(|i| {
             let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
             let specifics = get_specifics::<Test>(vec![0, 1]);
-         {
-                let dispute = Dispute{
+            {
+                let dispute = Dispute {
                     raised_by: *ALICE,
                     votes: BoundedBTreeMap::default(),
                     jury: jury,
@@ -432,17 +432,14 @@ fn extend_dispute_too_many_disputes() {
                     is_extended: false,
                     expiration: 27,
                 };
-                Disputes::<Test>::insert(i,dispute);
-                let actual_result = PalletDisputes::extend_dispute(
-                 RuntimeOrigin::signed(*BOB),
-                 i
-               );
-         if i==disputes_limit {
-             assert_noop!(actual_result,Error::<Test>::TooManyDisputesThisBlock);
-         }
-        };
+                Disputes::<Test>::insert(i, dispute);
+                let actual_result = PalletDisputes::extend_dispute(RuntimeOrigin::signed(*BOB), i);
+                if i == disputes_limit {
+                    assert_noop!(actual_result, Error::<Test>::TooManyDisputesThisBlock);
+                }
+            };
+        });
     });
-});
 }
 
 #[test]
@@ -475,7 +472,10 @@ fn calculate_winner_works_dispute_success() {
         let current_block = frame_system::Pallet::<Test>::current_block_number();
         run_to_block::<Test>(current_block + <Test as Config>::VotingTimeLimit::get());
         System::assert_last_event(RuntimeEvent::PalletDisputes(
-            Event::<Test>::DisputeCompleted { dispute_key,dispute_result: DisputeResult::Success},
+            Event::<Test>::DisputeCompleted {
+                dispute_key,
+                dispute_result: DisputeResult::Success,
+            },
         ));
     });
 }
@@ -510,11 +510,13 @@ fn calculate_winner_works_dispute_failure() {
         let current_block = frame_system::Pallet::<Test>::current_block_number();
         run_to_block::<Test>(current_block + <Test as Config>::VotingTimeLimit::get());
         System::assert_last_event(RuntimeEvent::PalletDisputes(
-            Event::<Test>::DisputeCompleted { dispute_key,dispute_result: DisputeResult::Failure},
+            Event::<Test>::DisputeCompleted {
+                dispute_key,
+                dispute_result: DisputeResult::Failure,
+            },
         ));
     });
 }
-
 
 ///e2e
 #[test]
@@ -543,4 +545,3 @@ fn e2e() {
         assert_eq!(0, PalletDisputes::disputes(dispute_key).iter().count());
     });
 }
-
