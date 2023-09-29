@@ -1,4 +1,4 @@
-use test_utils::*;
+use super::test_utils::*;
 
 #[test]
 fn raise_dispute_assert_state() {
@@ -6,7 +6,7 @@ fn raise_dispute_assert_state() {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
         let specifics = get_specifics::<Test>(vec![0, 1]);
-        let expiration_block = <Test as Config>::VotingTimeLimit::get() + frame_system::Pallet::<T>::block_number();
+        let expiration_block = <Test as Config>::VotingTimeLimit::get() + frame_system::Pallet::<Test>::block_number();
         assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             dispute_key,
             *ALICE,
@@ -15,7 +15,7 @@ fn raise_dispute_assert_state() {
         ));
         assert!(PalletDisputes::disputes(dispute_key).is_some());
         assert_eq!(1, PalletDisputes::disputes(dispute_key).iter().count());
-        assert!(DisputesFinaliseOn::<T>::get(expiration_block).unwrap().contains(dispute_key));
+        assert!(DisputesFinaliseOn::<Test>::get(expiration_block).contains(&dispute_key));
     });
 }
 

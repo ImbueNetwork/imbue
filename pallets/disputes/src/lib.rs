@@ -38,10 +38,10 @@ pub mod pallet {
         dispatch::fmt::Debug, pallet_prelude::*, weights::Weight, BoundedBTreeMap,
     };
     use frame_system::pallet_prelude::*;
-    use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating};
+    use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating, Zero};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub type BoundedVotes<T> = BoundedBTreeMap<<T as frame_system::Config>::AccountId, bool, <T as Config>::MaxJurySize>
+    pub type BoundedVotes<T> = BoundedBTreeMap<<T as frame_system::Config>::AccountId, bool, <T as Config>::MaxJurySize>;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -169,7 +169,7 @@ pub mod pallet {
                     Self::deposit_event(Event::<T>::DisputeCompleted { dispute_key: *dispute_id, dispute_result: result});
                 }
             });
-            weight;
+            weight
         }
     }
 
@@ -190,7 +190,7 @@ pub mod pallet {
             let votes = Disputes::<T>::try_mutate(dispute_key, |dispute| {
                 if let Some(d) = dispute {
                     total_jury = d.jury.len();
-                    d.try_add_vote(who, is_yay)?
+                    d.try_add_vote(who.clone(), is_yay)
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist.into())
                 }
@@ -357,19 +357,19 @@ pub mod pallet {
                     .collect::<Vec<_>>();
             });
             let _ = T::DisputeHooks::on_dispute_complete(dispute_key, result);
-            ///remove the dispute once the hooks gets successfully completed
+            // Remove the dispute once the hooks gets successfully completed.
             Disputes::<T>::remove(dispute_key);
             Ok(())
         }
 
         pub(crate) fn try_add_vote(&mut self, who: AccountIdOf<T>, is_yay: bool) -> Result<BoundedVotes<T>, DispatchError> {
             ensure!(
-                self.jury.iter().any(|e| e == &who.clone()),
+                self.jury.iter().any(|e| e == &who),
                 Error::<T>::NotAJuryAccount
             );
 
             self.votes
-                .try_insert(who.clone(), is_yay)
+                .try_insert(who, is_yay)
                 .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
 
             //TODO: This is kinda messy, ideally we dont want to clone such a big data set.

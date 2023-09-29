@@ -132,8 +132,8 @@ impl crate::traits::DisputeHooks<u32> for Test {
     fn on_dispute_complete(
         dispute_key: u32,
         dispute_result: crate::pallet::DisputeResult,
-    ) -> Result<(), DispatchError> {
-        Ok(())
+    ) -> Weight {
+        <Weight as Default>::default()
     }
 }
 
