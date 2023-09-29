@@ -35,30 +35,3 @@ mod benchmarks {
 
     impl_benchmark_test_suite!(PalletDisputes, crate::mock::new_test_ext(), crate::mock::Test);
 }
-
-pub fn create_funded_user<T: Config>(
-    seed: &'static str,
-    n: u32,
-    balance_factor: u128,
-) -> T::AccountId {
-    let user = account(seed, n, 0);
-    assert_ok!(<T::MultiCurrency as MultiCurrency<
-        <T as frame_system::Config>::AccountId,
-    >>::deposit(
-        CurrencyId::Native, &user, balance_factor.saturated_into()
-    ));
-    user
-}
-
-pub fn get_jury<T: Config>(
-    accounts: Vec<AccountIdOf<T>>,
-) -> BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize> {
-    accounts.try_into().expect("too many jury members")
-}
-
-pub fn get_specifics<T: Config>(
-    specifics: Vec<T::SpecificId>,
-) -> BoundedVec<T::SpecificId, T::MaxSpecifics> {
-    specifics.try_into().expect("too many specific ids.")
-}
-

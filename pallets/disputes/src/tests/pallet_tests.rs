@@ -1,43 +1,4 @@
-use crate::traits::*;
-use crate::{mock::*, mock, pallet, pallet::*};
-use frame_support::traits::Len;
-use frame_support::{assert_noop, assert_ok, traits::Hooks};
-use sp_arithmetic::traits::One;
-use sp_runtime::{BoundedBTreeMap, BoundedVec, Saturating};
-use sp_runtime::traits::BlockNumberProvider;
 use test_utils::*;
-
-mod test_utils {
-    use super::*;
-
-    pub fn run_to_block<T: Config>(n: T::BlockNumber)
-        where
-            T::BlockNumber: Into<u64>,
-    {
-        loop {
-            let mut block: T::BlockNumber = frame_system::Pallet::<T>::block_number();
-            if block >= n {
-                break;
-            }
-            block = block.saturating_add(<T::BlockNumber as One>::one());
-            frame_system::Pallet::<T>::set_block_number(block);
-            frame_system::Pallet::<T>::on_initialize(block);
-            PalletDisputes::on_initialize(block.into());
-        }
-    }
-
-    pub fn get_jury<T: Config>(
-        accounts: Vec<AccountIdOf<T>>,
-    ) -> BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize> {
-        accounts.try_into().expect("too many jury members")
-    }
-
-    pub fn get_specifics<T: Config>(
-        specifics: Vec<T::SpecificId>,
-    ) -> BoundedVec<T::SpecificId, T::MaxSpecifics> {
-        specifics.try_into().expect("too many specific ids.")
-    }
-}
 
 #[test]
 fn raise_dispute_assert_state() {
@@ -45,6 +6,7 @@ fn raise_dispute_assert_state() {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
         let specifics = get_specifics::<Test>(vec![0, 1]);
+        let expiration_block = <Test as Config>::VotingTimeLimit::get() + frame_system::Pallet::<T>::block_number();
         assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             dispute_key,
             *ALICE,
@@ -53,6 +15,7 @@ fn raise_dispute_assert_state() {
         ));
         assert!(PalletDisputes::disputes(dispute_key).is_some());
         assert_eq!(1, PalletDisputes::disputes(dispute_key).iter().count());
+        assert!(DisputesFinaliseOn::<T>::get(expiration_block).unwrap().contains(dispute_key));
     });
 }
 
@@ -157,9 +120,6 @@ fn vote_on_dispute_assert_state() {
     });
 }
 
-// FELIX: shankar what does this mean? ^^
-//SHANKAR: Just telling when auto finalization comes we could extend by making more calls to check unanimous voting
-//But i think we have covered in the new test cases so we can ignore the comments above
 #[test]
 fn vote_on_dispute_assert_last_event() {
     new_test_ext().execute_with(|| {

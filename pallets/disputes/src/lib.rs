@@ -41,6 +41,7 @@ pub mod pallet {
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub type BoundedVotes<T> = BoundedBTreeMap<<T as frame_system::Config>::AccountId, bool, <T as Config>::MaxJurySize>
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -67,17 +68,16 @@ pub mod pallet {
             + TypeInfo
             + Debug
             + Copy;
-        /// This is the max length for specifying the reason while raising the dispute
+        /// The max length for specifying the reason while raising the dispute
         type MaxReasonLength: Get<u32>;
-        /// This is number of juries that can be assigned to a given dispute
+        /// The number of juries that can be assigned to a given dispute
         type MaxJurySize: Get<u32>;
-        /// This is number of specifics that can be assigned to a given dispute
+        /// The number of specifics that can be assigned to a given dispute.
         type MaxSpecifics: Get<u32>;
-
-
+        /// The maximum disputes that can be finalised per block.
         type MaxDisputesPerBlock: Get<u32>;
         /// The amount of time a dispute takes to finalise.
-        type VotingTimeLimit: Get<<Self as frame_system::Config>::BlockNumber>;
+        type VotingTimeLimit: Get<BlockNumberFor<Self>>;
         /// The origin used to force cancel and pass disputes.
         type ForceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// External hooks to handle the completion of a dispute.
@@ -151,20 +151,25 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         // TODO: WEIGHT + BENCHMARKS
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+            let mut weight: Weight = Zero::zero();
             let expiring_disputes = DisputesFinaliseOn::<T>::take(n);
             expiring_disputes.iter().for_each(|dispute_id| {
+                weight = weight.saturating_add(T::DbWeight::get().reads(1));
                 if let Some(dispute) = Disputes::<T>::get(dispute_id) {
+                    weight = weight.saturating_add(T::WeightInfo::calculate_winner());
                     let result = dispute.calculate_winner();
                     // TODO: Gonna have to do a trick to benchmark this correctly.
                     // Maybe return a weight from the method is a good idea and simple.
-                    let _ = <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
+                    let hook_weight = <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
                         *dispute_id,
                         result.clone(),
                     );
+
+                    weight = weight.saturating_add(hook_weight);
                     Self::deposit_event(Event::<T>::DisputeCompleted { dispute_key: *dispute_id, dispute_result: result});
                 }
             });
-            Weight::default()
+            weight;
         }
     }
 
@@ -185,19 +190,7 @@ pub mod pallet {
             let votes = Disputes::<T>::try_mutate(dispute_key, |dispute| {
                 if let Some(d) = dispute {
                     total_jury = d.jury.len();
-                    ensure!(
-                        d.jury.iter().any(|e| e == &who.clone()),
-                        Error::<T>::NotAJuryAccount
-                    );
-
-                    d.votes
-                        .try_insert(who.clone(), is_yay)
-                        .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
-
-                    //TODO: This is kinda messy, ideally we dont want to clone such a big data set.
-                    Ok::<BoundedBTreeMap<AccountIdOf<T>, bool, T::MaxJurySize>, DispatchError>(
-                        d.votes.clone(),
-                    )
+                    d.try_add_vote(who, is_yay)?
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist.into())
                 }
@@ -289,7 +282,7 @@ pub mod pallet {
         /// Who this was raised by.
         pub raised_by: AccountIdOf<T>,
         /// The votes of each jury.
-        pub votes: BoundedBTreeMap<AccountIdOf<T>, bool, T::MaxJurySize>,
+        pub votes: BoundedVotes<T>,
         /// The party responsible for the vote.
         pub jury: BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize>,
         /// The specific entities the dispute is raised upon.
@@ -337,7 +330,8 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Calculate the winner in a dispute.
+        /// Calculate the winner in a dispute at the current moment.
+        /// This ofcourse is subject to change if more votes are had.
         pub(crate) fn calculate_winner(&self) -> DisputeResult {
             if self.votes.values().filter(|&&x| x).count()
                 >= self.votes.values().filter(|&&x| !x).count()
@@ -367,6 +361,22 @@ pub mod pallet {
             Disputes::<T>::remove(dispute_key);
             Ok(())
         }
+
+        pub(crate) fn try_add_vote(&mut self, who: AccountIdOf<T>, is_yay: bool) -> Result<BoundedVotes<T>, DispatchError> {
+            ensure!(
+                self.jury.iter().any(|e| e == &who.clone()),
+                Error::<T>::NotAJuryAccount
+            );
+
+            self.votes
+                .try_insert(who.clone(), is_yay)
+                .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
+
+            //TODO: This is kinda messy, ideally we dont want to clone such a big data set.
+            Ok::<BoundedVotes<T>, DispatchError>(
+                self.votes.clone(),
+            )
+        }
     }
 
     #[derive(Clone,PartialEq,Debug,Encode,Decode,TypeInfo)]
@@ -384,5 +394,6 @@ pub mod pallet {
         fn on_dispute_cancel() -> Weight;
         fn force_succeed_dispute() -> Weight;
         fn force_fail_dispute() -> Weight;
+        fn calculate_winner() -> Weight;
     }
 }

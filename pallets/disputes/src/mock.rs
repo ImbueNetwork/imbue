@@ -135,9 +135,6 @@ impl crate::traits::DisputeHooks<u32> for Test {
     ) -> Result<(), DispatchError> {
         Ok(())
     }
-    fn on_dispute_cancel(dispute_key: u32) -> Result<(), DispatchError> {
-        Ok(())
-    }
 }
 
 impl crate::WeightInfoT for () {
@@ -163,6 +160,9 @@ impl crate::WeightInfoT for () {
         <Weight as Default>::default()
     }
     fn force_fail_dispute() -> Weight {
+        <Weight as Default>::default()
+    }
+    fn calculate_winner() -> Weight {
         <Weight as Default>::default()
     }
 }
