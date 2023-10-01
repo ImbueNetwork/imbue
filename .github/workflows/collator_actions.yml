@@ -32,12 +32,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Ensure executable
-        run: chmod +x ./ci/jobs/clean.sh
-
-      - name: Clean env
-        run: ./ci/jobs/clean.sh 
-
       - name: Install minimal nightly Rust
         uses: actions-rs/toolchain@v1
         with:
