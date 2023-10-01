@@ -3,6 +3,7 @@ use super::*;
 
 use crate::traits::DisputeRaiser;
 use crate::Pallet as PalletDisputes;
+use sp_std::vec::Vec;
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, BoundedVec};

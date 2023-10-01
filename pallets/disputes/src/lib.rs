@@ -24,6 +24,7 @@ pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
 #[cfg(test)]
 mod mock;
 
@@ -35,7 +36,7 @@ pub mod pallet {
     use crate::traits::DisputeHooks;
     use codec::{FullCodec, FullEncode};
     use frame_support::{
-        dispatch::fmt::Debug, pallet_prelude::*, weights::Weight, BoundedBTreeMap,
+        dispatch::fmt::Debug, pallet_prelude::*, weights::Weight, BoundedBTreeMap, inherent::Vec
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating, Zero};
