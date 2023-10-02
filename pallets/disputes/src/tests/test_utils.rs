@@ -4,7 +4,7 @@ pub(super) use frame_support::traits::Len;
 pub(super) use frame_support::{assert_noop, assert_ok, traits::Hooks};
 pub(super) use sp_arithmetic::traits::One;
 pub(super) use sp_runtime::traits::BlockNumberProvider;
-pub(super) use sp_runtime::{BoundedBTreeMap, BoundedVec, Saturating, SaturatedConversion};
+pub(super) use sp_runtime::{BoundedBTreeMap, BoundedVec, SaturatedConversion, Saturating};
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber)
 where

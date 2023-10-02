@@ -2,19 +2,18 @@
 
 use super::*;
 use crate::traits::DisputeRaiser;
-use sp_std::vec::Vec;
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, BoundedVec};
 use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
+use sp_std::vec::Vec;
 
 #[benchmarks( where <T as frame_system::Config>::AccountId: AsRef<[u8]>, crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
 mod benchmarks {
     use super::*;
     #[benchmark]
     fn raise_a_dispute() {
-
         let alice: AccountIdOf<T> = account("ALICE", 0, 0);
         let bob: AccountIdOf<T> = account("BOB", 0, 0);
         let jury = get_jury::<T>(vec![alice.clone(), bob]);
@@ -28,7 +27,6 @@ mod benchmarks {
                 specifics,
             );
         }
-
     }
 
     //impl_benchmark_test_suite!(
@@ -37,7 +35,6 @@ mod benchmarks {
     //    crate::mock::Test
     //);
 }
-
 
 pub fn get_jury<T: Config>(
     accounts: Vec<<T as frame_system::Config>::AccountId>,

@@ -36,7 +36,7 @@ pub mod pallet {
     use crate::traits::DisputeHooks;
     use codec::{FullCodec, FullEncode};
     use frame_support::{
-        dispatch::fmt::Debug, pallet_prelude::*, weights::Weight, BoundedBTreeMap, inherent::Vec
+        dispatch::fmt::Debug, inherent::Vec, pallet_prelude::*, weights::Weight, BoundedBTreeMap,
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating, Zero};
@@ -216,7 +216,8 @@ pub mod pallet {
             origin: OriginFor<T>,
             dispute_key: T::DisputeKey,
         ) -> DispatchResult {
-            todo!();
+            ForceOrigin::ensure_origin(origin)?;
+            let dispute = Disputes::<T>::get(dispute_key);
             Ok(().into())
         }
 
