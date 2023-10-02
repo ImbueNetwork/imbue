@@ -480,14 +480,20 @@ fn try_auto_finalise_without_votes_fails() {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
         let specifics = get_specifics::<Test>(vec![0, 1]);
+        let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
         assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             dispute_key,
             *ALICE,
             jury,
             specifics,
         ));
-        // Noone votes so go to expiry block
+        // Noone votes, go directly to expiry block
+        run_to_block::<Test>(expiry_block);
 
+        System::assert_last_event(RuntimeEvent::PalletDisputes(Event::<Test>::DisputeCompleted {
+            dispute_key: dispute_key,
+            dispute_result: DisputeResult::Failure
+        }));
     });
 }
 
