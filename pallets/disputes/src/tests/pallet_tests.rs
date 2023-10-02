@@ -144,7 +144,11 @@ fn vote_on_dispute_assert_last_event() {
             true
         ));
         System::assert_last_event(RuntimeEvent::PalletDisputes(
-            Event::<Test>::DisputeVotedOn { dispute_key, who: *BOB, vote: true},
+            Event::<Test>::DisputeVotedOn {
+                dispute_key,
+                who: *BOB,
+                vote: true,
+            },
         ));
     });
 }
@@ -254,7 +258,8 @@ fn try_auto_finalise_removes_autofinalise_storage() {
             let dispute_key_2 = 11;
             let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
             let specifics = get_specifics::<Test>(vec![0, 1]);
-            let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
+            let expiry_block = frame_system::Pallet::<Test>::block_number()
+                + <Test as Config>::VotingTimeLimit::get();
             assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
                 dispute_key_1,
                 *ALICE,
@@ -277,7 +282,10 @@ fn try_auto_finalise_removes_autofinalise_storage() {
                 dispute_key_2,
                 true
             ));
-            assert_ok!(Dispute::<Test>::try_finalise_with_result(dispute_key_1, DisputeResult::Success));
+            assert_ok!(Dispute::<Test>::try_finalise_with_result(
+                dispute_key_1,
+                DisputeResult::Success
+            ));
             let finalising_disputes = DisputesFinaliseOn::<Test>::get(expiry_block);
 
             assert!(finalising_disputes.contains(&dispute_key_2));
@@ -426,7 +434,8 @@ fn extend_dispute_works_assert_state() {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*BOB]);
         let specific_ids = get_specifics::<Test>(vec![0]);
-        let initial_expiry = frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
+        let initial_expiry =
+            frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
         assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             dispute_key,
             *ALICE,
@@ -442,7 +451,10 @@ fn extend_dispute_works_assert_state() {
         ));
         let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
         assert!(d.is_extended);
-        assert_eq!(initial_expiry + <Test as Config>::VotingTimeLimit::get(), d.expiration);
+        assert_eq!(
+            initial_expiry + <Test as Config>::VotingTimeLimit::get(),
+            d.expiration
+        );
     });
 }
 
@@ -473,14 +485,14 @@ fn extend_dispute_too_many_disputes() {
     });
 }
 
-
 #[test]
 fn try_auto_finalise_without_votes_fails() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
         let specifics = get_specifics::<Test>(vec![0, 1]);
-        let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
+        let expiry_block =
+            frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
         assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             dispute_key,
             *ALICE,
@@ -490,10 +502,12 @@ fn try_auto_finalise_without_votes_fails() {
         // Noone votes, go directly to expiry block
         run_to_block::<Test>(expiry_block);
 
-        System::assert_last_event(RuntimeEvent::PalletDisputes(Event::<Test>::DisputeCompleted {
-            dispute_key: dispute_key,
-            dispute_result: DisputeResult::Failure
-        }));
+        System::assert_last_event(RuntimeEvent::PalletDisputes(
+            Event::<Test>::DisputeCompleted {
+                dispute_key: dispute_key,
+                dispute_result: DisputeResult::Failure,
+            },
+        ));
     });
 }
 
@@ -524,6 +538,3 @@ fn e2e() {
         assert_eq!(0, PalletDisputes::disputes(dispute_key).iter().count());
     });
 }
-
-
-

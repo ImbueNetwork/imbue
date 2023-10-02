@@ -41,7 +41,6 @@ fn test_calculate_winner_failure() {
     })
 }
 
-
 #[test]
 fn test_calculate_winner_noone_votes_failure() {
     new_test_ext().execute_with(|| {

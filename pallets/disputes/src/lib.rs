@@ -112,10 +112,10 @@ pub mod pallet {
         /// A dispute has been raised.
         DisputeRaised { dispute_key: T::DisputeKey },
         /// A disute has been voted on
-        DisputeVotedOn { 
+        DisputeVotedOn {
             dispute_key: T::DisputeKey,
             who: AccountIdOf<T>,
-            vote: bool
+            vote: bool,
         },
         /// A dispute has been completed.
         // TODO: Not in use
@@ -336,7 +336,7 @@ pub mod pallet {
         /// This ofcourse is subject to change if more votes are had.
         pub(crate) fn calculate_winner(&self) -> DisputeResult {
             if self.votes.values().len() == 0 {
-                return DisputeResult::Failure
+                return DisputeResult::Failure;
             }
 
             if self.votes.values().filter(|&&x| x).count()
@@ -357,13 +357,15 @@ pub mod pallet {
             let dispute =
                 Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             DisputesFinaliseOn::<T>::try_mutate(dispute.expiration, |finalising| {
-                if let Some(index) = finalising.iter().position(|finalising_key| finalising_key == &dispute_key) {
-                    finalising
-                    .remove(index);
+                if let Some(index) = finalising
+                    .iter()
+                    .position(|finalising_key| finalising_key == &dispute_key)
+                {
+                    finalising.remove(index);
                 } else {
                     // If the index for the dispute is not found in DisputeFinalisingOn then,
                     // we have a state mismatch and autofinalisation may not work so throw an error.
-                    return Err(Error::<T>::AutoFinaliseStateMismatch.into())
+                    return Err(Error::<T>::AutoFinaliseStateMismatch.into());
                 }
 
                 Ok::<(), DispatchError>(())
@@ -398,10 +400,10 @@ pub mod pallet {
                 .try_insert(who.clone(), is_yay)
                 .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
 
-            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeVotedOn { 
+            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeVotedOn {
                 who,
                 dispute_key,
-                vote: is_yay
+                vote: is_yay,
             });
 
             //TODO: This is kinda messy, ideally we dont want to clone such a big data set.
