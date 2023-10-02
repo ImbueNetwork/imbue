@@ -102,7 +102,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         BlockNumberFor<T>,
-        BoundedVec<T::DisputeKey, ConstU32<1000>>,
+        BoundedVec<T::DisputeKey, T::MaxDisputesPerBlock>,
         ValueQuery,
     >;
 
@@ -112,7 +112,11 @@ pub mod pallet {
         /// A dispute has been raised.
         DisputeRaised { dispute_key: T::DisputeKey },
         /// A disute has been voted on
-        DisputeVotedOn { who: AccountIdOf<T> },
+        DisputeVotedOn { 
+            dispute_key: T::DisputeKey,
+            who: AccountIdOf<T>,
+            vote: bool
+        },
         /// A dispute has been completed.
         // TODO: Not in use
         DisputeCompleted {
@@ -188,7 +192,7 @@ pub mod pallet {
             let votes = Disputes::<T>::try_mutate(dispute_key, |dispute| {
                 if let Some(d) = dispute {
                     total_jury = d.jury.len();
-                    d.try_add_vote(who.clone(), is_yay)
+                    d.try_add_vote(who.clone(), is_yay, dispute_key)
                 } else {
                     Err(Error::<T>::DisputeDoesNotExist.into())
                 }
@@ -203,8 +207,6 @@ pub mod pallet {
                     Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Failure)?;
                 }
             }
-
-            Self::deposit_event(Event::<T>::DisputeVotedOn { who });
             Ok(().into())
         }
 
@@ -216,7 +218,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             dispute_key: T::DisputeKey,
         ) -> DispatchResult {
-            ForceOrigin::ensure_origin(origin)?;
+            T::ForceOrigin::ensure_origin(origin)?;
             let dispute = Disputes::<T>::get(dispute_key);
             Ok(().into())
         }
@@ -325,7 +327,7 @@ pub mod pallet {
                 Ok::<(), DispatchError>(())
             })?;
 
-            //::deposit_event(Event::<T>::DisputeRaised { dispute_key }.into());
+            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeRaised { dispute_key }.into());
             Ok(())
         }
 
@@ -355,16 +357,26 @@ pub mod pallet {
                     .filter(|finalising_id| **finalising_id == dispute_key)
                     .collect::<Vec<_>>();
             });
-            let _ = T::DisputeHooks::on_dispute_complete(dispute_key, result);
+
             // Remove the dispute once the hooks gets successfully completed.
             Disputes::<T>::remove(dispute_key);
+            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeCompleted {
+                dispute_key,
+                dispute_result: result,
+            });
+
+            // Dont need to return the weight here.
+            let _ = T::DisputeHooks::on_dispute_complete(dispute_key, result);
             Ok(())
         }
 
+        /// Try and add a vote to self.
+        /// Fails if who is not part of the jury or DisputesPerBlock bound is violated.
         pub(crate) fn try_add_vote(
             &mut self,
             who: AccountIdOf<T>,
             is_yay: bool,
+            dispute_key: T::DisputeKey,
         ) -> Result<BoundedVotes<T>, DispatchError> {
             ensure!(
                 self.jury.iter().any(|e| e == &who),
@@ -372,18 +384,24 @@ pub mod pallet {
             );
 
             self.votes
-                .try_insert(who, is_yay)
+                .try_insert(who.clone(), is_yay)
                 .map_err(|_| Error::<T>::TooManyDisputeVotes)?;
+
+            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeVotedOn { 
+                who,
+                dispute_key,
+                vote: is_yay
+            });
 
             //TODO: This is kinda messy, ideally we dont want to clone such a big data set.
             Ok::<BoundedVotes<T>, DispatchError>(self.votes.clone())
         }
     }
 
-    #[derive(Clone, PartialEq, Debug, Encode, Decode, TypeInfo)]
+    #[derive(Clone, Copy, PartialEq, Debug, Encode, Decode, TypeInfo)]
     pub enum DisputeResult {
-        Success,
-        Failure,
+        Success = 0,
+        Failure = 1,
     }
 
     pub trait WeightInfoT {

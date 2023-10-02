@@ -20,7 +20,6 @@ impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
         specifiers: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
     ) -> Result<(), DispatchError> {
         Dispute::<T>::new(dispute_key, raised_by, jury, specifiers)?;
-        Self::deposit_event(Event::<T>::DisputeRaised { dispute_key });
         Ok(())
     }
 }

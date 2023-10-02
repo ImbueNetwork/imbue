@@ -101,6 +101,7 @@ fn vote_on_dispute_assert_state() {
             specifics,
         ));
         let dispute_before_vote = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
+
         assert_eq!(0, dispute_before_vote.votes.len());
         assert_ok!(PalletDisputes::vote_on_dispute(
             RuntimeOrigin::signed(*BOB),
@@ -108,9 +109,19 @@ fn vote_on_dispute_assert_state() {
             true
         ));
         let dispute_after_vote = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
-        let vote = dispute_after_vote.votes.get(&BOB).unwrap();
-        assert_eq!(true, *vote);
+        assert_eq!(dispute_after_vote.votes.get(&BOB).unwrap(), &true);
         assert_eq!(1, dispute_after_vote.votes.len());
+
+        assert_ok!(PalletDisputes::vote_on_dispute(
+            RuntimeOrigin::signed(*CHARLIE),
+            dispute_key,
+            false
+        ));
+
+        let dispute_after_vote = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
+        assert_eq!(dispute_after_vote.votes.get(&CHARLIE).unwrap(), &false);
+        assert_eq!(dispute_after_vote.votes.get(&BOB).unwrap(), &true);
+        assert_eq!(2, dispute_after_vote.votes.len());
     });
 }
 
@@ -133,13 +144,13 @@ fn vote_on_dispute_assert_last_event() {
             true
         ));
         System::assert_last_event(RuntimeEvent::PalletDisputes(
-            Event::<Test>::DisputeVotedOn { who: *BOB },
+            Event::<Test>::DisputeVotedOn { dispute_key, who: *BOB, vote: true},
         ));
     });
 }
 
 #[test]
-fn vote_on_dispute_assert_last_event_on_initialize() {
+fn on_initialize_tries_to_finalise_assert_event() {
     new_test_ext().execute_with(|| {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
@@ -189,8 +200,14 @@ fn vote_on_dispute_autofinalises_on_unanimous_yes() {
             dispute_key,
             true
         ));
+        System::assert_last_event(RuntimeEvent::PalletDisputes(
+            Event::<Test>::DisputeCompleted {
+                dispute_key,
+                dispute_result: DisputeResult::Success,
+            },
+        ));
         //verify that the dispute has been removed once auto_finalization is done in case of unanimous yes
-        assert_eq!(0, PalletDisputes::disputes(dispute_key).iter().count());
+        assert!(Disputes::<Test>::get(dispute_key).is_none());
     });
 }
 
@@ -216,43 +233,56 @@ fn vote_on_dispute_autofinalises_on_unanimous_no() {
             dispute_key,
             false
         ));
+        System::assert_last_event(RuntimeEvent::PalletDisputes(
+            Event::<Test>::DisputeCompleted {
+                dispute_key,
+                dispute_result: DisputeResult::Failure,
+            },
+        ));
         //verify that the dispute has been removed once auto_finalization is done in case of unanimous no
-        assert_eq!(0, PalletDisputes::disputes(dispute_key).iter().count());
+        assert!(Disputes::<Test>::get(dispute_key).is_none());
     });
 }
 
-///SHANKAR: What does this mean?
+// Ensure that when a dispute is finalised that the dispute is not given to the on_initialise
+// to try and auto finalise again.
 #[test]
-fn try_auto_finalise_removes_autofinalise() {
+fn try_auto_finalise_removes_autofinalise_storage() {
     new_test_ext().execute_with(|| {
         new_test_ext().execute_with(|| {
-            let dispute_key = 10;
+            let dispute_key_1 = 10;
+            let dispute_key_2 = 11;
             let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
             let specifics = get_specifics::<Test>(vec![0, 1]);
+            let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
             assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
-                dispute_key,
+                dispute_key_1,
+                *ALICE,
+                jury.clone(),
+                specifics.clone(),
+            ));
+            assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
+                dispute_key_2,
                 *ALICE,
                 jury,
                 specifics,
             ));
             assert_ok!(PalletDisputes::vote_on_dispute(
                 RuntimeOrigin::signed(*BOB),
-                dispute_key,
+                dispute_key_1,
                 false
             ));
             assert_ok!(PalletDisputes::vote_on_dispute(
-                RuntimeOrigin::signed(*CHARLIE),
-                dispute_key,
-                false
+                RuntimeOrigin::signed(*BOB),
+                dispute_key_2,
+                true
             ));
-            //verify that the dispute has been removed once auto_finalization is done in case of unanimous no
-            assert_eq!(0, PalletDisputes::disputes(dispute_key).iter().count());
-            //After the dispute has been autofinalized and the we again tru to autofinalize it throws an error saying that
-            // the dispute doesnt exists as it has been removed
-            assert_noop!(
-                Dispute::<Test>::try_finalise_with_result(dispute_key, DisputeResult::Success),
-                Error::<Test>::DisputeDoesNotExist
-            );
+            assert_ok!(Dispute::<Test>::try_finalise_with_result(dispute_key_1, DisputeResult::Success));
+            let finalising_disputes = DisputesFinaliseOn::<Test>::get(expiry_block);
+
+            assert!(finalising_disputes.contains(&dispute_key_2));
+            assert!(!finalising_disputes.contains(&dispute_key_1));
+            assert_eq!(finalising_disputes.len(), 1);
         });
     });
 }
@@ -518,6 +548,13 @@ fn calculate_winner_works_dispute_failure() {
     });
 }
 
+#[test]
+fn try_auto_finalise_without_votes_fails() {
+    new_test_ext().execute_with(|| {
+        assert!(false);
+    });
+}
+
 ///e2e
 #[test]
 fn e2e() {
@@ -545,3 +582,6 @@ fn e2e() {
         assert_eq!(0, PalletDisputes::disputes(dispute_key).iter().count());
     });
 }
+
+
+
