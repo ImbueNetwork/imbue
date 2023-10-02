@@ -1,10 +1,10 @@
-pub(crate) use crate::traits::*;
-pub(crate) use crate::{mock, mock::*, pallet, pallet::*};
-pub(crate) use frame_support::traits::Len;
-pub(crate) use frame_support::{assert_noop, assert_ok, traits::Hooks};
-pub(crate) use sp_arithmetic::traits::One;
-pub(crate) use sp_runtime::traits::BlockNumberProvider;
-pub(crate) use sp_runtime::{BoundedBTreeMap, BoundedVec, Saturating};
+pub(super) use crate::traits::*;
+pub(super) use crate::{mock, mock::*, pallet, pallet::*};
+pub(super) use frame_support::traits::Len;
+pub(super) use frame_support::{assert_noop, assert_ok, traits::Hooks};
+pub(super) use sp_arithmetic::traits::One;
+pub(super) use sp_runtime::traits::BlockNumberProvider;
+pub(super) use sp_runtime::{BoundedBTreeMap, BoundedVec, Saturating, SaturatedConversion};
 
 pub fn run_to_block<T: Config>(n: T::BlockNumber)
 where
@@ -32,19 +32,4 @@ pub fn get_specifics<T: Config>(
     specifics: Vec<T::SpecificId>,
 ) -> BoundedVec<T::SpecificId, T::MaxSpecifics> {
     specifics.try_into().expect("too many specific ids.")
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-pub fn create_funded_user<T: Config>(
-    seed: &'static str,
-    n: u32,
-    balance_factor: u128,
-) -> T::AccountId {
-    let user = account(seed, n, 0);
-    assert_ok!(<T::MultiCurrency as MultiCurrency<
-        <T as frame_system::Config>::AccountId,
-    >>::deposit(
-        CurrencyId::Native, &user, balance_factor.saturated_into()
-    ));
-    user
 }

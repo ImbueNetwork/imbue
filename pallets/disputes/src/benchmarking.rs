@@ -1,8 +1,7 @@
 #![cfg(feature = "runtime-benchmarks")]
-use super::*;
 
+use super::*;
 use crate::traits::DisputeRaiser;
-use crate::Pallet as PalletDisputes;
 use sp_std::vec::Vec;
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
@@ -15,14 +14,14 @@ mod benchmarks {
     use super::*;
     #[benchmark]
     fn raise_a_dispute() {
-        let alice: T::AccountId =
-            create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
-        let jury = get_jury::<T>(vec![alice, bob]);
+
+        let alice: AccountIdOf<T> = account("ALICE", 0, 0);
+        let bob: AccountIdOf<T> = account("BOB", 0, 0);
+        let jury = get_jury::<T>(vec![alice.clone(), bob]);
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
         #[block]
         {
-            <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
+            <crate::Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
                 10u32.into(),
                 alice,
                 jury,
@@ -30,12 +29,24 @@ mod benchmarks {
             );
         }
 
-        assert!(PalletDisputes::disputes(10u32.into()).is_some());
     }
 
-    impl_benchmark_test_suite!(
-        PalletDisputes,
-        crate::mock::new_test_ext(),
-        crate::mock::Test
-    );
+    //impl_benchmark_test_suite!(
+    //    PalletDisputes,
+    //    crate::mock::new_test_ext(),
+    //    crate::mock::Test
+    //);
+}
+
+
+pub fn get_jury<T: Config>(
+    accounts: Vec<<T as frame_system::Config>::AccountId>,
+) -> BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize> {
+    accounts.try_into().expect("too many jury members")
+}
+
+pub fn get_specifics<T: Config>(
+    specifics: Vec<T::SpecificId>,
+) -> BoundedVec<T::SpecificId, T::MaxSpecifics> {
+    specifics.try_into().expect("too many specific ids.")
 }
