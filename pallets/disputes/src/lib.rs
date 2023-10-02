@@ -144,6 +144,8 @@ pub mod pallet {
         DisputeAlreadyExtended,
         /// There have been more than required votes for a given dispute
         TooManyDisputeVotes,
+        /// A dispute key is not inserted in DisputesFinaliseOn as expected, this is a bug, contact development.
+        AutoFinaliseStateMismatch,
     }
 
     #[pallet::hooks]
@@ -157,8 +159,7 @@ pub mod pallet {
                 if let Some(dispute) = Disputes::<T>::get(dispute_id) {
                     weight = weight.saturating_add(T::WeightInfo::calculate_winner());
                     let result = dispute.calculate_winner();
-                    // TODO: Gonna have to do a trick to benchmark this correctly.
-                    // Maybe return a weight from the method is a good idea and simple.
+                    // TODO: actually benchmark.
                     let hook_weight =
                         <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
                             *dispute_id,
@@ -251,7 +252,7 @@ pub mod pallet {
             // Ensure that the dispute does not end on the old date.
             DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
                 // TODO: see if this works lol
-                let _ = finalising
+                finalising
                     .iter()
                     .filter(|finalising_id| **finalising_id == dispute_key)
                     .collect::<Vec<_>>();
@@ -334,6 +335,10 @@ pub mod pallet {
         /// Calculate the winner in a dispute at the current moment.
         /// This ofcourse is subject to change if more votes are had.
         pub(crate) fn calculate_winner(&self) -> DisputeResult {
+            if self.votes.values().len() == 0 {
+                return DisputeResult::Failure
+            }
+
             if self.votes.values().filter(|&&x| x).count()
                 >= self.votes.values().filter(|&&x| !x).count()
             {
@@ -351,11 +356,17 @@ pub mod pallet {
         ) -> Result<(), DispatchError> {
             let dispute =
                 Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
-            DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
-                let _ = finalising
-                    .iter()
-                    .filter(|finalising_id| **finalising_id == dispute_key)
-                    .collect::<Vec<_>>();
+            DisputesFinaliseOn::<T>::try_mutate(dispute.expiration, |finalising| {
+                if let Some(index) = finalising.iter().position(|finalising_key| finalising_key == &dispute_key) {
+                    finalising
+                    .remove(index);
+                } else {
+                    // If the index for the dispute is not found in DisputeFinalisingOn then,
+                    // we have a state mismatch and autofinalisation may not work so throw an error.
+                    return Err(Error::<T>::AutoFinaliseStateMismatch.into())
+                }
+
+                Ok::<(), DispatchError>(())
             });
 
             // Remove the dispute once the hooks gets successfully completed.
