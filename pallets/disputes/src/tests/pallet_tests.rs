@@ -445,7 +445,7 @@ fn extend_dispute_works_assert_state() {
         let d = Disputes::<Test>::get(dispute_key).expect("dispute should exist");
         assert!(!d.is_extended);
         assert_eq!(initial_expiry, d.expiration);
-        
+
         // Assert it will autofinalise on the old expiry block
         let autofinalising = DisputesFinaliseOn::<Test>::get(d.expiration);
         assert!(autofinalising.len() == 1);
@@ -481,7 +481,7 @@ fn extend_dispute_too_many_disputes() {
         let disputes_limit = <Test as Config>::MaxDisputesPerBlock::get();
         let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
         let specifics = get_specifics::<Test>(vec![0, 1]);
-        
+
         assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             u32::MAX,
             *ALICE,
@@ -489,7 +489,9 @@ fn extend_dispute_too_many_disputes() {
             specifics.clone(),
         ));
 
-        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get());
+        run_to_block::<Test>(
+            frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get(),
+        );
         (0u32..disputes_limit).for_each(|i| {
             assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
                 i,
@@ -499,7 +501,10 @@ fn extend_dispute_too_many_disputes() {
             ));
         });
         // It will never exists here unless the VotingTimeLimit is changed to a value smaller than before.
-        assert_noop!(PalletDisputes::extend_dispute(RuntimeOrigin::signed(*BOB), u32::MAX), Error::<Test>::DisputeDoesNotExist);
+        assert_noop!(
+            PalletDisputes::extend_dispute(RuntimeOrigin::signed(*BOB), u32::MAX),
+            Error::<Test>::DisputeDoesNotExist
+        );
     });
 }
 
@@ -528,8 +533,6 @@ fn try_auto_finalise_without_votes_fails() {
         ));
     });
 }
-
-
 
 ///e2e
 #[test]

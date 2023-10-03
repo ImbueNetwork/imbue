@@ -1,8 +1,8 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Pallet as PalletDisputes;
 use crate::traits::DisputeRaiser;
+use crate::Pallet as PalletDisputes;
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, BoundedVec};
@@ -12,8 +12,8 @@ use sp_std::vec::Vec;
 
 #[benchmarks( where <T as frame_system::Config>::AccountId: AsRef<[u8]>, Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
 mod benchmarks {
-    use frame_support::dispatch::RawOrigin;
     use super::*;
+    use frame_support::dispatch::RawOrigin;
     #[benchmark]
     fn raise_dispute() {
         let alice: AccountIdOf<T> = account("ALICE", 0, 0);
@@ -46,11 +46,7 @@ mod benchmarks {
         );
 
         #[extrinsic_call]
-        <Pallet<T>>::extend_dispute(
-            RawOrigin::Signed(alice.clone()),
-            10u32.into()
-        );
-
+        <Pallet<T>>::extend_dispute(RawOrigin::Signed(alice.clone()), 10u32.into());
     }
 
     #[benchmark]
@@ -68,18 +64,13 @@ mod benchmarks {
         );
 
         #[extrinsic_call]
-        <Pallet<T>> ::vote_on_dispute(
-            RawOrigin::Signed(alice.clone()),
-            10u32.into(),
-            true
-        );
-
+        <Pallet<T>>::vote_on_dispute(RawOrigin::Signed(alice.clone()), 10u32.into(), true);
     }
 
     impl_benchmark_test_suite!(
-       PalletDisputes,
-       crate::mock::new_test_ext(),
-       crate::mock::Test
+        PalletDisputes,
+        crate::mock::new_test_ext(),
+        crate::mock::Test
     );
 }
 
