@@ -36,7 +36,7 @@ pub mod pallet {
     use crate::traits::DisputeHooks;
     use codec::{FullCodec, FullEncode};
     use frame_support::{
-        dispatch::fmt::Debug, inherent::Vec, pallet_prelude::*, weights::Weight, BoundedBTreeMap,
+        dispatch::fmt::Debug, pallet_prelude::*, weights::Weight, BoundedBTreeMap,
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating, Zero};
@@ -163,7 +163,7 @@ pub mod pallet {
                     let hook_weight =
                         <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
                             *dispute_id,
-                            result.clone(),
+                            result,
                         );
 
                     weight = weight.saturating_add(hook_weight);
@@ -208,7 +208,7 @@ pub mod pallet {
                     Dispute::<T>::try_finalise_with_result(dispute_key, DisputeResult::Failure)?;
                 }
             }
-            Ok(().into())
+            Ok(())
         }
 
         /// Force a dispute to fail.
@@ -221,7 +221,7 @@ pub mod pallet {
         ) -> DispatchResult {
             T::ForceOrigin::ensure_origin(origin)?;
             let _dispute = Disputes::<T>::get(dispute_key);
-            Ok(().into())
+            Ok(())
         }
 
         /// Force a dispute to pass.
@@ -232,7 +232,7 @@ pub mod pallet {
             _origin: OriginFor<T>,
             _dispute_key: T::DisputeKey,
         ) -> DispatchResult {
-            Ok(().into())
+            Ok(())
         }
 
         /// Extend a given dispute by T::VotingTimeLimit.
@@ -335,7 +335,7 @@ pub mod pallet {
                 Ok::<(), DispatchError>(())
             })?;
 
-            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeRaised { dispute_key }.into());
+            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeRaised { dispute_key });
             Ok(())
         }
 
