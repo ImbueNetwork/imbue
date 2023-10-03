@@ -1,6 +1,7 @@
 [profile.release]
 panic = 'unwind'
 split-debuginfo = "unpacked"
+opt-level = 3
 
 [workspace.package]
 authors = ["imbue <https://github.com/ImbueNetwork>"]
@@ -23,3 +24,14 @@ members = [
 	"runtime/imbue-kusama",
 	"runtime/common",
 ]
+
+# make sure dev builds with backtrace do
+# not slow us down
+[profile.dev.package.backtrace]
+inherits = "release"
+
+[profile.production]
+inherits = "release"
+lto = true
+codegen-units = 1
+
