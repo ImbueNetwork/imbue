@@ -156,7 +156,7 @@ pub mod pallet {
             let expiring_disputes = DisputesFinaliseOn::<T>::take(n);
             expiring_disputes.iter().for_each(|dispute_id| {
                 weight = weight.saturating_add(T::DbWeight::get().reads(1));
-                if let Some(dispute) = Disputes::<T>::get(dispute_id) {
+                if let Some(dispute) = Disputes::<T>::take(dispute_id) {
                     weight = weight.saturating_add(T::WeightInfo::calculate_winner());
                     let result = dispute.calculate_winner();
                     // TODO: actually benchmark.
@@ -250,13 +250,21 @@ pub mod pallet {
                 Error::<T>::NotAJuryAccount
             );
             // Ensure that the dispute does not end on the old date.
-            DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
-                // TODO: see if this works lol
-                finalising
+            DisputesFinaliseOn::<T>::try_mutate(dispute.expiration, |finalising| {
+                if let Some(index) = finalising
                     .iter()
-                    .filter(|finalising_id| **finalising_id == dispute_key)
-                    .collect::<Vec<_>>();
-            });
+                    .position(|finalising_key| finalising_key == &dispute_key)
+                {
+                    finalising.remove(index);
+                } else {
+                    // This error is unreachable unless the VotingTimeLimit config item is reduced.
+                    // Thereby allowing the extension of a dispute ontop of possible more than MaxDisputes PerBlock.
+                    // If the VotingTimeLimit is the same then this would have autofinalised before this can be called.
+                    return Err(Error::<T>::AutoFinaliseStateMismatch.into());
+                }
+
+                Ok::<(), DispatchError>(())
+            })?;
 
             // Insert the new date.
             let new_expiry = dispute.expiration.saturating_add(T::VotingTimeLimit::get());
