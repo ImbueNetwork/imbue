@@ -220,7 +220,7 @@ pub mod pallet {
             dispute_key: T::DisputeKey,
         ) -> DispatchResult {
             T::ForceOrigin::ensure_origin(origin)?;
-            let dispute = Disputes::<T>::get(dispute_key);
+            let _dispute = Disputes::<T>::get(dispute_key);
             Ok(().into())
         }
 
@@ -229,10 +229,9 @@ pub mod pallet {
         #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::force_succeed_dispute())]
         pub fn force_succeed_dispute(
-            origin: OriginFor<T>,
-            dispute_key: T::DisputeKey,
+            _origin: OriginFor<T>,
+            _dispute_key: T::DisputeKey,
         ) -> DispatchResult {
-            todo!();
             Ok(().into())
         }
 
@@ -377,7 +376,7 @@ pub mod pallet {
                 }
 
                 Ok::<(), DispatchError>(())
-            });
+            })?;
 
             // Remove the dispute once the hooks gets successfully completed.
             Disputes::<T>::remove(dispute_key);

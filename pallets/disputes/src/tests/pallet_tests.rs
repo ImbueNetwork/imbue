@@ -42,7 +42,6 @@ fn raise_dispute_assert_event() {
 #[test]
 fn raise_dispute_assert_event_too_many_disputes() {
     new_test_ext().execute_with(|| {
-        let dispute_key = 10;
         let disputes_limit = <Test as Config>::MaxDisputesPerBlock::get();
         (0..=disputes_limit).for_each(|i| {
             let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
@@ -170,7 +169,7 @@ fn on_initialize_tries_to_finalise_assert_event() {
             dispute_key,
             true
         ));
-        ///trying to expire the timelimit for the given dispute
+        // Trying to expire the timelimit for the given dispute
         let current_block = frame_system::Pallet::<Test>::current_block_number();
         run_to_block::<Test>(current_block + <Test as Config>::VotingTimeLimit::get());
         System::assert_last_event(RuntimeEvent::PalletDisputes(

@@ -130,8 +130,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 impl crate::traits::DisputeHooks<u32> for Test {
     fn on_dispute_complete(
-        dispute_key: u32,
-        dispute_result: crate::pallet::DisputeResult,
+        _dispute_key: u32,
+        _dispute_result: crate::pallet::DisputeResult,
     ) -> Weight {
         <Weight as Default>::default()
     }

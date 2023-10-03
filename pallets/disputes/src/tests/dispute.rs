@@ -48,7 +48,7 @@ fn test_calculate_winner_noone_votes_failure() {
         let jury = get_jury::<Test>(vec![*ALICE, *BOB]);
         let specifics = get_specifics::<Test>(vec![0, 1, 2]);
         assert_ok!(Dispute::<Test>::new(dispute_key, *CHARLIE, jury, specifics));
-        let mut dispute = Disputes::<Test>::get(dispute_key).expect("just inserted, should exist.");
+        let dispute = Disputes::<Test>::get(dispute_key).expect("just inserted, should exist.");
         assert_eq!(dispute.calculate_winner(), DisputeResult::Failure);
     })
 }
