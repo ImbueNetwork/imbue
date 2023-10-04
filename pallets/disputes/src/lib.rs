@@ -213,6 +213,7 @@ pub mod pallet {
 
         /// Force a dispute to fail.
         /// Must be called by T::ForceOrigin
+        /// We have a seperate force_fail and force_succeed extrinsics as the two paths may be of vastly different weight.
         #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::force_fail_dispute())]
         pub fn force_fail_dispute(
@@ -220,7 +221,20 @@ pub mod pallet {
             dispute_key: T::DisputeKey,
         ) -> DispatchResult {
             T::ForceOrigin::ensure_origin(origin)?;
-            let _dispute = Disputes::<T>::get(dispute_key);
+            let dispute = Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
+                if let Some(index) = finalising
+                    .iter()
+                    .position(|finalising_key| finalising_key == &dispute_key) {
+                    finalising.remove(index);
+                }
+                // Dont mind if this fails as the autofinalise will skip.
+            });
+            T::DisputeHooks::on_dispute_complete(dispute_key, DisputeResult::Failure);
+            Self::deposit_event(Event::<T>::DisputeCompleted {
+                dispute_key,
+                dispute_result: DisputeResult::Failure,
+            });
             Ok(())
         }
 
@@ -229,9 +243,24 @@ pub mod pallet {
         #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::force_succeed_dispute())]
         pub fn force_succeed_dispute(
-            _origin: OriginFor<T>,
-            _dispute_key: T::DisputeKey,
+            origin: OriginFor<T>,
+            dispute_key: T::DisputeKey,
         ) -> DispatchResult {
+            T::ForceOrigin::ensure_origin(origin)?;
+            let dispute = Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
+                if let Some(index) = finalising
+                    .iter()
+                    .position(|finalising_key| finalising_key == &dispute_key) {
+                    finalising.remove(index);
+                }
+                // Dont mind if this fails as the autofinalise will skip.
+            });
+            T::DisputeHooks::on_dispute_complete(dispute_key, DisputeResult::Success);
+            Self::deposit_event(Event::<T>::DisputeCompleted {
+                dispute_key,
+                dispute_result: DisputeResult::Success,
+            });
             Ok(())
         }
 
@@ -362,7 +391,7 @@ pub mod pallet {
             result: DisputeResult,
         ) -> Result<(), DispatchError> {
             let dispute =
-                Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+                Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             DisputesFinaliseOn::<T>::try_mutate(dispute.expiration, |finalising| {
                 if let Some(index) = finalising
                     .iter()
