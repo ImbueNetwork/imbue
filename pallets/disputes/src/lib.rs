@@ -15,7 +15,6 @@
 
 // 4: an extrinsic is called claim_back(parameter: who, where.)
 
-//pub mod impls;
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
 pub mod impls;

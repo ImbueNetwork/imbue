@@ -35,7 +35,7 @@ mod benchmarks {
     fn extend_dispute() {
         let alice: AccountIdOf<T> = account("ALICE", 0, 0);
         let bob: AccountIdOf<T> = account("BOB", 0, 0);
-        let jury = get_jury::<T>(vec![alice.clone(), bob]);
+        let jury = get_jury::<T>(vec![bob.clone()]);
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
 
         <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
@@ -46,14 +46,14 @@ mod benchmarks {
         );
 
         #[extrinsic_call]
-        <Pallet<T>>::extend_dispute(RawOrigin::Signed(alice.clone()), 10u32.into());
+        <Pallet<T>>::extend_dispute(RawOrigin::Signed(bob), 10u32.into());
     }
 
     #[benchmark]
     fn vote_on_dispute() {
         let alice: AccountIdOf<T> = account("ALICE", 0, 0);
         let bob: AccountIdOf<T> = account("BOB", 0, 0);
-        let jury = get_jury::<T>(vec![alice.clone(), bob]);
+        let jury = get_jury::<T>(vec![bob.clone()]);
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
 
         <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
@@ -64,7 +64,7 @@ mod benchmarks {
         );
 
         #[extrinsic_call]
-        <Pallet<T>>::vote_on_dispute(RawOrigin::Signed(alice.clone()), 10u32.into(), true);
+        <Pallet<T>>::vote_on_dispute(RawOrigin::Signed(bob), 10u32.into(), true);
     }
 
     impl_benchmark_test_suite!(
