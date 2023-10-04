@@ -61,3 +61,4 @@ jobs:
           gcloud compute instances delete
           gce-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
           --quiet --zone us-central1-b
+          
