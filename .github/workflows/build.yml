@@ -1,0 +1,64 @@
+name: build-on-self-hosted-runner
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+    env:
+      CARGO_TERM_COLOR: always
+jobs:
+  create-runner:
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.create-runner.outputs.label }}
+    steps:
+      - id: create-runner
+        uses: related-sciences/gce-github-runner@v0.10
+        with:
+          token: ${{ secrets.GH_SA_TOKEN }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          image_project: ubuntu-os-cloud
+          image_family: ubuntu-2004-lts
+          machine_type: e2-highcpu-32
+          disk_size: 400
+          machine_zone: us-central1-b
+          ephemeral: true
+
+      - uses: actions/checkout@v4
+
+      - name: Install Protobuf
+        run: sudo apt install protobuf-compiler
+
+      - name: Install minimal nightly Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2023-05-22
+          target: wasm32-unknown-unknown
+          override: true
+          components: rustfmt, clippy
+
+      - name: 🫠 rustfmt 🫠
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --check
+
+      - name: Run tests with benchmarks
+        run: cargo test --features runtime-benchmarks
+
+      - name: Delete runner VM
+        if: always()
+        run: >
+          gcloud compute instances delete
+          gce-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+          --quiet --zone us-central1-b
+          
