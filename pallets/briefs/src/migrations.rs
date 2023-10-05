@@ -12,6 +12,7 @@ use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::Percent;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
+use sp_runtime::TryRuntimeError;
 
 mod v0 {
     use super::*;
