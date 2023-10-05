@@ -40,6 +40,9 @@ jobs:
       steps:
       - uses: actions/checkout@v4
 
+      - name: Set HOME
+        run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
+
       - name: Install minimal nightly Rust
         uses: actions-rs/toolchain@v1
         with:
