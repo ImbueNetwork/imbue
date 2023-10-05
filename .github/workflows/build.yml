@@ -13,6 +13,7 @@ on:
       - "**.md"
     env:
       CARGO_TERM_COLOR: always
+      GCP_ZONE: europe-west3-a
 #      HOME: /home/ubuntu
 jobs:
   create-runner:
@@ -30,14 +31,14 @@ jobs:
           image_family: ubuntu-2004-lts
           machine_type: e2-highcpu-32
           disk_size: 400
-          machine_zone: europe-west3-a
+          machine_zone: ${{ env.GCP_ZONE }}
           ephemeral: true
 
       - name: install as user
         run: >
           gcloud compute ssh
           gce-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-          --zone europe-west2-a
+          --zone ${{ env.GCP_ZONE }}
           --command="cd /actions-runner && sudo ./svc.sh uninstall && sudo ./svc.sh install ubuntu"
 
   test-features:
