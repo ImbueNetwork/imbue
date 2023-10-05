@@ -11,10 +11,10 @@ on:
       - main
     paths-ignore:
       - "**.md"
-    env:
-      CARGO_TERM_COLOR: always
-      GCP_ZONE: europe-west3-a
-#      HOME: /home/ubuntu
+env:
+  CARGO_TERM_COLOR: always
+  GCP_ZONE: europe-west3-a
+
 jobs:
   create-runner:
     runs-on: ubuntu-latest
@@ -40,6 +40,12 @@ jobs:
       steps:
       - uses: actions/checkout@v4
 
+      - name: echo region
+        run: echo $GCP_ZONE
+
+      - name: echo region2
+        run: echo ${{ env.$GCP_ZONE }}
+
       - name: Set HOME
         run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
 
@@ -63,10 +69,3 @@ jobs:
 
       - name: Run tests with benchmarks
         run: cargo test --features runtime-benchmarks
-
-#      - name: Delete runner VM
-#        if: always()
-#        run: >
-#          gcloud compute instances delete
-#          gce-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-#          --quiet --zone europe-west2-a
