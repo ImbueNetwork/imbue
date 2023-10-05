@@ -41,7 +41,7 @@ jobs:
 #        run: sudo rm -rf /usr/share/dotnet;sudo rm -rf /opt/ghc;sudo rm -rf "/usr/local/share/boost";sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
       - name: Install Protobuf
-        run: sudo apt install protobuf-compiler
+        run: sudo apt install protobuf-compiler -y
 
       - name: Install minimal nightly Rust
         uses: actions-rs/toolchain@v1
