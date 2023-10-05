@@ -40,9 +40,6 @@ jobs:
       steps:
       - uses: actions/checkout@v4
 
-      - name: echo region
-        run: echo $GCP_ZONE
-
       - name: echo region2
         run: echo ${{ env.GCP_ZONE }}
 
