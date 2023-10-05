@@ -29,7 +29,7 @@ jobs:
           image_family: ubuntu-2004-lts
           machine_type: e2-highcpu-32
           disk_size: 400
-          machine_zone: europe-west1-a
+          machine_zone: europe-west3-a
           ephemeral: true
   test-features:
       needs: create-runner
