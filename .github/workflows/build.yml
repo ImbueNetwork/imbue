@@ -30,7 +30,7 @@ jobs:
           image_project: ubuntu-os-cloud
           image_family: ubuntu-2004-lts
           machine_type: e2-highcpu-32
-          disk_size: 400
+          disk_size: 100
           machine_zone: europe-west3-a
           ephemeral: true
 
@@ -39,7 +39,7 @@ jobs:
           gcloud compute ssh
           gce-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
           --zone europe-west3-a
-          --command="cd /actions-runner && sudo ./svc.sh uninstall && sudo ./svc.sh install ubuntu"
+          --command="cd /actions-runner && sudo ./svc.sh uninstall && sudo ./svc.sh install ubuntu && sudo ./svc.sh start"
 
   test-features:
       needs: create-runner
