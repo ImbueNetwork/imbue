@@ -33,7 +33,6 @@ jobs:
           machine_zone: europe-west3-a
           ephemeral: true
 
-
       - name: install as user
         run: /actions-runner/svc.sh install ubuntu
 
