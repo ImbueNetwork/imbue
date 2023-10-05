@@ -46,7 +46,6 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 pallet-deposits = { path = "../deposits", default-features = false }
-pallet-disputes = { path = "../disputes", default-features = false }
 
 [dev-dependencies]
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43"}

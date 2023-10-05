@@ -102,8 +102,6 @@ pub mod pallet {
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
         /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
-
-        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>>;
     }
 
     #[pallet::pallet]

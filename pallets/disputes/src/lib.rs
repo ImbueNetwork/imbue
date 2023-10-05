@@ -303,11 +303,11 @@ pub mod pallet {
             })?;
 
             Disputes::<T>::mutate(dispute_key, |maybe_dispute| {
-                if let Some(d) = dispute_key {
+                if let Some(d) = maybe_dispute {
                     d.expiration = new_expiry;
                     d.is_extended = true
                 }
-            })
+            });
 
             Self::deposit_event(Event::<T>::DisputeExtended { dispute_key });
             Ok(())
@@ -455,10 +455,8 @@ pub mod pallet {
 
     pub trait WeightInfoT {
         fn vote_on_dispute() -> Weight;
-        fn force_cancel_dispute() -> Weight;
         fn extend_dispute() -> Weight;
         fn raise_dispute() -> Weight;
-        fn on_dispute_complete() -> Weight;
         fn force_succeed_dispute() -> Weight;
         fn force_fail_dispute() -> Weight;
         fn calculate_winner() -> Weight;

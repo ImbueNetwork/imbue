@@ -141,19 +141,10 @@ impl crate::WeightInfoT for () {
     fn vote_on_dispute() -> Weight {
         <Weight as Default>::default()
     }
-    fn force_cancel_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
     fn extend_dispute() -> Weight {
         <Weight as Default>::default()
     }
     fn raise_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn on_dispute_complete() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn on_dispute_cancel() -> Weight {
         <Weight as Default>::default()
     }
     fn force_succeed_dispute() -> Weight {

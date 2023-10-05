@@ -1,11 +1,7 @@
 use crate::*;
 use common_types::milestone_origin::FundingType;
-use pallet_disputes::pallet::Disputes;
-use pallet_disputes::traits::DisputeHooks;
-use pallet_disputes::Disputes;
 use scale_info::prelude::format;
 use sp_runtime::traits::{Saturating, Zero};
-use std::ptr::null;
 
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
@@ -455,29 +451,5 @@ impl<T: Config> Pallet<T> {
         // Allow future votes to occur on this milestone
         UserHasVoted::<T>::remove(user_has_voted_key);
         Ok(())
-    }
-}
-
-impl<T: Config> DisputeHooks<T::DisputeKey> for Pallet<T> {
-    fn on_dispute_complete(dispute_key: T::DisputeKey) -> Result<(), DispatchError> {
-        /// get the dispute using the dispute_key
-        let mut dispute = Disputes::<T>::get(dispute_key)?;
-        /// getting dispute raiser account to transfer the raised funds
-        /// in case of the dispute resolved in favor of the raiser
-        let raised_by = dispute.raised_by;
-        /// get the project based on the dispute_key
-        let project = Projects::<T>::get(&dispute_key)?;
-        /// get the raised funds to return in case of the success resolution in favor of the raiser
-        let raised_funds = project.raised_funds;
-        /// making the transfer to the raiser
-        // SHANKAR- Do we need the fund account from where the funds need to be refunded as the second parameter ask
-        T::MultiCurrency::transfer(project.currency_id, todo!(), &raised_by, raised_funds)?;
-        /// once the transfer is done remove the disputes from the disputes storagemap
-        //Disputes::<T>::remove(&dispute_key)?;
-        Ok(())
-    }
-
-    fn on_dispute_cancel(dispute_key: T::DisputeKey) -> Result<(), DispatchError> {
-        todo!()
     }
 }

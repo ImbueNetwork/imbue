@@ -4,7 +4,7 @@ use super::*;
 use crate::traits::DisputeRaiser;
 use crate::Pallet as PalletDisputes;
 use frame_benchmarking::v2::*;
-use frame_support::{assert_ok, BoundedVec};
+use frame_support::{assert_ok, BoundedVec, traits::Get};
 use orml_traits::MultiCurrency;
 use frame_system::Pallet as System;
 use sp_runtime::SaturatedConversion;
@@ -23,12 +23,12 @@ mod benchmarks {
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
         #[block]
         {
-            <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
+            <Pallet<T> as DisputeRaiser<AccountIdOf<T>>>::raise_dispute(
                 10u32.into(),
                 alice,
                 jury,
                 specifics,
-            );
+            ).unwrap();
         }
     }
 
@@ -39,17 +39,19 @@ mod benchmarks {
         let jury = get_jury::<T>(vec![bob.clone()]);
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
 
-        <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
+        assert_ok!(<Pallet<T> as DisputeRaiser<AccountIdOf<T>>>::raise_dispute(
             10u32.into(),
             alice.clone(),
             jury,
             specifics,
-        );
+        ));
 
         #[extrinsic_call]
         <Pallet<T>>::extend_dispute(RawOrigin::Signed(bob), 10u32.into());
     }
 
+
+    // Worst case atm is causing it to autofinalise.
     #[benchmark]
     fn vote_on_dispute() {
         let alice: AccountIdOf<T> = account("ALICE", 0, 0);
@@ -57,12 +59,12 @@ mod benchmarks {
         let jury = get_jury::<T>(vec![bob.clone()]);
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
 
-        <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
+        assert_ok!(<Pallet<T> as DisputeRaiser<AccountIdOf<T>>>::raise_dispute(
             10u32.into(),
             alice.clone(),
             jury,
             specifics,
-        );
+        ));
 
         #[extrinsic_call]
         <Pallet<T>>::vote_on_dispute(RawOrigin::Signed(bob), 10u32.into(), true);
@@ -75,12 +77,12 @@ mod benchmarks {
         let jury = get_jury::<T>(vec![bob.clone()]);
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
         let dispute_key = 10u32.into();
-        <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
+        assert_ok!(<Pallet<T> as DisputeRaiser<AccountIdOf<T>>>::raise_dispute(
             dispute_key,
             alice.clone(),
             jury,
             specifics,
-        );
+        ));
 
         #[extrinsic_call]
         <Pallet<T>>::force_fail_dispute(RawOrigin::Root, dispute_key);
@@ -100,12 +102,12 @@ mod benchmarks {
         let jury = get_jury::<T>(vec![bob.clone()]);
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
         let dispute_key = 10u32.into();
-        <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
+        assert_ok!(<Pallet<T> as DisputeRaiser<AccountIdOf<T>>>::raise_dispute(
             dispute_key,
             alice.clone(),
             jury,
             specifics,
-        );
+        ));
 
         #[extrinsic_call]
         <Pallet<T>>::force_succeed_dispute(RawOrigin::Root, dispute_key);
@@ -118,21 +120,30 @@ mod benchmarks {
         );
     }
 
+    // Linear relationship with jury members.
     #[benchmark]
     fn calculate_winner() {
-        let alice: AccountIdOf<T> = account("ALICE", 0, 0);
-        let bob: AccountIdOf<T> = account("BOB", 0, 0);
-        let charlie: AccountIdOf<T> = account("CHARLIE", 0, 0);
-        let jury = get_jury::<T>(vec![bob.clone(),charlie.clone()]);
-        let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
         let dispute_key = 10u32.into();
-        assert_ok!(Dispute::<T>::new(10u32.into(), alice, jury, specifics));
+        let alice: AccountIdOf<T> = account("ALICE", 0, 0);
+        let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
+
+        let mut accounts: Vec<AccountIdOf<T>> = Vec::new();
+        for i in 0..T::MaxJurySize::get() {
+            let acc: AccountIdOf<T> = account("ANY", i, 0);
+            accounts.push(acc)
+        }
+        let jury = get_jury::<T>(accounts.clone());
+
+        assert_ok!(Dispute::<T>::new(10u32.into(), alice, jury.clone(), specifics));
         let mut dispute = Disputes::<T>::get(dispute_key).expect("just inserted, should exist.");
-        assert_ok!(dispute.try_add_vote(charlie, true, dispute_key));
-        assert_ok!(dispute.try_add_vote(bob, true, dispute_key));
+
+        for i in 0..T::MaxJurySize::get() {
+            let acc = jury[i as usize].clone();
+            assert_ok!(dispute.try_add_vote(acc, true, dispute_key));
+        }
 
         #[block]{
-            assert_eq!(dispute.calculate_winner(), DisputeResult::Success);
+            dispute.calculate_winner();
         }
     }
 
