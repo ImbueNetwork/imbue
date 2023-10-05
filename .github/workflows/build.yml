@@ -50,6 +50,7 @@ jobs:
           toolchain: nightly-2023-05-22
           target: wasm32-unknown-unknown
           override: true
+          components: rustfmt, clippy
 
       - name: Install Protobuf
         run: sudo apt install protobuf-compiler -y
