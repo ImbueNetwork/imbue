@@ -3,10 +3,10 @@
 use super::*;
 use crate::traits::DisputeRaiser;
 use crate::Pallet as PalletDisputes;
-use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, BoundedVec};
 use orml_traits::MultiCurrency;
+use frame_system::Pallet as System;
 use sp_runtime::SaturatedConversion;
 use sp_std::vec::Vec;
 
@@ -14,6 +14,7 @@ use sp_std::vec::Vec;
 mod benchmarks {
     use super::*;
     use frame_support::dispatch::RawOrigin;
+
     #[benchmark]
     fn raise_dispute() {
         let alice: AccountIdOf<T> = account("ALICE", 0, 0);
@@ -65,6 +66,74 @@ mod benchmarks {
 
         #[extrinsic_call]
         <Pallet<T>>::vote_on_dispute(RawOrigin::Signed(bob), 10u32.into(), true);
+    }
+
+    #[benchmark]
+    fn force_fail_dispute() {
+        let alice: AccountIdOf<T> = account("ALICE", 0, 0);
+        let bob: AccountIdOf<T> = account("BOB", 0, 0);
+        let jury = get_jury::<T>(vec![bob.clone()]);
+        let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
+        let dispute_key = 10u32.into();
+        <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
+            dispute_key,
+            alice.clone(),
+            jury,
+            specifics,
+        );
+
+        #[extrinsic_call]
+        <Pallet<T>>::force_fail_dispute(RawOrigin::Root, dispute_key);
+
+        System::<T>::assert_last_event(
+            Event::<T>::DisputeCompleted{
+                dispute_key,
+                dispute_result: DisputeResult::Failure,
+            }.into()
+        );
+    }
+
+    #[benchmark]
+    fn force_succeed_dispute() {
+        let alice: AccountIdOf<T> = account("ALICE", 0, 0);
+        let bob: AccountIdOf<T> = account("BOB", 0, 0);
+        let jury = get_jury::<T>(vec![bob.clone()]);
+        let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
+        let dispute_key = 10u32.into();
+        <Pallet<T> as DisputeRaiser<<T as frame_system::Config>::AccountId>>::raise_dispute(
+            dispute_key,
+            alice.clone(),
+            jury,
+            specifics,
+        );
+
+        #[extrinsic_call]
+        <Pallet<T>>::force_succeed_dispute(RawOrigin::Root, dispute_key);
+
+        System::<T>::assert_last_event(
+            Event::<T>::DisputeCompleted{
+                dispute_key,
+                dispute_result: DisputeResult::Success,
+            }.into()
+        );
+    }
+
+    #[benchmark]
+    fn calculate_winner() {
+        let alice: AccountIdOf<T> = account("ALICE", 0, 0);
+        let bob: AccountIdOf<T> = account("BOB", 0, 0);
+        let charlie: AccountIdOf<T> = account("CHARLIE", 0, 0);
+        let jury = get_jury::<T>(vec![bob.clone(),charlie.clone()]);
+        let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
+        let dispute_key = 10u32.into();
+        assert_ok!(Dispute::<T>::new(10u32.into(), alice, jury, specifics));
+        let mut dispute = Disputes::<T>::get(dispute_key).expect("just inserted, should exist.");
+        assert_ok!(dispute.try_add_vote(charlie, true, dispute_key));
+        assert_ok!(dispute.try_add_vote(bob, true, dispute_key));
+
+        #[block]{
+            assert_eq!(dispute.calculate_winner(), DisputeResult::Success);
+        }
     }
 
     impl_benchmark_test_suite!(
