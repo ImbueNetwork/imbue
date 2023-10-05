@@ -34,7 +34,7 @@ jobs:
           ephemeral: true
 
       - name: install as user
-        run: /actions-runner/svc.sh install ubuntu
+        run: sudo source /actions-runner/svc.sh install ubuntu
 
   test-features:
       needs: create-runner
