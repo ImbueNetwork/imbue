@@ -44,7 +44,7 @@ jobs:
         run: echo $GCP_ZONE
 
       - name: echo region2
-        run: echo ${{ env.$GCP_ZONE }}
+        run: echo ${{ env.GCP_ZONE }}
 
       - name: Set HOME
         run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
