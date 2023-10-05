@@ -31,6 +31,11 @@ jobs:
           disk_size: 400
           machine_zone: europe-west3-a
           ephemeral: true
+  test-features:
+      needs: create-runner
+      runs-on: ${{ needs.create-runner.outputs.label }}
+      steps:
+      - uses: actions/checkout@v4
 
       - name: Install minimal nightly Rust
         uses: actions-rs/toolchain@v1
@@ -39,16 +44,6 @@ jobs:
           toolchain: nightly-2023-05-22
           target: wasm32-unknown-unknown
           override: true
-
-  test-features:
-      needs: create-runner
-      runs-on: ${{ needs.create-runner.outputs.label }}
-      steps:
-      - uses: actions/checkout@v4
-
-#      - name: Clean unused directories
-#        run: sudo rm -rf /usr/share/dotnet;sudo rm -rf /opt/ghc;sudo rm -rf "/usr/local/share/boost";sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-
 
       - name: Install Protobuf
         run: sudo apt install protobuf-compiler -y
