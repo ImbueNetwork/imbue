@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 sudo apt -y install build-essential
-sudo apt -y install --assume-yes git clang curl libssl-dev protobuf-compiler
+sudo apt -y install --assume-yes git clang curl libssl-dev
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 rustup -y update
