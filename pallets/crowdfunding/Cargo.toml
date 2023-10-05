@@ -2,12 +2,12 @@
 name = "pallet-crowdfunding"
 version = "0.1.0"
 description = "Used to setup the state for a proposal to morph into a project."
-authors = ['Imbue <https://github.com/ImbueNetwork>']
 homepage = 'https://github.com/ImbueNetwork/imbue'
-edition = "2021"
-license = 'Apache 2.0'
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 publish = false
-repository = 'https://github.com/ImbueNetwork/imbue'
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -63,4 +63,17 @@ std = [
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks",	"common-runtime/runtime-benchmarks",]
-try-runtime = ["frame-support/try-runtime"]
+try-runtime = [
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"sp-runtime/try-runtime",
+	"common-runtime/try-runtime",
+	"common-types/try-runtime",
+	"orml-tokens/try-runtime",
+	"pallet-balances/try-runtime",
+	"pallet-deposits/try-runtime",
+	"pallet-identity/try-runtime",
+	"pallet-proposals/try-runtime",
+	"pallet-timestamp/try-runtime",
+	"pallet-xcm/try-runtime"
+]

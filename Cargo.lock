@@ -1275,7 +1275,8 @@ name = "common-traits"
 version = "0.1.0"
 dependencies = [
  "frame-support",
- "parity-scale-codec 3.6.4",
+ "frame-system",
+ "parity-scale-codec 3.6.2",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -3345,8 +3346,9 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43#5e
 dependencies = [
  "frame-support",
  "frame-system",
- "parity-scale-codec 3.6.4",
- "scale-info 2.9.0",
+ "frame-try-runtime",
+ "parity-scale-codec 3.6.2",
+ "scale-info 2.8.0"
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -4266,6 +4268,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "trie-root 0.15.2",
+ "try-runtime-cli",
  "xcm",
  "xcm-builder",
 ]
@@ -4291,6 +4294,7 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
  "hex",
  "hex-literal 0.3.4",
  "log",
@@ -4320,6 +4324,7 @@ dependencies = [
  "pallet-proposals-rpc-runtime-api",
  "pallet-scheduler",
  "pallet-session",
+ "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -6665,6 +6670,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -6966,6 +6972,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -7237,11 +7244,13 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-primitives-core",
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
  "hex",
  "integer-sqrt",
  "lite-json",
+ "log",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -7270,6 +7279,8 @@ dependencies = [
 name = "pallet-proposals-rpc"
 version = "0.1.0"
 dependencies = [
+ "frame-support",
+ "frame-system",
  "jsonrpsee",
  "pallet-proposals-rpc-runtime-api",
  "parity-scale-codec 3.6.4",
@@ -7283,8 +7294,11 @@ dependencies = [
 name = "pallet-proposals-rpc-runtime-api"
 version = "0.1.0"
 dependencies = [
- "parity-scale-codec 3.6.4",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec 3.6.2",
  "sp-api",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -14011,6 +14025,7 @@ dependencies = [
  "async-trait",
  "clap 4.3.21",
  "frame-remote-externalities",
+ "frame-try-runtime",
  "hex",
  "log",
  "parity-scale-codec 3.6.4",

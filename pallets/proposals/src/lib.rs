@@ -79,15 +79,15 @@ pub mod pallet {
         type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
         type WeightInfo: WeightInfoT;
-        type MaxWithdrawalExpiration: Get<Self::BlockNumber>;
+        type MaxWithdrawalExpiration: Get<BlockNumberFor<Self>>;
         /// The amount of time given, up to point of decision, when a vote of no confidence is held.
-        type NoConfidenceTimeLimit: Get<Self::BlockNumber>;
+        type NoConfidenceTimeLimit: Get<BlockNumberFor<Self>>;
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<Percent>;
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
         /// Defines the length that a milestone can be voted on.
-        type MilestoneVotingWindow: Get<Self::BlockNumber>;
+        type MilestoneVotingWindow: Get<BlockNumberFor<Self>>;
         /// The type responisble for handling refunds.
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
         type MaxMilestonesPerProject: Get<u32>;
@@ -104,7 +104,10 @@ pub mod pallet {
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
     }
 
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(5);
+
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
@@ -158,7 +161,7 @@ pub mod pallet {
     pub type Rounds<T> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        ProjectKey,
+        (ProjectKey, MilestoneKey),
         Blake2_128Concat,
         RoundType,
         BlockNumberFor<T>,
@@ -174,10 +177,6 @@ pub mod pallet {
         BoundedProjectKeysPerBlock<T>,
         ValueQuery,
     >;
-
-    #[pallet::storage]
-    #[pallet::getter(fn storage_version)]
-    pub(super) type StorageVersion<T: Config> = StorageValue<_, Release, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -200,9 +199,15 @@ pub mod pallet {
         /// Successfully withdrawn funds from the project.
         ProjectFundsWithdrawn(T::AccountId, ProjectKey, BalanceOf<T>, CurrencyId),
         /// Vote submited successfully.
-        VoteSubmitted(T::AccountId, ProjectKey, MilestoneKey, bool, T::BlockNumber),
+        VoteSubmitted(
+            T::AccountId,
+            ProjectKey,
+            MilestoneKey,
+            bool,
+            BlockNumberFor<T>,
+        ),
         /// A milestone has been approved.
-        MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, T::BlockNumber),
+        MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, BlockNumberFor<T>),
         /// You have created a vote of no confidence.
         NoConfidenceRoundCreated(T::AccountId, ProjectKey),
         /// You have voted upon a round of no confidence.
@@ -269,22 +274,7 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        /// <HB SBP Review:
-        ///
-        /// I see this hook valid on testnet but if you will deploy this with weights v2 already, you can totally remove this.
-        ///
-        /// >
-        fn on_runtime_upgrade() -> Weight {
-            let mut weight = T::DbWeight::get().reads_writes(1, 1);
-            // Only supporting latest upgrade for now.
-            if StorageVersion::<T>::get() == Release::V2 {
-                weight += migration::v3::migrate_all::<T>();
-                StorageVersion::<T>::set(Release::V3);
-            }
-            weight
-        }
-
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
@@ -295,7 +285,7 @@ pub mod pallet {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
                 // Remove the round prevents further voting.
-                Rounds::<T>::remove(project_key, round_type);
+                Rounds::<T>::remove((project_key, milestone_key), round_type);
                 match round_type {
                     // Voting rounds automatically finalise if its reached its threshold.
                     // Therefore we can remove it on round end.
@@ -493,22 +483,6 @@ pub mod pallet {
 pub enum RoundType {
     VotingRound,
     VoteOfNoConfidence,
-}
-
-#[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen)]
-#[repr(u32)]
-pub enum Release {
-    V0,
-    V1,
-    V2,
-    V3,
-    V4,
-}
-
-impl Default for Release {
-    fn default() -> Self {
-        Self::V3
-    }
 }
 
 /// The milestones provided by the user to define the milestones of a project.

@@ -1,13 +1,11 @@
 [package]
 name = "common-traits"
-authors = ['imbue <https://github.com/ImbueNetwork>']
 description = 'Common traits for Imbue runtime'
-edition = '2018'
-homepage = 'https://imbue.network'
-license = "LGPL-3.0"
-repository = 'https://github.com/ImbueNetwork/imbue'
 version = '0.1.0'
-resolver = "2"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
@@ -15,6 +13,7 @@ targets = ['x86_64-unknown-linux-gnu']
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 
@@ -26,6 +25,11 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 
 [features]
 default = ['std']
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "sp-runtime/try-runtime",
+]
 std = [
     "codec/std",
     "frame-support/std",

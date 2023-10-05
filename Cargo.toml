@@ -2,8 +2,15 @@
 panic = 'unwind'
 split-debuginfo = "unpacked"
 
+[workspace.package]
+authors = ["imbue <https://github.com/ImbueNetwork>"]
+edition = "2021"
+repository = "https://github.com/ImbueNetwork/imbue/"
+license = "Apache 2.0"
 
 [workspace]
+resolver = "2"
+
 members = [
 	'node',
 	"pallets/proposals",

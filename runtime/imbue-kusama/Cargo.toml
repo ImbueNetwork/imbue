@@ -1,11 +1,10 @@
 [package]
-authors = ['imbue <https://github.com/ImbueNetwork>']
-edition = '2018'
-homepage = 'https://imbue.network'
-license = 'Apache 2.0'
 name = 'imbue-kusama-runtime'
-repository = 'https://github.com/ImbueNetwork/imbue/'
 version = '2.0.0'
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
@@ -51,6 +50,7 @@ pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-preimage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false  }
+pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate",  default-features = false, features = ["historical"] , branch = "polkadot-v0.9.43" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
@@ -59,7 +59,7 @@ pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false, optional = true }
 
 # Cumulus Dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.43"  , default-features = false }
@@ -106,7 +106,6 @@ common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 pallet-proposals-rpc-runtime-api = {path = "../../pallets/proposals/rpc/runtime-api", default-features = false}
 
-
 [dev-dependencies]
 hex-literal = "0.3.1"
 hex = "0.4.3"
@@ -117,6 +116,83 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", bran
 [features]
 default = ['std']
 
+try-runtime = [
+#	'sp-api/try-runtime',
+#	'sp-arithmetic/try-runtime',
+#	'sp-block-builder/try-runtime',
+#	'sp-core/try-runtime',
+#	'sp-consensus-aura/try-runtime',
+#	'sp-inherents/try-runtime',
+#	'sp-io/try-runtime',
+#	'sp-offchain/try-runtime',
+	'sp-runtime/try-runtime',
+#	'sp-session/try-runtime',
+#	'sp-std/try-runtime',
+#	'sp-transaction-pool/try-runtime',
+#	'sp-version/try-runtime',
+	'frame-executive/try-runtime',
+	'frame-support/try-runtime',
+	'frame-system/try-runtime',
+#	'frame-system-rpc-runtime-api/try-runtime',
+	'pallet-aura/try-runtime',
+	'pallet-assets/try-runtime',
+	'pallet-authorship/try-runtime',
+	'pallet-balances/try-runtime',
+	'pallet-collective/try-runtime',
+	'pallet-democracy/try-runtime',
+	'pallet-identity/try-runtime',
+	'pallet-membership/try-runtime',
+	'pallet-multisig/try-runtime',
+	'pallet-preimage/try-runtime',
+	'pallet-sudo/try-runtime',
+	'pallet-session/try-runtime',
+	'pallet-timestamp/try-runtime',
+#	'pallet-transaction-payment/try-runtime',
+#	'pallet-transaction-payment-rpc-runtime-api/try-runtime',
+	'pallet-treasury/try-runtime',
+	'pallet-scheduler/try-runtime',
+	'pallet-vesting/try-runtime',
+	'pallet-utility/try-runtime',
+	'frame-try-runtime/try-runtime',
+	'cumulus-pallet-aura-ext/try-runtime',
+	'cumulus-pallet-parachain-system/try-runtime',
+	'cumulus-pallet-dmp-queue/try-runtime',
+	'cumulus-pallet-xcm/try-runtime',
+	'cumulus-pallet-xcmp-queue/try-runtime',
+#	'cumulus-primitives-core/try-runtime',
+#	'cumulus-primitives-timestamp/try-runtime',
+#	'cumulus-primitives-utility/try-runtime',
+	'pallet-collator-selection/try-runtime',
+	'parachain-info/try-runtime',
+#	'xcm/try-runtime',
+#	'xcm-builder/try-runtime',
+#	'xcm-executor/try-runtime',
+	'pallet-xcm/try-runtime',
+#	'polkadot-parachain',
+	'polkadot-runtime-common/try-runtime',
+
+	'orml-asset-registry/try-runtime',
+	'orml-tokens/try-runtime',
+#	'orml-traits/try-runtime',
+	'orml-xcm/try-runtime',
+#	'orml-xcm-support/try-runtime',
+	'orml-xtokens/try-runtime',
+	'orml-currencies/try-runtime',
+	'orml-unknown-tokens/try-runtime',
+
+#	'frame-benchmarking/try-runtime',
+#	'frame-system-benchmarking/try-runtime',
+
+	'common-runtime/try-runtime',
+	'pallet-proposals/try-runtime',
+	'pallet-briefs/try-runtime',
+	'pallet-grants/try-runtime',
+	'pallet-deposits/try-runtime',
+	'common-traits/try-runtime',
+	'common-types/try-runtime',
+	'pallet-proposals-rpc-runtime-api/try-runtime',
+	"pallet-transaction-payment/try-runtime"
+]
 std = [
 	'codec/std',
 	'scale-info/std',
@@ -136,6 +212,7 @@ std = [
 	'frame-support/std',
 	'frame-executive/std',
 	'frame-system/std',
+	'frame-try-runtime/std',
 	'frame-system-rpc-runtime-api/std',
 	"orml-asset-registry/std",
 	"orml-tokens/std",
@@ -154,6 +231,7 @@ std = [
 	"pallet-multisig/std",
 	'pallet-timestamp/std',
 	'pallet-scheduler/std',
+	'pallet-sudo/std',
 	'pallet-utility/std',
 	'pallet-vesting/std',
 	'pallet-transaction-payment/std',
@@ -173,7 +251,6 @@ std = [
 	'cumulus-primitives-utility/std',
 	'common-traits/std',
 	'common-types/std',
-
 	'pallet-proposals/std',
 	'pallet-proposals-rpc-runtime-api/std',
 	'pallet-briefs/std',
@@ -193,7 +270,6 @@ runtime-benchmarks = [
 	'pallet-xcm/runtime-benchmarks',
 	'xcm-builder/runtime-benchmarks',
 	"common-runtime/runtime-benchmarks",
-
 	'pallet-proposals/runtime-benchmarks',
 	'pallet-briefs/runtime-benchmarks',
 	'pallet-grants/runtime-benchmarks',
