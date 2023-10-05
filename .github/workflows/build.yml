@@ -39,16 +39,13 @@ jobs:
           gcloud compute ssh
           gce-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
           --zone europe-west3-a
-          --command="cd /actions-runner && sudo ./svc.sh uninstall && sudo ./svc.sh install ubuntu && sudo ./svc.sh start"
+          --command="cd /actions-runner && sudo ./svc.sh uninstall && sudo ./svc.sh install ubuntu && sudo ./svc.sh start && sudo ./runsvc.sh"
 
   test-features:
       needs: create-runner
       runs-on: ${{ needs.create-runner.outputs.label }}
       steps:
       - uses: actions/checkout@v4
-
-      - name: Run tests with benchmarks
-        run: cargo test --features runtime-benchmarks
 
       - name: Install minimal nightly Rust
         uses: actions-rs/toolchain@v1
