@@ -29,7 +29,7 @@ jobs:
           image_family: ubuntu-2004-lts
           machine_type: e2-highcpu-32
           disk_size: 400
-          machine_zone: europe-west2-a
+          machine_zone: europe-west1-a
           ephemeral: true
   test-features:
       needs: create-runner
@@ -41,30 +41,25 @@ jobs:
 #        run: sudo rm -rf /usr/share/dotnet;sudo rm -rf /opt/ghc;sudo rm -rf "/usr/local/share/boost";sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
       - name: Install Protobuf
-        run: sudo apt -y install protobuf-compiler
+        run: sudo apt install protobuf-compiler
 
-      - name: Install minimal nightly Rust 
-        run: ./ci/jobs/install_rust.sh
+      - name: Install minimal nightly Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2023-05-22
+          target: wasm32-unknown-unknown
+          override: true
+          components: rustfmt, clippy
+
+      - name: 🫠 rustfmt 🫠
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --check
 
       - name: Run tests with benchmarks
-        run: cargo +nightly test --features runtime-benchmarks
-
-#  fmt_clippy:
-#      needs: create-runner
-#      runs-on: ${{ needs.create-runner.outputs.label }}
-#      steps:
-#      - uses: actions/checkout@v4
-#      - name: Install Protobuf
-#        run: sudo apt -y install protobuf-compiler
-#
-#      - name: Install minimal nightly Rust
-#        run: ./ci/jobs/install_rust.sh
-#
-#      - name: 🫠 rustfmt 🫠
-#        run: ./ci/jobs/rustfmt.sh
-#
-#      - name: 🫠 clippy 🫠
-#        run: ./ci/jobs/clippy.sh
+        run: cargo test --features runtime-benchmarks
 
 #      - name: Delete runner VM
 #        if: always()
