@@ -31,7 +31,7 @@ jobs:
           image_family: ubuntu-2004-lts
           machine_type: e2-highcpu-32
           disk_size: 100
-          machine_zone: europe-west3-a
+          machine_zone: ${{ env.GCP_ZONE }}
           ephemeral: true
 
   test-features:
@@ -39,9 +39,6 @@ jobs:
       runs-on: ${{ needs.create-runner.outputs.label }}
       steps:
       - uses: actions/checkout@v4
-
-      - name: echo region2
-        run: echo ${{ env.GCP_ZONE }}
 
       - name: Set HOME
         run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
