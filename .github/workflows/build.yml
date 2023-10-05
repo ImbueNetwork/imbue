@@ -13,6 +13,7 @@ on:
       - "**.md"
     env:
       CARGO_TERM_COLOR: always
+      HOME: /home/ubuntu
 jobs:
   create-runner:
     runs-on: ubuntu-latest
