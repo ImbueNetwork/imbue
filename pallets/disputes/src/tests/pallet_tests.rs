@@ -33,7 +33,7 @@ fn raise_dispute_assert_event() {
             specifics,
         ));
         System::assert_last_event(RuntimeEvent::PalletDisputes(Event::<Test>::DisputeRaised {
-            dispute_key: dispute_key,
+            dispute_key,
         }));
     });
 }
@@ -421,7 +421,7 @@ fn extend_dispute_works_assert_last_event() {
         ));
         System::assert_last_event(RuntimeEvent::PalletDisputes(
             Event::<Test>::DisputeExtended {
-                dispute_key: dispute_key,
+                dispute_key,
             },
         ));
     });
@@ -527,7 +527,7 @@ fn try_auto_finalise_without_votes_fails() {
 
         System::assert_last_event(RuntimeEvent::PalletDisputes(
             Event::<Test>::DisputeCompleted {
-                dispute_key: dispute_key,
+                dispute_key,
                 dispute_result: DisputeResult::Failure,
             },
         ));

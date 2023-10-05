@@ -7248,7 +7248,6 @@ dependencies = [
  "orml-xtokens",
  "pallet-balances",
  "pallet-deposits",
- "pallet-disputes",
  "pallet-identity",
  "pallet-timestamp",
  "pallet-transaction-payment",

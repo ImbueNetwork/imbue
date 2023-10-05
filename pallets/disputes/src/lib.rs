@@ -269,7 +269,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::extend_dispute())]
         pub fn extend_dispute(origin: OriginFor<T>, dispute_key: T::DisputeKey) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let mut dispute =
+            let dispute =
                 Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             ensure!(!dispute.is_extended, Error::<T>::DisputeAlreadyExtended);
             ensure!(
