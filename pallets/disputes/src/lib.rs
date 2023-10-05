@@ -302,13 +302,14 @@ pub mod pallet {
                 Ok::<(), DispatchError>(())
             })?;
 
-            // Mutate the expiration date on the dispute itself.
-            dispute.expiration = new_expiry;
-            dispute.is_extended = true;
-            Disputes::<T>::insert(dispute_key, dispute);
+            Disputes::<T>::mutate(dispute_key, |maybe_dispute| {
+                if let Some(d) = dispute_key {
+                    d.expiration = new_expiry;
+                    d.is_extended = true
+                }
+            })
 
             Self::deposit_event(Event::<T>::DisputeExtended { dispute_key });
-
             Ok(())
         }
     }
@@ -458,7 +459,6 @@ pub mod pallet {
         fn extend_dispute() -> Weight;
         fn raise_dispute() -> Weight;
         fn on_dispute_complete() -> Weight;
-        fn on_dispute_cancel() -> Weight;
         fn force_succeed_dispute() -> Weight;
         fn force_fail_dispute() -> Weight;
         fn calculate_winner() -> Weight;
