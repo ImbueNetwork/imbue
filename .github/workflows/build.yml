@@ -11,8 +11,10 @@ on:
       - main
     paths-ignore:
       - "**.md"
-    env:
-      CARGO_TERM_COLOR: always
+env:
+  CARGO_TERM_COLOR: always
+  GCP_ZONE: europe-west3-a
+
 jobs:
   create-runner:
     runs-on: ubuntu-latest
@@ -28,14 +30,18 @@ jobs:
           image_project: ubuntu-os-cloud
           image_family: ubuntu-2004-lts
           machine_type: e2-highcpu-32
-          disk_size: 400
-          machine_zone: us-central1-b
+          disk_size: 100
+          machine_zone: ${{ env.GCP_ZONE }}
           ephemeral: true
 
+  test-features:
+      needs: create-runner
+      runs-on: ${{ needs.create-runner.outputs.label }}
+      steps:
       - uses: actions/checkout@v4
 
-      - name: Install Protobuf
-        run: sudo apt install protobuf-compiler
+      - name: Set HOME
+        run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
 
       - name: Install minimal nightly Rust
         uses: actions-rs/toolchain@v1
@@ -46,6 +52,9 @@ jobs:
           override: true
           components: rustfmt, clippy
 
+      - name: Install Dependencies
+        run: sudo apt install protobuf-compiler clang build-essential -y
+
       - name: 🫠 rustfmt 🫠
         uses: actions-rs/cargo@v1
         with:
@@ -54,11 +63,3 @@ jobs:
 
       - name: Run tests with benchmarks
         run: cargo test --features runtime-benchmarks
-
-      - name: Delete runner VM
-        if: always()
-        run: >
-          gcloud compute instances delete
-          gce-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-          --quiet --zone us-central1-b
-          
