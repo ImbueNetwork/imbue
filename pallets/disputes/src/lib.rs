@@ -220,11 +220,13 @@ pub mod pallet {
             dispute_key: T::DisputeKey,
         ) -> DispatchResult {
             T::ForceOrigin::ensure_origin(origin)?;
-            let dispute = Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            let dispute =
+                Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
                 if let Some(index) = finalising
                     .iter()
-                    .position(|finalising_key| finalising_key == &dispute_key) {
+                    .position(|finalising_key| finalising_key == &dispute_key)
+                {
                     finalising.remove(index);
                 }
                 // Dont mind if this fails as the autofinalise will skip.
@@ -246,11 +248,13 @@ pub mod pallet {
             dispute_key: T::DisputeKey,
         ) -> DispatchResult {
             T::ForceOrigin::ensure_origin(origin)?;
-            let dispute = Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            let dispute =
+                Disputes::<T>::take(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             DisputesFinaliseOn::<T>::mutate(dispute.expiration, |finalising| {
                 if let Some(index) = finalising
                     .iter()
-                    .position(|finalising_key| finalising_key == &dispute_key) {
+                    .position(|finalising_key| finalising_key == &dispute_key)
+                {
                     finalising.remove(index);
                 }
                 // Dont mind if this fails as the autofinalise will skip.
@@ -269,8 +273,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::extend_dispute())]
         pub fn extend_dispute(origin: OriginFor<T>, dispute_key: T::DisputeKey) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let dispute =
-                Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            let dispute = Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             ensure!(!dispute.is_extended, Error::<T>::DisputeAlreadyExtended);
             ensure!(
                 dispute.jury.iter().any(|e| e == &who),
@@ -390,8 +393,7 @@ pub mod pallet {
             dispute_key: T::DisputeKey,
             result: DisputeResult,
         ) -> Result<(), DispatchError> {
-            let dispute =
-                Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
+            let dispute = Disputes::<T>::get(dispute_key).ok_or(Error::<T>::DisputeDoesNotExist)?;
             DisputesFinaliseOn::<T>::try_mutate(dispute.expiration, |finalising| {
                 if let Some(index) = finalising
                     .iter()

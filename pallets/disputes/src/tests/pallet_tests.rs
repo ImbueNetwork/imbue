@@ -420,9 +420,7 @@ fn extend_dispute_works_assert_last_event() {
             dispute_key
         ));
         System::assert_last_event(RuntimeEvent::PalletDisputes(
-            Event::<Test>::DisputeExtended {
-                dispute_key,
-            },
+            Event::<Test>::DisputeExtended { dispute_key },
         ));
     });
 }
@@ -546,8 +544,14 @@ fn force_succeed_dispute_not_force_origin() {
             jury,
             specifics,
         ));
-        assert_noop!(PalletDisputes::force_succeed_dispute(RuntimeOrigin::signed(*BOB), dispute_key), sp_runtime::traits::BadOrigin);
-        assert_noop!(PalletDisputes::force_succeed_dispute(RuntimeOrigin::signed(*ALICE), dispute_key), sp_runtime::traits::BadOrigin);
+        assert_noop!(
+            PalletDisputes::force_succeed_dispute(RuntimeOrigin::signed(*BOB), dispute_key),
+            sp_runtime::traits::BadOrigin
+        );
+        assert_noop!(
+            PalletDisputes::force_succeed_dispute(RuntimeOrigin::signed(*ALICE), dispute_key),
+            sp_runtime::traits::BadOrigin
+        );
     });
 }
 
@@ -563,12 +567,16 @@ fn force_succeed_dispute_works_assert_event() {
             jury,
             specifics,
         ));
-        assert_ok!(PalletDisputes::force_succeed_dispute(RuntimeOrigin::root(), dispute_key));
+        assert_ok!(PalletDisputes::force_succeed_dispute(
+            RuntimeOrigin::root(),
+            dispute_key
+        ));
         System::assert_last_event(RuntimeEvent::PalletDisputes(
             Event::<Test>::DisputeCompleted {
-            dispute_key,
-            dispute_result: DisputeResult::Success
-        }));
+                dispute_key,
+                dispute_result: DisputeResult::Success,
+            },
+        ));
     });
 }
 
@@ -578,14 +586,18 @@ fn force_succeed_dispute_works_assert_state() {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
         let specifics = get_specifics::<Test>(vec![0, 1]);
-        let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
+        let expiry_block =
+            frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
         assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             dispute_key,
             *ALICE,
             jury,
             specifics,
         ));
-        assert_ok!(PalletDisputes::force_succeed_dispute(RuntimeOrigin::root(), dispute_key));
+        assert_ok!(PalletDisputes::force_succeed_dispute(
+            RuntimeOrigin::root(),
+            dispute_key
+        ));
         assert!(Disputes::<Test>::get(dispute_key).is_none());
         assert!(!DisputesFinaliseOn::<Test>::get(expiry_block).contains(&dispute_key));
     });
@@ -597,19 +609,22 @@ fn force_fail_dispute_works_assert_state() {
         let dispute_key = 10;
         let jury = get_jury::<Test>(vec![*CHARLIE, *BOB]);
         let specifics = get_specifics::<Test>(vec![0, 1]);
-        let expiry_block = frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
+        let expiry_block =
+            frame_system::Pallet::<Test>::block_number() + <Test as Config>::VotingTimeLimit::get();
         assert_ok!(<PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
             dispute_key,
             *ALICE,
             jury,
             specifics,
         ));
-        assert_ok!(PalletDisputes::force_fail_dispute(RuntimeOrigin::root(), dispute_key));
+        assert_ok!(PalletDisputes::force_fail_dispute(
+            RuntimeOrigin::root(),
+            dispute_key
+        ));
         assert!(Disputes::<Test>::get(dispute_key).is_none());
         assert!(!DisputesFinaliseOn::<Test>::get(expiry_block).contains(&dispute_key));
     });
 }
-
 
 #[test]
 fn force_fail_dispute_works_assert_event() {
@@ -623,12 +638,16 @@ fn force_fail_dispute_works_assert_event() {
             jury,
             specifics,
         ));
-        assert_ok!(PalletDisputes::force_fail_dispute(RuntimeOrigin::root(), dispute_key));
-        System::assert_last_event(RuntimeEvent::PalletDisputes (
+        assert_ok!(PalletDisputes::force_fail_dispute(
+            RuntimeOrigin::root(),
+            dispute_key
+        ));
+        System::assert_last_event(RuntimeEvent::PalletDisputes(
             Event::<Test>::DisputeCompleted {
-            dispute_key,
-            dispute_result: DisputeResult::Failure
-        }))
+                dispute_key,
+                dispute_result: DisputeResult::Failure,
+            },
+        ))
     });
 }
 
@@ -645,13 +664,18 @@ fn force_fail_dispute_not_force_origin() {
             specifics,
         ));
 
-        assert_noop!(PalletDisputes::force_fail_dispute(RuntimeOrigin::signed(*BOB), dispute_key), sp_runtime::traits::BadOrigin);
-        assert_noop!(PalletDisputes::force_fail_dispute(RuntimeOrigin::signed(*ALICE), dispute_key), sp_runtime::traits::BadOrigin);
+        assert_noop!(
+            PalletDisputes::force_fail_dispute(RuntimeOrigin::signed(*BOB), dispute_key),
+            sp_runtime::traits::BadOrigin
+        );
+        assert_noop!(
+            PalletDisputes::force_fail_dispute(RuntimeOrigin::signed(*ALICE), dispute_key),
+            sp_runtime::traits::BadOrigin
+        );
     });
 }
 
-
-// SHANKAR: this test is practially useless tbf consider removing it 
+// SHANKAR: this test is practially useless tbf consider removing it
 #[test]
 fn e2e() {
     new_test_ext().execute_with(|| {

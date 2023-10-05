@@ -4,9 +4,9 @@ use super::*;
 use crate::traits::DisputeRaiser;
 use crate::Pallet as PalletDisputes;
 use frame_benchmarking::v2::*;
-use frame_support::{assert_ok, BoundedVec, traits::Get};
-use orml_traits::MultiCurrency;
+use frame_support::{assert_ok, traits::Get, BoundedVec};
 use frame_system::Pallet as System;
+use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
 use sp_std::vec::Vec;
 
@@ -28,7 +28,8 @@ mod benchmarks {
                 alice,
                 jury,
                 specifics,
-            ).unwrap();
+            )
+            .unwrap();
         }
     }
 
@@ -49,7 +50,6 @@ mod benchmarks {
         #[extrinsic_call]
         <Pallet<T>>::extend_dispute(RawOrigin::Signed(bob), 10u32.into());
     }
-
 
     // Worst case atm is causing it to autofinalise.
     #[benchmark]
@@ -88,10 +88,11 @@ mod benchmarks {
         <Pallet<T>>::force_fail_dispute(RawOrigin::Root, dispute_key);
 
         System::<T>::assert_last_event(
-            Event::<T>::DisputeCompleted{
+            Event::<T>::DisputeCompleted {
                 dispute_key,
                 dispute_result: DisputeResult::Failure,
-            }.into()
+            }
+            .into(),
         );
     }
 
@@ -113,10 +114,11 @@ mod benchmarks {
         <Pallet<T>>::force_succeed_dispute(RawOrigin::Root, dispute_key);
 
         System::<T>::assert_last_event(
-            Event::<T>::DisputeCompleted{
+            Event::<T>::DisputeCompleted {
                 dispute_key,
                 dispute_result: DisputeResult::Success,
-            }.into()
+            }
+            .into(),
         );
     }
 
@@ -134,7 +136,12 @@ mod benchmarks {
         }
         let jury = get_jury::<T>(accounts.clone());
 
-        assert_ok!(Dispute::<T>::new(10u32.into(), alice, jury.clone(), specifics));
+        assert_ok!(Dispute::<T>::new(
+            10u32.into(),
+            alice,
+            jury.clone(),
+            specifics
+        ));
         let mut dispute = Disputes::<T>::get(dispute_key).expect("just inserted, should exist.");
 
         for i in 0..T::MaxJurySize::get() {
@@ -142,7 +149,8 @@ mod benchmarks {
             assert_ok!(dispute.try_add_vote(acc, true, dispute_key));
         }
 
-        #[block]{
+        #[block]
+        {
             dispute.calculate_winner();
         }
     }
