@@ -34,13 +34,6 @@ jobs:
           machine_zone: europe-west3-a
           ephemeral: true
 
-      - name: install as user
-        run: >
-          gcloud compute ssh
-          gce-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-          --zone europe-west3-a
-          --command="cd /actions-runner && sudo ./svc.sh uninstall && sudo ./svc.sh install ubuntu && sudo ./svc.sh start && sudo ./runsvc.sh"
-
   test-features:
       needs: create-runner
       runs-on: ${{ needs.create-runner.outputs.label }}
