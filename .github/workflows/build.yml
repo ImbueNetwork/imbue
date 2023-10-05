@@ -53,7 +53,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Install Dependencies
-        run: sudo apt install protobuf-compiler build-essential -y
+        run: sudo apt install protobuf-compiler clang build-essential -y
 
       - name: 🫠 rustfmt 🫠
         uses: actions-rs/cargo@v1
