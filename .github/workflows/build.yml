@@ -13,7 +13,7 @@ on:
       - "**.md"
     env:
       CARGO_TERM_COLOR: always
-      HOME: /home/ubuntu
+#      HOME: /home/ubuntu
 jobs:
   create-runner:
     runs-on: ubuntu-latest
@@ -32,11 +32,19 @@ jobs:
           disk_size: 400
           machine_zone: europe-west3-a
           ephemeral: true
+
+
+      - name: install as user
+        run: ./svc.sh install ubuntu
+
   test-features:
       needs: create-runner
       runs-on: ${{ needs.create-runner.outputs.label }}
       steps:
       - uses: actions/checkout@v4
+
+      - name: Run tests with benchmarks
+        run: cargo test --features runtime-benchmarks
 
       - name: Install minimal nightly Rust
         uses: actions-rs/toolchain@v1
