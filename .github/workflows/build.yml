@@ -35,7 +35,7 @@ jobs:
 
 
       - name: install as user
-        run: $ACTION_DIR/svc.sh install ubuntu
+        run: /actions-runner/svc.sh install ubuntu
 
   test-features:
       needs: create-runner
