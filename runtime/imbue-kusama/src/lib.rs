@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
+#![allow(clippy::items_after_test_module)]
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -10,6 +11,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod sanity;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 
@@ -40,7 +42,7 @@ pub use frame_support::{
     dispatch::DispatchClass,
     ensure, parameter_types,
     traits::{
-        fungibles, ConstU128, ConstU16, ConstU32, Contains, Currency as PalletCurrency,
+        fungibles, ConstBool, ConstU128, ConstU16, ConstU32, Contains, Currency as PalletCurrency,
         EitherOfDiverse, EnsureOriginWithArg, EqualPrivilegeOnly, Everything, Get, Imbalance,
         IsInVec, Nothing, OnUnbalanced, Randomness, WithdrawReasons,
     },
@@ -98,7 +100,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 9430,
+    spec_version: 9432,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -169,6 +171,32 @@ impl Contains<RuntimeCall> for BaseCallFilter {
         }
     }
 }
+
+pub type Migrations = migrations::Unreleased;
+
+/// The runtime migrations per release.
+#[allow(missing_docs)]
+pub mod migrations {
+    use super::*;
+
+    /// Unreleased migrations. Add new ones here:
+    pub type Unreleased = (
+        pallet_proposals::migration::v5::MigrateToV5<Runtime>,
+        pallet_briefs::migrations::v2::MigrateToV2<Runtime>,
+        pallet_grants::migrations::v3::MigrateToV3<Runtime>,
+    );
+}
+
+/// Executive: handles dispatch to the various modules.
+pub type Executive = frame_executive::Executive<
+    Runtime,
+    Block,
+    frame_system::ChainContext<Runtime>,
+    Runtime,
+    AllPalletsWithSystem,
+    Migrations,
+>;
+
 impl frame_system::Config for Runtime {
     type BaseCallFilter = Everything;
     type BlockWeights = RuntimeBlockWeights;
@@ -262,6 +290,12 @@ impl pallet_transaction_payment::Config for Runtime {
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
+}
+
+impl pallet_sudo::Config for Runtime {
+    type RuntimeCall = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -502,7 +536,7 @@ impl pallet_democracy::Config for Runtime {
     type CancelProposalOrigin = HalfOfCouncil;
     type RuntimeEvent = RuntimeEvent;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-    type CancellationOrigin = EnsureRootOr<HalfOfCouncil>;
+    type CancellationOrigin = HalfOfCouncil;
     type CooloffPeriod = CooloffPeriod;
     type Currency = Balances;
     type EnactmentPeriod = EnactmentPeriod;
@@ -513,6 +547,8 @@ impl pallet_democracy::Config for Runtime {
     type ExternalMajorityOrigin = HalfOfCouncil;
     /// A straight majority of the council can decide what their next motion is.
     type ExternalOrigin = HalfOfCouncil;
+    /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
+    /// be tabled immediately and with a shorter voting/enactment period.
     type FastTrackOrigin = FastTrackOrigin;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     type InstantAllowed = InstantAllowed;
@@ -577,12 +613,17 @@ impl frame_system::offchain::SigningTypes for Runtime {
     type Signature = Signature;
 }
 
-/// Half of council members must vote yes to create this origin.
+/// All council members must vote yes to create this origin.
 type HalfOfCouncil = EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
 /// A majority of the Unit body from Rococo over XCM is our required administration origin.
 pub type AdminOrigin = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfCouncil = EnsureRootOr<HalfOfCouncil>;
 pub type MoreThanHalfTechCommittee = EnsureRootOr<HalfOfCouncil>;
+
+// pub type MoreThanHalfCouncil = EnsureOneOf<
+// 	EnsureRoot<AccountId>,
+// 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
+// >;
 
 // Parameterize collator selection pallet
 parameter_types! {
@@ -863,7 +904,7 @@ construct_runtime! {
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>} = 1,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
-        // Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
+        Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 5,
         Treasury: pallet_treasury::{Pallet, Storage, Config, Event<T>, Call} = 6,
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
@@ -934,14 +975,6 @@ pub type UncheckedExtrinsic =
     generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
-/// Executive: handles dispatch to the various modules.
-pub type Executive = frame_executive::Executive<
-    Runtime,
-    Block,
-    frame_system::ChainContext<Runtime>,
-    Runtime,
-    AllPalletsWithSystem,
->;
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
@@ -984,6 +1017,24 @@ impl_opaque_keys! {
 }
 
 impl_runtime_apis! {
+    #[cfg(feature = "try-runtime")]
+    impl frame_try_runtime::TryRuntime<Block> for Runtime {
+        fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
+            let weight = Executive::try_runtime_upgrade(checks).unwrap();
+            (weight, RuntimeBlockWeights::get().max_block)
+        }
+
+        fn execute_block(
+            block: Block,
+            state_root_check: bool,
+            signature_check: bool,
+            select: frame_try_runtime::TryStateSelect,
+        ) -> Weight {
+            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+            // have a backtrace here.
+            Executive::try_execute_block(block, state_root_check, signature_check, select).unwrap()
+        }
+    }
     impl sp_api::Core<Block> for Runtime {
         fn version() -> RuntimeVersion {
             VERSION
@@ -1108,6 +1159,8 @@ impl_runtime_apis! {
             ImbueProposals::project_account_id(project_id)
         }
     }
+
+
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {

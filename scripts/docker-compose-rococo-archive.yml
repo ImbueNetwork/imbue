@@ -1,0 +1,20 @@
+version: "3.2"
+services:
+  imbue-1:
+    container_name: imbue-1
+    image: samelamin/imbue:polkadot-v0.9.37-v3
+    ports:
+      - "9615:9615"
+      - "9616:9616"
+      - "9942:9942"
+      - "9980:9930"
+      - "30333:30333"
+      - "30334:30334"
+    command: bash -c "wget https://raw.githubusercontent.com/paritytech/polkadot/master/node/service/chain-specs/rococo.json;wget https://raw.githubusercontent.com/ImbueNetwork/imbue/main/res/imbue-rococo-spec.json;/imbue --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors=all --rpc-external --rpc-methods=Unsafe -d /cumulus_parachain/imbue-1 --name imbue-collator-1 --ws-port 9942 --rpc-port 9930 --parachain-id 2121 --chain imbue-rococo-spec.json --rpc-max-request-size=99999 --ws-max-connections=5000 --prometheus-external --port 30333 --pruning archive -- --port 30334 --chain rococo.json --sync fast"
+    volumes:
+      - ./imbue_db/cumulus_parachain_1:/cumulus_parachain/
+  frontend:
+    container_name: frontend
+    image: jacogr/polkadot-js-apps
+    ports:
+      - "3001:80"

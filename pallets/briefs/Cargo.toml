@@ -1,12 +1,12 @@
 [package]
 name = "pallet-briefs"
-authors = ['Imbue <https://github.com/ImbueNetwork>']
 description = "Briefs pallet is used to create a piece of work (briefs) to be done by a freelancer"
-version = '0.1.0'
-license = 'Apache 2.0'
 homepage = 'https://github.com/ImbueNetwork/imbue'
-repository = "https://github.com/ImbueNetwork/imbue"
-edition = '2018'
+version = '0.1.0'
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -15,6 +15,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
 	"derive",
 ] }
+log = { version = "0.4.17", default-features = false }
+
 serde = { version = "1.0.101", default-features=false}
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false, optional = true }
@@ -55,10 +57,11 @@ common-runtime = { path = "../../runtime/common"}
 
 [features]
 default = ['std']
+
 std = [
 	"codec/std",
 	"serde/std",
-	"frame-benchmarking?/std",
+	"frame-benchmarking/std",
  	"frame-support/std", 
 	"frame-system/std", 
 	"scale-info/std", 
@@ -79,4 +82,21 @@ runtime-benchmarks = [
 	"common-runtime/runtime-benchmarks",
 ]
 
-try-runtime = ["frame-support/try-runtime"]
+try-runtime = [
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"sp-runtime/try-runtime",
+	"pallet-balances/try-runtime",
+	"pallet-proposals/try-runtime",
+	"common-runtime/try-runtime",
+	"pallet-xcm/try-runtime",
+	"pallet-deposits/try-runtime",
+	"pallet-deposits/try-runtime",
+	"common-traits/try-runtime",
+	"common-types/try-runtime",
+	"orml-currencies/try-runtime",
+	"orml-tokens/try-runtime",
+	"pallet-identity/try-runtime",
+	"pallet-timestamp/try-runtime",
+	"pallet-transaction-payment/try-runtime"
+]
