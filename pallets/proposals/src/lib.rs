@@ -36,13 +36,16 @@ pub use weights::*;
 
 pub mod migration;
 
-mod benchmarking;
-mod benchmarking;
 pub mod impls;
 
-pub use impls::*;
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
+pub type IndividualVotes<T> = BoundedBTreeMap<
+    MilestoneKey,
+    BoundedBTreeMap<AccountIdOf<T>, bool, <T as Config>::MaximumContributorsPerProject>,
+    <T as Config>::MaxMilestonesPerProject,
+>;
+
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 pub type StorageItemOf<T> =
@@ -103,7 +106,7 @@ pub mod pallet {
         type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
     }
 
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(5);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -124,15 +127,17 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
+    pub type IndividualVoteStore<T: Config> =
+        StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
-    pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
+    pub(super) type MilestoneVotes<T: Config> = StorageMap<
         _,
         Identity,
         ProjectKey,
-        Identity,
-        MilestoneKey,
-        Vote<BalanceOf<T>>,
-        OptionQuery,
+        BoundedBTreeMap<MilestoneKey, Vote<BalanceOf<T>>, T::MaxMilestonesPerProject>,
+        ValueQuery,
     >;
 
     #[pallet::storage]
@@ -270,6 +275,10 @@ pub mod pallet {
         TooManyMilestones,
         /// There are too many projects for a given account
         TooManyProjects,
+        /// There are too many milestone votes, this generally shouldnt be hit.
+        TooManyMilestoneVotes,
+        /// An internal error, a collection of votes for a milestone has been lost.s
+        IndividualVoteNotFound,
     }
 
     #[pallet::hooks]
@@ -291,12 +300,15 @@ pub mod pallet {
                     RoundType::VotingRound => {
                         weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
 
-                        MilestoneVotes::<T>::remove(project_key, milestone_key);
-                        UserHasVoted::<T>::remove((
-                            project_key,
-                            RoundType::VotingRound,
-                            milestone_key,
-                        ));
+                        MilestoneVotes::<T>::mutate(project_key, |vote_btree| {
+                            vote_btree.remove(milestone_key);
+                        });
+
+                        IndividualVoteStore::<T>::mutate(project_key, |m_votes| {
+                            if let Some(individual_votes) = m_votes {
+                                individual_votes.clear_milestone_votes(*milestone_key);
+                            }
+                        });
                     }
                     // Votes of no confidence do not finaliese automatically
                     RoundType::VoteOfNoConfidence => {
@@ -428,8 +440,13 @@ pub mod pallet {
                 FundingType::Grant(_) => {}
             }
 
+            // TODO: this milestone key has no relation to the milestones coming in except the order they come in.
+            // This could be a bug somewhere.
             let mut milestone_key: u32 = 0;
             let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
+            let mut bounded_milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject> =
+                BoundedVec::new();
+
             for milestone in proposed_milestones {
                 let milestone = Milestone {
                     project_key,
@@ -440,8 +457,16 @@ pub mod pallet {
                 milestones
                     .try_insert(milestone_key, milestone)
                     .map_err(|_| Error::<T>::TooManyMilestones)?;
+
+                bounded_milestone_keys
+                    .try_push(milestone_key)
+                    .map_err(|_| Error::<T>::TooManyMilestones)?;
+
                 milestone_key = milestone_key.saturating_add(1);
             }
+
+            let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
+            IndividualVoteStore::<T>::insert(project_key, individual_votes);
 
             let bounded_contributions: ContributionsFor<T> = contributions
                 .try_into()
@@ -487,7 +512,6 @@ pub enum RoundType {
 /// The milestones provided by the user to define the milestones of a project.
 /// TODO: add ipfs hash like in the grants pallet and
 /// TODO: move these to a common repo (common_types will do)
-// MIGRATION! for briefs and grants
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct ProposedMilestone {
     pub percentage_to_unlock: Percent,
@@ -553,6 +577,13 @@ pub struct Contribution<Balance, BlockNumber> {
 pub struct Whitelist<AccountId, Balance> {
     who: AccountId,
     max_cap: Balance,
+}
+
+/// Stores the btree for each individual vote.
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+pub struct ImmutableIndividualVotes<T: Config> {
+    inner: IndividualVotes<T>,
 }
 
 pub trait WeightInfoT {
