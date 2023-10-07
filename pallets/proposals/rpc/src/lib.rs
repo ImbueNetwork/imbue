@@ -1,19 +1,30 @@
 use codec::Codec;
+
 use jsonrpsee::{
     core::{Error as JsonRpseeError, RpcResult},
     proc_macros::rpc,
     types::error::{CallError, ErrorObject},
 };
 pub use pallet_proposals_rpc_runtime_api::ProposalsApi as ProposalsRuntimeApi;
+
 use sp_blockchain::HeaderBackend;
 use sp_runtime::traits::Block as BlockT;
+use sp_std::vec::Vec;
+
 use std::fmt::Display;
 use std::sync::Arc;
 
+// Runtime api return type.
+
 #[rpc(client, server)]
-pub trait ProposalsApi<BlockHash, AccountId> {
+pub trait ProposalsApi<BlockHash, AccountId: Ord, Balance>
+where
+    AccountId: Ord,
+{
     #[method(name = "proposals_getProjectKitty")]
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId>;
+    #[method(name = "proposals_getAllProjectData")]
+    fn all_project_data(&self, project_id: u32) -> RpcResult<Option<(Vec<u8>, Vec<u8>)>>;
 }
 
 pub struct Proposals<C, B> {
@@ -48,20 +59,28 @@ impl From<Error> for i32 {
     }
 }
 
-impl<C, B, AccountId> ProposalsApiServer<<B as BlockT>::Hash, AccountId> for Proposals<C, B>
+impl<C, B, AccountId, Balance> ProposalsApiServer<<B as BlockT>::Hash, AccountId, Balance>
+    for Proposals<C, B>
 where
     C: sp_api::ProvideRuntimeApi<B>,
     C: HeaderBackend<B>,
     C: Send + Sync + 'static,
-    C::Api: ProposalsRuntimeApi<B, AccountId>,
+    C::Api: ProposalsRuntimeApi<B, AccountId, Balance>,
     B: BlockT,
-    AccountId: Clone + Display + Codec + Send + 'static,
+    AccountId: Clone + Display + Codec + Send + 'static + Ord,
 {
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId> {
         let api = self.client.runtime_api();
         let at = self.client.info().best_hash;
 
         api.get_project_account_by_id(at, project_id)
+            .map_err(runtime_error_into_rpc_err)
+    }
+    fn all_project_data(&self, project_id: u32) -> RpcResult<Option<(Vec<u8>, Vec<u8>)>> {
+        let api = self.client.runtime_api();
+        let at = self.client.info().best_hash;
+
+        api.get_all_project_data(at, project_id)
             .map_err(runtime_error_into_rpc_err)
     }
 }

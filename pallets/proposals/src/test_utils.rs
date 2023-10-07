@@ -1,9 +1,6 @@
 use crate::Config;
 use crate::Pallet as Proposals;
-use crate::{
-    AccountIdOf, BalanceOf, Contribution, ContributionsFor, Milestone, MilestoneKey, Project,
-    ProjectKey, ProposedMilestone,
-};
+use crate::*;
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, Vec};
@@ -95,6 +92,8 @@ pub fn create_project<T: Config>(
 
     let mut milestone_key: u32 = 0;
     let mut milestones: BTreeMap<MilestoneKey, Milestone> = BTreeMap::new();
+    let mut bounded_milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject> =
+        BoundedVec::new();
 
     for ms in proposed_milestones {
         let milestone = Milestone {
@@ -104,8 +103,12 @@ pub fn create_project<T: Config>(
             is_approved: false,
         };
         milestones.insert(milestone_key, milestone);
+        let _ = bounded_milestone_keys.try_push(milestone_key);
         milestone_key = milestone_key.saturating_add(1);
     }
+
+    let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
+    IndividualVoteStore::<T>::insert(project_key, individual_votes);
 
     let project = Project {
         milestones: milestones.try_into().expect("too many milestones"),
