@@ -6964,6 +6964,7 @@ dependencies = [
  "orml-traits",
  "parity-scale-codec 3.6.5",
  "scale-info 2.9.0",
+ "serde",
  "sp-arithmetic",
  "sp-core",
  "sp-io",
@@ -7319,6 +7320,7 @@ dependencies = [
  "sp-blockchain",
  "sp-rpc",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -7328,8 +7330,11 @@ dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec 3.6.5",
+ "scale-info 2.9.0",
+ "serde",
  "sp-api",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
