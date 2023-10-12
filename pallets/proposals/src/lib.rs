@@ -41,6 +41,10 @@ pub use weights::*;
 
 pub mod impls;
 
+<<<<<<< HEAD
+=======
+pub use impls::*;
+>>>>>>> origin
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 pub type IndividualVotes<T> = BoundedBTreeMap<
@@ -148,6 +152,10 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
 
     /// Stores the total votes on a milestone.
+    #[pallet::storage]
+    pub type IndividualVoteStore<T: Config> =
+        StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
+
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
     pub(super) type MilestoneVotes<T: Config> = StorageMap<
@@ -295,6 +303,7 @@ pub mod pallet {
         TooManyMilestones,
         /// There are too many projects for a given account
         TooManyProjects,
+<<<<<<< HEAD
         /// Not enough funds in project account to distribute fees.
         NotEnoughFundsForFees,
         /// Conversion failed due to an error while funding the Project.
@@ -305,6 +314,8 @@ pub mod pallet {
         TooManyRefundLocations,
         /// This project has too many jury members.
         TooManyJuryMembers,
+=======
+>>>>>>> origin
         /// There are too many milestone votes, this generally shouldnt be hit.
         TooManyMilestoneVotes,
         /// An internal error, a collection of votes for a milestone has been lost.s
@@ -474,9 +485,6 @@ pub mod pallet {
                 .try_into()
                 .map_err(|_|Error::<T>::TooManyMilestones)?;
 
-            let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
-            IndividualVoteStore::<T>::insert(project_key, individual_votes);
-
             let project: Project<T> = Project {
                 agreement_hash,
                 milestones: converted_milestones,
@@ -496,6 +504,9 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::TooManyJuryMembers)?,
                 on_creation_funding,
             };
+
+            let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
+            IndividualVoteStore::<T>::insert(project_key, individual_votes);
 
             Projects::<T>::insert(project_key, project);
             ProjectCount::<T>::put(project_key);
@@ -652,6 +663,7 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
+<<<<<<< HEAD
 /// Defines how a project is funded on its instantiation.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen, Default)]
 pub enum FundingPath {
@@ -665,6 +677,8 @@ pub enum FundingPath {
     WaitForFunding,
 }
 
+=======
+>>>>>>> origin
 /// Stores the btree for each individual vote.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]

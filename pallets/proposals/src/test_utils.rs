@@ -1,7 +1,6 @@
 use crate::Config;
 use crate::Pallet as Proposals;
 use crate::*;
-use crate::mock::*;
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, Vec};

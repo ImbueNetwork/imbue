@@ -70,7 +70,6 @@ impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
 }
 
 pub struct XcmRefundHandler<T, U>(T, U);
-
 impl<T, U> RefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for XcmRefundHandler<T, U>
 where
     [u8; 32]: From<<T as frame_system::Config>::AccountId>,
