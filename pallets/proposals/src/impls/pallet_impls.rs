@@ -427,13 +427,13 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // TODO: test
     /// Try and fund a project based on its FundingPath.
+    /// Will error is the 
     /// If the funds have actually been transferred this will return and Ok(true)
     /// If the funds have not been transferred (i.e awaiting funding) then it will return Ok(false)
     pub(crate) fn fund_project<'a>(
         funding_path: &'a FundingPath,
-        contributions: &'a BTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>>,
+        contributions: &'a ContributionsFor<T>,
         project_account_id: &'a T::AccountId,
         currency_id: CurrencyId,
     ) -> Result<bool, DispatchError> {
@@ -456,9 +456,8 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    // TODO: Test
     /// Try and convert some proposed milestones to milestones.
-    /// Fails when the MaxMilestones bound is not respected
+    /// Will never fail so long as proposed_milestones and BoundedBTreeMilestones<T> have the same bound.
     pub(crate) fn try_convert_to_milestones(
         proposed_milestones: BoundedVec<ProposedMilestone, T::MaxMilestonesPerProject>,
         project_key: ProjectKey,

@@ -1310,6 +1310,8 @@ fn close_voting_round_works() {
     })
 }
 
+try_convert_to_milestones
+
 // todo: finalise voteof no confidence tests.
 // ^^ is connected to making the pallet generic over funding type.
 // Todo: assert the last event of each extrinsic/

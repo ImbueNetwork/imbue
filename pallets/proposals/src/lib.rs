@@ -303,7 +303,6 @@ pub mod pallet {
         TooManyMilestones,
         /// There are too many projects for a given account
         TooManyProjects,
-<<<<<<< HEAD
         /// Not enough funds in project account to distribute fees.
         NotEnoughFundsForFees,
         /// Conversion failed due to an error while funding the Project.
@@ -314,8 +313,6 @@ pub mod pallet {
         TooManyRefundLocations,
         /// This project has too many jury members.
         TooManyJuryMembers,
-=======
->>>>>>> origin
         /// There are too many milestone votes, this generally shouldnt be hit.
         TooManyMilestoneVotes,
         /// An internal error, a collection of votes for a milestone has been lost.s
@@ -442,7 +439,7 @@ pub mod pallet {
         /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
         fn convert_to_proposal(
             currency_id: CurrencyId,
-            contributions: BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>, Self::MaximumContributorsPerProject>,
+            contributions: ContributionsFor<T>,
             agreement_hash: H256,
             benificiary: AccountIdOf<T>,
             proposed_milestones: BoundedVec<ProposedMilestone, Self::MaxMilestonesPerProject>,
@@ -522,8 +519,10 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Convert a set of contributions into their respective refund locations.
+        /// Only for local contributions.
         fn convert_contributions_to_refund_locations(
-            contributions: &BoundedBTreeMap<AccountIdOf<T>, Contribution<BalanceOf<T>, BlockNumberFor<T>>, Self::MaximumContributorsPerProject>,
+            contributions: &ContributionsFor<T>,
         ) -> BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> {
             let sum_of_contributions = contributions
                 .values()
@@ -663,7 +662,6 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
-<<<<<<< HEAD
 /// Defines how a project is funded on its instantiation.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen, Default)]
 pub enum FundingPath {
@@ -677,8 +675,6 @@ pub enum FundingPath {
     WaitForFunding,
 }
 
-=======
->>>>>>> origin
 /// Stores the btree for each individual vote.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
