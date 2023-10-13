@@ -291,7 +291,6 @@ pub mod pallet {
             let contributions = BriefContributions::<T>::get(brief_id);
 
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
-
             <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
                 contributions.into_inner(),

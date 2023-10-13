@@ -42,7 +42,7 @@ where
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
     C::Api: BlockBuilder<Block>,
-    C::Api: pallet_proposals_rpc::ProposalsRuntimeApi<Block, AccountId>,
+    C::Api: pallet_proposals_rpc::ProposalsRuntimeApi<Block, AccountId, Balance>,
     P: TransactionPool + Sync + Send + 'static,
 {
     use pallet_proposals_rpc::{Proposals, ProposalsApiServer};

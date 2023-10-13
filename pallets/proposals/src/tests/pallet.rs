@@ -86,7 +86,8 @@ fn submit_milestone_creates_non_bias_vote() {
             project_key,
             1
         ));
-        let created_vote = MilestoneVotes::<Test>::get(project_key, 1).expect("should exist");
+        let total_vote = MilestoneVotes::<Test>::get(project_key);
+        let created_vote = total_vote.get(&1).expect("should exist");
 
         assert_eq!(created_vote.nay, 0, "initial vote should be default");
         assert_eq!(created_vote.yay, 0, "initial vote should be default");
@@ -124,11 +125,14 @@ fn submit_milestone_can_resubmit_during_voting_round() {
             0usize,
             "User votes should be defaulted on resubmission."
         );
-        let group_vote = MilestoneVotes::<Test>::get(project_key, milestone_key)
+        let total_vote = MilestoneVotes::<Test>::get(project_key);
+
+        let group_vote = total_vote
+            .get(&milestone_key)
             .expect("group vote should exist.");
         assert_eq!(
             group_vote,
-            Default::default(),
+            &<Vote<Balance> as Default>::default(),
             "Group vote should have defaulted on resubmission"
         );
     });
@@ -218,9 +222,17 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
             RoundType::VotingRound,
             milestone_key
         )));
+
+        let individual_votes = IndividualVoteStore::<Test>::get(project_key).unwrap();
         assert!(
-            UserHasVoted::<Test>::get((&project_key, RoundType::VotingRound, milestone_key))
-                .contains_key(&BOB)
+            individual_votes
+                .as_ref()
+                .get(&milestone_key)
+                .unwrap()
+                .get(&BOB)
+                .unwrap()
+                == &true,
+            "IndividualVoteStore has not been mutated correctly."
         );
 
         // Assert the storage has been cleared up after finalisation
@@ -239,10 +251,12 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
             0,
             "This vec should have been emptied on auto finalisation."
         );
-        assert!(
-            UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key))
-                .is_empty()
-        );
+        let individual_votes = IndividualVoteStore::<Test>::get(project_key).unwrap();
+        assert!(!individual_votes
+            .as_ref()
+            .get(&milestone_key)
+            .unwrap()
+            .contains_key(&BOB));
     });
 }
 
@@ -273,11 +287,18 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
             RoundType::VotingRound,
             milestone_key
         )));
-        assert!(
-            UserHasVoted::<Test>::get((&project_key, RoundType::VotingRound, milestone_key))
-                .contains_key(&BOB)
-        );
 
+        let individual_votes = IndividualVoteStore::<Test>::get(project_key).unwrap();
+        assert!(
+            individual_votes
+                .as_ref()
+                .get(&milestone_key)
+                .unwrap()
+                .get(&BOB)
+                .unwrap()
+                == &false,
+            "IndividualVoteStore has not been mutated correctly."
+        );
         // Assert the storage has been cleared up after finalisation
         assert_ok!(Proposals::vote_on_milestone(
             RuntimeOrigin::signed(*CHARLIE),
@@ -294,10 +315,12 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
             0,
             "This vec should have been emptied on auto finalisation."
         );
-        assert!(
-            UserHasVoted::<Test>::get((project_key, RoundType::VotingRound, milestone_key))
-                .is_empty()
-        );
+        let individual_votes = IndividualVoteStore::<Test>::get(project_key).unwrap();
+        assert!(!individual_votes
+            .as_ref()
+            .get(&milestone_key)
+            .unwrap()
+            .contains_key(&BOB));
     });
 }
 
@@ -331,13 +354,18 @@ fn users_can_submit_multiple_milestones_and_vote_independantly() {
             milestone_key_1,
             true
         ));
-        let vote_0 =
-            MilestoneVotes::<Test>::get(project_key, milestone_key_0).expect("vote should exist");
+        let total_votes = MilestoneVotes::<Test>::get(project_key);
+
+        let vote_0 = total_votes
+            .get(&milestone_key_0)
+            .expect("vote 0 should exist");
+
         assert!(vote_0.yay == 100_000u64);
         assert!(vote_0.nay == 0u64);
 
-        let vote_1 =
-            MilestoneVotes::<Test>::get(project_key, milestone_key_1).expect("vote should exist");
+        let vote_1 = total_votes
+            .get(&milestone_key_1)
+            .expect("vote 1 should exist");
         assert!(vote_1.yay == 100_000u64);
         assert!(vote_1.nay == 0u64);
     });
@@ -488,8 +516,8 @@ fn vote_on_milestone_actually_adds_to_vote() {
             milestone_key,
             true
         ));
-        let vote =
-            MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
+        let total_votes = MilestoneVotes::<Test>::get(project_key);
+        let vote = total_votes.get(&milestone_key).expect("vote should exist");
         assert!(vote.yay == 100_000u64);
         assert!(vote.nay == 0u64);
         assert_ok!(Proposals::vote_on_milestone(
@@ -498,8 +526,9 @@ fn vote_on_milestone_actually_adds_to_vote() {
             milestone_key,
             false
         ));
-        let vote =
-            MilestoneVotes::<Test>::get(project_key, milestone_key).expect("vote should exist");
+        let total_votes = MilestoneVotes::<Test>::get(project_key);
+        let vote = total_votes.get(&milestone_key).expect("vote should exist");
+
         assert!(vote.yay == 100_000u64);
         assert!(vote.nay == 100_000u64);
     });
@@ -1147,15 +1176,27 @@ fn close_voting_round_works() {
             .try_into()
             .expect("smaller than bound: qed.");
         RoundsExpiring::<Test>::insert(100, r_expiring);
-        UserHasVoted::<Test>::insert((0, RoundType::VotingRound, 0), BoundedBTreeMap::new());
 
+        let milestone_keys = vec![0];
+        let mut i_v = ImmutableIndividualVotes::<Test>::new(milestone_keys.try_into().unwrap());
+        assert_ok!(i_v.insert_individual_vote(0, &ALICE, true));
+
+        IndividualVoteStore::<Test>::insert(0, i_v);
         assert_ok!(crate::Pallet::<Test>::close_voting_round(
             0,
             (0, RoundType::VotingRound, 0)
         ));
+
         assert!(Rounds::<Test>::get((0, 0), RoundType::VotingRound).is_none());
         assert!(RoundsExpiring::<Test>::get(100).len() == 0);
-        assert!(UserHasVoted::<Test>::get((0, RoundType::VotingRound, 0)).is_empty());
+        let individual_votes = IndividualVoteStore::<Test>::get(0);
+        assert!(individual_votes.is_some());
+        assert!(individual_votes
+            .unwrap()
+            .as_ref()
+            .get(&0)
+            .unwrap()
+            .is_empty());
     })
 }
 
