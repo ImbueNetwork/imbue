@@ -172,8 +172,6 @@ impl Contains<RuntimeCall> for BaseCallFilter {
     }
 }
 
-
-
 pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.

@@ -10,9 +10,9 @@ use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::Percent;
+use sp_runtime::TryRuntimeError;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
-use sp_runtime::TryRuntimeError;
 
 mod v0 {
     use super::*;
