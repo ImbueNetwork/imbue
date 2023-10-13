@@ -172,6 +172,8 @@ impl Contains<RuntimeCall> for BaseCallFilter {
     }
 }
 
+
+
 pub type Migrations = migrations::Unreleased;
 
 /// The runtime migrations per release.
@@ -180,7 +182,14 @@ pub mod migrations {
     use super::*;
 
     /// Unreleased migrations. Add new ones here:
-    pub type Unreleased = (pallet_proposals::migration::v6::MigrateToV6<Runtime>,);
+    pub type Unreleased = (
+        pallet_proposals::migration::v6::MigrateToV6<Runtime>,
+        pallet_democracy::migrations::v1::Migration<Runtime>,
+        pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
+        pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+        pallet_preimage::migration::v1::Migration<Runtime>,
+        orml_asset_registry::Migration<Runtime>,
+    );
 }
 
 /// Executive: handles dispatch to the various modules.
