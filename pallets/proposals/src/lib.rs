@@ -364,6 +364,10 @@ pub mod pallet {
         /// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
         /// This will start a round which each contributor can vote on.
         /// The round will last as long as set in the Config.
+
+        /// Deprecated: This function is no longer recommended for use as all the handling of dispute handling will
+        /// be taken care by the dedicated pallet called pallet-disputes.
+        #[deprecated(since = "0.1.0 of the disputes pallet", note = "all the disputes handling will be taken care by pallet-disputes")]
         #[pallet::call_index(12)]
         #[pallet::weight(<T as Config>::WeightInfo::raise_vote_of_no_confidence())]
         pub fn raise_vote_of_no_confidence(
