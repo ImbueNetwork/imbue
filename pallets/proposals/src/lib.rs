@@ -151,7 +151,6 @@ pub mod pallet {
         ValueQuery,
     >;
 
-
     #[pallet::storage]
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
