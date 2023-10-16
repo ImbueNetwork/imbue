@@ -43,14 +43,7 @@ pub enum TreasuryOriginError {
     NetworkUnsupported,
 }
 
-#[derive(
-    Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
-)]
-pub enum FundingType {
-    Proposal,
-    Brief,
-    Grant(TreasuryOrigin),
-}
+
 
 #[derive(
     Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,

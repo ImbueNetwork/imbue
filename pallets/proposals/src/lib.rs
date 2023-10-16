@@ -110,7 +110,7 @@ pub mod pallet {
         /// Imbue fee in percent 0-99
         type ImbueFee: Get<Percent>;
         /// The account the imbue fee goes to.
-        type ImbueFeeAccount: Get<AccountIdOf<Self>>
+        type ImbueFeeAccount: Get<AccountIdOf<Self>>;
         /// The type responisble for handling refunds.
         type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
         /// The type responsible for storage deposits.
@@ -663,7 +663,6 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
-<<<<<<< HEAD
 /// Defines how a project is funded on its instantiation.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen, Default)]
 pub enum FundingPath {
@@ -677,8 +676,6 @@ pub enum FundingPath {
     WaitForFunding,
 }
 
-=======
->>>>>>> f5b65b648adb9abe1429374bd1a8d87acfc979cf
 /// Stores the btree for each individual vote.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]

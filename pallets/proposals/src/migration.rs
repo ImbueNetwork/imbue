@@ -488,6 +488,9 @@ pub mod v5 {
     #[storage_alias]
     pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
 
+    #[storage_alias]
+    pub type Projects<T: Config> = StorageMap<_, Identity, ProjectKey, ProjectV5<T>, OptionQuery>;
+
     #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
     #[repr(u32)]
     pub enum Release {
@@ -497,6 +500,29 @@ pub mod v5 {
         #[default]
         V3,
         V4,
+    }
+
+    pub struct ProjectV5<T: Config> {
+        pub agreement_hash: H256,
+        pub milestones: BoundedBTreeMilestones<T>,
+        pub contributions: ContributionsFor<T>,
+        pub currency_id: common_types::CurrencyId,
+        pub withdrawn_funds: BalanceOf<T>,
+        pub raised_funds: BalanceOf<T>,
+        pub initiator: AccountIdOf<T>,
+        pub created_on: BlockNumberFor<T>,
+        pub cancelled: bool,
+        pub funding_type: FundingType,
+        pub deposit_id: DepositIdOf<T>,
+    }
+
+    #[derive(
+        Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+    )]
+    pub enum FundingType {
+        Proposal,
+        Brief,
+        Grant(TreasuryOrigin),
     }
 
     /// 1: Custom StorageVersion is removed, macro StorageVersion is used: https://github.com/ImbueNetwork/imbue/issues/178
@@ -626,6 +652,62 @@ pub mod v6 {
                 // probs wont happen.
             }
         })
+    }
+    pub struct ProjectV5<T: Config> {
+        pub agreement_hash: H256,
+        pub milestones: BoundedBTreeMilestones<T>,
+        pub contributions: ContributionsFor<T>,
+        pub currency_id: common_types::CurrencyId,
+        pub withdrawn_funds: BalanceOf<T>,
+        pub raised_funds: BalanceOf<T>,
+        pub initiator: AccountIdOf<T>,
+        pub created_on: BlockNumberFor<T>,
+        pub cancelled: bool,
+        pub funding_type: FundingType,
+        pub deposit_id: DepositIdOf<T>,
+    }
+
+    refund locations, jury, on_creation_funding
+    fn migrate_new_fields<T: Config, R: crate::traits::RefundHandler>(weight &mut Weight) {
+        v5::Projects::<T>::drain().for_each(|(key, project)|{
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+
+            let on_creation_funding = match project.funding_type {
+                Proposal => crate::FundingPath::TakeFromReserved,
+                Brief => crate::FundingPath::TakeFromReserved,
+                Grant(_) => crate::FundingPath::WaitForFunding,
+            }
+
+            let jury = todo!();
+
+            let refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = match funding.funding_type {
+                Proposal => crate::Pallet::<T>::convert_contributions_to_refund_locations(project.contributions),
+                Brief => crate::Pallet::<T>::convert_contributions_to_refund_locations(project.contributions),
+                Grant(treasury_origin) => {
+                    let beneficiary = PalletId(*b"py/trsry").into_account_truncating();
+                    Vec::from((Locality(treasury_origin.get_multi_location(beneficiary)), Percent::from_parts(100))).try_into().expect("1 is lower than bound; qed")
+                },
+            };
+
+            let migrated_project = crate::Project {
+                agreement_hash: project.agreement_hash,
+                milestones: project.milestones,
+                contributions: project.contributions,
+                currency_id: project.currency_id,
+                withdrawn_funds: project.withdrawn_funds,
+                raised_funds: project.raised_funds,
+                initiator: project.initiator,
+                created_on: project.created_on,
+                cancelled: project.cancelled,
+                deposit_id: project.deposit_id,
+                refund_locations,
+                jury,
+                on_creation_funding,
+            };
+
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            crate::Projects::<T>::insert(key, migrated_project);
+        });
     }
 
     pub struct MigrateToV6<T: Config>(T);
