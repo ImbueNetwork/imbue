@@ -864,6 +864,26 @@ impl pallet_briefs::Config for Runtime {
     type DepositHandler = Deposits;
 }
 
+parameter_types! {
+    pub MaxCandidatesPerShortlist: u32 = 50;
+    pub ShortlistPeriod: BlockNumber = 14 * DAYS;
+    pub MembershipDeposit: Balance = DOLLARS.saturating_mul(500);
+    pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
+}
+
+impl pallet_fellowship::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MultiCurrency = Currencies;
+    type ForceAuthority = EnsureRootOr<HalfOfCouncil>;
+    type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
+    type ShortlistPeriod = ShortlistPeriod;
+    type MembershipDeposit = MembershipDeposit;
+    type DepositCurrencyId = DepositCurrencyId;
+    // Send slashes to the treasury.
+    type SlashAccount = TreasuryAccount;
+    type WeightInfo: ();
+}
+
 pub type DepositId = u64;
 pub struct ImbueDepositCalculator;
 impl DepositCalculator<Balance> for ImbueDepositCalculator {
@@ -949,6 +969,7 @@ construct_runtime! {
         ImbueBriefs: pallet_briefs::{Pallet, Call, Storage, Event<T>} = 101,
         ImbueGrants: pallet_grants::{Pallet, Call, Storage, Event<T>} = 102,
         Deposits: pallet_deposits::{Pallet, Storage, Event<T>} = 103,
+        ImbueFellowship: pallet_fellowship::{Pallet, Call, Storage, Event<T>} = 104,
     }
 }
 
@@ -986,6 +1007,7 @@ mod benches {
         [pallet_proposals, ImbueProposals]
         [pallet_briefs, ImbueBriefs]
         [pallet_grants, ImbueGrants]
+        [pallet_fellowship, ImbueFellowship]
     );
 }
 
