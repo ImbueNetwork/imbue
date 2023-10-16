@@ -95,44 +95,6 @@ impl<T: frame_system::Config> crate::WeightInfoT for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(6))
 	}
-	/// Storage: ImbueProposals Projects (r:1 w:0)
-	/// Proof: ImbueProposals Projects (max_values: None, max_size: Some(260823), added: 263298, mode: MaxEncodedLen)
-	/// Storage: ImbueProposals NoConfidenceVotes (r:1 w:1)
-	/// Proof: ImbueProposals NoConfidenceVotes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
-	/// Storage: ImbueProposals RoundsExpiring (r:1 w:1)
-	/// Proof: ImbueProposals RoundsExpiring (max_values: None, max_size: Some(471), added: 2946, mode: MaxEncodedLen)
-	/// Storage: ImbueProposals UserHasVoted (r:1 w:1)
-	/// Proof: ImbueProposals UserHasVoted (max_values: None, max_size: Some(165018), added: 167493, mode: MaxEncodedLen)
-	/// Storage: ImbueProposals Rounds (r:0 w:1)
-	/// Proof: ImbueProposals Rounds (max_values: None, max_size: Some(41), added: 2516, mode: MaxEncodedLen)
-	fn raise_vote_of_no_confidence() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `961`
-		//  Estimated: `264288`
-		// Minimum execution time: 21_212_000 picoseconds.
-		Weight::from_parts(21_625_000, 0)
-			.saturating_add(Weight::from_parts(0, 264288))
-			.saturating_add(T::DbWeight::get().reads(4))
-			.saturating_add(T::DbWeight::get().writes(4))
-	}
-	/// Storage: ImbueProposals Rounds (r:1 w:0)
-	/// Proof: ImbueProposals Rounds (max_values: None, max_size: Some(41), added: 2516, mode: MaxEncodedLen)
-	/// Storage: ImbueProposals Projects (r:1 w:0)
-	/// Proof: ImbueProposals Projects (max_values: None, max_size: Some(260823), added: 263298, mode: MaxEncodedLen)
-	/// Storage: ImbueProposals NoConfidenceVotes (r:1 w:1)
-	/// Proof: ImbueProposals NoConfidenceVotes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
-	/// Storage: ImbueProposals UserHasVoted (r:1 w:1)
-	/// Proof: ImbueProposals UserHasVoted (max_values: None, max_size: Some(165018), added: 167493, mode: MaxEncodedLen)
-	fn vote_on_no_confidence_round() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `1223`
-		//  Estimated: `264288`
-		// Minimum execution time: 21_730_000 picoseconds.
-		Weight::from_parts(22_659_000, 0)
-			.saturating_add(Weight::from_parts(0, 264288))
-			.saturating_add(T::DbWeight::get().reads(4))
-			.saturating_add(T::DbWeight::get().writes(2))
-	}
 	/// Storage: ImbueProposals RoundsExpiring (r:1 w:1)
 	/// Proof: ImbueProposals RoundsExpiring (max_values: None, max_size: Some(471), added: 2946, mode: MaxEncodedLen)
 	/// Storage: ImbueProposals Rounds (r:0 w:1)
