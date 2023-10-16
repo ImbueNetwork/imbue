@@ -41,10 +41,7 @@ pub use weights::*;
 
 pub mod impls;
 
-<<<<<<< HEAD
-=======
 pub use impls::*;
->>>>>>> origin
 pub type ProjectKey = u32;
 pub type MilestoneKey = u32;
 pub type IndividualVotes<T> = BoundedBTreeMap<
@@ -152,6 +149,10 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
 
     /// Stores the total votes on a milestone.
+    #[pallet::storage]
+    pub type IndividualVoteStore<T: Config> =
+        StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
+
     #[pallet::storage]
     pub type IndividualVoteStore<T: Config> =
         StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
@@ -662,6 +663,7 @@ pub struct Whitelist<AccountId, Balance> {
     max_cap: Balance,
 }
 
+<<<<<<< HEAD
 /// Defines how a project is funded on its instantiation.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen, Default)]
 pub enum FundingPath {
@@ -675,6 +677,8 @@ pub enum FundingPath {
     WaitForFunding,
 }
 
+=======
+>>>>>>> f5b65b648adb9abe1429374bd1a8d87acfc979cf
 /// Stores the btree for each individual vote.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
