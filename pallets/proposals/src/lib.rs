@@ -119,7 +119,8 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn refunds)]
-    pub type RefundedOn<T: Config> = StorageMap<_,Blake2_128Concat, ProjectKey, BlockNumberFor<T>, OptionQuery>;
+    pub type RefundedOn<T: Config> =
+        StorageMap<_, Blake2_128Concat, ProjectKey, BlockNumberFor<T>, OptionQuery>;
 
     // BTree of users that has voted, bounded by the number of contributors in a project.
     #[pallet::storage]

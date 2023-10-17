@@ -3,7 +3,6 @@ use common_types::milestone_origin::FundingType;
 use scale_info::prelude::format;
 use sp_runtime::traits::{Saturating, Zero};
 
-
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
     ///
@@ -346,7 +345,7 @@ impl<T: Config> Pallet<T> {
             Rounds::<T>::remove((project_key, 0), RoundType::VoteOfNoConfidence);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
             /// this will store the blocknumber when the project was refunded
-            RefundedOn::<T>::insert(project_key,frame_system::Pallet::<T>::block_number());
+            RefundedOn::<T>::insert(project_key, frame_system::Pallet::<T>::block_number());
             Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
         }
         Ok(())
@@ -421,7 +420,7 @@ impl<T: Config> Pallet<T> {
             Projects::<T>::remove(project_key);
             <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
             /// this will store the blocknumber when the project was refunded
-            RefundedOn::<T>::insert(project_key,frame_system::Pallet::<T>::block_number());
+            RefundedOn::<T>::insert(project_key, frame_system::Pallet::<T>::block_number());
             Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
         } else {
             return Err(Error::<T>::VoteThresholdNotMet.into());
