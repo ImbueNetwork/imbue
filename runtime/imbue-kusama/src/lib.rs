@@ -100,7 +100,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 9434,
+    spec_version: 9435,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -180,7 +180,14 @@ pub mod migrations {
     use super::*;
 
     /// Unreleased migrations. Add new ones here:
-    pub type Unreleased = (pallet_proposals::migration::v6::MigrateToV6<Runtime>,);
+    pub type Unreleased = (
+        pallet_proposals::migration::v6::MigrateToV6<Runtime>,
+        pallet_democracy::migrations::v1::Migration<Runtime>,
+        pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
+        pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+        pallet_preimage::migration::v1::Migration<Runtime>,
+        orml_asset_registry::Migration<Runtime>,
+    );
 }
 
 /// Executive: handles dispatch to the various modules.
