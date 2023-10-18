@@ -99,7 +99,7 @@ This guide will show you step by step process to transfer the kusd from acala to
             "port": 31200,
             "name": "alice",
             "flags": [
-              "--unsafe-ws-external",
+              "--unsafe-rpc-external",
               "--unsafe-rpc-external",
               "--rpc-external",
               "--ws-external",
@@ -121,7 +121,7 @@ This guide will show you step by step process to transfer the kusd from acala to
             "port": 31300,
             "name": "alice",
             "flags": [
-              "--unsafe-ws-external",
+              "--unsafe-rpc-external",
               "--unsafe-rpc-external",
               "--rpc-external",
               "--ws-external",
