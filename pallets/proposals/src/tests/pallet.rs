@@ -2,8 +2,26 @@ use frame_support::{assert_noop, assert_ok};
 
 use common_types::CurrencyId;
 use test_utils::*;
-
 use crate::{mock::*, *};
+
+#[test]
+fn get_type_info() {
+    build_test_externality().execute_with(|| {
+        let milestone_keys: BoundedVec<MilestoneKey, <Test as Config>::MaxMilestonesPerProject> =
+        vec![0, 1, 2, 3]
+            .try_into()
+            .expect("should be smaller than bound.");
+        let i = ImmutableIndividualVotes::<Test>::new(milestone_keys.clone());
+
+        let mut encoded = <ImmutableIndividualVotes<Test> as Encode>::encode(&i);
+
+        dbg!(<ImmutableIndividualVotes<Test> as TypeInfo>::type_info());
+        dbg!(&encoded);
+        dbg!(<ImmutableIndividualVotes<Test> as Decode>::decode(&mut encoded.as_slice()));
+        assert!(false)
+    });
+}
+
 
 #[test]
 fn submit_milestone_milestone_doesnt_exist() {
