@@ -488,8 +488,6 @@ pub mod v5 {
     #[storage_alias]
     pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
 
-    #[storage_alias]
-    pub type Projects<T: Config> = StorageMap<_, Identity, ProjectKey, ProjectV5<T>, OptionQuery>;
 
     #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
     #[repr(u32)]
@@ -502,20 +500,7 @@ pub mod v5 {
         V4,
     }
 
-    pub struct ProjectV5<T: Config> {
-        pub agreement_hash: H256,
-        pub milestones: BoundedBTreeMilestones<T>,
-        pub contributions: ContributionsFor<T>,
-        pub currency_id: common_types::CurrencyId,
-        pub withdrawn_funds: BalanceOf<T>,
-        pub raised_funds: BalanceOf<T>,
-        pub initiator: AccountIdOf<T>,
-        pub created_on: BlockNumberFor<T>,
-        pub cancelled: bool,
-        pub funding_type: FundingType,
-        pub deposit_id: DepositIdOf<T>,
-    }
-
+    
     #[derive(
         Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
     )]
@@ -583,6 +568,23 @@ pub mod v5 {
 pub mod v6 {
     use super::*;
 
+    pub struct ProjectV6<T: Config> {
+        pub agreement_hash: H256,
+        pub milestones: BoundedBTreeMilestones<T>,
+        pub contributions: ContributionsFor<T>,
+        pub currency_id: common_types::CurrencyId,
+        pub withdrawn_funds: BalanceOf<T>,
+        pub raised_funds: BalanceOf<T>,
+        pub initiator: AccountIdOf<T>,
+        pub created_on: BlockNumberFor<T>,
+        pub cancelled: bool,
+        pub funding_type: FundingType,
+        pub deposit_id: DepositIdOf<T>,
+    }
+
+    #[storage_alias]
+    pub type Projects<T: Config> = StorageMap<_, Identity, ProjectKey, ProjectV6<T>, OptionQuery>;
+
     #[storage_alias]
     pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
         Pallet<T>,
@@ -598,7 +600,7 @@ pub mod v6 {
     // only migrate the voting rounds awaiting the migration to remove no confidence rounds.
     // User votes is now handled by IndividualVoteStore::<T>
     fn migrate_user_has_voted<T: Config>(weight: &mut Weight) {
-        Projects::<T>::iter().for_each(|(project_key, project)| {
+        v6::Projects::<T>::iter().for_each(|(project_key, project)| {
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             project.milestones.keys().for_each(|milestone_key| {
                 *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
@@ -653,62 +655,8 @@ pub mod v6 {
             }
         })
     }
-    pub struct ProjectV5<T: Config> {
-        pub agreement_hash: H256,
-        pub milestones: BoundedBTreeMilestones<T>,
-        pub contributions: ContributionsFor<T>,
-        pub currency_id: common_types::CurrencyId,
-        pub withdrawn_funds: BalanceOf<T>,
-        pub raised_funds: BalanceOf<T>,
-        pub initiator: AccountIdOf<T>,
-        pub created_on: BlockNumberFor<T>,
-        pub cancelled: bool,
-        pub funding_type: FundingType,
-        pub deposit_id: DepositIdOf<T>,
-    }
 
-    refund locations, jury, on_creation_funding
-    fn migrate_new_fields<T: Config, R: crate::traits::RefundHandler>(weight &mut Weight) {
-        v5::Projects::<T>::drain().for_each(|(key, project)|{
-            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
-            let on_creation_funding = match project.funding_type {
-                Proposal => crate::FundingPath::TakeFromReserved,
-                Brief => crate::FundingPath::TakeFromReserved,
-                Grant(_) => crate::FundingPath::WaitForFunding,
-            }
-
-            let jury = todo!();
-
-            let refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = match funding.funding_type {
-                Proposal => crate::Pallet::<T>::convert_contributions_to_refund_locations(project.contributions),
-                Brief => crate::Pallet::<T>::convert_contributions_to_refund_locations(project.contributions),
-                Grant(treasury_origin) => {
-                    let beneficiary = PalletId(*b"py/trsry").into_account_truncating();
-                    Vec::from((Locality(treasury_origin.get_multi_location(beneficiary)), Percent::from_parts(100))).try_into().expect("1 is lower than bound; qed")
-                },
-            };
-
-            let migrated_project = crate::Project {
-                agreement_hash: project.agreement_hash,
-                milestones: project.milestones,
-                contributions: project.contributions,
-                currency_id: project.currency_id,
-                withdrawn_funds: project.withdrawn_funds,
-                raised_funds: project.raised_funds,
-                initiator: project.initiator,
-                created_on: project.created_on,
-                cancelled: project.cancelled,
-                deposit_id: project.deposit_id,
-                refund_locations,
-                jury,
-                on_creation_funding,
-            };
-
-            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-            crate::Projects::<T>::insert(key, migrated_project);
-        });
-    }
 
     pub struct MigrateToV6<T: Config>(T);
     impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
@@ -758,6 +706,101 @@ pub mod v6 {
             Ok(())
         }
     }
+}
+
+pub mod v7 {
+
+    struct MigrateToV7<T: Config>(T);
+
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV7<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
+            log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
+            let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
+            let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
+            ensure!(
+                current == 7 && onchain == 6,
+                "Current version must be set to v7 and onchain to v6"
+            );
+            Ok(Vec::new())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            log::warn!("****** STARTING MIGRATION *****");
+
+            let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
+            let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
+            if current == 7 && onchain == 6 {
+
+                migrate_new_fields::<T>()
+                current.put::<Pallet<T>>();
+                log::warn!("v7 has been successfully applied");
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
+            } else {
+                log::warn!("Skipping v7 due to mismatched version, this be removed from Executive");
+                weight = weight.saturating_add(T::DbWeight::get().reads(1));
+            }
+            
+            log::warn!("****** ENDING MIGRATION *****");
+            weight
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
+            log::warn!( target:  "pallet-proposals", "Running post_upgrade()");
+
+            ensure!(
+                Pallet::<T>::current_storage_version() == 7,
+                "Storage version should be v7 after the migration"
+            );
+
+            Ok(())
+        }
+    }
+
+    fn migrate_new_fields<T: Config>(weight &mut Weight) {
+        v6::Projects::<T>::drain().for_each(|(key, project)|{
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+
+            let on_creation_funding = match project.funding_type {
+                Proposal => crate::FundingPath::TakeFromReserved,
+                Brief => crate::FundingPath::TakeFromReserved,
+                Grant(_) => crate::FundingPath::WaitForFunding,
+            }
+
+            let jury = todo!();
+
+            let refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = match funding.funding_type {
+                Proposal => crate::Pallet::<T>::convert_contributions_to_refund_locations(project.contributions),
+                Brief => crate::Pallet::<T>::convert_contributions_to_refund_locations(project.contributions),
+                Grant(treasury_origin) => {
+                    let beneficiary = PalletId(*b"py/trsry").into_account_truncating();
+                    Vec::from((Locality(treasury_origin.get_multi_location(beneficiary)), Percent::from_parts(100))).try_into().expect("1 is lower than bound; qed")
+                },
+            };
+
+            let migrated_project = crate::Project {
+                agreement_hash: project.agreement_hash,
+                milestones: project.milestones,
+                contributions: project.contributions,
+                currency_id: project.currency_id,
+                withdrawn_funds: project.withdrawn_funds,
+                raised_funds: project.raised_funds,
+                initiator: project.initiator,
+                created_on: project.created_on,
+                cancelled: project.cancelled,
+                deposit_id: project.deposit_id,
+                refund_locations,
+                jury,
+                on_creation_funding,
+            };
+
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            crate::Projects::<T>::insert(key, migrated_project);
+        });
+    }
+
 }
 
 #[cfg(test)]

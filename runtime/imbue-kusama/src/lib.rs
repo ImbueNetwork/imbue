@@ -180,7 +180,7 @@ pub mod migrations {
     use super::*;
 
     /// Unreleased migrations. Add new ones here:
-    pub type Unreleased = (pallet_proposals::migration::v6::MigrateToV6<Runtime>,);
+    pub type Unreleased = (pallet_proposals::migration::v7::MigrateToV7<Runtime>,);
 }
 
 /// Executive: handles dispatch to the various modules.
