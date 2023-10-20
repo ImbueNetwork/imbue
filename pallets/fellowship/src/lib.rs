@@ -19,6 +19,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod migration;
+
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
@@ -106,28 +108,31 @@ pub mod pallet {
     pub type FellowToVetter<T> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, VetterIdOf<T>, OptionQuery>;
 
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
-        pub initial_fellows: Vec<(T::AccountId, Role, Rank)>
-    }
+    
+    // #[cfg(feature = "genesis")]
+    // #[pallet::genesis_config]
+    // pub struct GenesisConfig<T: Config> {
+    //     pub initial_fellows: BoundedVec<(T::AccountId, Role, Rank), ConstU32<100>>
+    // }
 
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-	    fn default() -> Self {
-            Self {
-                initial_fellows: Vec::new()
-            }
-	    }
-    }
+    // #[cfg(feature = "std")]
+    // impl<T: Config> Default for GenesisConfig<T> {
+	//     fn default() -> Self {
+    //         Self {
+    //             initial_fellows: Vec::new()
+    //         }
+	//     }
+    // }
 
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-	    fn build(&self) {
-	    	for (account, role, rank) in &self.initial_fellows {
-                <Pallet<T> as FellowshipHandle>::add_to_fellowship(account, role, rank, None, false);
-	    	}
-	    }
-    }
+    // #[cfg(feature = "genesis")]
+    // #[pallet::genesis_build]
+    // impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	//     fn build(&self) {
+	//     	for (account, role, rank) in &self.initial_fellows {
+    //             <Pallet<T> as FellowshipHandle>::add_to_fellowship(account, role, rank, None, false);
+	//     	}
+	//     }
+    // }
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]

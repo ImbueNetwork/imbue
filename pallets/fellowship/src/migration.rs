@@ -1,22 +1,41 @@
-use sp_std::{vec, vec::Vec};
+use sp_std::{vec, vec::Vec, str::FromStr, fmt::Debug};
 use frame_support::traits::OnRuntimeUpgrade;
-use frame_support::*;
+use frame_support::{*, pallet_prelude::*, dispatch::EncodeLike};
+use sp_runtime::AccountId32;
+use crate::{*, traits::*};
 
 mod v0 {
     use super::*;
 
     struct MigrateInitial<T: crate::Config>(T);
     impl<T: Config> MigrateInitial<T> 
-    where <T as frame_system::Config>::AccountId : From<[u8; 32]>
+    where 
+    <T as frame_system::Config>::AccountId: FromStr,
+    <<T as frame_system::Config>::AccountId as FromStr>::Err : Debug
+
     {
-        fn get_initial_fellows(initial_fellows: Vec<([u8; 32], crate::Role, crate::Rank)>) -> Vec<(<T as frame_system::Config>::AccountId>, crate::Role, crate::Rank) {
-            initial_fellows.iter().map(|(bytes, _, _)|{
-                (bytes.into(), _, _)
-            }).collect()
+        fn insert_initial_fellows(weight: &mut Weight) {
+            let initial_fellows: Vec<(<T as frame_system::Config>::AccountId, crate::Role, crate::Rank)> = vec![
+                // EARNEST
+                (<AccountIdOf<T> as FromStr>::from_str("5Da1Fna8wvgQNmCFPhcRGR9oxmhyPd7MNhPZADq2X6GiKkkr").unwrap(), Role::Freelancer, 10),
+                // ME
+                (<AccountIdOf<T> as FromStr>::from_str("5DCzKK5EZvY77vxxWXeip7sp17TqB7sk7Fj1hXes7Bo6B5Eq").unwrap(), Role::Freelancer, 10),
+                // BEA
+                (<AccountIdOf<T> as FromStr>::from_str("5DU2hcQnEmrSXCDUnjiwNX3A1uTf26ACpgs4KUFpsLJqAnjd").unwrap(), Role::Freelancer, 10),
+            ];
+            for (acc, role, rank) in initial_fellows.into_iter() {
+                <Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&acc, role, rank, None, false);
+                *weight = weight.saturating_add(T::WeightInfo::add_to_fellowship())
+            }
         }
     }
 
-    impl<T: Config> OnRuntimeUpgrade for MigrateInitial<T> {
+    impl<T: Config> OnRuntimeUpgrade for MigrateInitial<T> 
+    where 
+    <T as frame_system::Config>::AccountId: FromStr,
+    <<T as frame_system::Config>::AccountId as FromStr>::Err : Debug
+
+    {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::warn!( target: "pallet-fellowship", "Running pre_upgrade()");
@@ -30,14 +49,7 @@ mod v0 {
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
 
             if current == 1 {
-                let initial_fellows: Vec<<T as frame_system::Config>::AccountId> = vec![
-                    (b"5Da1Fna8wvgQNmCFPhcRGR9oxmhyPd7MNhPZADq2X6GiKkkr", Role::Freelancer, 10),
-                    (b"5DCzKK5EZvY77vxxWXeip7sp17TqB7sk7Fj1hXes7Bo6B5Eq", Role::Freelancer, 10),
-                ];
-                let accounts = Self::get_initial_fellows(initial_fellows);
-                for (acc, role, rank) in accounts.iter() {
-                    <Pallet<T> as FellowshipHandle>::add_to_fellowship(acc, role, rank, None, false);
-                }
+                Self::insert_initial_fellows(&mut weight);
 
                 log::warn!("v1 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
