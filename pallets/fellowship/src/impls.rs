@@ -53,8 +53,6 @@ impl Convert<crate::Role, Percent> for RoleToPercentFee {
         match role {
             Role::Vetter => Percent::from_percent(50u8),
             Role::Freelancer => Percent::from_percent(50u8),
-            Role::BusinessDev => Percent::from_percent(50u8),
-            Role::Approver => Percent::from_percent(50u8),
         }
     }
 }

@@ -19,7 +19,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-mod migration;
+pub mod migration;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -50,7 +50,7 @@ pub mod pallet {
         <T as Config>::MaxCandidatesPerShortlist,
     >;
 
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -427,7 +427,5 @@ pub mod pallet {
     pub enum Role {
         Vetter,
         Freelancer,
-        BusinessDev,
-        Approver,
     }
 }

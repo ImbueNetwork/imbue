@@ -884,7 +884,7 @@ impl pallet_fellowship::Config for Runtime {
     type DepositCurrencyId = DepositCurrencyId;
     // Send slashes to the treasury.
     type SlashAccount = TreasuryAccount;
-    type WeightInfo = ();
+    type WeightInfo = pallet_fellowship::weights::WeightInfo;
 }
 
 pub type DepositId = u64;
