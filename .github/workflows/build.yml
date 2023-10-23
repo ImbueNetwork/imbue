@@ -2,8 +2,6 @@ name: build-on-self-hosted-runner
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
     paths-ignore:
       - "**.md"
   pull_request:
