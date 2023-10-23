@@ -3,6 +3,8 @@ use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::{pallet_prelude::*, storage_alias, traits::OnRuntimeUpgrade, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
+use sp_runtime::TryRuntimeError;
+use sp_std::vec::Vec;
 
 #[allow(unused)]
 #[allow(dead_code)]

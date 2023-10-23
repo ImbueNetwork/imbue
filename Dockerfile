@@ -6,7 +6,7 @@ WORKDIR /builds/imbue
 
 RUN cargo build --release
 
-FROM debian:buster-slim as collator
+FROM docker.io/library/ubuntu:20.04 as collator
 RUN apt-get update && apt-get install jq curl bash wget git curl bash make vim g++ -y && \
     curl -sSo /wait-for-it.sh https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh && \
     chmod +x /wait-for-it.sh && \

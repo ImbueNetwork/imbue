@@ -24,7 +24,7 @@ impl<T: Config> ImmutableIndividualVotes<T> {
                 .expect("milestone_keys and outer_votes have been bound by the same binding; qed");
         }
 
-        Self { inner: outer_votes }
+        Self { votes: outer_votes }
     }
 
     /// Insert the vote from an individual on a milestone.
@@ -34,7 +34,7 @@ impl<T: Config> ImmutableIndividualVotes<T> {
         account_id: &AccountIdOf<T>,
         vote: bool,
     ) -> Result<(), DispatchError> {
-        if let Some(votes) = self.inner.get_mut(&milestone_key) {
+        if let Some(votes) = self.votes.get_mut(&milestone_key) {
             if let Some(_existing_vote) = votes.get_mut(account_id) {
                 return Err(Error::<T>::VotesAreImmutable.into());
             } else {
@@ -53,7 +53,7 @@ impl<T: Config> ImmutableIndividualVotes<T> {
     /// Used when a milestone is submitted.
     /// Skips if the milestone is not found.
     pub(crate) fn clear_milestone_votes(&mut self, milestone_key: MilestoneKey) {
-        if let Some(btree) = self.inner.get_mut(&milestone_key) {
+        if let Some(btree) = self.votes.get_mut(&milestone_key) {
             *btree = Default::default()
         }
     }
@@ -61,12 +61,12 @@ impl<T: Config> ImmutableIndividualVotes<T> {
     /// Take a mutable reference to the inner individual votes item.
     #[allow(dead_code)]
     pub(crate) fn as_mut(&mut self) -> &mut IndividualVotes<T> {
-        &mut self.inner
+        &mut self.votes
     }
 }
 
 impl<T: Config> AsRef<IndividualVotes<T>> for ImmutableIndividualVotes<T> {
     fn as_ref(&self) -> &IndividualVotes<T> {
-        &self.inner
+        &self.votes
     }
 }

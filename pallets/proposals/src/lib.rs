@@ -680,7 +680,7 @@ pub enum FundingPath {
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 pub struct ImmutableIndividualVotes<T: Config> {
-    inner: IndividualVotes<T>,
+    votes: IndividualVotes<T>,
 }
 
 pub trait WeightInfoT {
