@@ -13,7 +13,7 @@ const parachainAlicePrometheusPort = 9610;
 
 const commonFlags = [
     "--force-authoring",
-    "--unsafe-ws-external",
+    "--unsafe-rpc-external",
     "--rpc-cors=all",
     "--rpc-external",
     "--rpc-methods=Unsafe",
@@ -32,7 +32,7 @@ const parachainNodeFlags = [
     "--",
     "--prometheus-external",
     "--ws-max-out-buffer-capacity=99999",
-    "--ws-max-connections=200"
+    "--rpc-max-connections=200"
 ];
 
 const relaychain = {

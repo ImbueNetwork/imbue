@@ -622,8 +622,7 @@ pub mod v6 {
             {
                 crate::MilestoneVotes::<T>::insert(key, bounded_btree);
             } else {
-                // chill bruh the bound has been violated.
-                // probs wont happen.
+                // Unreachable unless the MaxMilestonesPerProject bound has been reduced in the upgrade.
             }
         })
     }
@@ -653,6 +652,7 @@ pub mod v6 {
                 migrate_milestone_votes::<T>(&mut weight);
                 migrate_user_has_voted::<T>(&mut weight);
 
+                current.put::<Pallet<T>>();
                 log::warn!("v6 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
             } else {
