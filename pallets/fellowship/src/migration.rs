@@ -1,35 +1,64 @@
-use sp_std::{vec, vec::Vec, str::FromStr, fmt::Debug};
 use frame_support::traits::OnRuntimeUpgrade;
-use frame_support::{*, pallet_prelude::*, dispatch::EncodeLike};
+use frame_support::{dispatch::EncodeLike, pallet_prelude::*, *};
 use sp_runtime::AccountId32;
+use sp_std::{fmt::Debug, str::FromStr, vec, vec::Vec};
 
-use crate::{*, traits::*};
+use crate::{traits::*, *};
 
 pub mod v0 {
     use super::*;
 
     pub struct MigrateInitial<T: crate::Config>(T);
-    impl<T: Config> MigrateInitial<T> 
-    where T: frame_system::Config<AccountId = AccountId32>
+    impl<T: Config> MigrateInitial<T>
+    where
+        T: frame_system::Config<AccountId = AccountId32>,
     {
         fn insert_initial_fellows(weight: &mut Weight) {
-            let initial_fellows: Vec<(<T as frame_system::Config>::AccountId, crate::Role, crate::Rank)> = vec![
+            let initial_fellows: Vec<(
+                <T as frame_system::Config>::AccountId,
+                crate::Role,
+                crate::Rank,
+            )> = vec![
                 // EARNEST
-                (AccountId32::try_from(b"5Da1Fna8wvgQNmCFPhcRGR9oxmhyPd7MNhPZADq2X6GiKkkr".as_slice()).unwrap(), Role::Freelancer, 10),
+                (
+                    AccountId32::try_from(
+                        b"5Da1Fna8wvgQNmCFPhcRGR9oxmhyPd7MNhPZADq2X6GiKkkr".as_slice(),
+                    )
+                    .unwrap(),
+                    Role::Freelancer,
+                    10,
+                ),
                 // ME
-                (AccountId32::try_from(b"5DCzKK5EZvY77vxxWXeip7sp17TqB7sk7Fj1hXes7Bo6B5Eq".as_slice()).unwrap(), Role::Freelancer, 10),
+                (
+                    AccountId32::try_from(
+                        b"5DCzKK5EZvY77vxxWXeip7sp17TqB7sk7Fj1hXes7Bo6B5Eq".as_slice(),
+                    )
+                    .unwrap(),
+                    Role::Freelancer,
+                    10,
+                ),
                 // BEA
-                (AccountId32::try_from(b"5DU2hcQnEmrSXCDUnjiwNX3A1uTf26ACpgs4KUFpsLJqAnjd".as_slice()).unwrap(), Role::Freelancer, 10),
+                (
+                    AccountId32::try_from(
+                        b"5DU2hcQnEmrSXCDUnjiwNX3A1uTf26ACpgs4KUFpsLJqAnjd".as_slice(),
+                    )
+                    .unwrap(),
+                    Role::Freelancer,
+                    10,
+                ),
             ];
             for (acc, role, rank) in initial_fellows.into_iter() {
-                <Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&acc, role, rank, None, false);
+                <Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
+                    &acc, role, rank, None, false,
+                );
                 *weight = weight.saturating_add(T::WeightInfo::add_to_fellowship())
             }
         }
     }
 
-    impl<T: Config> OnRuntimeUpgrade for MigrateInitial<T> 
-    where T: frame_system::Config<AccountId = AccountId32>
+    impl<T: Config> OnRuntimeUpgrade for MigrateInitial<T>
+    where
+        T: frame_system::Config<AccountId = AccountId32>,
     {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
@@ -68,8 +97,5 @@ pub mod v0 {
 
             Ok(())
         }
-
     }
-
-    
 }

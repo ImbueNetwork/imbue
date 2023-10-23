@@ -108,7 +108,6 @@ pub mod pallet {
     pub type FellowToVetter<T> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, VetterIdOf<T>, OptionQuery>;
 
-    
     // #[cfg(feature = "genesis")]
     // #[pallet::genesis_config]
     // pub struct GenesisConfig<T: Config> {
@@ -117,21 +116,21 @@ pub mod pallet {
 
     // #[cfg(feature = "std")]
     // impl<T: Config> Default for GenesisConfig<T> {
-	//     fn default() -> Self {
+    //     fn default() -> Self {
     //         Self {
     //             initial_fellows: Vec::new()
     //         }
-	//     }
+    //     }
     // }
 
     // #[cfg(feature = "genesis")]
     // #[pallet::genesis_build]
     // impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-	//     fn build(&self) {
-	//     	for (account, role, rank) in &self.initial_fellows {
+    //     fn build(&self) {
+    //     	for (account, role, rank) in &self.initial_fellows {
     //             <Pallet<T> as FellowshipHandle>::add_to_fellowship(account, role, rank, None, false);
-	//     	}
-	//     }
+    //     	}
+    //     }
     // }
 
     #[pallet::event]
