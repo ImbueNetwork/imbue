@@ -274,6 +274,7 @@ runtime-benchmarks = [
 	'pallet-proposals/runtime-benchmarks',
 	'pallet-briefs/runtime-benchmarks',
 	'pallet-grants/runtime-benchmarks',
+	'pallet-fellowship/runtime-benchmarks',
 ]
 
 # A feature that should be enabled when the runtime should be build for on-chain
