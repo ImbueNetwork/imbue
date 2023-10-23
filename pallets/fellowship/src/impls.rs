@@ -57,6 +57,12 @@ impl Convert<crate::Role, Percent> for RoleToPercentFee {
     }
 }
 
+impl<T: Config> SelectJury<AccountIdOf<T>> for Pallet<T> {
+    fn select_jury() ->  Vec<AccountIdOf<T>> {
+
+    }
+}
+
 impl<T: Config> Pallet<T> {
     /// Try take the membership deposit from who
     /// If the deposit was taken, this will return true, else false.

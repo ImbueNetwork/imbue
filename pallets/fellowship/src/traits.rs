@@ -33,6 +33,12 @@ pub trait EnsureRole<AccountId, Role> {
     ) -> Result<Self::Success, DispatchError>;
 }
 
+/// Select a pseudo-random jury of a specified amount.
+pub trait SelectJury<AccountId> {
+    fn select_jury() ->  Vec<AccountId>
+}
+
+
 pub trait WeightInfoT {
     fn add_to_fellowship() -> Weight;
     fn force_add_fellowship() -> Weight;
