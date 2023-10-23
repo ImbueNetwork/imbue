@@ -25,6 +25,9 @@ common-types = { path = "../../libs/common-types", default-features = false}
 common-traits = { path = "../../libs/common-traits", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false}
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+rand = { version = "0.7.3", default-features = false, features = ["alloc"]}
+
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}

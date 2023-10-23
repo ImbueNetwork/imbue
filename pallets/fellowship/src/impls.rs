@@ -8,6 +8,7 @@ use sp_runtime::{
     DispatchError, Percent,
 };
 use sp_std::vec::Vec;
+use sp_core::H256;
 
 /// Ensure that a account is of a given role.
 /// Used in other pallets like an ensure origin.
@@ -57,9 +58,29 @@ impl Convert<crate::Role, Percent> for RoleToPercentFee {
     }
 }
 
+/// Select a jury randomly, if there is not enough member is Roles then a truncated list will be provided.
 impl<T: Config> SelectJury<AccountIdOf<T>> for Pallet<T> {
-    fn select_jury() ->  Vec<AccountIdOf<T>> {
+    fn select_jury(mut jury_size: u32) ->  Vec<AccountIdOf<T>> {
+        let out: Vec<AccountIdOf<T>> = Vec::new();
+        let mut rng = rand::thread_rng();
+        let mut length = Roles::<T>::iter_keys().count();
+        
+        if jury_size > length {
+            jury_size = length;
+        }
+        // SAFETY: panics is jury_size > length.
+        let sample = rand::seq::index::sample(&mut rng, length, jury_size)
 
+        let roles_keys_iterator = Roles::<T>::iter_keys();
+        for index in sample.to_vec().iter() {
+            if let Some(key) = roles_keys_iterator.position(|&x| x == index) {
+                if let Some(role) = Roles::<T>::get(key) {
+                    out.push(role);
+                }
+            }
+        }
+
+        out
     }
 }
 
