@@ -67,7 +67,7 @@ fn ensure_role_in_works() {
             None
         ));
         assert!(
-            EnsureFellowshipRole::<Test>::ensure_role_in(&BOB, vec![Role::Approver], None).is_err(),
+            EnsureFellowshipRole::<Test>::ensure_role_in(&BOB, vec![Role::Vetter], None).is_err(),
             "BOB is not of this Role."
         );
         assert!(

@@ -23,6 +23,7 @@ pallet-authorship = { git = "https://github.com/paritytech/substrate" , branch =
 pallet-balances = { git = "https://github.com/paritytech/substrate" , branch = "polkadot-v0.9.43",  default-features = false }
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.43", optional = true }
 frame-system-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.43", optional = true }
+pallet-xcm = { default-features = false, git = "https://github.com/paritytech/polkadot.git", branch = "release-v0.9.43"}
 
 ## Substrate Primitive Dependencies
 sp-arithmetic = { git = "https://github.com/paritytech/substrate" , branch = "polkadot-v0.9.43",  default-features = false }
@@ -80,5 +81,6 @@ std = [
 runtime-benchmarks = [
 	'frame-support/runtime-benchmarks',
 	"frame-system/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 ]
