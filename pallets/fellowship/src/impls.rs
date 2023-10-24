@@ -64,20 +64,22 @@ impl<T: Config> crate::traits::SelectJury<AccountIdOf<T>> for Pallet<T> {
         let mut out: Vec<AccountIdOf<T>> = Vec::new();
         let mut rng = rand::thread_rng();
         let mut length = Roles::<T>::iter_keys().count();
-        
+
         if jury_size > length {
             jury_size = length;
         }
+
         // SAFETY: panics is jury_size > length.
         let sample = rand::seq::index::sample(&mut rng, length, jury_size);
 
-        let mut roles_keys_iterator = Roles::<T>::iter_keys();
-        for index in sample.into_vec().iter() {
-            if let Some(key) = roles_keys_iterator.nth(*index) {
-                out.push(key)
+        let keys = Roles::<T>::iter_keys().collect::<Vec<AccountIdOf<T>>>();
+        for index in sample.iter() {
+            // Defensive guard to avoid panic on indexing.
+            if index < keys.len() {
+                let key = &keys[index];
+                out.push(key.clone())
             }
         }
-
         out
     }
 }
