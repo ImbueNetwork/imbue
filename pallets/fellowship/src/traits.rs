@@ -33,6 +33,12 @@ pub trait EnsureRole<AccountId, Role> {
     ) -> Result<Self::Success, DispatchError>;
 }
 
+/// Custom definition for permissions for each role.
+pub trait FellowshipPermissions<Role> {
+    fn has_permission(role: Role) -> bool;
+    fn get_permisisons(role: Role) -> Vec<crate::Permission>;
+}
+
 pub trait WeightInfoT {
     fn add_to_fellowship() -> Weight;
     fn force_add_fellowship() -> Weight;
