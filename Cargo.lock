@@ -6957,6 +6957,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "parity-scale-codec 3.6.5",
+ "rand 0.7.3",
  "scale-info 2.9.0",
  "serde",
  "sp-arithmetic",
