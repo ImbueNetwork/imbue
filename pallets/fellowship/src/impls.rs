@@ -47,16 +47,6 @@ impl<T: Config> MaybeConvert<&AccountIdOf<T>, VetterIdOf<T>> for Pallet<T> {
     }
 }
 
-pub struct RoleToPercentFee;
-impl Convert<crate::Role, Percent> for RoleToPercentFee {
-    fn convert(role: Role) -> Percent {
-        match role {
-            Role::Vetter => Percent::from_percent(50u8),
-            Role::Freelancer => Percent::from_percent(50u8),
-        }
-    }
-}
-
 impl<T: Config> Pallet<T> {
     /// Try take the membership deposit from who
     /// If the deposit was taken, this will return true, else false.
