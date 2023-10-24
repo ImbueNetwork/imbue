@@ -35,7 +35,7 @@ pub trait EnsureRole<AccountId, Role> {
 
 /// Select a pseudo-random jury of a specified amount.
 pub trait SelectJury<AccountId> {
-    fn select_jury(size: usize) ->  Vec<AccountId>;
+    fn select_jury(size: u8) ->  Vec<AccountId>;
 }
 
 

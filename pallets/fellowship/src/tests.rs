@@ -747,7 +747,7 @@ fn test_select_jury_doesnt_panic_amount_more_than_length() {
                 10
             ));
         }
-        let jury = <crate::Pallet<Test> as SelectJury<AccountId>>::select_jury(size as usize + 100usize);
+        let jury = <crate::Pallet<Test> as SelectJury<AccountId>>::select_jury(size + 100);
         assert_eq!(jury.len(), 100, "jury size should have been truncated to size of roles or not enough roles have been selected.");
     });
 }
@@ -798,7 +798,7 @@ fn test_select_jury_stress_test() {
 #[test]
 fn test_select_jury_select_correct_amount_in_normal_conditions() {
     new_test_ext().execute_with(|| {
-        for i in 0..size {
+        for i in 0..255 {
             assert_ok!(Fellowship::force_add_fellowship(
                 RuntimeOrigin::root(),
                 Public::from_raw([i as u8; 32]),

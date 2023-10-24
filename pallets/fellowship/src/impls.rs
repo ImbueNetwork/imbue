@@ -59,11 +59,13 @@ impl Convert<crate::Role, Percent> for RoleToPercentFee {
 }
 
 /// Select a jury randomly, if there is not enough member is Roles then a truncated list will be provided.
+/// Currently bound to u8 for size.
 impl<T: Config> crate::traits::SelectJury<AccountIdOf<T>> for Pallet<T> {
-    fn select_jury(mut jury_size: usize) ->  Vec<AccountIdOf<T>> {
+    fn select_jury(jury_size: u8) ->  Vec<AccountIdOf<T>> {
+        let mut jury_size = jury_size as usize;
         let mut out: Vec<AccountIdOf<T>> = Vec::new();
         let mut rng = rand::thread_rng();
-        let mut length = Roles::<T>::iter_keys().count();
+        let length = Roles::<T>::iter_keys().count();
 
         if jury_size > length {
             jury_size = length;
