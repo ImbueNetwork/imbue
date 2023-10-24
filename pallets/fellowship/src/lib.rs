@@ -135,8 +135,6 @@ pub mod pallet {
         RoleNotFound,
         /// This account is not a fellow.
         NotAFellow,
-        /// This account is not a Vetter.
-        NotAVetter,
         /// Already a fellow.
         AlreadyAFellow,
         /// The candidate must have the deposit amount to be put on the shortlst.
@@ -236,9 +234,9 @@ pub mod pallet {
             rank: Rank,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let (role, _) = Roles::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
+            let (caller_role, _) = Roles::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
             ensure!(
-                T::Permissions::has_permission(role, Permission::AddToShortlist),
+                T::Permissions::has_permission(caller_role, Permission::AddToShortlist),
                 Error::<T>::RoleLacksPermission
             );
             ensure!(
@@ -277,9 +275,9 @@ pub mod pallet {
             candidate: AccountIdOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let (role, _) = Roles::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
+            let (caller_role, _) = Roles::<T>::get(&who).ok_or(Error::<T>::NotAFellow)?;
             ensure!(
-                T::Permissions::has_permission(role, Permission::RemoveFromShortlist),
+                T::Permissions::has_permission(caller_role, Permission::RemoveFromShortlist),
                 Error::<T>::RoleLacksPermission
             );
             CandidateShortlist::<T>::try_mutate(ShortlistRound::<T>::get(), |m_shortlist| {

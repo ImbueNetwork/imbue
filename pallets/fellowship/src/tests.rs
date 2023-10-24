@@ -356,7 +356,7 @@ fn add_candidate_to_shortlist_not_a_vetter() {
                 Role::Freelancer,
                 10
             ),
-            Error::<Test>::NotAVetter
+            Error::<Test>::NotAFellow
         );
     });
 }
@@ -489,7 +489,7 @@ fn remove_candidate_from_shortlist_not_a_vetter() {
 
         assert_noop!(
             Fellowship::remove_candidate_from_shortlist(RuntimeOrigin::signed(*CHARLIE), *ALICE),
-            Error::<Test>::NotAVetter
+            Error::<Test>::NotAFellow
         );
     });
 }
