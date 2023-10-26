@@ -36,7 +36,7 @@ pub trait EnsureRole<AccountId, Role> {
 /// Custom definition for permissions for each role.
 pub trait FellowshipPermissions<Role, Permission> {
     fn has_permission(role: Role, permission: Permission) -> bool;
-    fn get_permisisons(role: Role) -> Vec<Permission>;
+    fn get_permissions(role: Role) -> Vec<Permission>;
 }
 
 pub trait WeightInfoT {

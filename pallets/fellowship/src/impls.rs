@@ -65,3 +65,19 @@ impl<T: Config> Pallet<T> {
         false
     }
 }
+
+pub struct VetterAndFreelancerAllPermissions;
+impl crate::traits::FellowshipPermissions<crate::Role, crate::Permission> for VetterAndFreelancerAllPermissions {
+    fn has_permission(role: Role, permission: Permission) -> bool {
+        Self::get_permissions(role).contains(&permission)        
+    }
+
+    // Force match on all so we dont forget to add permissions when we add new roles.
+    fn get_permissions(role: Role) -> Vec<Permission> {
+        match role {
+            Role::Freelancer => vec![Permission::AddToShortlist, Permission::RemoveFromShortlist],
+            Role::Vetter => vec![Permission::AddToShortlist, Permission::RemoveFromShortlist],
+        }
+    }   
+}
+

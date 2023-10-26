@@ -403,5 +403,6 @@ pub mod pallet {
     pub enum Permission {  
         AddToShortlist,
         RemoveFromShortlist,
+        None,
     }
 }
