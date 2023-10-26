@@ -7,8 +7,7 @@ use sp_runtime::{
     traits::{BadOrigin, Convert},
     DispatchError, Percent,
 };
-use sp_std::vec::Vec;
-
+use sp_std::{vec::Vec, vec};
 /// Ensure that a account is of a given role.
 /// Used in other pallets like an ensure origin.
 pub struct EnsureFellowshipRole<T>(T);
