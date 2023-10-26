@@ -3,6 +3,7 @@ use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::*;
 
 use frame_system::pallet_prelude::BlockNumberFor;
+use pallet_fellowship::traits::JurySelector;
 pub use pallet::*;
 
 pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
@@ -710,9 +711,9 @@ pub mod v6 {
 
 pub mod v7 {
 
-    struct MigrateToV7<T: Config>(T);
+    struct MigrateToV7<T: Config, U: JurySelector>(T, U);
 
-    impl<T: Config> OnRuntimeUpgrade for MigrateToV7<T> {
+    impl<T: Config, U: JurySelector> OnRuntimeUpgrade for MigrateToV7<T, U> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
@@ -733,7 +734,7 @@ pub mod v7 {
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
             if current == 7 && onchain == 6 {
 
-                migrate_new_fields::<T>()
+                migrate_new_fields::<T, U>()
                 current.put::<Pallet<T>>();
                 log::warn!("v7 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
@@ -759,7 +760,7 @@ pub mod v7 {
         }
     }
 
-    fn migrate_new_fields<T: Config>(weight &mut Weight) {
+    fn migrate_new_fields<T: Config, U: JurySelector>(weight &mut Weight) {
         v6::Projects::<T>::drain().for_each(|(key, project)|{
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
@@ -769,7 +770,7 @@ pub mod v7 {
                 Grant(_) => crate::FundingPath::WaitForFunding,
             }
 
-            let jury = todo!();
+            let jury = <U as JurySelector>::select_jury(<T as Config>::MaxJuryMembers::get());
 
             let refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = match funding.funding_type {
                 Proposal => crate::Pallet::<T>::convert_contributions_to_refund_locations(project.contributions),
@@ -792,7 +793,7 @@ pub mod v7 {
                 cancelled: project.cancelled,
                 deposit_id: project.deposit_id,
                 refund_locations,
-                jury,
+                jury.try_into().expect("MaxJuryMembers is used in bound and creation; qed"),
                 on_creation_funding,
             };
 
