@@ -56,7 +56,6 @@ pub mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
-
     // TODO: Use permissions instead of ensure role, leave ensure role in place
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -400,7 +399,7 @@ pub mod pallet {
     }
 
     #[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, MaxEncodedLen, TypeInfo)]
-    pub enum Permission {  
+    pub enum Permission {
         AddToShortlist,
         RemoveFromShortlist,
         None,

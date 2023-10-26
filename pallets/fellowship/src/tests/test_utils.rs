@@ -16,7 +16,10 @@ pub(crate) fn add_to_fellowship_take_deposit(
     Ok(())
 }
 
-pub(crate) fn revoke_fellowship(who: &AccountIdOf<Test>, slash_deposit: bool) -> Result<(), DispatchError> {
+pub(crate) fn revoke_fellowship(
+    who: &AccountIdOf<Test>,
+    slash_deposit: bool,
+) -> Result<(), DispatchError> {
     <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::revoke_fellowship(who, slash_deposit)
 }
 

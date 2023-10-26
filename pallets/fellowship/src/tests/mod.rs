@@ -18,8 +18,8 @@ use sp_std::vec;
 pub(crate) static DEP_CURRENCY: Lazy<CurrencyId> =
     Lazy::new(<Test as Config>::DepositCurrencyId::get);
 
-mod pallet_tests;
 mod ensure_role;
 mod fellowship_permissions;
+mod pallet_tests;
 mod test_utils;
 pub(crate) use test_utils::*;

@@ -7,7 +7,7 @@ use sp_runtime::{
     traits::{BadOrigin, Convert},
     DispatchError, Percent,
 };
-use sp_std::{vec::Vec, vec};
+use sp_std::{vec, vec::Vec};
 /// Ensure that a account is of a given role.
 /// Used in other pallets like an ensure origin.
 pub struct EnsureFellowshipRole<T>(T);
@@ -66,9 +66,11 @@ impl<T: Config> Pallet<T> {
 }
 
 pub struct VetterAndFreelancerAllPermissions;
-impl crate::traits::FellowshipPermissions<crate::Role, crate::Permission> for VetterAndFreelancerAllPermissions {
+impl crate::traits::FellowshipPermissions<crate::Role, crate::Permission>
+    for VetterAndFreelancerAllPermissions
+{
     fn has_permission(role: Role, permission: Permission) -> bool {
-        Self::get_permissions(role).contains(&permission)        
+        Self::get_permissions(role).contains(&permission)
     }
 
     // Force match on all so we dont forget to add permissions when we add new roles.
@@ -77,6 +79,5 @@ impl crate::traits::FellowshipPermissions<crate::Role, crate::Permission> for Ve
             Role::Freelancer => vec![Permission::AddToShortlist, Permission::RemoveFromShortlist],
             Role::Vetter => vec![Permission::AddToShortlist, Permission::RemoveFromShortlist],
         }
-    }   
+    }
 }
-
