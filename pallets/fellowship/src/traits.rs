@@ -38,6 +38,11 @@ pub trait SelectJury<AccountId> {
     fn select_jury(size: u8) ->  Vec<AccountId>;
 }
 
+/// Custom definition for permissions for each role.
+pub trait FellowshipPermissions<Role, Permission> {
+    fn has_permission(role: Role, permission: Permission) -> bool;
+    fn get_permissions(role: Role) -> Vec<Permission>;
+}
 
 pub trait WeightInfoT {
     fn add_to_fellowship() -> Weight;
