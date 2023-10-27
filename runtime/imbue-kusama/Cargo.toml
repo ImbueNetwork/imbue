@@ -189,6 +189,7 @@ try-runtime = [
 	'pallet-briefs/try-runtime',
 	'pallet-grants/try-runtime',
 	'pallet-deposits/try-runtime',
+	'pallet-fellowship/try-runtime',
 	'common-traits/try-runtime',
 	'common-types/try-runtime',
 	'pallet-proposals-rpc-runtime-api/try-runtime',
@@ -256,6 +257,7 @@ std = [
 	'pallet-proposals-rpc-runtime-api/std',
 	'pallet-briefs/std',
 	'pallet-grants/std',
+	'pallet-fellowship/std',
 ]
 
 runtime-benchmarks = [
