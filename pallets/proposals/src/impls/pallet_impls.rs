@@ -2,6 +2,7 @@ use crate::*;
 use common_types::milestone_origin::FundingType;
 use scale_info::prelude::format;
 use sp_runtime::traits::{Saturating, Zero};
+use pallet_disputes::traits::DisputeHooks;
 
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
@@ -537,5 +538,24 @@ impl<T: Config> Pallet<T> {
         })?;
 
         Ok(())
+    }
+}
+
+impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
+    fn on_dispute_complete(
+        dispute_key: ProjectKey,
+        specifics: Vec<MilestoneKey>
+        dispute_result: pallet_disputes::pallet::DisputeResult,
+    ) -> Weight {
+        // OnSuccess
+        // mark each of the milestones as ready for refund.
+        // This should allow the withdraw function to 
+        // cancel the project 
+        // Emit Event for withdrawl
+
+        // OnFailure
+        // should not modify the state of the project except perhaps recording the amount of disputes previosuly handled.
+        // Emit event for failure?? check if pallet_disputes does this.
+        // revert anything that has happened as a result of calling a dispute (should be nothing as the 2 are independant.)
     }
 }

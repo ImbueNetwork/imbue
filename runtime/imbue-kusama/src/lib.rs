@@ -182,7 +182,7 @@ pub mod migrations {
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
         pallet_proposals::migration::v7::MigrateToV7<Runtime>,
-        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
+        pallet_fellowship::migration::v0::MigrateInitial<Runtime, pallet_fellowship::Pallet<Runtime>,
     );
 }
 
@@ -916,6 +916,27 @@ impl pallet_deposits::Config for Runtime {
     type DepositSlashAccount = TreasuryAccount;
 }
 
+parameter_types! {
+    pub MaxJurySize: u32 = 100;
+    pub MaxDisputesPerBlock: u32 = 50;
+    pub VotingTimeLimit: BlockNumber = DAYS * 14;
+}
+
+impl pallet_disputes::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type DisputeKey = u32;
+    type SpecificId = u32;
+    type MaxJurySize = MaxJurySize;
+    // TODO: this syntax for each max milestones per brief grant and projet.
+    // it binds automatically.
+    type MaxSpecifics = <Runtime as pallet_proposals::Config>::MaxMilestonesPerProject;
+    type MaxDisputesPerBlock = MaxDisputesPerBlock;
+    type VotingTimeLimit = VotingTimeLimit;
+    type ForceOrigin = EnsureRootOr<HalfOfCouncil>;
+    type DisputeHooks = todo!();
+    type WeightInfo = todo!();
+}
+
 construct_runtime! {
     pub enum Runtime where
         Block = Block,
@@ -1069,6 +1090,7 @@ impl_runtime_apis! {
         fn initialize_block(header: &<Block as BlockT>::Header) {
             Executive::initialize_block(header)
         }
+
     }
 
    impl sp_api::Metadata<Block> for Runtime {

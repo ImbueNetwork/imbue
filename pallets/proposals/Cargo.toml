@@ -48,6 +48,7 @@ common-types = { path = "../../libs/common-types", default-features = false }
 common-runtime = { path = "../../runtime/common", default-features = false }
 pallet-deposits = { path = "../deposits", default-features = false }
 pallet-fellowship = { path = "../fellowship", default-features = false }
+pallet-disputes = { path = "../fellowship"}
 
 [dev-dependencies]
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43"}

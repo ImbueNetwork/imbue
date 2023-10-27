@@ -69,8 +69,6 @@ pub mod pallet {
             + TypeInfo
             + Debug
             + Copy;
-        /// The max length for specifying the reason while raising the dispute
-        type MaxReasonLength: Get<u32>;
         /// The number of juries that can be assigned to a given dispute
         type MaxJurySize: Get<u32>;
         /// The number of specifics that can be assigned to a given dispute.
