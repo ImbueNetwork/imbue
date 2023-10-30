@@ -471,6 +471,8 @@ impl<T: Config> Pallet<T> {
                 milestone_key,
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
+                can_refund: false,
+                is_refunded: false,
             };
             milestones
                 .try_insert(milestone_key, milestone)
@@ -547,6 +549,36 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
         specifics: Vec<MilestoneKey>
         dispute_result: pallet_disputes::pallet::DisputeResult,
     ) -> Weight {
+        let mut weight: Weight = <Weight as Zero>::zero();
+        let maybe_project = Projects::<T>::get(dispute_key);
+        *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+
+        match maybe_project {
+            Some(project) => {
+                for milestone_key in specifics.iter() {
+                    if let Some(milestone) = project.milestones.get(milestone_key) {
+                        milestone.
+                    }
+                }
+            },
+            // Looks like the project was deleted somehow during the dispute. 
+            // The only way this is possible is through a refund or final withdraw.
+            // Not a massive issue as either way the project has been finalised.
+            // Just ignore and return weight.
+            None => {
+                weight
+            }
+        }
+        let weight = match dispute_result {
+            DisputeResult::Success => {
+                for milestone_key in specifics {
+
+                }
+            },
+            DisputeResult::Failure => {
+
+            }
+        };
         // OnSuccess
         // mark each of the milestones as ready for refund.
         // This should allow the withdraw function to 

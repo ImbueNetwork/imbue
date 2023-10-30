@@ -8,7 +8,6 @@ use traits::DisputeRaiser;
 impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
     type DisputeKey = T::DisputeKey;
     type SpecificId = T::SpecificId;
-    type MaxReasonLength = <T as Config>::MaxReasonLength;
     type MaxJurySize = <T as Config>::MaxJurySize;
     type MaxSpecifics = <T as Config>::MaxSpecifics;
 

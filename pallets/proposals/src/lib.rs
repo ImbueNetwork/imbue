@@ -12,6 +12,7 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
 use pallet_fellowship::{traits::EnsureRole, Role};
+use pallet_disputes::traits::DisputeRaiser;
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
@@ -118,6 +119,8 @@ pub mod pallet {
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
         
+        // Potencially need to bind the assocaited types to bounds in this pallet: todo!
+        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>>;
     }
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
@@ -427,6 +430,18 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             Self::add_vote_no_confidence(who, project_key, is_yay)
         }
+
+        /// Raise a dispute using the
+        #[pallet::call_index(14)]
+        #[pallet::weight(<Weight as Zero>::zero())]
+        pub fn raise_dispute(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+            milestone_keys: BoundedVec<MilestoneKeys, T::MaxMilestonesPerProject>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::add_vote_no_confidence(who, project_key, is_yay)
+        }
     }
     impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
         for crate::Pallet<T>
@@ -574,12 +589,16 @@ pub struct ProposedMilestone {
 /// The contribution users made to a project project.
 /// TODO: move these to a common repo (common_types will do)
 /// TODO: add ipfs hash like in the grants pallet and
+
+// TODO: MIGRATION FOR MILESTONES
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Milestone {
     pub project_key: ProjectKey,
     pub milestone_key: MilestoneKey,
     pub percentage_to_unlock: Percent,
     pub is_approved: bool,
+    pub can_refund: bool,
+    pub is_refunded: bool,
 }
 
 /// The vote struct is used to
