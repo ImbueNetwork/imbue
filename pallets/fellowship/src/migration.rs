@@ -1,7 +1,7 @@
 use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::{dispatch::EncodeLike, pallet_prelude::*, *};
 use sp_runtime::AccountId32;
-use sp_std::{fmt::Debug, str::FromStr, vec, vec::Vec};
+use sp_std::{fmt::Debug, vec, vec::Vec};
 use hex_literal::hex;
 
 use crate::{traits::*, *};
@@ -14,12 +14,24 @@ pub mod v0 {
     where
         T: frame_system::Config<AccountId = AccountId32>,
     {
-        pub fn insert_initial_fellows(weight: &mut Weight) {
-            let initial_fellows: Vec<(
-                <T as frame_system::Config>::AccountId,
-                crate::Role,
-                crate::Rank,
-            )> = vec![
+        pub fn insert_initial_fellows(weight:&mut Weight, initial_fellows: Vec<(
+            <T as frame_system::Config>::AccountId,
+            crate::Role,
+            crate::Rank,
+        )>) {
+            for (acc, role, rank) in initial_fellows.into_iter() {
+                <Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
+                    &acc, role, rank, None, false,
+                );
+                *weight = weight.saturating_add(T::WeightInfo::add_to_fellowship())
+            }
+        }
+        pub fn get_initial_fellows() -> Vec<(
+            <T as frame_system::Config>::AccountId,
+            crate::Role,
+            crate::Rank,
+        )> {
+            vec![
                 // EARNEST  
                 //"5Da1Fna8wvgQNmCFPhcRGR9oxmhyPd7MNhPZADq2X6GiKkkr",
                 (
@@ -65,13 +77,7 @@ pub mod v0 {
                     Role::Freelancer,
                     1,
                 ),
-            ];
-            for (acc, role, rank) in initial_fellows.into_iter() {
-                <Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
-                    &acc, role, rank, None, false,
-                );
-                *weight = weight.saturating_add(T::WeightInfo::add_to_fellowship())
-            }
+            ]
         }
     }
 
@@ -93,7 +99,8 @@ pub mod v0 {
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
 
             if current == 1 && onchain == 0 {
-                Self::insert_initial_fellows(&mut weight);
+                let initial_fellows = Self::get_initial_fellows();
+                Self::insert_initial_fellows(&mut weight, initial_fellows);
 
                 current.put::<Pallet<T>>();
                 log::warn!("v1 has been successfully applied");

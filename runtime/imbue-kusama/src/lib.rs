@@ -8,6 +8,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 #[cfg(test)]
+#[cfg(feature = "std")]
 mod sanity;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
