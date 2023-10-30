@@ -1,7 +1,9 @@
 use crate::Runtime;
 use common_runtime::MAXIMUM_BLOCK_WEIGHT;
 use pallet_proposals::{WeightInfo as PWeightInfo, WeightInfoT};
-use sp_arithmetic::Percent;
+use sp_arithmetic::{Percent, traits::Zero};
+use pallet_fellowship::Roles;
+use crate::Weight;
 
 #[test]
 fn ensure_maximum_milestones_are_consistent_grants() {
@@ -69,4 +71,19 @@ fn ensure_proposals_initialize_is_less_than_10_percent_block() {
         proof_size <= max_proof_size,
         "ExpiringProjectRoundsPerBlock is exceeding proof size limits."
     );
+}
+
+#[test]
+fn migrate_initial_check_accounts() {
+    let t = frame_system::GenesisConfig::default()
+        .build_storage::<Runtime>()
+        .unwrap();
+    let mut ext = sp_io::TestExternalities::new(t);
+
+    ext.execute_with(|| {
+        pallet_fellowship::migration::v0::MigrateInitial::<Runtime>::insert_initial_fellows(&mut <Weight as Zero>::zero());
+        let roles: Vec<_> = Roles::<Runtime>::iter().collect();
+        dbg!(&roles);
+        assert!(false);
+    })
 }

@@ -14,7 +14,7 @@ pub mod v0 {
     where
         T: frame_system::Config<AccountId = AccountId32>,
     {
-        fn insert_initial_fellows(weight: &mut Weight) {
+        pub fn insert_initial_fellows(weight: &mut Weight) {
             let initial_fellows: Vec<(
                 <T as frame_system::Config>::AccountId,
                 crate::Role,
@@ -146,3 +146,7 @@ pub mod v0 {
         }
     }
 }
+
+
+
+
