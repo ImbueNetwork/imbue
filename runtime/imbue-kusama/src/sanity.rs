@@ -75,6 +75,9 @@ fn ensure_proposals_initialize_is_less_than_10_percent_block() {
     );
 }
 
+// Done here aswell as the migration.
+// Wanted to test the FromStr using the ss58 vs using hex and AccountId32::new().
+// Needed the Runtime type for easy testing with AccountId32 due to the bound on MigrateInitial.
 #[test]
 fn migrate_initial_check_accounts() {
     let t = frame_system::GenesisConfig::default()
