@@ -609,7 +609,6 @@ fn e2e() {
     });
 }
 
-
 #[test]
 fn test_select_jury_doesnt_panic_amount_more_than_length() {
     new_test_ext().execute_with(|| {
@@ -651,7 +650,6 @@ fn test_select_jury_is_random() {
     });
 }
 
-
 #[test]
 fn test_select_jury_stress_test() {
     new_test_ext().execute_with(|| {
@@ -684,6 +682,5 @@ fn test_select_jury_select_correct_amount_in_normal_conditions() {
 
         let jury = <crate::Pallet<Test> as SelectJury<AccountId>>::select_jury(50);
         assert_eq!(jury.len(), 50, "jury members should be exactly 50.")
-
     });
 }

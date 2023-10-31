@@ -43,8 +43,6 @@ pub enum TreasuryOriginError {
     NetworkUnsupported,
 }
 
-
-
 #[derive(
     Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
 )]

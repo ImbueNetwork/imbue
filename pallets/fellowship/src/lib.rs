@@ -27,7 +27,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
     use common_types::CurrencyId;
-    use frame_support::{pallet_prelude::*, BoundedBTreeMap, traits::Randomness};
+    use frame_support::{pallet_prelude::*, traits::Randomness, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_runtime::traits::Zero;

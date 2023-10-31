@@ -49,7 +49,7 @@ impl<T: Config> MaybeConvert<&AccountIdOf<T>, VetterIdOf<T>> for Pallet<T> {
 /// Select a jury randomly, if there is not enough member is Roles then a truncated list will be provided.
 /// Currently bound to u8 for size.
 impl<T: Config> crate::traits::SelectJury<AccountIdOf<T>> for Pallet<T> {
-    fn select_jury(jury_size: u8) ->  Vec<AccountIdOf<T>> {
+    fn select_jury(jury_size: u8) -> Vec<AccountIdOf<T>> {
         let mut jury_size = jury_size as usize;
         let mut out: Vec<AccountIdOf<T>> = Vec::new();
         let mut rng = rand::thread_rng();
