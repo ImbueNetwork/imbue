@@ -1,9 +1,9 @@
 use crate::Runtime;
 use crate::Weight;
-use pallet_proposals::{WeightInfo as PWeightInfo, WeightInfoT};
-use pallet_fellowship::{Role, Roles};
 use common_runtime::MAXIMUM_BLOCK_WEIGHT;
-use sp_arithmetic::{Percent, traits::Zero};
+use pallet_fellowship::{Role, Roles};
+use pallet_proposals::{WeightInfo as PWeightInfo, WeightInfoT};
+use sp_arithmetic::{traits::Zero, Percent};
 use sp_runtime::AccountId32;
 use std::str::FromStr;
 
@@ -86,9 +86,13 @@ fn migrate_initial_check_accounts() {
     let mut ext = sp_io::TestExternalities::new(t);
 
     ext.execute_with(|| {
-        let initial_fellows = pallet_fellowship::migration::v0::MigrateInitial::<Runtime>::get_initial_fellows();
-        pallet_fellowship::migration::v0::MigrateInitial::<Runtime>::insert_initial_fellows(&mut <Weight as Zero>::zero(), initial_fellows);
-        let accounts_actual = vec! [
+        let initial_fellows =
+            pallet_fellowship::migration::v0::MigrateInitial::<Runtime>::get_initial_fellows();
+        pallet_fellowship::migration::v0::MigrateInitial::<Runtime>::insert_initial_fellows(
+            &mut <Weight as Zero>::zero(),
+            initial_fellows,
+        );
+        let accounts_actual = vec![
             AccountId32::from_str("5Da1Fna8wvgQNmCFPhcRGR9oxmhyPd7MNhPZADq2X6GiKkkr").unwrap(),
             AccountId32::from_str("5DCzKK5EZvY77vxxWXeip7sp17TqB7sk7Fj1hXes7Bo6B5Eq").unwrap(),
             AccountId32::from_str("5DU2hcQnEmrSXCDUnjiwNX3A1uTf26ACpgs4KUFpsLJqAnjd").unwrap(),
