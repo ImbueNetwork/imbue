@@ -454,6 +454,7 @@ pub mod pallet {
                     milestone_key,
                     percentage_to_unlock: milestone.percentage_to_unlock,
                     is_approved: false,
+                    withdrawn: false,
                 };
                 milestones
                     .try_insert(milestone_key, milestone)
@@ -485,6 +486,7 @@ pub mod pallet {
                 agreement_hash: brief_hash,
                 funding_type,
                 deposit_id,
+                payment_address: [0; 20],
             };
 
             Projects::<T>::insert(project_key, project);
@@ -527,6 +529,7 @@ pub struct Milestone {
     pub milestone_key: MilestoneKey,
     pub percentage_to_unlock: Percent,
     pub is_approved: bool,
+    pub withdrawn: bool,
 }
 
 /// The vote struct is used to
@@ -562,6 +565,7 @@ pub struct Project<T: Config> {
     pub cancelled: bool,
     pub funding_type: FundingType,
     pub deposit_id: DepositIdOf<T>,
+    pub payment_address: [u8; 20],
 }
 
 /// The contribution users made to a proposal project.

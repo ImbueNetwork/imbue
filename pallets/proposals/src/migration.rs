@@ -19,6 +19,7 @@ mod v0 {
         pub name: Vec<u8>,
         pub percentage_to_unlock: u32,
         pub is_approved: bool,
+        pub withdrawn: bool,
     }
 
     #[derive(Encode, Clone, Decode)]
@@ -45,6 +46,7 @@ mod v0 {
         pub approved_for_funding: bool,
         pub funding_threshold_met: bool,
         pub cancelled: bool,
+        pub payment_address: [u8;20],
     }
 
     #[storage_alias]
@@ -74,6 +76,7 @@ mod v1 {
         pub approved_for_funding: bool,
         pub funding_threshold_met: bool,
         pub cancelled: bool,
+        pub payment_address: [u8;20],
     }
 
     pub type ProjectV1Of<T> =
@@ -135,6 +138,7 @@ mod v1 {
                 funding_threshold_met: project.funding_threshold_met,
                 cancelled: project.cancelled,
                 raised_funds,
+                payment_address: project.payment_address,
             };
             Some(migrated_project)
         });
@@ -168,6 +172,7 @@ mod v2 {
         pub funding_threshold_met: bool,
         pub cancelled: bool,
         pub funding_type: FundingType,
+        pub payment_address: [u8;20],
     }
 
     #[derive(Clone, Debug, Encode, Decode, TypeInfo)]
@@ -176,6 +181,7 @@ mod v2 {
         pub milestone_key: MilestoneKey,
         pub percentage_to_unlock: u32,
         pub is_approved: bool,
+        pub withdrawn: bool,
     }
 
     pub fn migrate<T: Config + pallet_timestamp::Config>() -> Weight {
@@ -191,6 +197,7 @@ mod v2 {
                         milestone_key: milestone.milestone_key,
                         percentage_to_unlock: milestone.percentage_to_unlock,
                         is_approved: milestone.is_approved,
+                        withdrawn: milestone.withdrawn,
                     };
                     migrated_milestones.insert(milestone.milestone_key, migrated_milestone)
                 })
@@ -211,6 +218,7 @@ mod v2 {
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
                 funding_type: FundingType::Proposal,
+                payment_address: project.payment_address,
             };
             Some(migrated_project)
         });
@@ -242,6 +250,7 @@ pub mod v3 {
         pub created_on: BlockNumber,
         pub cancelled: bool,
         pub funding_type: FundingType,
+        pub payment_address: [u8;20],
     }
 
     pub fn migrate_contribution_and_project<T: Config + pallet_timestamp::Config>(
@@ -273,6 +282,7 @@ pub mod v3 {
                             milestone.percentage_to_unlock as u8,
                         ),
                         is_approved: milestone.is_approved,
+                        withdrawn: milestone.withdrawn
                     },
                 );
             });
@@ -296,6 +306,7 @@ pub mod v3 {
                         funding_type: FundingType::Proposal,
                         // A deposit_id of u32::MAX is ignored.
                         deposit_id: u32::MAX.into(),
+                        payment_address: project.payment_address,
                     };
                     Some(migrated_project)
                 } else {
@@ -680,6 +691,7 @@ pub mod v6 {
 
 #[cfg(test)]
 mod test {
+    use std::io::Read;
     use super::*;
     use mock::*;
     use test_utils::*;
@@ -699,6 +711,7 @@ mod test {
                     milestone_key: 0,
                     percentage_to_unlock: 40,
                     is_approved: true,
+                    withdrawn: false,
                 },
                 MilestoneV0 {
                     project_key,
@@ -706,6 +719,7 @@ mod test {
                     milestone_key: 1,
                     percentage_to_unlock: 60,
                     is_approved: true,
+                    withdrawn: false,
                 },
             ];
 
@@ -735,6 +749,7 @@ mod test {
                 approved_for_funding: true,
                 funding_threshold_met: true,
                 cancelled: false,
+                payment_address: *b"pre_migration_addres",
             };
 
             v0::Projects::<Test>::insert(project_key, &old_project);
@@ -812,6 +827,7 @@ mod test {
                 approved_for_funding: true,
                 funding_threshold_met: true,
                 cancelled: false,
+                payment_address: *b"pre_migration_addres",
             };
             v1::Projects::<Test>::insert(project_key, &old_project);
             let _ = v2::migrate::<Test>();
@@ -852,6 +868,7 @@ mod test {
                     milestone_key: 0,
                     percentage_to_unlock: 40u32,
                     is_approved: true,
+                    withdrawn: false,
                 },
             );
             old_milestones.insert(
@@ -861,6 +878,7 @@ mod test {
                     milestone_key: 1,
                     percentage_to_unlock: 60u32,
                     is_approved: true,
+                    withdrawn: false,
                 },
             );
             let mut contributions = BTreeMap::new();
@@ -892,6 +910,7 @@ mod test {
                 funding_threshold_met: false,
                 cancelled: false,
                 funding_type: FundingType::Brief,
+                payment_address: *b"pre_migration_addres",
             };
             v2::Projects::<Test>::insert(0, &project);
             v3::UserVotes::<Test>::insert((*ALICE, 10u32, 10u32, v3::RoundType::VotingRound), true);

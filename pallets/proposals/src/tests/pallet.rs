@@ -602,6 +602,9 @@ fn withdraw_only_transfers_approved_milestones() {
             RuntimeOrigin::signed(*ALICE),
             project_key
         ));
+        //validating the withdrawn flag set to true once the fund for the milestone is being withdrawn
+        assert_eq!(Projects::<Test>::get(project_key).unwrap().milestones.get(&milestone_key).unwrap().withdrawn,true);
+
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(per_contribution * 2 / 10);
         // total_contribution / number of milestones - fee

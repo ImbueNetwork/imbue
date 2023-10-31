@@ -169,6 +169,11 @@ impl<T: Config> Pallet<T> {
         Projects::<T>::mutate_exists(project_key, |project| -> DispatchResult {
             if let Some(p) = project {
                 p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
+                for (_,ms) in &mut p.milestones {
+                    if ms.is_approved {
+                        ms.withdrawn = true;
+                    }
+                }
                 if p.withdrawn_funds == p.raised_funds {
                     <T as Config>::DepositHandler::return_deposit(p.deposit_id)?;
                     CompletedProjects::<T>::try_mutate(

@@ -101,6 +101,7 @@ pub fn create_project<T: Config>(
             milestone_key,
             percentage_to_unlock: ms.percentage_to_unlock,
             is_approved: false,
+            withdrawn: false,
         };
         milestones.insert(milestone_key, milestone);
         let _ = bounded_milestone_keys.try_push(milestone_key);
@@ -122,6 +123,7 @@ pub fn create_project<T: Config>(
         agreement_hash,
         funding_type: FundingType::Brief,
         deposit_id,
+        payment_address: [0;20],
     };
 
     crate::Projects::<T>::insert(project_key, project);
