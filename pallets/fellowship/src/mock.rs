@@ -1,4 +1,5 @@
 use crate as pallet_fellowship;
+use crate::{Permission, Role};
 use common_types::CurrencyId;
 use frame_support::once_cell::sync::Lazy;
 use frame_support::traits::{ConstU16, Nothing};
@@ -76,6 +77,7 @@ impl pallet_fellowship::Config for Test {
     type MembershipDeposit = MembershipDeposit;
     type DepositCurrencyId = DepositCurrencyId;
     type SlashAccount = SlashAccount;
+    type Permissions = crate::impls::VetterAndFreelancerAllPermissions;
     type WeightInfo = ();
 }
 
