@@ -623,6 +623,61 @@ fn withdraw_only_transfers_approved_milestones() {
 }
 
 #[test]
+fn withdraw_foreign_currency() {
+    build_test_externality().execute_with(|| {
+        let per_contribution = 100_000;
+        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], per_contribution);
+        let prop_milestones = get_milestones(10);
+        let project_key =
+            create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::ForeignAsset(100));
+        let project_address = Proposals::project_account_id(project_key);
+
+        let project_balance = <Test as Config>::MultiCurrency::free_balance(
+            CurrencyId::ForeignAsset(100),
+            &project_address,
+        );
+
+        assert!(project_balance > 0);
+
+        let milestone_key = 0;
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+
+        assert_ok!(Proposals::withdraw(
+            RuntimeOrigin::signed(*ALICE),
+            project_key
+        ));
+        // total_contribution / number of milestones - fee
+
+        let project_account = crate::Pallet::<Test>::project_account_id(project_key);
+
+        assert_eq!(
+            <Test as Config>::MultiCurrency::free_balance(
+                CurrencyId::ForeignAsset(100),
+                &project_account
+            ),
+            180_000,
+            "funds havent been taken out of project as expected."
+        );
+    });
+}
+
+#[test]
 fn withdraw_removes_project_after_all_funds_taken() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![*BOB], 100_000);

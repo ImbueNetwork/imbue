@@ -81,12 +81,24 @@ pub fn create_project<T: Config>(
 
     for (account, contribution) in contributions.iter() {
         let amount = contribution.value;
-        assert_ok!(<T as crate::Config>::MultiCurrency::transfer(
-            currency_id,
-            account,
-            &project_account_id,
-            amount
-        ));
+        match currency_id {
+            CurrencyId::ForeignAsset(_) => {
+                assert_ok!(<T as crate::Config>::MultiCurrency::deposit(
+                    currency_id,
+                    &project_account_id,
+                    amount
+                ));
+            }
+            _ => {
+                assert_ok!(<T as crate::Config>::MultiCurrency::transfer(
+                    currency_id,
+                    account,
+                    &project_account_id,
+                    amount
+                ));
+            }
+        }
+
         raised_funds = raised_funds.saturating_add(amount);
     }
 
