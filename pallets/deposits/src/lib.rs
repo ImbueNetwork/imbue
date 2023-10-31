@@ -18,8 +18,8 @@ pub mod pallet {
     use crate::traits::{DepositCalculator, DepositHandler};
     use codec::{FullCodec, FullEncode};
     use common_types::CurrencyId;
-    use frame_support::dispatch::fmt::Debug;
     use frame_support::pallet_prelude::*;
+    use sp_std::fmt::Debug;
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use sp_runtime::{
         traits::{AtLeast32BitUnsigned, One},

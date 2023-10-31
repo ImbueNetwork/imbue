@@ -206,22 +206,27 @@ pub mod asset_registry {
     use codec::{Decode, Encode};
     use common_types::{CurrencyId, CustomMetadata};
     use frame_support::{
+        parameter_types,
         dispatch::RawOrigin,
-        sp_std::marker::PhantomData,
         traits::{EnsureOrigin, EnsureOriginWithArg},
     };
     use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
     use scale_info::TypeInfo;
     use sp_runtime::DispatchError;
+    use sp_std::marker::PhantomData;
+
+    parameter_types! {
+        pub const StringLimit: u32 = 50;
+    }
 
     #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
     pub struct CustomAssetProcessor;
 
-    impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for CustomAssetProcessor {
+    impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata, StringLimit>> for CustomAssetProcessor {
         fn pre_register(
             id: Option<CurrencyId>,
-            metadata: AssetMetadata<Balance, CustomMetadata>,
-        ) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata>), DispatchError> {
+            metadata: AssetMetadata<Balance, CustomMetadata, StringLimit>,
+        ) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata, StringLimit>), DispatchError> {
             match id {
                 Some(id) => Ok((id, metadata)),
                 None => Err(DispatchError::Other("asset-registry: AssetId is required")),
@@ -230,7 +235,7 @@ pub mod asset_registry {
 
         fn post_register(
             _id: CurrencyId,
-            _asset_metadata: AssetMetadata<Balance, CustomMetadata>,
+            _asset_metadata: AssetMetadata<Balance, CustomMetadata, StringLimit>,
         ) -> Result<(), DispatchError> {
             Ok(())
         }

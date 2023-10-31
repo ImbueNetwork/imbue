@@ -35,11 +35,11 @@ pub mod pallet {
     use crate::traits::DisputeHooks;
     use codec::{FullCodec, FullEncode};
     use frame_support::{
-        dispatch::fmt::Debug, pallet_prelude::*, weights::Weight, BoundedBTreeMap,
+         pallet_prelude::*, weights::Weight, BoundedBTreeMap,
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating, Zero};
-
+    use sp_std::fmt::Debug;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub type BoundedVotes<T> =
         BoundedBTreeMap<<T as frame_system::Config>::AccountId, bool, <T as Config>::MaxJurySize>;

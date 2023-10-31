@@ -10,8 +10,8 @@
 
 // Ensure we're `no_std` when compiling for WebAssembly.
 #![cfg_attr(not(feature = "std"), no_std)]
-
-use frame_support::dispatch::{Codec, DispatchResultWithPostInfo};
+use codec::Codec;
+use frame_support::dispatch::DispatchResultWithPostInfo;
 use frame_support::Parameter;
 use sp_runtime::traits::{
     AtLeast32BitUnsigned, Bounded, MaybeDisplay, MaybeSerialize, MaybeSerializeDeserialize, Member,
