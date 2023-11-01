@@ -1,6 +1,16 @@
+raise-dispute extrinsic.
+tests for above implementation.
+benchmark for raise dispute extrinsic
+prevent voting on a submitted milestone if a project is in dispute.
 
-complete the tests for the new impls
-migration for project pallet
-10% fee if a vetter exists for the project.
+
+
+OnDisputeCompleteHooks.
+tests for above implementation.
+benchmark for hooks to return weight.
+
+removal of old no confidence logic.
+get jury in each pallet (briefs, grants, crowdfunding.)
+
 
 

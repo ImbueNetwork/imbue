@@ -118,9 +118,7 @@ pub mod pallet {
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
-        
-        // Potencially need to bind the assocaited types to bounds in this pallet: todo!
-        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>>;
+        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxJurySize = Self::MaxJuryMembers, MaxSpecifics = Self::MaxMilestonesPerProject>;
     }
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
@@ -321,6 +319,8 @@ pub mod pallet {
         TooManyMilestoneVotes,
         /// An internal error, a collection of votes for a milestone has been lost.s
         IndividualVoteNotFound,
+        /// Only a contributor can raise a dispute.
+        OnlyContributorsCanRaiseDispute
     }
 
     #[pallet::hooks]
@@ -431,7 +431,7 @@ pub mod pallet {
             Self::add_vote_no_confidence(who, project_key, is_yay)
         }
 
-        /// Raise a dispute using the
+        /// Raise a dispute using the handle DisputeRaiser in the Config.
         #[pallet::call_index(14)]
         #[pallet::weight(<Weight as Zero>::zero())]
         pub fn raise_dispute(
@@ -440,7 +440,11 @@ pub mod pallet {
             milestone_keys: BoundedVec<MilestoneKeys, T::MaxMilestonesPerProject>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::add_vote_no_confidence(who, project_key, is_yay)
+            let project = Project::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            ensure!(project.contributors.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute)?;
+            <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys)?;
+
+
         }
     }
     impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
@@ -609,11 +613,11 @@ pub struct Vote<Balance> {
     is_approved: bool,
 }
 
-impl<Balance: From<u32>> Default for Vote<Balance> {
+impl<Balance: Zero> Default for Vote<Balance> {
     fn default() -> Self {
         Self {
-            yay: Balance::from(Zero::zero()),
-            nay: Balance::from(Zero::zero()),
+            yay: Zero::zero(),
+            nay: Zero::zero(),
             is_approved: false,
         }
     }
