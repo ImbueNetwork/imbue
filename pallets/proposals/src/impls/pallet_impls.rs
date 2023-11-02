@@ -1,5 +1,4 @@
 use crate::*;
-use common_types::milestone_origin::FundingType;
 use scale_info::prelude::format;
 use sp_runtime::traits::{Saturating, Zero};
 use pallet_disputes::{
@@ -325,7 +324,7 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
     ) -> Weight {
         let mut weight: Weight = <Weight as Zero>::zero();
         let maybe_project = Projects::<T>::get(dispute_key);
-        *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+        weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
         match maybe_project {
             Some(project) => {
@@ -342,7 +341,7 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
                             }
                         }
                     },
-                    DisputeResult::Failue => {
+                    DisputeResult::Failure => {
                     // OnFailure
                     // should not modify the state of the project except perhaps recording the amount of disputes previosuly handled.
                     // Emit event for failure?? check if pallet_disputes does this.

@@ -55,8 +55,8 @@ impl<T: crate::Config> ExternalRefundHandler<AccountIdOf<T>, BalanceOf<T>, Curre
     for MockRefundHandler<T>
 {
     fn send_refund_message_to_treasury(
-        _from: AccountId,
-        _amount: Balance,
+        _from: AccountIdOf<T>,
+        _amount: BalanceOf<T>,
         _currency: CurrencyId,
         _treasury_origin: TreasuryOrigin
     ) -> Result<(), DispatchError> {
@@ -84,19 +84,14 @@ where
         currency: CurrencyId,
         treasury_origin: TreasuryOrigin,
     ) -> Result<(), DispatchError> {
-        match funding_type {
-            FundingType::Grant(treasury_origin) => {
-                let beneficiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
-                let location: MultiLocation = treasury_origin
-                    .get_multi_location(beneficiary)
-                    .map_err(|_| Error::<T>::InvalidDest)?;
-
-                // TODO: dest weight limit. or specify a fee.
-                let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
-                Ok(())
-            }
-            _ => Err(Error::<T>::InvalidDest.into()),
-        }
+        let beneficiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
+        let location: MultiLocation = treasury_origin
+            .get_multi_location(beneficiary)
+            .map_err(|_| Error::<T>::InvalidDest)?;
+        
+        // TODO: dest weight limit. or specify a fee.
+        let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
+        Ok(())
     }
     fn get_treasury_account_id(
         treasury_origin: TreasuryOrigin,

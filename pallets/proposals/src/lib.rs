@@ -392,12 +392,13 @@ pub mod pallet {
         pub fn raise_dispute(
             origin: OriginFor<T>,
             project_key: ProjectKey,
-            milestone_keys: BoundedVec<MilestoneKeys, T::MaxMilestonesPerProject>,
+            milestone_keys: BoundedVec<MilestoneKey, T::MaxMilestonesPerProject>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let project = Project::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-            ensure!(project.contributors.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute)?;
+            let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute);
             <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys)?;
+            Ok(().into())
         }
     }
     impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
