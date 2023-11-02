@@ -27,7 +27,7 @@ pub fn imbue_properties() -> Properties {
 }
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ImbueKusamaChainSpec = sc_service::GenericChainSpec<imbue_kusama_runtime::GenesisConfig>;
+pub type ImbueKusamaChainSpec = sc_service::GenericChainSpec<imbue_kusama_runtime::RuntimeGenesisConfig>;
 
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 /// The default XCM version to set in genesis config.
@@ -206,7 +206,7 @@ fn development_genesis(
     council_membership: Vec<AccountId>,
     technical_committee_membership: Vec<AccountId>,
     id: ParaId,
-) -> imbue_kusama_runtime::GenesisConfig {
+) -> imbue_kusama_runtime::RuntimeGenesisConfig {
     let num_endowed_accounts = endowed_accounts.len();
 
     let (balances, token_balances) = match total_issuance {
@@ -230,11 +230,12 @@ fn development_genesis(
         None => (vec![], vec![]),
     };
 
-    imbue_kusama_runtime::GenesisConfig {
+    imbue_kusama_runtime::RuntimeGenesisConfig {
         system: imbue_kusama_runtime::SystemConfig {
             code: imbue_kusama_runtime::WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
+            ..Default::default()
         },
         balances: imbue_kusama_runtime::BalancesConfig { balances },
         orml_asset_registry: Default::default(),
@@ -278,7 +279,10 @@ fn development_genesis(
         },
         // scheduler: imbue_kusama_runtime::SchedulerConfig {},
         vesting: Default::default(),
-        parachain_info: imbue_kusama_runtime::ParachainInfoConfig { parachain_id: id },
+        parachain_info: imbue_kusama_runtime::ParachainInfoConfig { 
+            parachain_id: id, 
+            ..Default::default() 
+        },
         aura: imbue_kusama_runtime::AuraConfig {
             authorities: Default::default(),
         },
@@ -296,6 +300,7 @@ fn development_genesis(
         parachain_system: Default::default(),
         polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig {
             safe_xcm_version: Some(SAFE_XCM_VERSION),
+            ..Default::default()
         },
     }
 }

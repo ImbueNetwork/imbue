@@ -15,7 +15,7 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::{impl_runtime_apis, Encode};
 use sp_core::OpaqueMetadata;
 
-use common_runtime::storage_deposits::StorageDepositItems;
+use common_runtime::{storage_deposits::StorageDepositItems, asset_registry::StringLimit};
 use pallet_collective::EnsureProportionAtLeast;
 use pallet_deposits::traits::DepositCalculator;
 use sp_arithmetic::per_things::Percent;
@@ -81,7 +81,7 @@ use xcm_executor::XcmExecutor;
 pub use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 
 use common_runtime::currency::*;
-pub use common_runtime::Index;
+pub use common_runtime::{Nonce, BlockNumber, Hash};
 
 /// common types for the runtime.
 pub use common_runtime::*;
@@ -178,11 +178,10 @@ pub type Migrations = migrations::Unreleased;
 #[allow(missing_docs)]
 pub mod migrations {
     use super::*;
-
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
         pallet_proposals::migration::v6::MigrateToV6<Runtime>,
-        pallet_democracy::migrations::v1::Migration<Runtime>,
+        pallet_democracy::migrations::v1::v1::Migration<Runtime>,
         pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
         pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
         pallet_preimage::migration::v1::Migration<Runtime>,
@@ -202,16 +201,15 @@ pub type Executive = frame_executive::Executive<
 
 impl frame_system::Config for Runtime {
     type BaseCallFilter = Everything;
+    type Block = Block;
     type BlockWeights = RuntimeBlockWeights;
     type BlockLength = RuntimeBlockLength;
     type AccountId = AccountId;
     type RuntimeCall = RuntimeCall;
     type Lookup = AccountIdLookup<AccountId, ()>;
-    type Index = Index;
-    type BlockNumber = BlockNumber;
+    type Nonce = Nonce;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type RuntimeOrigin = RuntimeOrigin;
     type BlockHashCount = BlockHashCount;
@@ -276,9 +274,9 @@ impl pallet_balances::Config for Runtime {
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-    type HoldIdentifier = ();
     type FreezeIdentifier = ();
     type MaxHolds = ConstU32<0>;
+    type RuntimeHoldReason = RuntimeHoldReason;
     type MaxFreezes = ConstU32<0>;
 }
 
@@ -645,7 +643,7 @@ impl pallet_collator_selection::Config for Runtime {
     type UpdateOrigin = CollatorSelectionUpdateOrigin;
     type PotId = PotId;
     type MaxCandidates = MaxCandidates;
-    type MinCandidates = MinCandidates;
+    type MinEligibleCollators = ConstU32<4>;
     type MaxInvulnerables = MaxInvulnerables;
     // should be a multiple of session or things will get inconsistent
     type KickThreshold = Period;
@@ -669,6 +667,7 @@ impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
     type DisabledValidators = ();
     type MaxAuthorities = MaxAuthorities;
+    type AllowMultipleBlocksPerSlot = ConstBool<false>;
 }
 
 parameter_type_with_key! {
@@ -707,6 +706,7 @@ impl orml_asset_registry::Config for Runtime {
     type CustomMetadata = CustomMetadata;
     type AssetProcessor = asset_registry::CustomAssetProcessor;
     type WeightInfo = ();
+    type StringLimit = StringLimit;
 }
 
 pub type Amount = i128;
@@ -900,16 +900,13 @@ impl pallet_deposits::Config for Runtime {
 }
 
 construct_runtime! {
-    pub enum Runtime where
-        Block = Block,
-        NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Runtime
     {
-        System: frame_system::{Pallet, Call, Storage, Config, Event<T>} = 1,
+        System: frame_system::{Pallet, Call, Storage, Config<T>, Event<T>} = 1,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
         Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 5,
-        Treasury: pallet_treasury::{Pallet, Storage, Config, Event<T>, Call} = 6,
+        Treasury: pallet_treasury::{Pallet, Storage, Config<T>, Event<T>, Call} = 6,
         Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
         TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 9,
@@ -924,8 +921,8 @@ construct_runtime! {
 
         Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 16,
 
-        ParachainSystem: cumulus_pallet_parachain_system::{	Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,} = 17,
-        ParachainInfo: parachain_info::{Pallet, Storage, Config} = 18,
+        ParachainSystem: cumulus_pallet_parachain_system::{	Pallet, Call, Config<T>, Storage, Inherent, Event<T>, ValidateUnsigned,} = 17,
+        ParachainInfo: parachain_info::{Pallet, Storage, Config<T>} = 18,
 
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 19,
         Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 20,
@@ -934,11 +931,11 @@ construct_runtime! {
         Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 23,
 
         Aura: pallet_aura::{Pallet, Config<T>} = 24,
-        AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 25,
+        AuraExt: cumulus_pallet_aura_ext::{Pallet, Config<T>} = 25,
 
         // XCM helpers.
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 26,
-        PolkadotXcm: pallet_xcm::{Pallet, Storage, Call, Event<T>, Origin, Config} = 27,
+        PolkadotXcm: pallet_xcm::{Pallet, Storage, Call, Event<T>, Origin, Config<T>} = 27,
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 28,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 29,
 
@@ -1002,7 +999,10 @@ mod benches {
 /// to even the core data structures.
 pub mod opaque {
     use super::*;
-    use sp_runtime::{generic, traits::BlakeTwo256};
+    use sp_runtime::{
+        generic, 
+        traits::{BlakeTwo256, Hash as HashT},
+    };
 
     pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
     /// Opaque block header type.
@@ -1011,6 +1011,8 @@ pub mod opaque {
     pub type Block = generic::Block<Header, UncheckedExtrinsic>;
     /// Opaque block identifier type.
     pub type BlockId = generic::BlockId<Block>;
+    /// Opaque block hash type.
+    pub type Hash = <BlakeTwo256 as HashT>::Output;
 }
 
 impl_opaque_keys! {
@@ -1124,8 +1126,8 @@ impl_runtime_apis! {
         }
     }
 
-    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
-        fn account_nonce(account: AccountId) -> Index {
+    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
+        fn account_nonce(account: AccountId) -> Nonce {
             System::account_nonce(account)
         }
     }

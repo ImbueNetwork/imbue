@@ -1,14 +1,11 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
 #[derive(
-    Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+    Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen, Default, Serialize, Deserialize
 )]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Default)]
 pub enum CurrencyId {
     #[default]
     Native,
