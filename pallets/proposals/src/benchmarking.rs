@@ -119,49 +119,6 @@ mod benchmarks {
         );
     }
 
-    #[benchmark]
-    fn raise_vote_of_no_confidence() {
-        let alice: T::AccountId =
-            create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId =
-            create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
-        // TODO: should update the contributors list to have maximum available length
-        let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
-        let prop_milestones = get_max_milestones::<T>();
-        let project_key =
-            create_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native);
-        #[extrinsic_call]
-        raise_vote_of_no_confidence(RawOrigin::Signed(bob.clone()), project_key);
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundCreated(bob, project_key).into());
-    }
-
-    #[benchmark]
-    fn vote_on_no_confidence_round() {
-        let alice: T::AccountId =
-            create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId =
-            create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
-        let charlie: T::AccountId =
-            create_funded_user::<T>("contributor", 2, 1_000_000_000_000_000_000u128);
-        // TODO: should update the contributors list to have maximum available length
-        let contributions = get_contributions::<T>(
-            vec![bob.clone(), charlie.clone()],
-            100_000_000_000_000_000u128,
-        );
-        let prop_milestones = get_max_milestones::<T>();
-        let project_key =
-            create_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native);
-
-        assert_ok!(Pallet::<T>::raise_vote_of_no_confidence(
-            RawOrigin::Signed(bob).into(),
-            project_key
-        ));
-
-        #[extrinsic_call]
-        vote_on_no_confidence_round(RawOrigin::Signed(charlie.clone()), project_key, true);
-        assert_last_event::<T>(Event::<T>::NoConfidenceRoundVotedUpon(charlie, project_key).into());
-    }
-
     // Benchmark for a single loop of on_initialise as a voting round (most expensive).
     #[benchmark]
     fn on_initialize() {

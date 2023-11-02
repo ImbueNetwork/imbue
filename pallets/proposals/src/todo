@@ -3,6 +3,11 @@ tests for above implementation.
 benchmark for raise dispute extrinsic
 prevent voting on a submitted milestone if a project is in dispute.
 
+Migration for removing NoConfidenceLogic
+    #[pallet::storage]
+    #[pallet::getter(fn no_confidence_votes)]
+    pub(super) type NoConfidenceVotes<T: Config> =
+        StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
 
 
 OnDisputeCompleteHooks.

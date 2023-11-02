@@ -170,13 +170,6 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    /// This holds the votes when a no confidence round is raised.
-    #[pallet::storage]
-    #[pallet::getter(fn no_confidence_votes)]
-    pub(super) type NoConfidenceVotes<T: Config> =
-        StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
-
-    /// The project count, used as an id for new projects on instantiation.
     #[pallet::storage]
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
@@ -391,35 +384,6 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::new_withdrawal(who, project_key)
-        }
-
-        /// In case of contributors losing confidence in the initiator a "Vote of no confidence" can be called.
-        /// This will start a round which each contributor can vote on.
-        /// The round will last as long as set in the Config.
-        #[pallet::call_index(12)]
-        #[pallet::weight(<T as Config>::WeightInfo::raise_vote_of_no_confidence())]
-        pub fn raise_vote_of_no_confidence(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            Self::raise_no_confidence_round(who, project_key)
-        }
-
-        /// pallet-disputes?
-        /// Vote on an already existing "Vote of no condidence" round.
-        /// is_yay is FOR the project's continuation.
-        /// so is_yay == false == against the project from continuing.
-        /// This autofinalises like in the milestone voting.
-        #[pallet::call_index(13)]
-        #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
-        pub fn vote_on_no_confidence_round(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-            is_yay: bool,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            Self::add_vote_no_confidence(who, project_key, is_yay)
         }
 
         /// Raise a dispute using the handle DisputeRaiser in the Config.
@@ -699,7 +663,5 @@ pub trait WeightInfoT {
     fn submit_milestone() -> Weight;
     fn vote_on_milestone() -> Weight;
     fn withdraw() -> Weight;
-    fn raise_vote_of_no_confidence() -> Weight;
-    fn vote_on_no_confidence_round() -> Weight;
     fn on_initialize() -> Weight;
 }
