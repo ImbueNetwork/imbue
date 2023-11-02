@@ -31,14 +31,14 @@ use imbue_kusama_runtime::{
     CanonicalImbuePerSecond, OrmlTokens, Runtime as R, RuntimeOrigin, XTokens,
 };
 use orml_traits::MultiCurrency;
-use pallet_proposals::traits::RefundHandler;
+use pallet_proposals::traits::ExternalRefundHandler;
 
 #[test]
 fn transfer_treasury_to_parachain_grant_escrow_address() {
     let transfer_amount: Balance = ksm_amount(1);
     let treasury_origin = TreasuryOrigin::Kusama;
     let kusama_treasury_address =
-        <R as pallet_proposals::Config>::RefundHandler::get_treasury_account_id(treasury_origin)
+        <R as pallet_proposals::Config>::ExternalRefundHandler::get_treasury_account_id(treasury_origin)
             .unwrap();
     Development::execute_with(|| {
         assert_eq!(
@@ -133,7 +133,7 @@ fn transfer_ksm_to_relay_chain() {
 fn test_xcm_refund_handler_to_kusama() {
     let treasury_origin = TreasuryOrigin::Kusama;
     let kusama_treasury_address =
-        <R as pallet_proposals::Config>::RefundHandler::get_treasury_account_id(treasury_origin)
+        <R as pallet_proposals::Config>::ExternalRefundHandler::get_treasury_account_id(treasury_origin)
             .unwrap();
     let _kusama_treasury_balance_before =
         Kusama::account_data_of(kusama_treasury_address.clone()).free;
@@ -162,7 +162,7 @@ fn test_xcm_refund_handler_to_kusama() {
         let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get());
         assert!(ksm_balance > 0);
         assert_ok!(
-            <R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(
+            <R as pallet_proposals::Config>::ExternalRefundHandler::send_refund_message_to_treasury(
                 ImbueKusamaReceiver::get(),
                 ksm_balance,
                 CurrencyId::KSM,

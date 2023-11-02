@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode};
 use common_traits::MaybeConvert;
-use common_types::{CurrencyId, FundingType};
+use common_types::CurrencyId;
 use frame_support::{
     dispatch::EncodeLike, pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap,
     traits::EnsureOrigin, PalletId,
@@ -21,7 +21,7 @@ use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 use xcm::latest::MultiLocation;
 
 pub mod traits;
-use traits::{IntoProposal, RefundHandler};
+use traits::{IntoProposal, ExternalRefundHandler};
 
 #[cfg(test)]
 mod mock;
@@ -113,7 +113,7 @@ pub mod pallet {
         /// The account the imbue fee goes to.
         type ImbueFeeAccount: Get<AccountIdOf<Self>>;
         /// The type responisble for handling refunds.
-        type RefundHandler: traits::RefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+        type ExternalRefundHandler: traits::ExternalRefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
         /// The type responsible for storage deposits.
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that will be used to calculate the deposit of a project.
@@ -145,15 +145,6 @@ pub mod pallet {
     >;
 
     /// Stores the individuals votes on a given milestone key
-    #[pallet::storage]
-    pub type IndividualVoteStore<T: Config> =
-        StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
-
-    /// Stores the total votes on a milestone.
-    #[pallet::storage]
-    pub type IndividualVoteStore<T: Config> =
-        StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
-
     #[pallet::storage]
     pub type IndividualVoteStore<T: Config> =
         StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
@@ -443,8 +434,6 @@ pub mod pallet {
             let project = Project::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             ensure!(project.contributors.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute)?;
             <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys)?;
-
-
         }
     }
     impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>

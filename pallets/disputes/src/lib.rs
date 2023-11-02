@@ -80,7 +80,7 @@ pub mod pallet {
         /// The origin used to force cancel and pass disputes.
         type ForceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// External hooks to handle the completion of a dispute.
-        type DisputeHooks: DisputeHooks<Self::DisputeKey>;
+        type DisputeHooks: DisputeHooks<Self::DisputeKey, Self::SpecificId>;
     }
 
     /// Used to store the disputes that is being raised, given the dispute key it returns the Dispute
@@ -158,8 +158,9 @@ pub mod pallet {
                     let result = dispute.calculate_winner();
                     // TODO: actually benchmark.
                     let hook_weight =
-                        <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
+                        <T::DisputeHooks as DisputeHooks<T::DisputeKey, T::SpecificId>>::on_dispute_complete(
                             *dispute_id,
+                            dispute.specifiers.into_inner(),
                             result,
                         );
 
@@ -229,7 +230,7 @@ pub mod pallet {
                 }
                 // Dont mind if this fails as the autofinalise will skip.
             });
-            T::DisputeHooks::on_dispute_complete(dispute_key, DisputeResult::Failure);
+            T::DisputeHooks::on_dispute_complete(dispute_key, dispute.specifiers.into_inner(), DisputeResult::Failure);
             Self::deposit_event(Event::<T>::DisputeCompleted {
                 dispute_key,
                 dispute_result: DisputeResult::Failure,
@@ -257,7 +258,7 @@ pub mod pallet {
                 }
                 // Dont mind if this fails as the autofinalise will skip.
             });
-            T::DisputeHooks::on_dispute_complete(dispute_key, DisputeResult::Success);
+            T::DisputeHooks::on_dispute_complete(dispute_key, dispute.specifiers.into_inner(), DisputeResult::Success);
             Self::deposit_event(Event::<T>::DisputeCompleted {
                 dispute_key,
                 dispute_result: DisputeResult::Success,
@@ -415,7 +416,7 @@ pub mod pallet {
             });
 
             // Dont need to return the weight here.
-            let _ = T::DisputeHooks::on_dispute_complete(dispute_key, result);
+            let _ = T::DisputeHooks::on_dispute_complete(dispute_key, dispute.specifiers.into_inner(), result);
             Ok(())
         }
 

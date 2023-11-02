@@ -823,7 +823,7 @@ impl pallet_proposals::Config for Runtime {
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type WeightInfo = pallet_proposals::weights::WeightInfo<Self>;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
+    type ExternalRefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;

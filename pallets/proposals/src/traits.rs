@@ -1,5 +1,5 @@
 use crate::{AccountIdOf, BalanceOf, Contribution, FundingPath, ProposedMilestone, Locality};
-use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
+use common_types::{CurrencyId, TreasuryOrigin, TreasuryOriginConverter};
 use frame_support::{inherent::Vec, pallet_prelude::*, transactional, PalletId, BoundedBTreeMap};
 use orml_traits::XcmTransfer;
 use orml_xtokens::Error;
@@ -33,7 +33,7 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
     ) -> BoundedVec<(Locality<AccountId>, Percent), Self::MaximumContributorsPerProject>;
 }
 
-pub trait RefundHandler<AccountId, Balance, CurrencyId> {
+pub trait ExternalRefundHandler<AccountId, Balance, CurrencyId> {
     /// Send a message to some destination chain asking to do some reserve asset transfer.
     /// The multilocation is defined by the FundingType.
     /// see FundingType and TreasuryOrigin.
@@ -41,7 +41,7 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
         from: AccountId,
         amount: Balance,
         currency: CurrencyId,
-        funding_type: FundingType,
+        treasury_origin: TreasuryOrigin,
     ) -> Result<(), DispatchError>;
     fn get_treasury_account_id(treasury_origin: TreasuryOrigin)
         -> Result<AccountId, DispatchError>;
@@ -51,14 +51,14 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
 pub struct MockRefundHandler<T>(T);
 
 #[cfg(feature = "std")]
-impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
+impl<T: crate::Config> ExternalRefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
     for MockRefundHandler<T>
 {
     fn send_refund_message_to_treasury(
-        _from: AccountIdOf<T>,
-        _amount: BalanceOf<T>,
+        _from: AccountId,
+        _amount: Balance,
         _currency: CurrencyId,
-        _funding_type: FundingType,
+        _treasury_origin: TreasuryOrigin
     ) -> Result<(), DispatchError> {
         Ok(())
     }
@@ -70,7 +70,7 @@ impl<T: crate::Config> RefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
 }
 
 pub struct XcmRefundHandler<T, U>(T, U);
-impl<T, U> RefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for XcmRefundHandler<T, U>
+impl<T, U> ExternalRefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for XcmRefundHandler<T, U>
 where
     [u8; 32]: From<<T as frame_system::Config>::AccountId>,
     T: orml_xtokens::Config,
@@ -82,7 +82,7 @@ where
         from: T::AccountId,
         amount: T::Balance,
         currency: CurrencyId,
-        funding_type: FundingType,
+        treasury_origin: TreasuryOrigin,
     ) -> Result<(), DispatchError> {
         match funding_type {
             FundingType::Grant(treasury_origin) => {
