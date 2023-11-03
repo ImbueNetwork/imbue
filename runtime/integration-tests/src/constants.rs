@@ -1,20 +1,20 @@
 use core::default::Default;
-
-use grandpa::AuthorityId as GrandpaId;
 pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
-use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use polkadot_primitives::{AssignmentId, ValidatorId};
 pub use polkadot_runtime_parachains::configuration::HostConfiguration;
 use polkadot_service::chain_spec::get_authority_keys_from_seed_no_beefy;
 use polkadot_service::ParaId;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
-use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{sr25519, storage::Storage, Pair, Public};
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     BuildStorage, MultiSignature, Perbill,
 };
+use grandpa::AuthorityId as GrandpaId;
+use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
+use sp_consensus_babe::AuthorityId as BabeId;
+use sp_consensus_beefy::ecdsa_crypto::AuthorityId as BeefyId;
 pub use xcm;
 pub const REF_TIME_THRESHOLD: u64 = 33;
 pub const PROOF_SIZE_THRESHOLD: u64 = 33;
@@ -146,6 +146,7 @@ pub mod kusama {
         para_validator: ValidatorId,
         para_assignment: AssignmentId,
         authority_discovery: AuthorityDiscoveryId,
+        beefy: BeefyId,
     ) -> kusama_runtime::SessionKeys {
         kusama_runtime::SessionKeys {
             babe,
@@ -154,6 +155,7 @@ pub mod kusama {
             para_validator,
             para_assignment,
             authority_discovery,
+            beefy,
         }
     }
 
@@ -161,6 +163,7 @@ pub mod kusama {
         let genesis_config = kusama_runtime::GenesisConfig {
             system: kusama_runtime::SystemConfig {
                 code: kusama_runtime::WASM_BINARY.unwrap().to_vec(),
+                ..Default::default()
             },
             balances: kusama_runtime::BalancesConfig {
                 balances: accounts::init_balances()
@@ -182,6 +185,7 @@ pub mod kusama {
                                 x.5.clone(),
                                 x.6.clone(),
                                 x.7.clone(),
+                                get_from_seed::<BeefyId>("Alice"),
                             ),
                         )
                     })
@@ -211,12 +215,15 @@ pub mod kusama {
             babe: kusama_runtime::BabeConfig {
                 authorities: Default::default(),
                 epoch_config: Some(kusama_runtime::BABE_GENESIS_EPOCH_CONFIG),
+                ..Default::default()
             },
             xcm_pallet: kusama_runtime::XcmPalletConfig {
                 safe_xcm_version: Some(SAFE_XCM_VERSION),
+                ..Default::default()
             },
             configuration: kusama_runtime::ConfigurationConfig {
                 config: get_host_config(),
+                ..Default::default()
             },
             ..Default::default()
         };
@@ -233,11 +240,12 @@ pub mod imbue {
     pub const ED: Balance = imbue_kusama_runtime::currency::EXISTENTIAL_DEPOSIT;
 
     pub fn genesis(para_id: u32) -> Storage {
-        let genesis_config = imbue_kusama_runtime::GenesisConfig {
+        let genesis_config = imbue_kusama_runtime::RuntimeGenesisConfig {
             system: imbue_kusama_runtime::SystemConfig {
                 code: imbue_kusama_runtime::WASM_BINARY
                     .expect("WASM binary was not build, please build it!")
                     .to_vec(),
+                ..Default::default()
             },
             balances: imbue_kusama_runtime::BalancesConfig {
                 balances: accounts::init_balances()
@@ -261,6 +269,7 @@ pub mod imbue {
             },
             parachain_info: imbue_kusama_runtime::ParachainInfoConfig {
                 parachain_id: para_id.into(),
+                ..Default::default()
             },
             collator_selection: imbue_kusama_runtime::CollatorSelectionConfig {
                 invulnerables: collators::invulnerables()
@@ -293,6 +302,7 @@ pub mod imbue {
             parachain_system: Default::default(),
             polkadot_xcm: imbue_kusama_runtime::PolkadotXcmConfig {
                 safe_xcm_version: Some(SAFE_XCM_VERSION),
+                ..Default::default()
             },
             ..Default::default()
         };

@@ -10872,6 +10872,7 @@ dependencies = [
  "sc-consensus-grandpa",
  "sp-authority-discovery",
  "sp-consensus-babe",
+ "sp-consensus-beefy",
  "sp-core",
  "sp-io",
  "sp-runtime",

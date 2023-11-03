@@ -1,6 +1,5 @@
-use crate::Config;
-use crate::Pallet as Proposals;
 use crate::*;
+pub(super) use crate::{mock::*, pallet::*};
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, Vec};
@@ -15,16 +14,24 @@ use sp_runtime::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
 #[allow(dead_code)]
-pub fn run_to_block<T: Config>(n: T::BlockNumber) {
-    loop {
-        let mut block = frame_system::Pallet::<T>::block_number();
-        if block >= n {
-            break;
-        }
-        block = block.saturating_add(1u32.into());
-        frame_system::Pallet::<T>::set_block_number(block);
-        frame_system::Pallet::<T>::on_initialize(block);
-        Proposals::<T>::on_initialize(block);
+pub fn run_to_block<T: Config>(n: BlockNumber)
+{
+    while System::block_number() < n {
+        IdentityPallet::on_finalize(System::block_number());
+        Proposals::on_finalize(System::block_number());
+        TransactionPayment::on_finalize(System::block_number());
+        Currencies::on_finalize(System::block_number());
+        Tokens::on_finalize(System::block_number());
+        Balances::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Balances::on_initialize(System::block_number());
+        Tokens::on_initialize(System::block_number());
+        Currencies::on_initialize(System::block_number());
+        TransactionPayment::on_initialize(System::block_number());
+        Proposals::on_initialize(System::block_number());
+        IdentityPallet::on_initialize(System::block_number());
     }
 }
 
@@ -77,7 +84,7 @@ pub fn create_project<T: Config>(
     let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
 
     let mut raised_funds: BalanceOf<T> = 0u32.into();
-    let project_account_id = Proposals::<T>::project_account_id(project_key);
+    let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
 
     for (account, contribution) in contributions.iter() {
         let amount = contribution.value;
@@ -146,8 +153,6 @@ pub fn create_funded_user<T: Config>(
 }
 
 pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
-where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
 {
     let events = frame_system::Pallet::<T>::events();
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();

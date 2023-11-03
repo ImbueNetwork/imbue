@@ -20,7 +20,7 @@ pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch =
 pallet-im-online = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 
 # Polkadot
-staging-kusama-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+kusama-runtime = { package = "staging-kusama-runtime", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 polkadot-primitives = {git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
@@ -51,7 +51,7 @@ sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-
 xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 grandpa = { package = "sc-consensus-grandpa", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 polkadot-test-service = {  git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
-
+sp-consensus-beefy = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 
 [features]
 default = [ "std" ]
@@ -66,7 +66,7 @@ std = [
     "frame-benchmarking/std",
     "pallet-balances/std",
     "pallet-im-online/std",
-    "staging-kusama-runtime/std",
+    "kusama-runtime/std",
     "pallet-xcm/std",
     "polkadot-primitives/std",
     "polkadot-runtime-parachains/std",
@@ -100,6 +100,6 @@ runtime-benchmarks = [
 	"polkadot-primitives/runtime-benchmarks",
 	"polkadot-test-service/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
-	"staging-kusama-runtime/runtime-benchmarks",
+	"kusama-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 ]

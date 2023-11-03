@@ -12,7 +12,7 @@ fn create_proposal_from_grant() {
         let contribution_value: Balance = 10_000;
 
         assert_ok!(Grant::create_and_convert(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             get_milestones(10),
             get_approvers(10),
             CurrencyId::Native,

@@ -1,33 +1,26 @@
 use crate as pallet_grants;
 use common_types::CurrencyId;
-use frame_support::once_cell::sync::Lazy;
 use frame_support::traits::{ConstU16, Nothing};
 use frame_support::{pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
 use pallet_deposits::traits::DepositHandler;
 use sp_arithmetic::per_things::Percent;
-use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
-use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{
-    testing::Header,
+    BuildStorage,
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type BlockNumber = u64;
 pub type Balance = u64;
 type Moment = u64;
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+pub type AccountId = u128;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
         System: frame_system,
         Grant: pallet_grants,
@@ -54,10 +47,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-    type HoldIdentifier = ();
     type FreezeIdentifier = ();
     type MaxHolds = ConstU32<0>;
     type MaxFreezes = ConstU32<0>;
+    type RuntimeHoldReason = ();
 }
 
 impl frame_system::Config for Test {
@@ -68,12 +61,11 @@ impl frame_system::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
     type Nonce = u64;
-    type BlockNumber = BlockNumber;
+    type Block = Block;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
@@ -229,13 +221,13 @@ impl pallet_identity::Config for Test {
     type WeightInfo = ();
 }
 
-pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
-pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
-pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
+pub static ALICE: AccountId = 125;
+pub static BOB: AccountId = 126;
+pub static CHARLIE: AccountId = 127;
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let t = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
