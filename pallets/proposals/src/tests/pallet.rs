@@ -5,8 +5,7 @@ use test_utils::*;
 
 use crate::{mock::*, *};
 
-pub fn run_to_block(n: BlockNumber)
-{
+pub fn run_to_block(n: BlockNumber) {
     while System::block_number() < n {
         IdentityPallet::on_finalize(System::block_number());
         Proposals::on_finalize(System::block_number());
@@ -812,11 +811,11 @@ fn withdraw_once_times_with_double_submissions() {
         let prop_milestones = get_milestones(10);
         let project_key = create_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native);
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true)
-            .unwrap();
+        let _ =
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true).unwrap();
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 1).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 1, true)
-            .unwrap();
+        let _ =
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 1, true).unwrap();
 
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
@@ -844,8 +843,8 @@ fn withdraw_twice_with_intermitent_submission() {
 
         // The first submission and withdraw
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true)
-            .unwrap();
+        let _ =
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true).unwrap();
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(
@@ -862,8 +861,8 @@ fn withdraw_twice_with_intermitent_submission() {
 
         // The second submission and withdraw
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 1).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 1, true)
-            .unwrap();
+        let _ =
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 1, true).unwrap();
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(
@@ -894,8 +893,8 @@ fn withdraw_with_variable_percentage() {
         ];
         let project_key = create_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native);
         let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true)
-            .unwrap();
+        let _ =
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true).unwrap();
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(

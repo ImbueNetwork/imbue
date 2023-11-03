@@ -15,7 +15,7 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::{impl_runtime_apis, Encode};
 use sp_core::OpaqueMetadata;
 
-use common_runtime::{storage_deposits::StorageDepositItems, asset_registry::StringLimit};
+use common_runtime::{asset_registry::StringLimit, storage_deposits::StorageDepositItems};
 use pallet_collective::EnsureProportionAtLeast;
 use pallet_deposits::traits::DepositCalculator;
 use sp_arithmetic::per_things::Percent;
@@ -81,7 +81,7 @@ use xcm_executor::XcmExecutor;
 pub use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 
 use common_runtime::currency::*;
-pub use common_runtime::{Nonce, BlockNumber, Hash};
+pub use common_runtime::{BlockNumber, Hash, Nonce};
 
 /// common types for the runtime.
 pub use common_runtime::*;
@@ -1000,7 +1000,7 @@ mod benches {
 pub mod opaque {
     use super::*;
     use sp_runtime::{
-        generic, 
+        generic,
         traits::{BlakeTwo256, Hash as HashT},
     };
 

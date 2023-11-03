@@ -6,8 +6,8 @@ use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
-    BuildStorage,
     traits::{BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 use sp_std::convert::{TryFrom, TryInto};
 type Block = frame_system::mocking::MockBlock<Test>;

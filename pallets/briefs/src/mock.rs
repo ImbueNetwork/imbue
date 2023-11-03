@@ -13,7 +13,7 @@ use common_types::CurrencyId;
 
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
-    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup },
+    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
     BuildStorage,
 };
 
@@ -46,7 +46,7 @@ impl orml_currencies::Config for Test {
 }
 
 frame_support::construct_runtime!(
-    pub enum Test 
+    pub enum Test
     {
         System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
@@ -287,7 +287,9 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         .build_storage()
         .unwrap();
 
-    RuntimeGenesisConfig::default().assimilate_storage(&mut t).unwrap();
+    RuntimeGenesisConfig::default()
+        .assimilate_storage(&mut t)
+        .unwrap();
     orml_tokens::GenesisConfig::<Test> {
         balances: {
             vec![ALICE, BOB, CHARLIE]

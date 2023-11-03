@@ -5,8 +5,7 @@ pub(super) use frame_support::{assert_noop, assert_ok, traits::Hooks};
 pub(super) use sp_runtime::traits::BlockNumberProvider;
 pub(super) use sp_runtime::BoundedVec;
 
-pub fn run_to_block<T: Config>(n: BlockNumber)
-{
+pub fn run_to_block<T: Config>(n: BlockNumber) {
     while System::block_number() < n {
         Tokens::on_finalize(System::block_number());
         PalletDisputes::on_finalize(System::block_number());

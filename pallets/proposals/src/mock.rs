@@ -9,13 +9,13 @@ use frame_support::{
 use crate::*;
 use common_types::CurrencyId;
 use frame_system::EnsureRoot;
-use sp_core::{H256};
+use sp_core::H256;
 
 use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
+    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
     BuildStorage,
-    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup },
 };
 
 use sp_std::{

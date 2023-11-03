@@ -5,8 +5,8 @@ use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
+    traits::{parameter_types, BlakeTwo256, IdentityLookup},
     BuildStorage,
-    traits::{parameter_types, BlakeTwo256, IdentityLookup },
 };
 use sp_std::convert::{TryFrom, TryInto};
 

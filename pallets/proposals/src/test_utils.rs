@@ -2,8 +2,6 @@ use crate::*;
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::account;
-#[cfg(feature = "runtime-benchmarks")]
-use sp_std::vec::Vec;
 use frame_support::assert_ok;
 use frame_system::EventRecord;
 use orml_traits::MultiCurrency;
@@ -12,8 +10,9 @@ use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
 use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
+#[cfg(feature = "runtime-benchmarks")]
+use sp_std::vec::Vec;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
-
 
 pub fn get_contributions<T: Config>(
     accounts: Vec<AccountIdOf<T>>,
@@ -132,8 +131,7 @@ pub fn create_funded_user<T: Config>(
     user
 }
 
-pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
-{
+pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     let events = frame_system::Pallet::<T>::events();
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
     // compare to the last event record

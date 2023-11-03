@@ -1,7 +1,7 @@
 use common_runtime::Balance;
 use common_types::currency_decimals;
-use sp_runtime::BuildStorage;
 pub use imbue_kusama_runtime::{AccountId, CurrencyId, Runtime, RuntimeOrigin, System};
+use sp_runtime::BuildStorage;
 /// Parachain Ids
 pub const PARA_ID_DEVELOPMENT: u32 = 2121;
 pub const PARA_ID_SIBLING: u32 = 2110;
@@ -33,7 +33,9 @@ impl ExtBuilder {
     }
 
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
+        let mut t = frame_system::GenesisConfig::<Runtime>::default()
+            .build_storage()
+            .unwrap();
         let native_currency_id = imbue_kusama_runtime::CurrencyId::Native;
         pallet_balances::GenesisConfig::<Runtime> {
             balances: self
@@ -60,7 +62,8 @@ impl ExtBuilder {
         parachain_info::GenesisConfig::<Runtime> {
             parachain_id: self.parachain_id.into(),
             ..Default::default()
-        }.assimilate_storage(&mut t)
+        }
+        .assimilate_storage(&mut t)
         .unwrap();
 
         pallet_xcm::GenesisConfig::<Runtime> {

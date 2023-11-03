@@ -8,8 +8,8 @@ use pallet_deposits::traits::DepositHandler;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::{
-    BuildStorage,
     traits::{BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 
 type Block = frame_system::mocking::MockBlock<Test>;

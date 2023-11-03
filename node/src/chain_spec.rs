@@ -27,7 +27,8 @@ pub fn imbue_properties() -> Properties {
 }
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ImbueKusamaChainSpec = sc_service::GenericChainSpec<imbue_kusama_runtime::RuntimeGenesisConfig>;
+pub type ImbueKusamaChainSpec =
+    sc_service::GenericChainSpec<imbue_kusama_runtime::RuntimeGenesisConfig>;
 
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 /// The default XCM version to set in genesis config.
@@ -279,9 +280,9 @@ fn development_genesis(
         },
         // scheduler: imbue_kusama_runtime::SchedulerConfig {},
         vesting: Default::default(),
-        parachain_info: imbue_kusama_runtime::ParachainInfoConfig { 
-            parachain_id: id, 
-            ..Default::default() 
+        parachain_info: imbue_kusama_runtime::ParachainInfoConfig {
+            parachain_id: id,
+            ..Default::default()
         },
         aura: imbue_kusama_runtime::AuraConfig {
             authorities: Default::default(),

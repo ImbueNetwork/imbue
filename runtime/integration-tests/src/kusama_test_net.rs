@@ -24,9 +24,8 @@ pub use sp_core::{sr25519, storage::Storage, Get};
 use xcm::prelude::*;
 use xcm_emulator::{
     decl_test_networks, decl_test_parachains, decl_test_relay_chains,
-    decl_test_sender_receiver_accounts_parameter_types, DefaultMessageProcessor
+    decl_test_sender_receiver_accounts_parameter_types, DefaultMessageProcessor,
 };
-
 
 use crate::setup::{PARA_ID_DEVELOPMENT, PARA_ID_SIBLING};
 
@@ -47,14 +46,14 @@ decl_test_relay_chains! {
         ),
         runtime = kusama_runtime,
         core = {
-			MessageProcessor: DefaultMessageProcessor<Kusama>,
-			SovereignAccountOf: kusama_runtime::xcm_config::SovereignAccountOf,
-		},
-		pallets = {
-			XcmPallet: kusama_runtime::XcmPallet,
-			Balances: kusama_runtime::Balances,
-			Hrmp: kusama_runtime::Hrmp,
-		}
+            MessageProcessor: DefaultMessageProcessor<Kusama>,
+            SovereignAccountOf: kusama_runtime::xcm_config::SovereignAccountOf,
+        },
+        pallets = {
+            XcmPallet: kusama_runtime::XcmPallet,
+            Balances: kusama_runtime::Balances,
+            Hrmp: kusama_runtime::Hrmp,
+        }
     }
 }
 decl_test_parachains! {
@@ -69,9 +68,9 @@ decl_test_parachains! {
         runtime = imbue_kusama_runtime,
         core = {
             XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
-			DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
-			LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
-			ParachainInfo: imbue_kusama_runtime::ParachainInfo,
+            DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
+            LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
+            ParachainInfo: imbue_kusama_runtime::ParachainInfo,
         },
         pallets = {
             PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,
@@ -89,9 +88,9 @@ decl_test_parachains! {
         runtime = imbue_kusama_runtime,
         core = {
             XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
-			DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
-			LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
-			ParachainInfo: imbue_kusama_runtime::ParachainInfo,
+            DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
+            LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
+            ParachainInfo: imbue_kusama_runtime::ParachainInfo,
         },
         pallets = {
             PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,

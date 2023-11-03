@@ -6,8 +6,8 @@ use frame_support::{pallet_prelude::*, parameter_types};
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
-    BuildStorage,
     traits::{BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 
 type Block = frame_system::mocking::MockBlock<Test>;

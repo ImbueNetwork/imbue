@@ -8,7 +8,7 @@ use pallet_deposits::traits::DepositHandler;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
 use sp_runtime::{
-    traits::{BlakeTwo256, IdentityLookup },
+    traits::{BlakeTwo256, IdentityLookup},
     BuildStorage,
 };
 

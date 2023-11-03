@@ -4,9 +4,7 @@ use crate::*;
 use crate::{mock::*, Error, Event, FellowToVetter, Role, Roles};
 use common_traits::MaybeConvert;
 use common_types::CurrencyId;
-use frame_support::{
-    assert_noop, assert_ok, traits::Hooks, BoundedBTreeMap,
-};
+use frame_support::{assert_noop, assert_ok, traits::Hooks, BoundedBTreeMap};
 use orml_tokens::Error as TokensError;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::{traits::BadOrigin, DispatchError};
@@ -30,8 +28,7 @@ fn revoke_fellowship(who: &AccountIdOf<Test>, slash_deposit: bool) -> Result<(),
     <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::revoke_fellowship(who, slash_deposit)
 }
 
-pub fn run_to_block<T: Config>(n: BlockNumber)
-{
+pub fn run_to_block<T: Config>(n: BlockNumber) {
     while System::block_number() < n {
         Tokens::on_finalize(System::block_number());
         Fellowship::on_finalize(System::block_number());
@@ -241,12 +238,14 @@ fn add_to_fellowship_adds_to_pending_fellows_assert_event() {
     new_test_ext().execute_with(|| {
         let free = <Test as Config>::MultiCurrency::free_balance(DCIdOf::<Test>::get(), &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(DCIdOf::<Test>::get());
-        <Test as Config>::MultiCurrency::withdraw(DCIdOf::<Test>::get(), &ALICE, free - minimum + minimum)
-            .unwrap();
+        <Test as Config>::MultiCurrency::withdraw(
+            DCIdOf::<Test>::get(),
+            &ALICE,
+            free - minimum + minimum,
+        )
+        .unwrap();
         assert!(add_to_fellowship_take_deposit(&ALICE, Role::Freelancer, 10, None).is_ok());
-        System::assert_last_event(
-            Event::<Test>::MemberAddedToPendingFellows { who: ALICE }.into(),
-        );
+        System::assert_last_event(Event::<Test>::MemberAddedToPendingFellows { who: ALICE }.into());
     });
 }
 
@@ -387,8 +386,12 @@ fn add_candidate_to_shortlist_candidate_lacks_deposit_fails() {
         assert_ok!(add_to_fellowship_take_deposit(&BOB, Role::Vetter, 5, None));
         let free = <Test as Config>::MultiCurrency::free_balance(DCIdOf::<Test>::get(), &ALICE);
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(DCIdOf::<Test>::get());
-        <Test as Config>::MultiCurrency::withdraw(DCIdOf::<Test>::get(), &ALICE, free - minimum + minimum)
-            .unwrap();
+        <Test as Config>::MultiCurrency::withdraw(
+            DCIdOf::<Test>::get(),
+            &ALICE,
+            free - minimum + minimum,
+        )
+        .unwrap();
         assert_noop!(
             Fellowship::add_candidate_to_shortlist(
                 RuntimeOrigin::signed(BOB),
@@ -463,9 +466,7 @@ fn add_candidate_to_shortlist_works_assert_event() {
             Role::Freelancer,
             10
         ));
-        System::assert_last_event(
-            Event::<Test>::CandidateAddedToShortlist { who: ALICE }.into(),
-        );
+        System::assert_last_event(Event::<Test>::CandidateAddedToShortlist { who: ALICE }.into());
     });
 }
 
@@ -527,8 +528,12 @@ fn pay_deposit_and_remove_pending_status_not_enough_funds_to_reserve() {
     new_test_ext().execute_with(|| {
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(DCIdOf::<Test>::get());
         let free = <Test as Config>::MultiCurrency::free_balance(DCIdOf::<Test>::get(), &ALICE);
-        <Test as Config>::MultiCurrency::withdraw(DCIdOf::<Test>::get(), &ALICE, free - minimum + minimum)
-            .unwrap();
+        <Test as Config>::MultiCurrency::withdraw(
+            DCIdOf::<Test>::get(),
+            &ALICE,
+            free - minimum + minimum,
+        )
+        .unwrap();
         assert_ok!(add_to_fellowship_take_deposit(
             &ALICE,
             Role::Freelancer,
@@ -547,8 +552,12 @@ fn pay_deposit_and_remove_pending_status_works_assert_event() {
     new_test_ext().execute_with(|| {
         let minimum = <Test as Config>::MultiCurrency::minimum_balance(DCIdOf::<Test>::get());
         let free = <Test as Config>::MultiCurrency::free_balance(DCIdOf::<Test>::get(), &ALICE);
-        <Test as Config>::MultiCurrency::withdraw(DCIdOf::<Test>::get(), &ALICE, free - minimum + minimum)
-            .unwrap();
+        <Test as Config>::MultiCurrency::withdraw(
+            DCIdOf::<Test>::get(),
+            &ALICE,
+            free - minimum + minimum,
+        )
+        .unwrap();
         assert_ok!(add_to_fellowship_take_deposit(
             &ALICE,
             Role::Freelancer,

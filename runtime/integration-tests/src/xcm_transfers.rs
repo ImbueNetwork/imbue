@@ -13,7 +13,7 @@
 use frame_support::assert_ok;
 use frame_support::dispatch::RawOrigin;
 
-use xcm_emulator::{bx, TestExt, Chain};
+use xcm_emulator::{bx, Chain, TestExt};
 
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
 
@@ -214,7 +214,7 @@ fn transfer_ksm_from_sibling() {
         ));
     });
 
-    // TODO: Fix this test 
+    // TODO: Fix this test
     // #[cfg(not(feature = "runtime-benchmarks"))]
     // Development::execute_with(|| {
     //     let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &SiblingReceiver::get());
@@ -266,8 +266,7 @@ fn transfer_native_to_sibling() {
         ));
     });
     let transfer_amount: Balance = native_amount(10);
-    let sibling_balance_before: Balance =
-        Sibling::account_data_of(SiblingReceiver::get()).free;
+    let sibling_balance_before: Balance = Sibling::account_data_of(SiblingReceiver::get()).free;
     Development::execute_with(|| {
         assert_ok!(XTokens::transfer(
             imbue_kusama_runtime::RuntimeOrigin::signed(DevelopmentSender::get()),

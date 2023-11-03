@@ -19,12 +19,12 @@ pub mod pallet {
     use codec::{FullCodec, FullEncode};
     use common_types::CurrencyId;
     use frame_support::pallet_prelude::*;
-    use sp_std::fmt::Debug;
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use sp_runtime::{
         traits::{AtLeast32BitUnsigned, One},
         Saturating,
     };
+    use sp_std::fmt::Debug;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;

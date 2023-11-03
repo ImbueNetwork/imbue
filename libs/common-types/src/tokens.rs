@@ -4,7 +4,20 @@ use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 
 #[derive(
-    Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen, Default, Serialize, Deserialize
+    Clone,
+    Copy,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Debug,
+    Encode,
+    Decode,
+    TypeInfo,
+    MaxEncodedLen,
+    Default,
+    Serialize,
+    Deserialize,
 )]
 pub enum CurrencyId {
     #[default]

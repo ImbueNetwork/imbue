@@ -1,9 +1,9 @@
-use crate::{AccountIdOf, BalanceOf, Contribution, ProposedMilestone, BlockNumberFor};
+use crate::{AccountIdOf, BalanceOf, BlockNumberFor, Contribution, ProposedMilestone};
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
 use frame_support::{pallet_prelude::DispatchError, transactional, PalletId};
-use sp_std::vec::Vec;
 use orml_traits::XcmTransfer;
 use orml_xtokens::Error;
+use sp_std::vec::Vec;
 
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;

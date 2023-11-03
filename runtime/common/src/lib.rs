@@ -206,8 +206,8 @@ pub mod asset_registry {
     use codec::{Decode, Encode};
     use common_types::{CurrencyId, CustomMetadata};
     use frame_support::{
-        parameter_types,
         dispatch::RawOrigin,
+        parameter_types,
         traits::{EnsureOrigin, EnsureOriginWithArg},
     };
     use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
@@ -222,11 +222,19 @@ pub mod asset_registry {
     #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
     pub struct CustomAssetProcessor;
 
-    impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata, StringLimit>> for CustomAssetProcessor {
+    impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata, StringLimit>>
+        for CustomAssetProcessor
+    {
         fn pre_register(
             id: Option<CurrencyId>,
             metadata: AssetMetadata<Balance, CustomMetadata, StringLimit>,
-        ) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata, StringLimit>), DispatchError> {
+        ) -> Result<
+            (
+                CurrencyId,
+                AssetMetadata<Balance, CustomMetadata, StringLimit>,
+            ),
+            DispatchError,
+        > {
             match id {
                 Some(id) => Ok((id, metadata)),
                 None => Err(DispatchError::Other("asset-registry: AssetId is required")),
