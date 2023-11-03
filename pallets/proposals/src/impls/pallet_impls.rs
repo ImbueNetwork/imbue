@@ -76,6 +76,11 @@ impl<T: Config> Pallet<T> {
             Rounds::<T>::contains_key((project_key, milestone_key), RoundType::VotingRound),
             Error::<T>::VotingRoundNotStarted
         );
+        ensure!(
+            !ProjectsInDispute::<T>::get(project_key).contains(&milestone_key),
+            Error::<T>::MilestonesAlreadyInDispute
+        );
+        
         let contribution_amount = project
             .contributions
             .get(&who)

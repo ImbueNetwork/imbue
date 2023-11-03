@@ -202,7 +202,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         ProjectKey,
-        (),
+        BoundedVec<MilestoneKey, <T as Config>::MaxMilestonesPerProject>,
         ValueQuery,
     >;
 
@@ -315,8 +315,8 @@ pub mod pallet {
         IndividualVoteNotFound,
         /// Only a contributor can raise a dispute.
         OnlyContributorsCanRaiseDispute,
-        /// The Project is already in a dispute.
-        ProjectAlreadyInDispute,
+        /// One of these milestones is already in a dispute.
+        MilestonesAlreadyInDispute,
         /// You cannot raise a dispute on an approved milestone.
         CannotRaiseDisputeOnApprovedMilestone,
     }
@@ -410,15 +410,19 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            ensure!(milestone_keys.iter().all(|ms_key|project.milestones.contains_key(ms_key)), Error::<T>::MilestoneDoesNotExist);
             ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute);
-            ensure!(!ProjectsInDispute::<T>::contains_key(project_key), Error::<T>::ProjectAlreadyInDispute);
+            ensure!(!ProjectsInDispute::<T>::get(project_key).iter().any(|ms_key| milestone_keys.contains(ms_key)), Error::<T>::MilestonesAlreadyInDispute);
             ensure!(
                 !project.milestones.iter().any(|(milestone_key, milestone)|{milestone_keys.contains(milestone_key) && milestone.is_approved}),
                 Error::<T>::CannotRaiseDisputeOnApprovedMilestone
             );
 
             <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys)?;
-            ProjectsInDispute::<T>::insert(project_key, ());
+            ProjectsInDispute::<T>::mutate(project_key |keys|{
+                // Test this pls
+                keys.try_append(milestone_keys)
+            });
             Ok(().into())
         }
     }

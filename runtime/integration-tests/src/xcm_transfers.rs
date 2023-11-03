@@ -38,8 +38,10 @@ fn transfer_treasury_to_parachain_grant_escrow_address() {
     let transfer_amount: Balance = ksm_amount(1);
     let treasury_origin = TreasuryOrigin::Kusama;
     let kusama_treasury_address =
-        <R as pallet_proposals::Config>::ExternalRefundHandler::get_treasury_account_id(treasury_origin)
-            .unwrap();
+        <R as pallet_proposals::Config>::ExternalRefundHandler::get_treasury_account_id(
+            treasury_origin,
+        )
+        .unwrap();
     Development::execute_with(|| {
         assert_eq!(
             OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get()),
@@ -133,8 +135,10 @@ fn transfer_ksm_to_relay_chain() {
 fn test_xcm_refund_handler_to_kusama() {
     let treasury_origin = TreasuryOrigin::Kusama;
     let kusama_treasury_address =
-        <R as pallet_proposals::Config>::ExternalRefundHandler::get_treasury_account_id(treasury_origin)
-            .unwrap();
+        <R as pallet_proposals::Config>::ExternalRefundHandler::get_treasury_account_id(
+            treasury_origin,
+        )
+        .unwrap();
     let _kusama_treasury_balance_before =
         Kusama::account_data_of(kusama_treasury_address.clone()).free;
     let transfer_amount: Balance = ksm_amount(10);

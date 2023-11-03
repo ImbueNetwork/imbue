@@ -29,7 +29,7 @@ fn raise_dispute_project_doesnt_exist() {
 }
 
 #[test]
-fn raise_dispute_already_in_dispute() {
+fn raise_dispute_milestone_already_in_dispute() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
@@ -40,8 +40,17 @@ fn raise_dispute_already_in_dispute() {
             CurrencyId::Native,
         ).unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
-        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, milestone_keys.clone()));
-        assert_noop!(Proposals::raise_dispute(RuntimeOrigin::signed(*CHARLIE), project_key, milestone_keys), Error::<Test>::ProjectAlreadyInDispute);
+        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, milestone_keys));
+        for i in milestones.iter() {
+            assert_noop!(Proposals::raise_dispute(RuntimeOrigin::signed(*CHARLIE), project_key, vec![i].try_into().unwrap()), Error::<Test>::MilestonesAlreadyInDispute);
+        }
+    })
+}
+
+#[test]
+fn raise_dispute_invalid_milestone_key() {
+    build_test_externality().execute_with(|| {
+
     })
 }
 
@@ -129,9 +138,6 @@ fn dispute_success_approves_milestone_for_refund_but_only_ones_specified() {
     })
 }
 
-
-
-
 #[test]
 fn dispute_success_returns_non_zero_weight() {
     build_test_externality().execute_with(|| {
@@ -154,7 +160,104 @@ fn dispute_success_returns_non_zero_weight() {
 #[test]
 fn raise_dispute_prevents_milestone_voting() {
     build_test_externality().execute_with(|| {
+        let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let submitted_milestone_key = 0;
+        let project_key = create_and_fund_project::<Test>(
+            *ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+        ).unwrap();
 
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            submitted_milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            submitted_milestone_key,
+            true
+        ));
+        let dispute_milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
+        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, dispute_milestone_keys.clone()));
+        
+        assert_noop!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            submitted_milestone_key,
+            true
+        ), Error::<Test>::MilestonesAlreadyInDispute);
+    })
+}
+
+
+#[test]
+fn raise_dispute_allows_milestone_voting_on_non_disputed_milestones() {
+    build_test_externality().execute_with(|| {
+        let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let submitted_milestone_keys = [0, 1];
+        let project_key = create_and_fund_project::<Test>(
+            *ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+        ).unwrap();
+
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            submitted_milestone_keys[0]
+        ));
+
+        let dispute_milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (2u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
+        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, dispute_milestone_keys.clone()));
+        
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            submitted_milestone_keys[1]
+        ));
+
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            submitted_milestone_keys[0],
+            true
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            submitted_milestone_keys[1],
+            true
+        ));
+    })
+}
+
+
+#[test]
+fn raise_dispute_allows_submission() {
+    build_test_externality().execute_with(|| {
+        let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let milestone_key = 0;
+        let project_key = create_and_fund_project::<Test>(
+            *ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+        ).unwrap();
+
+        let dispute_milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
+        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, dispute_milestone_keys.clone()));
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            milestone_key
+        ));
     })
 }
 
