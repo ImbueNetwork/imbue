@@ -11,8 +11,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
 
-#[benchmarks( where <T as frame_system::Config>::AccountId: AsRef<[u8]>, crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
-#[benchmarks]
+#[benchmarks( where crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
 mod benchmarks {
     use super::*;
     #[benchmark]

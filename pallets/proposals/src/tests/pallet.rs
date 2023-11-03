@@ -5,6 +5,27 @@ use test_utils::*;
 
 use crate::{mock::*, *};
 
+pub fn run_to_block(n: BlockNumber)
+{
+    while System::block_number() < n {
+        IdentityPallet::on_finalize(System::block_number());
+        Proposals::on_finalize(System::block_number());
+        TransactionPayment::on_finalize(System::block_number());
+        Currencies::on_finalize(System::block_number());
+        Tokens::on_finalize(System::block_number());
+        Balances::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Balances::on_initialize(System::block_number());
+        Tokens::on_initialize(System::block_number());
+        Currencies::on_initialize(System::block_number());
+        TransactionPayment::on_initialize(System::block_number());
+        Proposals::on_initialize(System::block_number());
+        IdentityPallet::on_initialize(System::block_number());
+    }
+}
+
 #[test]
 fn submit_milestone_milestone_doesnt_exist() {
     build_test_externality().execute_with(|| {
@@ -151,7 +172,7 @@ fn submit_milestone_can_submit_again_after_failed_vote() {
         ));
         let expiry_block = frame_system::Pallet::<Test>::block_number()
             + <Test as Config>::MilestoneVotingWindow::get();
-        run_to_block::<Test>(expiry_block + 1);
+        run_to_block(expiry_block + 1);
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(ALICE),
             project_key,
@@ -187,7 +208,7 @@ fn submit_milestone_cannot_submit_again_after_success_vote() {
         // The auto approval should have approved it here.
         let expiry_block = frame_system::Pallet::<Test>::block_number()
             + <Test as Config>::MilestoneVotingWindow::get();
-        run_to_block::<Test>(expiry_block + 1);
+        run_to_block(expiry_block + 1);
         assert_noop!(
             Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, milestone_key),
             Error::<Test>::MilestoneAlreadyApproved
@@ -414,7 +435,7 @@ fn vote_on_milestone_after_round_end_fails() {
             project_key,
             milestone_key
         ));
-        run_to_block::<Test>(expiring_block);
+        run_to_block(expiring_block);
         assert_noop!(
             Proposals::vote_on_milestone(
                 RuntimeOrigin::signed(BOB),
@@ -458,13 +479,13 @@ fn if_double_submission_and_one_finalises_voting_on_the_second_can_vote() {
             project_key,
             0
         ));
-        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + 10);
+        run_to_block(frame_system::Pallet::<Test>::block_number() + 10);
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(ALICE),
             project_key,
             1
         ));
-        run_to_block::<Test>(expiring_block);
+        run_to_block(expiring_block);
         assert_ok!(Proposals::vote_on_milestone(
             RuntimeOrigin::signed(BOB),
             project_key,

@@ -1,9 +1,10 @@
 use crate::*;
-pub(super) use crate::{mock::*, pallet::*};
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{account, Vec};
-use frame_support::{assert_ok, traits::Hooks};
+use frame_benchmarking::account;
+#[cfg(feature = "runtime-benchmarks")]
+use sp_std::vec::Vec;
+use frame_support::assert_ok;
 use frame_system::EventRecord;
 use orml_traits::MultiCurrency;
 use pallet_deposits::traits::DepositHandler;
@@ -13,27 +14,6 @@ use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
-#[allow(dead_code)]
-pub fn run_to_block<T: Config>(n: BlockNumber)
-{
-    while System::block_number() < n {
-        IdentityPallet::on_finalize(System::block_number());
-        Proposals::on_finalize(System::block_number());
-        TransactionPayment::on_finalize(System::block_number());
-        Currencies::on_finalize(System::block_number());
-        Tokens::on_finalize(System::block_number());
-        Balances::on_finalize(System::block_number());
-        System::on_finalize(System::block_number());
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-        Balances::on_initialize(System::block_number());
-        Tokens::on_initialize(System::block_number());
-        Currencies::on_initialize(System::block_number());
-        TransactionPayment::on_initialize(System::block_number());
-        Proposals::on_initialize(System::block_number());
-        IdentityPallet::on_initialize(System::block_number());
-    }
-}
 
 pub fn get_contributions<T: Config>(
     accounts: Vec<AccountIdOf<T>>,

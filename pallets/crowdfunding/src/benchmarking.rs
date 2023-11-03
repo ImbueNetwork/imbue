@@ -13,7 +13,7 @@ use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
 use sp_std::collections::btree_map::BTreeMap;
 
-#[benchmarks( where<T as frame_system::Config>::AccountId: AsRef<[u8]>,)]
+#[benchmarks]
 mod benchmarks {
     use super::*;
 
@@ -199,8 +199,6 @@ fn get_max_milestones<T: Config>() -> BoundedProposedMilestones<T> {
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
-where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
 {
     let events = frame_system::Pallet::<T>::events();
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();

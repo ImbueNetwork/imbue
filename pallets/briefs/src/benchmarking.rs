@@ -16,7 +16,7 @@ use sp_std::{convert::TryInto, str, vec::Vec};
 
 const SEED: u32 = 0;
 
-#[benchmarks( where<T as frame_system::Config>::AccountId: AsRef<[u8]>,)]
+#[benchmarks]
 mod benchmarks {
     use super::*;
 
@@ -145,8 +145,6 @@ fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
-where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
 {
     let events = frame_system::Pallet::<T>::events();
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
