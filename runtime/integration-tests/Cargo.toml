@@ -102,4 +102,5 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"kusama-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"common-runtime/runtime-benchmarks"
 ]

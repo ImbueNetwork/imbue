@@ -127,6 +127,7 @@ runtime-benchmarks = [
 	"imbue-kusama-runtime/runtime-benchmarks",
 	"polkadot-cli/runtime-benchmarks",
 	"try-runtime-cli/try-runtime",
+	"common-runtime/runtime-benchmarks"
 ]
 try-runtime = [
 	"common-runtime/try-runtime",
