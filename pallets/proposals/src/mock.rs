@@ -179,7 +179,6 @@ impl pallet_timestamp::Config for Test {
 }
 
 parameter_types! {
-    pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
@@ -194,16 +193,14 @@ parameter_types! {
     pub MaxProjectsPerAccount: u16 = 50;
     pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
     pub MaxJuryMembers: u32 = 100;
-
+    pub TreasuryFeeAccount: AccountId = *TREASURY;
 }
 
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = crate::WeightInfo<Self>;
-    type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
@@ -211,13 +208,14 @@ impl pallet_proposals::Config for Test {
     type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
-    type ImbueFeeAccount =     
+    type ImbueFeeAccount = TreasuryFeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler<Test>;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
     type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
     type MaxJuryMembers = MaxJuryMembers;
+    type DisputeRaiser = MockDisputeRaiser;
 }
 
 parameter_types! {
@@ -280,7 +278,6 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &DAVE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &JOHN, initial_balance);
-        let _ = Tokens::deposit(CurrencyId::Native, &VETTER, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &TREASURY, initial_balance);
     });
     ext
@@ -308,6 +305,22 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
         Ok(())
     }
     fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
+        Ok(())
+    }
+}
+
+pub struct MockDisputeRaiser;
+impl DisputeRaiser<AccountId> for MockDisputeRaiser {
+type DisputeKey = ProjectKey;
+type SpecificId = MilestoneKey;
+type MaxJurySize = MaxJuryMembers;
+type MaxSpecifics = MaxMilestonesPerProject;
+    fn raise_dispute(
+        dispute_key: Self::DisputeKey,
+        raised_by: AccountId,
+        jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+    ) -> Result<(), DispatchError> {
         Ok(())
     }
 }

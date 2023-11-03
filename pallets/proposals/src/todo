@@ -1,7 +1,11 @@
-raise-dispute extrinsic.
+raise-dispute extrinsic. - done
 tests for above implementation.
 benchmark for raise dispute extrinsic
 prevent voting on a submitted milestone if a project is in dispute.
+make sure when raising a dispute you cannot raise it on approved milestones.
+
+test above ^^
+
 
 Migration for removing NoConfidenceLogic
     #[pallet::storage]
@@ -12,10 +16,11 @@ Migration for removing NoConfidenceLogic
 
 OnDisputeCompleteHooks.
 tests for above implementation.
+update change withdraw to uses can_withdraw 
 benchmark for hooks to return weight.
 
 removal of old no confidence logic.
 get jury in each pallet (briefs, grants, crowdfunding.)
-
+update the function call in each pallet (jury, TreasuryOrigin, )
 
 

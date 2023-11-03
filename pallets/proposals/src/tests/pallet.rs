@@ -762,7 +762,7 @@ fn withdraw_takes_imbue_fee() {
             create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
                 .unwrap();
         let milestone_key = 0;
-        let fee_account = crate::Pallet::<Test>::ImbueFeeAccount::get();
+        let fee_account: AccountId = <Test as Config>::ImbueFeeAccount::get();
         let _ =
             Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
                 .unwrap();

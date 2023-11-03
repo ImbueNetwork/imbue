@@ -314,50 +314,49 @@ impl<T: Config> Pallet<T> {
 
         Ok(())
     }
+
+
 }
 
 impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
     fn on_dispute_complete(
-        dispute_key: ProjectKey,
+        project_key: ProjectKey,
         specifics: Vec<MilestoneKey>,
         dispute_result: pallet_disputes::pallet::DisputeResult,
     ) -> Weight {
         let mut weight: Weight = <Weight as Zero>::zero();
-        let maybe_project = Projects::<T>::get(dispute_key);
         weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+        ProjectsInDispute::<T>::remove(project_key);
 
-        match maybe_project {
-            Some(project) => {
-                match dispute_result {
-                    DisputeResult::Success => {
-                        // OnSuccess
-                        // mark each of the milestones as ready for refund.
-                        // This should allow the withdraw function to 
-                        // cancel the project 
-                        // Emit Event for withdrawl
-                        for milestone_key in specifics.iter() {
-                            if let Some(milestone) = project.milestones.get(milestone_key) {
-
+        Projects::<T>::mutate(project_key, |maybe_project|{
+                match maybe_project {
+                    Some(project) => {
+                    match dispute_result {
+                        DisputeResult::Success => {
+                            for milestone_key in specifics.iter() {
+                                if let Some(milestone) = project.milestones.get_mut(milestone_key) {
+                                    milestone.can_refund = true;
+                                }
                             }
-                        }
-                    },
-                    DisputeResult::Failure => {
-                    // OnFailure
-                    // should not modify the state of the project except perhaps recording the amount of disputes previosuly handled.
-                    // Emit event for failure?? check if pallet_disputes does this.
-                    // revert anything that has happened as a result of calling a dispute (should be nothing as the 2 are independant.)
-                    },
-                };
+                        },
+                        DisputeResult::Failure => {
 
-                weight
-            },
-            // Looks like the project was deleted somehow during the dispute. 
-            // The only way this is possible is through a refund or final withdraw.
-            // Not a massive issue as either way the project has been finalised.
-            // Just ignore and return weight.
-            None => {
-                weight
+                        // OnFailure
+                        // should not modify the state of the project except perhaps recording the amount of disputes previosuly handled.
+                        // Emit event for failure?? check if pallet_disputes does this.
+                        // revert anything that has happened as a result of calling a dispute (should be nothing as the 2 are independant.)
+                        },
+                    };
+                    weight
+                },
+                // Looks like the project was deleted somehow during the dispute. 
+                // The only way this is possible is through a refund or final withdraw.
+                // Not a massive issue as either way the project has been finalised.
+                // Just ignore and return weight.
+                None => {
+                    weight
+                }
             }
-        }
+        })
     }
 }

@@ -63,6 +63,7 @@ sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polka
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}
 common-runtime = { path = "../../runtime/common"}
 pallet-fellowship = { path = "../fellowship"}
+pallet-disputes = { path = "../disputes"}
 
 [features]
 default = ['std']

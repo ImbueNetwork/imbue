@@ -118,6 +118,7 @@ pub mod pallet {
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
+        /// The trait that handler the raising of a dispute.
         type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxJurySize = Self::MaxJuryMembers, MaxSpecifics = Self::MaxMilestonesPerProject>;
     }
 
@@ -193,6 +194,15 @@ pub mod pallet {
         Blake2_128Concat,
         BlockNumberFor<T>,
         BoundedProjectKeysPerBlock<T>,
+        ValueQuery,
+    >;
+
+    #[pallet::storage]
+    pub type ProjectsInDispute<T> = StorageMap<
+        _,
+        Blake2_128Concat,
+        ProjectKey,
+        (),
         ValueQuery,
     >;
 
@@ -304,7 +314,11 @@ pub mod pallet {
         /// An internal error, a collection of votes for a milestone has been lost.s
         IndividualVoteNotFound,
         /// Only a contributor can raise a dispute.
-        OnlyContributorsCanRaiseDispute
+        OnlyContributorsCanRaiseDispute,
+        /// The Project is already in a dispute.
+        ProjectAlreadyInDispute,
+        /// You cannot raise a dispute on an approved milestone.
+        CannotRaiseDisputeOnApprovedMilestone,
     }
 
     #[pallet::hooks]
@@ -397,7 +411,14 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute);
+            ensure!(!ProjectsInDispute::<T>::contains_key(project_key), Error::<T>::ProjectAlreadyInDispute);
+            ensure!(
+                !project.milestones.iter().any(|(milestone_key, milestone)|{milestone_keys.contains(milestone_key) && milestone.is_approved}),
+                Error::<T>::CannotRaiseDisputeOnApprovedMilestone
+            );
+
             <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys)?;
+            ProjectsInDispute::<T>::insert(project_key, ());
             Ok(().into())
         }
     }
@@ -577,7 +598,6 @@ impl<Balance: Zero> Default for Vote<Balance> {
     }
 }
 
-//TODO: MIGRATION FOR refund locations, jury, on_creation_funding
 /// The struct which contain milestones that can be submitted.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]

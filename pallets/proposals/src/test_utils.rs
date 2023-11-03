@@ -1,7 +1,7 @@
 use crate::Config;
 use crate::Pallet as Proposals;
 use crate::*;
-use common_types::{CurrencyId, FundingType};
+use common_types::{CurrencyId};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, Vec};
 use frame_support::{assert_ok, traits::Hooks, BoundedVec};
@@ -13,6 +13,7 @@ use sp_core::{Get, H256};
 use sp_runtime::Saturating;
 use sp_runtime::{DispatchError, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
+use pallet_disputes::traits::DisputeHooks;
 
 #[allow(dead_code)]
 pub fn run_to_block<T: Config>(n: T::BlockNumber) {
@@ -85,7 +86,7 @@ pub fn create_and_fund_project<T: Config>(
         contributions,
         agreement_hash,
         beneficiary,
-        proposed_milestones.try_into().map_err(|_|Error::<Test>::TooManyMilestones)?,
+        proposed_milestones.try_into().map_err(|_|Error::<T>::TooManyMilestones)?,
         refund_locations,
         BoundedVec::new(),
         FundingPath::TakeFromReserved,
@@ -109,8 +110,8 @@ pub fn create_project_awaiting_funding<T: Config>(
         contributions,
         agreement_hash,
         beneficiary,
-        proposed_milestones.try_into().map_err(|_|Error::<Test>::TooManyMilestones)?,
-        vec![(Locality::Foreign(treasury_account), Percent::from_parts(100u8))].try_into().map_err(|_|Error::<Test>::TooManyRefundLocations)?,
+        proposed_milestones.try_into().map_err(|_|Error::<T>::TooManyMilestones)?,
+        vec![(Locality::Foreign(treasury_account), Percent::from_parts(100u8))].try_into().map_err(|_|Error::<T>::TooManyRefundLocations)?,
         BoundedVec::new(),
         FundingPath::WaitForFunding,
     )?;
@@ -131,6 +132,11 @@ pub fn create_funded_user<T: Config>(
         CurrencyId::Native, &user, balance_factor.saturated_into()
     ));
     user
+}
+
+/// Manually call the hook OnDisputeCompleteWith a predefined result for testing>
+pub fn complete_dispute<T: Config>(project_key: ProjectKey, milestone_keys: Vec<MilestoneKey>, result: pallet_disputes::DisputeResult) -> crate::Weight {
+    Proposals::<T>::on_dispute_complete(project_key, milestone_keys, result)
 }
 
 pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
