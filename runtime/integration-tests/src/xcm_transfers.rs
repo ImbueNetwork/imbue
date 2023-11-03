@@ -13,7 +13,7 @@
 use frame_support::assert_ok;
 use frame_support::dispatch::RawOrigin;
 
-use xcm_emulator::{bx, TestExt, Chain, RelayChain};
+use xcm_emulator::{bx, TestExt, Chain};
 
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
 
@@ -362,11 +362,11 @@ fn currency_id_convert_imbu() {
 }
 
 // The fee associated with transferring Native tokens
-fn native_fee() -> Balance {
-    let (_asset, fee, _) = CanonicalImbuePerSecond::get();
-    // NOTE: it is possible that in different machines this value may differ. We shall see.
-    fee.div_euclid(10_000) * 8
-}
+// fn native_fee() -> Balance {
+//     let (_asset, fee, _) = CanonicalImbuePerSecond::get();
+//     // NOTE: it is possible that in different machines this value may differ. We shall see.
+//     fee.div_euclid(10_000) * 8
+// }
 
 // The fee associated with transferring AUSD tokens
 // fn ausd_fee() -> Balance {

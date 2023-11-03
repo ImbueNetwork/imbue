@@ -160,7 +160,7 @@ pub mod kusama {
     }
 
     pub fn genesis() -> Storage {
-        let genesis_config = kusama_runtime::GenesisConfig {
+        let genesis_config = kusama_runtime::RuntimeGenesisConfig {
             system: kusama_runtime::SystemConfig {
                 code: kusama_runtime::WASM_BINARY.unwrap().to_vec(),
                 ..Default::default()

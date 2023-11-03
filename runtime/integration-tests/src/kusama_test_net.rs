@@ -17,14 +17,14 @@ use crate::constants::SAFE_XCM_VERSION;
 pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
 
 use crate::constants::{
-    accounts::{ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE},
+    accounts::{ALICE, BOB},
     imbue, kusama,
 };
 pub use sp_core::{sr25519, storage::Storage, Get};
 use xcm::prelude::*;
 use xcm_emulator::{
-    decl_test_networks, decl_test_parachains, decl_test_relay_chains, Parachain,
-    TestExt, decl_test_sender_receiver_accounts_parameter_types, DefaultMessageProcessor
+    decl_test_networks, decl_test_parachains, decl_test_relay_chains,
+    decl_test_sender_receiver_accounts_parameter_types, DefaultMessageProcessor
 };
 
 
@@ -38,12 +38,12 @@ decl_test_relay_chains! {
             kusama_runtime::XcmPallet::force_xcm_version(
             kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(0, X1(Parachain(PARA_ID_SIBLING)))),
-            SAFE_XCM_VERSION),
+            SAFE_XCM_VERSION).expect("Failed to set XCM version"),
 
             kusama_runtime::XcmPallet::force_xcm_version(
             kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(0, X1(Parachain(PARA_ID_DEVELOPMENT)))),
-            SAFE_XCM_VERSION),
+            SAFE_XCM_VERSION).expect("Failed to set XCM version"),
         ),
         runtime = kusama_runtime,
         core = {
@@ -64,7 +64,7 @@ decl_test_parachains! {
             imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
             imbue_kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(1, Here)),
-            SAFE_XCM_VERSION),
+            SAFE_XCM_VERSION).expect("Failed to set XCM version"),
         ),
         runtime = imbue_kusama_runtime,
         core = {
@@ -84,7 +84,7 @@ decl_test_parachains! {
             imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
             imbue_kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(1, Here)),
-            SAFE_XCM_VERSION),
+            SAFE_XCM_VERSION).expect("Failed to set XCM version"),
         ),
         runtime = imbue_kusama_runtime,
         core = {

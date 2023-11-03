@@ -6,8 +6,6 @@ use crate::Pallet as PalletDisputes;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get, BoundedVec};
 use frame_system::Pallet as System;
-use orml_traits::MultiCurrency;
-use sp_runtime::SaturatedConversion;
 use sp_std::vec::Vec;
 
 #[benchmarks(where Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]

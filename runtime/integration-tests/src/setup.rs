@@ -1,12 +1,11 @@
 use common_runtime::Balance;
 use common_types::currency_decimals;
 use sp_runtime::BuildStorage;
-use frame_support::traits::GenesisBuild;
 pub use imbue_kusama_runtime::{AccountId, CurrencyId, Runtime, RuntimeOrigin, System};
 /// Parachain Ids
 pub const PARA_ID_DEVELOPMENT: u32 = 2121;
 pub const PARA_ID_SIBLING: u32 = 2110;
-pub const PARA_ID_KARURA: u32 = 2000;
+// pub const PARA_ID_KARURA: u32 = 2000;
 
 pub struct ExtBuilder {
     balances: Vec<(AccountId, CurrencyId, Balance)>,
@@ -85,9 +84,9 @@ pub fn mgx_amount(amount: Balance) -> Balance {
     amount * dollar(currency_decimals::MGX)
 }
 
-pub fn kar_amount(amount: Balance) -> Balance {
-    amount * dollar(currency_decimals::KAR)
-}
+// pub fn kar_amount(amount: Balance) -> Balance {
+//     amount * dollar(currency_decimals::KAR)
+// }
 
 pub fn ksm_amount(amount: Balance) -> Balance {
     amount * dollar(currency_decimals::KSM)
