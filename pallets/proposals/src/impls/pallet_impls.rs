@@ -140,20 +140,24 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::UserIsNotInitiator);
 
-        Projects::<T>::try_mutate_exists(project_key, |maybe_project|{
+        let withdrawable = Projects::<T>::try_mutate_exists(project_key, |maybe_project|{
             if let Some(project) = maybe_project {
-                let withdrawable = project.milestones.values().map(|ms|{
+                let withdrawable_percent: Percent = project.milestones.iter_mut().map(|(_key, mut ms)|{
                     if ms.is_approved && !ms.is_withdrawn {
-                        ms.percentage_to_unlock
                         ms.is_withdrawn = true;
+                        ms.percentage_to_unlock
+                    } else {
+                        <Percent as Zero>::zero()
                     }
-                }).collect::<Vec<Percent>>().sum();
+                    
+                }).fold(<Percent as Zero>::zero(), |acc, item| acc + item);
 
                 ensure!(
-                    withdrawable != Zero::zero(),
+                    withdrawable_percent != Zero::zero(),
                     Error::<T>::NoAvailableFundsToWithdraw
                 );
 
+                let withdrawable = withdrawable_percent.mul_floor(project.raised_funds);
                 let fee = <T as Config>::ImbueFee::get().mul_floor(withdrawable);
                 let initiator_payment = withdrawable.saturating_sub(fee);
                 let project_account = Self::project_account_id(project_key);
@@ -189,13 +193,16 @@ impl<T: Config> Pallet<T> {
                     )?;
                     *maybe_project = None;
                 }
-            }
+                Ok::<BalanceOf<T>, DispatchError>(withdrawable)
+            } else {
+                Ok::<BalanceOf<T>, DispatchError>(<BalanceOf<T> as Zero>::zero())
+            } 
         })?;
 
         Self::deposit_event(Event::ProjectFundsWithdrawn(
             who,
             project_key,
-            withdrawn,
+            withdrawable,
             project.currency_id,
         ));
 
@@ -245,6 +252,7 @@ impl<T: Config> Pallet<T> {
                 milestone_key,
                 percentage_to_unlock: milestone.percentage_to_unlock,
                 is_approved: false,
+                is_withdrawn: false,
                 can_refund: false,
                 is_refunded: false,
             };
