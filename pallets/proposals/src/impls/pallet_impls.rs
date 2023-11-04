@@ -140,49 +140,46 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::UserIsNotInitiator);
 
-        // Collect and calculate the amount that can be withdrawn.
-        let mut unlocked_funds: BalanceOf<T> = Zero::zero();
-        for (_, ms) in project.milestones.iter() {
-            if ms.is_approved {
-                let per_milestone = ms.percentage_to_unlock.mul_floor(project.raised_funds);
-                unlocked_funds = unlocked_funds.saturating_add(per_milestone);
-            }
-        }
+        Projects::<T>::try_mutate_exists(project_key, |maybe_project|{
+            if let Some(project) = maybe_project {
+                let withdrawable = project.milestones.values().map(|ms|{
+                    if ms.is_approved && !ms.is_withdrawn {
+                        ms.percentage_to_unlock
+                        ms.is_withdrawn = true;
+                    }
+                }).collect::<Vec<Percent>>().sum();
 
-        let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
-        ensure!(
-            withdrawable != Zero::zero(),
-            Error::<T>::NoAvailableFundsToWithdraw
-        );
+                ensure!(
+                    withdrawable != Zero::zero(),
+                    Error::<T>::NoAvailableFundsToWithdraw
+                );
 
-        let fee = <T as Config>::ImbueFee::get().mul_floor(withdrawable);
-        let withdrawn = withdrawable.saturating_sub(fee);
-        let project_account = Self::project_account_id(project_key);
+                let fee = <T as Config>::ImbueFee::get().mul_floor(withdrawable);
+                let initiator_payment = withdrawable.saturating_sub(fee);
+                let project_account = Self::project_account_id(project_key);
 
-        // Take the fee and send to ImbueFeeAccount   
-        T::MultiCurrency::transfer(
-            project.currency_id,
-            &project_account,
-            &<T as Config>::ImbueFeeAccount::get(),
-            fee,
-        )?;
+                // Take the fee and send to ImbueFeeAccount   
+                T::MultiCurrency::transfer(
+                    project.currency_id,
+                    &project_account,
+                    &<T as Config>::ImbueFeeAccount::get(),
+                    fee,
+                )?;
+            
+                // Transfer to initiator
+                T::MultiCurrency::transfer(
+                    project.currency_id,
+                    &project_account,
+                    &project.initiator,
+                    initiator_payment,
+                )?;
 
-        // Transfer to initiator
-        T::MultiCurrency::transfer(
-            project.currency_id,
-            &project_account,
-            &project.initiator,
-            withdrawn,
-        )?;
-
-        // Remove the project if the funds left are 0.
-        Projects::<T>::mutate_exists(project_key, |project| -> DispatchResult {
-            if let Some(p) = project {
-                p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
-                if p.withdrawn_funds == p.raised_funds {
-                    <T as Config>::DepositHandler::return_deposit(p.deposit_id)?;
+                project.withdrawn_funds = project.withdrawn_funds.saturating_add(withdrawable);
+        
+                if project.withdrawn_funds == project.raised_funds {
+                    <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
                     CompletedProjects::<T>::try_mutate(
-                        &p.initiator,
+                        &project.initiator,
                         |completed_projects| -> DispatchResult {
                             completed_projects
                                 .try_push(project_key)
@@ -190,10 +187,9 @@ impl<T: Config> Pallet<T> {
                             Ok(())
                         },
                     )?;
-                    *project = None;
+                    *maybe_project = None;
                 }
             }
-            Ok(())
         })?;
 
         Self::deposit_event(Event::ProjectFundsWithdrawn(
@@ -331,8 +327,8 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
     ) -> Weight {
         let mut weight: Weight = <Weight as Zero>::zero();
         weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-        ProjectsInDispute::<T>::remove(project_key);
 
+        ProjectsInDispute::<T>::remove(project_key);
         Projects::<T>::mutate(project_key, |maybe_project|{
                 match maybe_project {
                     Some(project) => {
@@ -345,11 +341,6 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
                             }
                         },
                         DisputeResult::Failure => {
-
-                        // OnFailure
-                        // should not modify the state of the project except perhaps recording the amount of disputes previosuly handled.
-                        // Emit event for failure?? check if pallet_disputes does this.
-                        // revert anything that has happened as a result of calling a dispute (should be nothing as the 2 are independant.)
                         },
                     };
                     weight

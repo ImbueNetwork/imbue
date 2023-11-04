@@ -412,17 +412,15 @@ pub mod pallet {
             let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             ensure!(milestone_keys.iter().all(|ms_key|project.milestones.contains_key(ms_key)), Error::<T>::MilestoneDoesNotExist);
             ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute);
-            ensure!(!ProjectsInDispute::<T>::get(project_key).iter().any(|ms_key| milestone_keys.contains(ms_key)), Error::<T>::MilestonesAlreadyInDispute);
+            ensure!(!ProjectsInDispute::<T>::contains_key(&project_key), Error::<T>::MilestonesAlreadyInDispute);
             ensure!(
                 !project.milestones.iter().any(|(milestone_key, milestone)|{milestone_keys.contains(milestone_key) && milestone.is_approved}),
                 Error::<T>::CannotRaiseDisputeOnApprovedMilestone
             );
 
             <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys.clone())?;
-            ProjectsInDispute::<T>::mutate(project_key, |keys|{
-                // Test this pls
-                keys.try_append(&mut milestone_keys.into_inner()).expect("The length will never exceed MaxMilestonePerProject as input must be within projects.milestones and distinct; qed.")
-            });
+            ProjectsInDispute::<T>::insert(project_key, milestone_keys);
+
             Ok(().into())
         }
     }
@@ -574,12 +572,16 @@ pub struct ProposedMilestone {
 /// TODO: add ipfs hash like in the grants pallet and
 
 // TODO: MIGRATION FOR MILESTONES
+//is_withdrawn
+//can_refund
+//is_refunded
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Milestone {
     pub project_key: ProjectKey,
     pub milestone_key: MilestoneKey,
     pub percentage_to_unlock: Percent,
     pub is_approved: bool,
+    pub is_withdrawn: bool,
     pub can_refund: bool,
     pub is_refunded: bool,
 }

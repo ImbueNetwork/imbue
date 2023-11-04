@@ -50,14 +50,53 @@ fn raise_dispute_milestone_already_in_dispute() {
 #[test]
 fn raise_dispute_invalid_milestone_key() {
     build_test_externality().execute_with(|| {
-
+        let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let project_key = create_and_fund_project::<Test>(
+            *ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+        ).unwrap();
+        assert_noop!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, vec![11u32].try_into().unwrap()), Error::<Test>::MilestoneDoesNotExist);
+        assert_noop!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, vec![12u32].try_into().unwrap()), Error::<Test>::MilestoneDoesNotExist);
+        assert_noop!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, vec![1u32, 11u32].try_into().unwrap()), Error::<Test>::MilestoneDoesNotExist);
     })
 }
 
 #[test]
 fn raise_dispute_cant_raise_on_approved_milestone() {
     build_test_externality().execute_with(|| {
+        let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let project_key = create_and_fund_project::<Test>(
+            *ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+        ).unwrap();
+        let submitted_milestone_key = 0u32;
 
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(*ALICE),
+            project_key,
+            submitted_milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            submitted_milestone_key,
+            true
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*CHARLIE),
+            project_key,
+            submitted_milestone_key,
+            true
+        ));
+        // Milestone should be approved.
+        assert_noop!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, vec![submitted_milestone_key].try_into().unwrap()), Error::<Test>::CannotRaiseDisputeOnApprovedMilestone);
+        assert_noop!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, vec![submitted_milestone_key, 2u32].try_into().unwrap()), Error::<Test>::CannotRaiseDisputeOnApprovedMilestone);
     })
 }
 
@@ -158,7 +197,7 @@ fn dispute_success_returns_non_zero_weight() {
 }
 
 #[test]
-fn raise_dispute_prevents_milestone_voting() {
+fn raise_dispute_allows_milestone_voting() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
@@ -184,12 +223,12 @@ fn raise_dispute_prevents_milestone_voting() {
         let dispute_milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
         assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, dispute_milestone_keys.clone()));
         
-        assert_noop!(Proposals::vote_on_milestone(
+        assert_ok!(Proposals::vote_on_milestone(
             RuntimeOrigin::signed(*CHARLIE),
             project_key,
             submitted_milestone_key,
             true
-        ), Error::<Test>::MilestonesAlreadyInDispute);
+        ));
     })
 }
 
