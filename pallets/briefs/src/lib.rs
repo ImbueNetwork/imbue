@@ -37,6 +37,7 @@ pub mod pallet {
     use sp_core::H256;
     use sp_runtime::traits::Zero;
     use sp_std::convert::{From, TryInto};
+    use pallet_fellowship::traits::SelectJury;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -70,8 +71,8 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        /// The currency type.
         type RMultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-        type AuthorityOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// The type that allows for evolution from brief to proposal.
         type IntoProposal: IntoProposal<AccountIdOf<Self>, BalanceOf<Self>, BlockNumberFor<Self>>;
         /// The maximum amount of owners to a brief.
@@ -82,7 +83,11 @@ pub mod pallet {
         /// Storage deposits.
         type BriefStorageItem: Get<StorageItemOf<Self>>;
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
-
+        /// The jury size of each brief as selected by JurySelector.
+        type StandardJurySize: Get<u32>
+        /// The type that selects a list of jury members.
+        type JurySelector: SelectJury<AccountIdOf<Self>>;
+        /// The weight info for the extrinsics. 
         type WeightInfo: WeightInfoT;
     }
 

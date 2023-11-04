@@ -423,7 +423,32 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        /// Attempt a refund of milestones.
+        /// Will only refund milestones that have can_refund set to true.
+        #[pallet::call_index(14)]
+        #[pallet::weight(<Weight as Zero>::zero())]
+        pub fn refund(
+            origin: OriginFor<T>,
+            project_key: ProjectKey,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
+            ensure!(milestone_keys.iter().all(|ms_key|project.milestones.contains_key(ms_key)), Error::<T>::MilestoneDoesNotExist);
+            ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute);
+            ensure!(!ProjectsInDispute::<T>::contains_key(&project_key), Error::<T>::MilestonesAlreadyInDispute);
+            ensure!(
+                !project.milestones.iter().any(|(milestone_key, milestone)|{milestone_keys.contains(milestone_key) && milestone.is_approved}),
+                Error::<T>::CannotRaiseDisputeOnApprovedMilestone
+            );
+
+            <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys.clone())?;
+            ProjectsInDispute::<T>::insert(project_key, milestone_keys);
+
+            Ok(().into())
+        }
     }
+
     impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
         for crate::Pallet<T>
     where
