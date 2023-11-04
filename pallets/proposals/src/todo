@@ -4,6 +4,17 @@ benchmark for raise dispute extrinsic
 ALLOW VOTING ON SUBMITTED MILESTONE - done
 make sure when raising a dispute you cannot raise it on approved milestones. - done
 
+OnDisputeCompleteHooks.
+tests for above implementation. - done check code cov
+
+update change withdraw to uses can_withdraw - done
+benchmark for hooks to return weight. - done didnt need, we can do it directly in the method.
+fix all tests
+
+removal of old no confidence logic. - done
+get jury in each pallet (briefs, grants, crowdfunding.)
+update the function call in each pallet (jury, TreasuryOrigin, )
+
 Migration for removing NoConfidenceLogic
     #[pallet::storage]
     #[pallet::getter(fn no_confidence_votes)]
@@ -12,14 +23,5 @@ Migration for removing NoConfidenceLogic
 Migration removing NoConfidenceRound,
 
 
-OnDisputeCompleteHooks.
-tests for above implementation. - done check code cov
-
-update change withdraw to uses can_withdraw 
-benchmark for hooks to return weight. - done didnt need, we can do it directly in the method.
-
-removal of old no confidence logic. - done
-get jury in each pallet (briefs, grants, crowdfunding.)
-update the function call in each pallet (jury, TreasuryOrigin, )
 
 

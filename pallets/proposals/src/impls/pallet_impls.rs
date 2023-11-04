@@ -333,9 +333,6 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
         specifics: Vec<MilestoneKey>,
         dispute_result: pallet_disputes::pallet::DisputeResult,
     ) -> Weight {
-        let mut weight: Weight = <Weight as Zero>::zero();
-        weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-
         ProjectsInDispute::<T>::remove(project_key);
         Projects::<T>::mutate(project_key, |maybe_project|{
                 match maybe_project {
@@ -351,16 +348,17 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
                         DisputeResult::Failure => {
                         },
                     };
-                    weight
                 },
                 // Looks like the project was deleted somehow during the dispute. 
                 // The only way this is possible is through a refund or final withdraw.
                 // Not a massive issue as either way the project has been finalised.
                 // Just ignore and return weight.
                 None => {
-                    weight
                 }
             }
-        })
+        });
+        // ProjectsInDispute::remove
+        // Projects::mutate
+        T::DbWeight::get().reads_writes(2, 2)
     }
 }
