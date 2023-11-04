@@ -418,10 +418,10 @@ pub mod pallet {
                 Error::<T>::CannotRaiseDisputeOnApprovedMilestone
             );
 
-            <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys)?;
-            ProjectsInDispute::<T>::mutate(project_key |keys|{
+            <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys.clone())?;
+            ProjectsInDispute::<T>::mutate(project_key, |keys|{
                 // Test this pls
-                keys.try_append(milestone_keys)
+                keys.try_append(&mut milestone_keys.into_inner()).expect("The length will never exceed MaxMilestonePerProject as input must be within projects.milestones and distinct; qed.")
             });
             Ok(().into())
         }

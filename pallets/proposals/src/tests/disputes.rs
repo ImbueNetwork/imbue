@@ -41,8 +41,8 @@ fn raise_dispute_milestone_already_in_dispute() {
         ).unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
         assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, milestone_keys));
-        for i in milestones.iter() {
-            assert_noop!(Proposals::raise_dispute(RuntimeOrigin::signed(*CHARLIE), project_key, vec![i].try_into().unwrap()), Error::<Test>::MilestonesAlreadyInDispute);
+        for (i, index) in milestones.iter().enumerate() {
+            assert_noop!(Proposals::raise_dispute(RuntimeOrigin::signed(*CHARLIE), project_key, vec![i as u32].try_into().unwrap()), Error::<Test>::MilestonesAlreadyInDispute);
         }
     })
 }

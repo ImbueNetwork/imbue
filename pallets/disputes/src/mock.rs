@@ -59,7 +59,6 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-    pub MaxReasonLength: u32 = 100;
     pub MaxJurySize: u32 = 3;
     pub MaxSpecifics: u32 = 10;
     pub VotingTimeLimit: BlockNumber = 10;
@@ -71,7 +70,6 @@ impl pallet_disputes::Config for Test {
     type WeightInfo = ();
     type DisputeKey = u32;
     type SpecificId = u32;
-    type MaxReasonLength = MaxReasonLength;
     type MaxJurySize = MaxJurySize;
     type MaxSpecifics = MaxSpecifics;
     type MaxDisputesPerBlock = MaxDisputesPerBlock;
@@ -131,7 +129,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 impl crate::traits::DisputeHooks<u32, u32> for Test {
     fn on_dispute_complete(
         _dispute_key: u32,
-        _specifics: u32,
+        _specifics: Vec<u32>,
         _dispute_result: crate::pallet::DisputeResult,
     ) -> Weight {
         <Weight as Default>::default()
