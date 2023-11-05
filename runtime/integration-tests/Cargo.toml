@@ -104,3 +104,6 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"common-runtime/runtime-benchmarks"
 ]
+try-runtime = [
+    "kusama-runtime/try-runtime",
+]
