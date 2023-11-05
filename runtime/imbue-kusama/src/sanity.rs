@@ -1,7 +1,11 @@
 use crate::Runtime;
+use crate::Weight;
 use common_runtime::MAXIMUM_BLOCK_WEIGHT;
+use pallet_fellowship::{Role, Roles};
 use pallet_proposals::{WeightInfo as PWeightInfo, WeightInfoT};
-use sp_arithmetic::Percent;
+use sp_arithmetic::{traits::Zero, Percent};
+use sp_runtime::{AccountId32, BuildStorage};
+use std::str::FromStr;
 
 #[test]
 fn ensure_maximum_milestones_are_consistent_grants() {
@@ -69,4 +73,35 @@ fn ensure_proposals_initialize_is_less_than_10_percent_block() {
         proof_size <= max_proof_size,
         "ExpiringProjectRoundsPerBlock is exceeding proof size limits."
     );
+}
+
+// Done here aswell as the migration.
+// Wanted to test the FromStr using the ss58 vs using hex and AccountId32::new().
+// Needed the Runtime type for easy testing with AccountId32 due to the bound on MigrateInitial.
+#[test]
+fn migrate_initial_check_accounts() {
+    let t = frame_system::GenesisConfig::<Runtime>::default()
+        .build_storage()
+        .unwrap();
+    let mut ext = sp_io::TestExternalities::new(t);
+
+    ext.execute_with(|| {
+        let initial_fellows =
+            pallet_fellowship::migration::v0::MigrateInitial::<Runtime>::get_initial_fellows();
+        pallet_fellowship::migration::v0::MigrateInitial::<Runtime>::insert_initial_fellows(
+            &mut <Weight as Zero>::zero(),
+            initial_fellows,
+        );
+        let accounts_actual = vec![
+            AccountId32::from_str("5Da1Fna8wvgQNmCFPhcRGR9oxmhyPd7MNhPZADq2X6GiKkkr").unwrap(),
+            AccountId32::from_str("5DCzKK5EZvY77vxxWXeip7sp17TqB7sk7Fj1hXes7Bo6B5Eq").unwrap(),
+            AccountId32::from_str("5DU2hcQnEmrSXCDUnjiwNX3A1uTf26ACpgs4KUFpsLJqAnjd").unwrap(),
+            AccountId32::from_str("5F28xL42VWThNonDft4TAQ6rw6a82E2jMsQXS5uMyKiA4ccv").unwrap(),
+            AccountId32::from_str("5E6pjCAGAtpV4nDoTWfMyQ474ku9DNScYeU3PK3e8Jd94Z1n").unwrap(),
+        ];
+
+        for acc in accounts_actual.iter() {
+            assert_eq!(Roles::<Runtime>::get(acc).unwrap(), (Role::Freelancer, 1));
+        }
+    })
 }

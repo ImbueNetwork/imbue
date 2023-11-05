@@ -10,6 +10,7 @@ use frame_system::Pallet as System;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
+use sp_std::vec;
 
 #[benchmarks( where crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
 mod benchmarks {

@@ -99,6 +99,7 @@ common-types = { path = "../../libs/common-types", default-features = false }
 common-runtime = { path = "../common", default-features = false }
 pallet-briefs = {path = '../../pallets/briefs', default-features = false }
 pallet-deposits = {path = '../../pallets/deposits', default-features = false }
+pallet-fellowship = {path = '../../pallets/fellowship', default-features = false }
 pallet-grants = {path = '../../pallets/grants', default-features = false }
 pallet-proposals = { path = '../../pallets/proposals', default-features = false }
 pallet-proposals-rpc-runtime-api = { path = "../../pallets/proposals/rpc/runtime-api", default-features = false }
@@ -150,6 +151,7 @@ std = [
 	"pallet-collective/std",
 	"pallet-democracy/std",
 	"pallet-deposits/std",
+	"pallet-fellowship/std",
 	"pallet-grants/std",
 	"pallet-identity/std",
 	"pallet-membership/std",
@@ -230,6 +232,7 @@ try-runtime = [
 	'pallet-collective/try-runtime',
 	'pallet-democracy/try-runtime',
 	'pallet-deposits/try-runtime',
+	'pallet-fellowship/try-runtime',
 	'pallet-grants/try-runtime',
 	'pallet-identity/try-runtime',
 	'pallet-membership/try-runtime',
@@ -280,7 +283,8 @@ runtime-benchmarks = [
 	'pallet-xcm/runtime-benchmarks',
 	'sp-runtime/runtime-benchmarks',
 	'xcm-builder/runtime-benchmarks',
-	"pallet-deposits/runtime-benchmarks"
+	"pallet-deposits/runtime-benchmarks",
+	"pallet-fellowship/runtime-benchmarks",
 ]
 
 # A feature that should be enabled when the runtime should be build for on-chain

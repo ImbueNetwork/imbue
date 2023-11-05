@@ -1,119 +1,7 @@
-use crate::impls::*;
-use crate::traits::*;
-use crate::*;
-use crate::{mock::*, Error, Event, FellowToVetter, Role, Roles};
-use common_traits::MaybeConvert;
-use common_types::CurrencyId;
-use frame_support::{assert_noop, assert_ok, traits::Hooks, BoundedBTreeMap};
-use orml_tokens::Error as TokensError;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::{traits::BadOrigin, DispatchError};
-use sp_std::vec;
+use super::*;
 
 // Saves a bit of typing.
 type DCIdOf<Test> = <Test as Config>::DepositCurrencyId;
-fn add_to_fellowship_take_deposit(
-    who: &AccountIdOf<Test>,
-    role: Role,
-    rank: Rank,
-    vetter: Option<&VetterIdOf<Test>>,
-) -> Result<(), DispatchError> {
-    <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::add_to_fellowship(
-        who, role, rank, vetter, true,
-    );
-    Ok(())
-}
-
-fn revoke_fellowship(who: &AccountIdOf<Test>, slash_deposit: bool) -> Result<(), DispatchError> {
-    <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::revoke_fellowship(who, slash_deposit)
-}
-
-pub fn run_to_block<T: Config>(n: BlockNumber) {
-    while System::block_number() < n {
-        Tokens::on_finalize(System::block_number());
-        Fellowship::on_finalize(System::block_number());
-        System::on_finalize(System::block_number());
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-        Fellowship::on_initialize(System::block_number());
-        Tokens::on_initialize(System::block_number());
-    }
-}
-
-#[test]
-fn ensure_role_in_works() {
-    new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(ALICE, (Role::Vetter, 10));
-        Roles::<Test>::insert(BOB, (Role::Freelancer, 10));
-
-        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(
-            &ALICE,
-            vec![Role::Vetter, Role::Freelancer],
-            None
-        ));
-        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(
-            &BOB,
-            vec![Role::Vetter, Role::Freelancer],
-            None
-        ));
-        assert!(
-            EnsureFellowshipRole::<Test>::ensure_role_in(&BOB, vec![Role::Approver], None).is_err(),
-            "BOB is not of this Role."
-        );
-        assert!(
-            EnsureFellowshipRole::<Test>::ensure_role_in(&ALICE, vec![Role::Freelancer], None)
-                .is_err(),
-            "ALICE is not of this Role."
-        );
-    });
-}
-
-#[test]
-fn ensure_role_in_works_with_rank() {
-    new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(ALICE, (Role::Vetter, 10));
-        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(
-            &ALICE,
-            vec![Role::Vetter],
-            Some(vec![10, 9])
-        ));
-
-        assert_noop!(
-            EnsureFellowshipRole::<Test>::ensure_role_in(&ALICE, vec![Role::Vetter], Some(vec![9])),
-            BadOrigin
-        );
-    });
-}
-
-#[test]
-fn ensure_role_works() {
-    new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(ALICE, (Role::Vetter, 0));
-        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role(
-            &ALICE,
-            Role::Vetter,
-            None
-        ));
-        assert!(EnsureFellowshipRole::<Test>::ensure_role(&ALICE, Role::Freelancer, None).is_err());
-    });
-}
-
-#[test]
-fn ensure_role_works_with_rank() {
-    new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(ALICE, (Role::Vetter, 10));
-        assert_ok!(EnsureFellowshipRole::<Test>::ensure_role(
-            &ALICE,
-            Role::Vetter,
-            Some(10)
-        ));
-
-        assert_noop!(
-            EnsureFellowshipRole::<Test>::ensure_role(&ALICE, Role::Vetter, Some(9)),
-            BadOrigin
-        );
-    });
-}
 
 #[test]
 fn freelancer_to_vetter_works() {
@@ -348,7 +236,7 @@ fn add_candidate_to_shortlist_not_a_vetter() {
                 Role::Freelancer,
                 10
             ),
-            Error::<Test>::NotAVetter
+            Error::<Test>::NotAFellow
         );
     });
 }
@@ -483,7 +371,7 @@ fn remove_candidate_from_shortlist_not_a_vetter() {
 
         assert_noop!(
             Fellowship::remove_candidate_from_shortlist(RuntimeOrigin::signed(CHARLIE), ALICE),
-            Error::<Test>::NotAVetter
+            Error::<Test>::NotAFellow
         );
     });
 }

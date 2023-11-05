@@ -69,6 +69,7 @@ impl pallet_fellowship::Config for Test {
     type MembershipDeposit = MembershipDeposit;
     type DepositCurrencyId = DepositCurrencyId;
     type SlashAccount = SlashAccount;
+    type Permissions = crate::impls::VetterAndFreelancerAllPermissions;
     type WeightInfo = ();
 }
 

@@ -4,11 +4,10 @@ use common_traits::MaybeConvert;
 use frame_support::{ensure, traits::Get};
 use orml_traits::MultiReservableCurrency;
 use sp_runtime::{
-    traits::{BadOrigin, Convert},
-    DispatchError, Percent,
+    traits::BadOrigin,
+    DispatchError,
 };
-use sp_std::vec::Vec;
-
+use sp_std::{vec, vec::Vec};
 /// Ensure that a account is of a given role.
 /// Used in other pallets like an ensure origin.
 pub struct EnsureFellowshipRole<T>(T);
@@ -47,18 +46,6 @@ impl<T: Config> MaybeConvert<&AccountIdOf<T>, VetterIdOf<T>> for Pallet<T> {
     }
 }
 
-pub struct RoleToPercentFee;
-impl Convert<crate::Role, Percent> for RoleToPercentFee {
-    fn convert(role: Role) -> Percent {
-        match role {
-            Role::Vetter => Percent::from_percent(50u8),
-            Role::Freelancer => Percent::from_percent(50u8),
-            Role::BusinessDev => Percent::from_percent(50u8),
-            Role::Approver => Percent::from_percent(50u8),
-        }
-    }
-}
-
 impl<T: Config> Pallet<T> {
     /// Try take the membership deposit from who
     /// If the deposit was taken, this will return true, else false.
@@ -75,5 +62,22 @@ impl<T: Config> Pallet<T> {
             return true;
         }
         false
+    }
+}
+
+pub struct VetterAndFreelancerAllPermissions;
+impl crate::traits::FellowshipPermissions<crate::Role, crate::Permission>
+    for VetterAndFreelancerAllPermissions
+{
+    fn has_permission(role: Role, permission: Permission) -> bool {
+        Self::get_permissions(role).contains(&permission)
+    }
+
+    // Force match on all so we dont forget to add permissions when we add new roles.
+    fn get_permissions(role: Role) -> Vec<Permission> {
+        match role {
+            Role::Freelancer => vec![Permission::AddToShortlist, Permission::RemoveFromShortlist],
+            Role::Vetter => vec![Permission::AddToShortlist, Permission::RemoveFromShortlist],
+        }
     }
 }

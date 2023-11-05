@@ -1,9 +1,8 @@
 use frame_support::{assert_noop, assert_ok};
 
+use crate::{mock::*, *};
 use common_types::CurrencyId;
 use test_utils::*;
-
-use crate::{mock::*, *};
 
 pub fn run_to_block(n: BlockNumber) {
     while System::block_number() < n {
