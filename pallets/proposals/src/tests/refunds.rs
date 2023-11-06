@@ -99,7 +99,7 @@ fn refund_deletes_project_when_all_funds_are_refunded() {
 // before the refund has been called.
 // Without the proper checks there will be a kind of double spend.
 #[test]
-fn refund_only_transfers_milestones_which_havent_been_withdrawn() {
+fn withdraw_then_refund_no_double_spend() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![*BOB], 1_000_000u128);
         let milestones = get_milestones(10);
@@ -136,6 +136,41 @@ fn refund_only_transfers_milestones_which_havent_been_withdrawn() {
         assert_ok!(Proposals::refund(RuntimeOrigin::signed(*BOB), project_key));
         let bob_after_refund = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &BOB);
         assert_eq!(bob_after_refund, (bob_before_creation - project_after_withdraw.withdrawn_funds - refund_fee), "bobs shizzle aint what it should be.");
+    })
+}
+
+
+// The reverse case of withdraw_then_refund_no_double_spend
+// essentially if a milestone is refunded one cannot withdraw an approved milestone as its already gone.
+#[test]
+fn refund_then_withdraw_no_double_spend() {
+    build_test_externality().execute_with(|| {
+        let contributions = get_contributions::<Test>(vec![*BOB], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let milestone_key = 0;
+        let alice_before_creation = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let bob_before_creation = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+        let project_key = create_and_fund_project::<Test>(
+            *ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+        ).unwrap();
+        let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..5 as u32).collect::<Vec<u32>>().try_into().unwrap();
+        let _ = Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, milestone_keys.clone());
+        let _ = complete_dispute::<Test>(project_key, milestone_keys.into_inner(), DisputeResult::Success);
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key).unwrap();
+
+        let _ = Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(*BOB),
+            project_key,
+            milestone_key,
+            true,
+        )
+        .unwrap();
+        assert_ok!(Proposals::refund(RuntimeOrigin::signed(*BOB), project_key));
+        assert_noop!(Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key), Error::<Test>::NoAvailableFundsToWithdraw);
     })
 }
 
