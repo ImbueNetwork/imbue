@@ -45,7 +45,21 @@ fn refund_not_contributor() {
 #[test]
 fn refund_deletes_project_when_all_funds_are_refunded() {
     build_test_externality().execute_with(|| {
-
+        let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let project_key = create_and_fund_project::<Test>(
+            *ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+        ).unwrap();
+        let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
+        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, milestone_keys.clone()));
+        let _ = complete_dispute::<Test>(project_key, milestone_keys.into_inner(), DisputeResult::Success);
+        // All milestones should be good for refund
+        
+        let _ = Proposals::refund(RuntimeOrigin::signed(*BOB), project_key).unwrap();
+        assert!(!Projects::<Test>::contains_key(project_key));
     })
 }
 
@@ -62,7 +76,28 @@ fn refund_only_transfers_milestones_which_havent_been_withdrawn() {
 #[test]
 fn refund_check_refund_amount() {
     build_test_externality().execute_with(|| {
-
+        let bob_pre_creation = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &BOB);
+        let charlie_pre_creation = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &CHARLIE);
+        let per_contribution = 100000u64;
+        let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], per_contribution as u128);
+        let milestones = get_milestones(10);
+        let project_key = create_and_fund_project::<Test>(
+            *ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+        ).unwrap();
+        let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
+        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, milestone_keys.clone()));
+        let _ = complete_dispute::<Test>(project_key, milestone_keys.into_inner(), DisputeResult::Success);
+        // All milestones should be good for refund
+        
+        assert_ok!(Proposals::refund(RuntimeOrigin::signed(*BOB), project_key));
+        let bob_post_refund = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &BOB);
+        let charlie_post_refund = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &CHARLIE);
+        let per_fee = <Test as Config>::ImbueFee::get().mul_floor(per_contribution);
+        assert_eq!(bob_pre_creation - per_fee, bob_post_refund , "bobo didnt get his money back!!");
+        assert_eq!(charlie_pre_creation - per_fee, charlie_post_refund , "charlie didnt get his money back!!");
     })
 }
 
