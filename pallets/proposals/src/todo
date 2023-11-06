@@ -14,10 +14,10 @@ get jury in each pallet (briefs, grants, crowdfunding.)
 update the function call in each pallet (jury, TreasuryOrigin, )
 code cov check
 
-initiate refund extrinsic
-tests!
-add total_refunded to withdraw extrinsic
-tests for these
+initiate refund extrinsic - done
+tests! - done
+add total_refunded to withdraw extrinsic - done
+tests for these - not done
 
 Migration for removing NoConfidenceLogic
     #[pallet::storage]

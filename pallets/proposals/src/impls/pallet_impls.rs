@@ -176,7 +176,7 @@ impl<T: Config> Pallet<T> {
 
                 project.withdrawn_funds = project.withdrawn_funds.saturating_add(withdrawable);
         
-                if project.withdrawn_funds == project.raised_funds {
+                if project.withdrawn_funds.saturating_add(project.refunded_funds) == project.raised_funds {
                     <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
                     CompletedProjects::<T>::try_mutate(
                         &project.initiator,
@@ -334,6 +334,8 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
                         DisputeResult::Success => {
                             for milestone_key in specifics.iter() {
                                 if let Some(milestone) = project.milestones.get_mut(milestone_key) {
+                                // Shouldnt be needed but nice to have this check.
+                                // Will prevent someone calling both refund and withdraw on the same milestone. 
                                 if milestone.transfer_status == None {
                                     milestone.can_refund = true;
                                 }
@@ -341,6 +343,7 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
                             }
                         },
                         DisputeResult::Failure => {
+                            // I Guess do nothing.. ProjectsInDispute gets cleared regardless allowing further disputes.
                         },
                     };
                 },
@@ -354,6 +357,6 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
         });
         // ProjectsInDispute::remove
         // Projects::mutate
-        T::DbWeight::get().reads_writes(2, 2)
+        return T::DbWeight::get().reads_writes(2, 2)
     }
 }

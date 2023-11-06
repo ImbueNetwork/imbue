@@ -979,47 +979,7 @@ fn withdraw_assert_milestone_state_change() {
     });
 }
 
-
-// #[test]
-// fn fund_project_success() {
-//     build_test_externality().execute_with(|| {
-//         assert!(false);
-//     });
-// }
-
-// #[test]
-// fn fund_project_not_enough_to_reserve() {
-//     build_test_externality().execute_with(|| {
-//         assert!(false);
-//     });
-// }
-// #[test]
-// fn try_convert_to_milestones_too_many_milestones() {
-//     build_test_externality().execute_with(|| {
-//         assert!(false);
-//     });
-// }
-
-// #[test]
-// fn try_convert_to_milestones_works() {
-//     build_test_externality().execute_with(|| {
-//         assert!(false);
-//     });
-// }
-
-// #[test]
-// fn convert_contributions_to_refund_locations_works() {
-//     build_test_externality().execute_with(|| {
-//         assert!(false);
-//     });
-// }
-
-// fn convert_contributions_to_refund_locations_uses_treasury_for_dust_clearance() {
-//     build_test_externality().execute_with(|| {
-//         assert!(false);
-//     });
-// }
-
+#[test]
 fn close_voting_round_works() {
     build_test_externality().execute_with(|| {
         Rounds::<Test>::insert((0, 0), RoundType::VotingRound, 100);
@@ -1053,7 +1013,3 @@ fn close_voting_round_works() {
             .is_empty());
     })
 }
-
-// todo: finalise voteof no confidence tests.
-// ^^ is connected to making the pallet generic over funding type.
-// Todo: assert the last event of each extrinsic/

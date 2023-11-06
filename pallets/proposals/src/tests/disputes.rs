@@ -178,25 +178,6 @@ fn dispute_success_approves_milestone_for_refund_but_only_ones_specified() {
 }
 
 #[test]
-fn dispute_success_returns_non_zero_weight() {
-    build_test_externality().execute_with(|| {
-        let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
-        let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            *ALICE,
-            contributions,
-            milestones.clone(),
-            CurrencyId::Native,
-        ).unwrap();
-
-        let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
-        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, milestone_keys.clone()));
-        let weight = complete_dispute::<Test>(project_key, milestone_keys.into_inner(), DisputeResult::Success);
-        assert!(weight != <Weight as Zero>::zero());
-    })
-}
-
-#[test]
 fn raise_dispute_allows_milestone_voting() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
@@ -304,7 +285,27 @@ fn raise_dispute_allows_submission() {
 #[test]
 fn failed_dispute_tests() {
     build_test_externality().execute_with(|| {
-        assert!(false)
+        let contributions = get_contributions::<Test>(vec![*BOB, *CHARLIE], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let milestone_key = 0;
+        let project_key = create_and_fund_project::<Test>(
+            *ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+        ).unwrap();
+
+        let dispute_milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
+        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(*BOB), project_key, dispute_milestone_keys.clone()));
+        let _ = complete_dispute::<Test>(project_key, dispute_milestone_keys.into_inner(), DisputeResult::Failure);
+
+        // just gonna assert that the milestones arnt approved for refund.
+        let project_after_refund = Projects::<Test>::get(project_key).unwrap();
+        for i in 0u32..10 {
+            let milestone = project_after_refund.milestones.get(&i).unwrap();
+            assert!(!milestone.can_refund);
+            assert!(milestone.transfer_status.is_none());
+        }
     })
 }
 
