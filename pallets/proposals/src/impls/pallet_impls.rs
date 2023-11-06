@@ -143,8 +143,8 @@ impl<T: Config> Pallet<T> {
         let withdrawable = Projects::<T>::try_mutate_exists(project_key, |maybe_project|{
             if let Some(project) = maybe_project {
                 let withdrawable_percent: Percent = project.milestones.iter_mut().map(|(_key, mut ms)|{
-                    if ms.is_approved && !ms.is_withdrawn {
-                        ms.is_withdrawn = true;
+                    if ms.is_approved && ms.transfer_status == None {
+                        ms.transfer_status = Some(TransferStatus::Withdrawn{on: frame_system::Pallet::<T>::block_number()});
                         ms.percentage_to_unlock
                     } else {
                         <Percent as Zero>::zero()
@@ -246,16 +246,13 @@ impl<T: Config> Pallet<T> {
     ) -> Result<BoundedBTreeMilestones<T>, DispatchError> {
         let mut milestone_key: u32 = 0;
         let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
-        for milestone in proposed_milestones {
-            let milestone = Milestone {
+        for proposed_milestone in proposed_milestones {
+            let milestone = Milestone::new(
                 project_key,
                 milestone_key,
-                percentage_to_unlock: milestone.percentage_to_unlock,
-                is_approved: false,
-                is_withdrawn: false,
-                can_refund: false,
-                is_refunded: false,
-            };
+                proposed_milestone.percentage_to_unlock
+            );
+            
             milestones
                 .try_insert(milestone_key, milestone)
                 .map_err(|_| Error::<T>::TooManyMilestones)?;
@@ -341,7 +338,7 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
                         DisputeResult::Success => {
                             for milestone_key in specifics.iter() {
                                 if let Some(milestone) = project.milestones.get_mut(milestone_key) {
-                                if !milestone.is_withdrawn {
+                                if milestone.transfer_status == None {
                                     milestone.can_refund = true;
                                 }
                             }

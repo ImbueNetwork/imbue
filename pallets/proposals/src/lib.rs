@@ -62,7 +62,7 @@ pub type DepositIdOf<T> =
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedBTreeMilestones<T> =
-    BoundedBTreeMap<MilestoneKey, Milestone, <T as Config>::MaxMilestonesPerProject>;
+    BoundedBTreeMap<MilestoneKey, Milestone<BlockNumberFor<T>>, <T as Config>::MaxMilestonesPerProject>;
 pub type BoundedProposedMilestones<T> =
     BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
 pub type AgreementHash = H256;
@@ -428,7 +428,7 @@ pub mod pallet {
 
         /// Attempt a refund of milestones.
         /// Will only refund milestones that have can_refund set to true.
-        #[pallet::call_index(14)]
+        #[pallet::call_index(15)]
         #[pallet::weight(<Weight as Zero>::zero())]
         pub fn refund(
             origin: OriginFor<T>,
@@ -441,42 +441,46 @@ pub mod pallet {
             let mut total_refunded: BalanceOf<T> = Zero::zero();
             let project_account = Self::project_account_id(project_key);
 
-            project.milestones.iter().map(|(ms_key, ms)|{
-                if ms.can_refund && ms.transfer_status == None {
-                    for (refund_location, percent_share) in project.refund_locations {
-                        let amount = milestone.percentage_to_unlock.mul_floor(project.raised_funds);
-                        match refund_location {
-                            Locality::Local(acc) => {
-                                T::MultiCurrency::transfer(
-                                    project.currency_id,
-                                    &project_account,
-                                    &acc,
-                                    amount,
-                                )?;
-                            },
-                            Locality::Foreign(multilocation) => {
-                                T::ExternalRefundHandler::send_refund_message_to_treasury(
-                                    &project_account,
-                                    amount,
-                                    project.currency_id,
-                                    multilocation,
-                                )
-                            }
-                        }
-                        total_refunded = total_refunded.saturating_add(amount);
-                    }
-                }
-            })
-
-            Projects::<T>::mutate_exists(project_key, |maybe_project|{
+            Projects::<T>::try_mutate(project_key, |maybe_project|{
                 if let Some(project) = maybe_project {
-                    project.refunded_funds = project.refunded_funds.saturating_add(total_refunded);
+                    for (ms_key, mut ms) in project.milestones.iter_mut() {
+                        if ms.can_refund && ms.transfer_status.is_none() {
+                            for (refund_location, percent_share) in &project.refund_locations {
+                                let amount = ms.percentage_to_unlock.mul_floor(project.raised_funds);
+                                match refund_location {
+                                    Locality::Local(acc) => {
+                                        T::MultiCurrency::transfer(
+                                            project.currency_id,
+                                            &project_account,
+                                            &acc,
+                                            amount,
+                                        )?;
+                                    },
+                                    Locality::Foreign(multilocation) => {
+                                        T::ExternalRefundHandler::send_refund_message_to_treasury(
+                                            // TODO: change this to reference so that we dont have to clone....
+                                            project_account.clone(),
+                                            amount,
+                                            project.currency_id,
+                                            *multilocation,
+                                        )?;
+                                    }
+                                }
+                                total_refunded = total_refunded.saturating_add(amount);
+                            }
+                            ms.transfer_status = Some(TransferStatus::Refunded{on: frame_system::Pallet::<T>::block_number()});
+                        }
+                    }
+                    Ok::<(), DispatchError>(())
+                } else {
+                    Ok::<(), DispatchError>(())
                 }
+            })?;
 
-                if project.refunded_funds.saturating_add(project.withdrawn_funds) = project.raised_funds {
-                    *maybe_project = None;
-                }
-            });
+            //project.refunded_funds = project.refunded_funds.saturating_add(total_refunded);
+            //if project.refunded_funds.saturating_add(project.withdrawn_funds) == project.raised_funds {
+            //    *maybe_project = None;
+            //}
 
             Ok(().into())
         }
@@ -542,7 +546,7 @@ pub mod pallet {
                 milestones: converted_milestones,
                 contributions,
                 currency_id,
-                withdrawn_funds: 0u32.into(),
+                withdrawn_funds: Zero::zero(),
                 raised_funds: sum_of_contributions,
                 initiator: benificiary.clone(),
                 created_on: frame_system::Pallet::<T>::block_number(),
@@ -555,6 +559,7 @@ pub mod pallet {
                     .try_into()
                     .map_err(|_| Error::<T>::TooManyJuryMembers)?,
                 on_creation_funding,
+                refunded_funds: Zero::zero()
             };
 
             let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
@@ -640,6 +645,7 @@ pub struct Milestone<BlockNumber> {
     pub can_refund: bool,
     pub transfer_status: Option<TransferStatus<BlockNumber>>,
 }
+
 impl<B> Milestone<B> {
     fn new(project_key: ProjectKey, milestone_key: MilestoneKey, percentage_to_unlock: Percent) -> Self {
         Self {
@@ -751,6 +757,7 @@ pub enum FundingPath {
 
 /// Defines how the funds were taken out of a specific milestone.
 /// Contians the block number for possible further investigation.
+#[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub enum TransferStatus<BlockNumber> {
     Refunded{on: BlockNumber},
     Withdrawn{on: BlockNumber},

@@ -56,7 +56,7 @@ impl<T: crate::Config> ExternalRefundHandler<AccountIdOf<T>, BalanceOf<T>, Curre
         _from: AccountIdOf<T>,
         _amount: BalanceOf<T>,
         _currency: CurrencyId,
-        _treasury_origin: TreasuryOrigin
+        _multilocation: MultiLocation
     ) -> Result<(), DispatchError> {
         Ok(())
     }
@@ -80,7 +80,7 @@ where
         from: T::AccountId,
         amount: T::Balance,
         currency: CurrencyId,
-        treasury_origin: MultiLocation,
+        location: MultiLocation,
     ) -> Result<(), DispatchError> {
         // TODO: dest weight limit. or specify a fee.
         let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
