@@ -441,7 +441,7 @@ pub mod pallet {
             let mut total_refunded: BalanceOf<T> = Zero::zero();
             let project_account = Self::project_account_id(project_key);
 
-            Projects::<T>::try_mutate(project_key, |maybe_project|{
+            Projects::<T>::try_mutate_exists(project_key, |maybe_project|{
                 if let Some(project) = maybe_project {
                     for (ms_key, mut ms) in project.milestones.iter_mut() {
                         if ms.can_refund && ms.transfer_status.is_none() {
@@ -471,17 +471,15 @@ pub mod pallet {
                             ms.transfer_status = Some(TransferStatus::Refunded{on: frame_system::Pallet::<T>::block_number()});
                         }
                     }
+                    project.refunded_funds = project.refunded_funds.saturating_add(total_refunded);
+                    if project.refunded_funds.saturating_add(project.withdrawn_funds) == project.raised_funds {
+                        *maybe_project = None;
+                    }
                     Ok::<(), DispatchError>(())
                 } else {
                     Ok::<(), DispatchError>(())
                 }
             })?;
-
-            //project.refunded_funds = project.refunded_funds.saturating_add(total_refunded);
-            //if project.refunded_funds.saturating_add(project.withdrawn_funds) == project.raised_funds {
-            //    *maybe_project = None;
-            //}
-
             Ok(().into())
         }
     }
