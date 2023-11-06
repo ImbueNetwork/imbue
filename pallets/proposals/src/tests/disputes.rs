@@ -314,3 +314,16 @@ fn failed_dispute_tests() {
     })
 }
 
+#[test]
+fn assert_can_recall_dispute_after_success() {
+    build_test_externality().execute_with(|| {
+    })
+}
+
+#[test]
+fn assert_can_recall_dispute_after_failure() {
+    build_test_externality().execute_with(|| {
+    })
+}
+
+

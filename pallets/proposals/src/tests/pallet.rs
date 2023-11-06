@@ -956,6 +956,30 @@ fn withdraw_fails_before_approval() {
     });
 }
 
+#[test]
+fn withdraw_assert_milestone_state_change() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key =
+            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
+                .unwrap();
+        let milestone_key = 0;
+        assert_noop!(
+            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Error::<Test>::NoAvailableFundsToWithdraw
+        );
+        let _ =
+            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+                .unwrap();
+        assert_noop!(
+            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Error::<Test>::NoAvailableFundsToWithdraw
+        );
+    });
+}
+
+
 // #[test]
 // fn fund_project_success() {
 //     build_test_externality().execute_with(|| {
