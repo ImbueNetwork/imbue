@@ -446,27 +446,40 @@ pub mod pallet {
                     for (ms_key, mut ms) in project.milestones.iter_mut() {
                         if ms.can_refund && ms.transfer_status.is_none() {
                             for (refund_location, percent_share) in &project.refund_locations {
-                                let amount = ms.percentage_to_unlock.mul_floor(project.raised_funds);
+                                let milestone_amount = ms.percentage_to_unlock.mul_floor(project.raised_funds);
+                                let total_amount = percent_share.mul_floor(milestone_amount);
+                                let fee = <T as Config>::ImbueFee::get().mul_floor(total_amount);
+                                let refund_amount = total_amount.saturating_sub(fee);
+                
                                 match refund_location {
                                     Locality::Local(acc) => {
                                         T::MultiCurrency::transfer(
                                             project.currency_id,
                                             &project_account,
                                             &acc,
-                                            amount,
+                                            refund_amount,
                                         )?;
                                     },
                                     Locality::Foreign(multilocation) => {
                                         T::ExternalRefundHandler::send_refund_message_to_treasury(
                                             // TODO: change this to reference so that we dont have to clone....
                                             project_account.clone(),
-                                            amount,
+                                            refund_amount,
                                             project.currency_id,
                                             *multilocation,
                                         )?;
                                     }
                                 }
-                                total_refunded = total_refunded.saturating_add(amount);
+
+                                // Take the fee and send to ImbueFeeAccount   
+                                T::MultiCurrency::transfer(
+                                    project.currency_id,
+                                    &project_account,
+                                    &<T as Config>::ImbueFeeAccount::get(),
+                                    fee,
+                                )?;
+
+                                total_refunded = total_refunded.saturating_add(total_amount);
                             }
                             ms.transfer_status = Some(TransferStatus::Refunded{on: frame_system::Pallet::<T>::block_number()});
                         }

@@ -763,6 +763,8 @@ fn withdraw_takes_imbue_fee() {
                 .unwrap();
         let milestone_key = 0;
         let fee_account: AccountId = <Test as Config>::ImbueFeeAccount::get();
+        let fee_account_balance_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &fee_account);
+
         let _ =
             Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
                 .unwrap();
@@ -778,8 +780,10 @@ fn withdraw_takes_imbue_fee() {
             project_key
         ));
         let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10_000);
+        let fee_account_balance_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &fee_account);
+
         assert_eq!(
-            <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &fee_account),
+            fee_account_balance_after - fee_account_balance_before,
             expected_fee,
             "fee hasnt been taken out of project as expected."
         );
@@ -952,60 +956,45 @@ fn withdraw_fails_before_approval() {
     });
 }
 
-#[test]
-#[test]
-fn convert_to_proposal_too_many_refund_locations() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
+// #[test]
+// fn fund_project_success() {
+//     build_test_externality().execute_with(|| {
+//         assert!(false);
+//     });
+// }
 
-#[test]
-fn convert_to_proposal_too_many_jury_members() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
+// #[test]
+// fn fund_project_not_enough_to_reserve() {
+//     build_test_externality().execute_with(|| {
+//         assert!(false);
+//     });
+// }
+// #[test]
+// fn try_convert_to_milestones_too_many_milestones() {
+//     build_test_externality().execute_with(|| {
+//         assert!(false);
+//     });
+// }
 
-#[test]
-fn fund_project_success() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
+// #[test]
+// fn try_convert_to_milestones_works() {
+//     build_test_externality().execute_with(|| {
+//         assert!(false);
+//     });
+// }
 
-#[test]
-fn fund_project_not_enough_to_reserve() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
-#[test]
-fn try_convert_to_milestones_too_many_milestones() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
+// #[test]
+// fn convert_contributions_to_refund_locations_works() {
+//     build_test_externality().execute_with(|| {
+//         assert!(false);
+//     });
+// }
 
-#[test]
-fn try_convert_to_milestones_works() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
-
-#[test]
-fn convert_contributions_to_refund_locations_works() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
-
-fn convert_contributions_to_refund_locations_uses_treasury_for_dust_clearance() {
-    build_test_externality().execute_with(|| {
-        assert!(false);
-    });
-}
+// fn convert_contributions_to_refund_locations_uses_treasury_for_dust_clearance() {
+//     build_test_externality().execute_with(|| {
+//         assert!(false);
+//     });
+// }
 
 fn close_voting_round_works() {
     build_test_externality().execute_with(|| {

@@ -307,4 +307,10 @@ fn refund_then_withdraw_doesnt_double_spend() {
     })
 }
 
+#[test]
+fn failed_dispute_tests() {
+    build_test_externality().execute_with(|| {
+        assert!(false)
+    })
+}
 
