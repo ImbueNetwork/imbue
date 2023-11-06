@@ -301,8 +301,10 @@ fn raise_dispute_allows_submission() {
 }
 
 #[test]
-fn you_can_actually_refund_after_dispute_success() {
+fn refund_then_withdraw_doesnt_double_spend() {
     build_test_externality().execute_with(|| {
-
+        assert!(false)
     })
 }
+
+

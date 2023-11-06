@@ -319,6 +319,8 @@ pub mod pallet {
         MilestonesAlreadyInDispute,
         /// You cannot raise a dispute on an approved milestone.
         CannotRaiseDisputeOnApprovedMilestone,
+        /// Only a contributor can initiate a refund.
+        OnlyContributorsCanInitiateRefund,
     }
 
     #[pallet::hooks]
@@ -434,16 +436,47 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-            ensure!(milestone_keys.iter().all(|ms_key|project.milestones.contains_key(ms_key)), Error::<T>::MilestoneDoesNotExist);
-            ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute);
-            ensure!(!ProjectsInDispute::<T>::contains_key(&project_key), Error::<T>::MilestonesAlreadyInDispute);
-            ensure!(
-                !project.milestones.iter().any(|(milestone_key, milestone)|{milestone_keys.contains(milestone_key) && milestone.is_approved}),
-                Error::<T>::CannotRaiseDisputeOnApprovedMilestone
-            );
+            ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanInitiateRefund);
 
-            <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys.clone())?;
-            ProjectsInDispute::<T>::insert(project_key, milestone_keys);
+            let mut total_refunded: BalanceOf<T> = Zero::zero();
+            let project_account = Self::project_account_id(project_key);
+
+            project.milestones.iter().map(|(ms_key, ms)|{
+                if ms.can_refund && ms.transfer_status == None {
+                    for (refund_location, percent_share) in project.refund_locations {
+                        let amount = milestone.percentage_to_unlock.mul_floor(project.raised_funds);
+                        match refund_location {
+                            Locality::Local(acc) => {
+                                T::MultiCurrency::transfer(
+                                    project.currency_id,
+                                    &project_account,
+                                    &acc,
+                                    amount,
+                                )?;
+                            },
+                            Locality::Foreign(multilocation) => {
+                                T::ExternalRefundHandler::send_refund_message_to_treasury(
+                                    &project_account,
+                                    amount,
+                                    project.currency_id,
+                                    multilocation,
+                                )
+                            }
+                        }
+                        total_refunded = total_refunded.saturating_add(amount);
+                    }
+                }
+            })
+
+            Projects::<T>::mutate_exists(project_key, |maybe_project|{
+                if let Some(project) = maybe_project {
+                    project.refunded_funds = project.refunded_funds.saturating_add(total_refunded);
+                }
+
+                if project.refunded_funds.saturating_add(project.withdrawn_funds) = project.raised_funds {
+                    *maybe_project = None;
+                }
+            });
 
             Ok(().into())
         }
@@ -597,18 +630,27 @@ pub struct ProposedMilestone {
 /// TODO: add ipfs hash like in the grants pallet and
 
 // TODO: MIGRATION FOR MILESTONES
-//is_withdrawn
 //can_refund
-//is_refunded
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-pub struct Milestone {
+pub struct Milestone<BlockNumber> {
     pub project_key: ProjectKey,
     pub milestone_key: MilestoneKey,
     pub percentage_to_unlock: Percent,
     pub is_approved: bool,
-    pub is_withdrawn: bool,
     pub can_refund: bool,
-    pub is_refunded: bool,
+    pub transfer_status: Option<TransferStatus<BlockNumber>>,
+}
+impl<B> Milestone<B> {
+    fn new(project_key: ProjectKey, milestone_key: MilestoneKey, percentage_to_unlock: Percent) -> Self {
+        Self {
+            project_key,
+            milestone_key,
+            percentage_to_unlock,
+            is_approved: false,
+            can_refund: false,
+            transfer_status: None,
+        }
+    }
 }
 
 /// The vote struct is used to
@@ -629,6 +671,7 @@ impl<Balance: Zero> Default for Vote<Balance> {
     }
 }
 
+// TODO MILESTONE MIGRATIONS
 /// The struct which contain milestones that can be submitted.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
@@ -657,6 +700,8 @@ pub struct Project<T: Config> {
     pub jury: BoundedVec<AccountIdOf<T>, T::MaxJuryMembers>,
     /// When is the project funded and how is it taken.
     pub on_creation_funding: FundingPath,
+    /// The amount of funds refunded.
+    pub refunded_funds: BalanceOf<T>,
 }
 
 /// For deriving the location of an account.
@@ -702,6 +747,13 @@ pub enum FundingPath {
     TakeFromReserved,
     /// Take nothing from the contributors and await funding from some outside source.
     WaitForFunding,
+}
+
+/// Defines how the funds were taken out of a specific milestone.
+/// Contians the block number for possible further investigation.
+pub enum TransferStatus<BlockNumber> {
+    Refunded{on: BlockNumber},
+    Withdrawn{on: BlockNumber},
 }
 
 /// Stores the btree for each individual vote.

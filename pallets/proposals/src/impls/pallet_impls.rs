@@ -341,8 +341,10 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
                         DisputeResult::Success => {
                             for milestone_key in specifics.iter() {
                                 if let Some(milestone) = project.milestones.get_mut(milestone_key) {
+                                if !milestone.is_withdrawn {
                                     milestone.can_refund = true;
                                 }
+                            }
                             }
                         },
                         DisputeResult::Failure => {

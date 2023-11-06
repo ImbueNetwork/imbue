@@ -15,6 +15,9 @@ update the function call in each pallet (jury, TreasuryOrigin, )
 code cov check
 
 initiate refund extrinsic
+tests!
+add total_refunded to withdraw extrinsic
+tests for these
 
 Migration for removing NoConfidenceLogic
     #[pallet::storage]

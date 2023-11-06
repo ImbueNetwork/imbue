@@ -35,13 +35,11 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
 
 pub trait ExternalRefundHandler<AccountId, Balance, CurrencyId> {
     /// Send a message to some destination chain asking to do some reserve asset transfer.
-    /// The multilocation is defined by the FundingType.
-    /// see FundingType and TreasuryOrigin.
     fn send_refund_message_to_treasury(
         from: AccountId,
         amount: Balance,
         currency: CurrencyId,
-        treasury_origin: TreasuryOrigin,
+        treasury_origin: MultiLocation,
     ) -> Result<(), DispatchError>;
     fn get_treasury_account_id(treasury_origin: TreasuryOrigin)
         -> Result<AccountId, DispatchError>;
@@ -82,13 +80,8 @@ where
         from: T::AccountId,
         amount: T::Balance,
         currency: CurrencyId,
-        treasury_origin: TreasuryOrigin,
+        treasury_origin: MultiLocation,
     ) -> Result<(), DispatchError> {
-        let beneficiary: AccountIdOf<T> = Self::get_treasury_account_id(treasury_origin)?;
-        let location: MultiLocation = treasury_origin
-            .get_multi_location(beneficiary)
-            .map_err(|_| Error::<T>::InvalidDest)?;
-        
         // TODO: dest weight limit. or specify a fee.
         let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
         Ok(())
