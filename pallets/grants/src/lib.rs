@@ -25,7 +25,7 @@ pub use weights::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
+    use common_types::{CurrencyId, TreasuryOrigin};
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -97,6 +97,8 @@ pub mod pallet {
         GrantAlreadyExists,
         /// There are too many milestones.
         TooManyMilestones,
+        /// This is an invalid Treasury origin.
+        InvalidTreasuryOrigin
     }
 
     #[pallet::call]
@@ -140,6 +142,7 @@ pub mod pallet {
                 })
                 .collect::<Vec<_>>();
 
+            let refund_locations = <T as Config>::IntoProposal::convert_contributions_to_refund_locations(&contributions);
             <T as Config>::IntoProposal::convert_to_proposal(
                 currency_id,
                 contributions,
@@ -148,7 +151,9 @@ pub mod pallet {
                 proposed_milestones
                     .try_into()
                     .map_err(|_| Error::<T>::TooManyMilestones)?,
-                FundingType::Grant(treasury_origin),
+                refund_locations,
+                treasury_origin.get_multi_location().map_err(Error::<T>::InvalidTreasuryOrigin)?,
+                pallet_proposals::FundingPath::WaitForFunding
             )?;
 
             GrantsSubmittedBy::<T>::insert(&submitter, grant_id, ());
