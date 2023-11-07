@@ -214,12 +214,15 @@ fn transfer_ksm_from_sibling() {
         ));
     });
 
-    // TODO: Fix this test
-    // #[cfg(not(feature = "runtime-benchmarks"))]
-    // Development::execute_with(|| {
-    //     let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &SiblingReceiver::get());
-    //     assert!(ksm_balance > 0);
-    // });
+    // Necessary to make sure messages are processed. Feels like a bug in the emulator. Might
+    // be fixed in next version.
+    Kusama::execute_with(|| {});
+
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    Development::execute_with(|| {
+        let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &SiblingReceiver::get());
+        assert!(ksm_balance > 0);
+    });
 }
 
 #[test]

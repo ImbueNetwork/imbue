@@ -8,7 +8,7 @@
 //! WASM-EXECUTION: `Compiled`, CHAIN: `Some("local")`, DB CACHE: 1024
 
 // Executed Command:
-// ./target/debug/imbue
+// ./target/release/imbue
 // benchmark
 // pallet
 // --chain
@@ -27,6 +27,8 @@
 // 50
 // --repeat
 // 20
+// --heap-pages
+// 4096
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![allow(unused_parens)]
@@ -38,11 +40,11 @@ use core::marker::PhantomData;
 
 /// Weight functions for `pallet_proposals`.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> pallet_proposals::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> crate::WeightInfoT for WeightInfo<T> {
 	/// Storage: `ImbueProposals::Projects` (r:1 w:0)
 	/// Proof: `ImbueProposals::Projects` (`max_values`: None, `max_size`: Some(260823), added: 263298, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::RoundsExpiring` (r:1 w:1)
-	/// Proof: `ImbueProposals::RoundsExpiring` (`max_values`: None, `max_size`: Some(471), added: 2946, mode: `MaxEncodedLen`)
+	/// Proof: `ImbueProposals::RoundsExpiring` (`max_values`: None, `max_size`: Some(291), added: 2766, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::IndividualVoteStore` (r:1 w:1)
 	/// Proof: `ImbueProposals::IndividualVoteStore` (`max_values`: None, `max_size`: Some(8250321), added: 8252796, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::MilestoneVotes` (r:1 w:1)
@@ -53,8 +55,8 @@ impl<T: frame_system::Config> pallet_proposals::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `1257`
 		//  Estimated: `8253786`
-		// Minimum execution time: 367_000_000 picoseconds.
-		Weight::from_parts(376_000_000, 0)
+		// Minimum execution time: 35_000_000 picoseconds.
+		Weight::from_parts(36_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 8253786))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -68,13 +70,13 @@ impl<T: frame_system::Config> pallet_proposals::WeightInfo for WeightInfo<T> {
 	/// Storage: `ImbueProposals::MilestoneVotes` (r:1 w:1)
 	/// Proof: `ImbueProposals::MilestoneVotes` (`max_values`: None, `max_size`: Some(1855), added: 4330, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::RoundsExpiring` (r:0 w:1)
-	/// Proof: `ImbueProposals::RoundsExpiring` (`max_values`: None, `max_size`: Some(471), added: 2946, mode: `MaxEncodedLen`)
+	/// Proof: `ImbueProposals::RoundsExpiring` (`max_values`: None, `max_size`: Some(291), added: 2766, mode: `MaxEncodedLen`)
 	fn vote_on_milestone() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `1400`
 		//  Estimated: `8253786`
-		// Minimum execution time: 538_000_000 picoseconds.
-		Weight::from_parts(553_000_000, 0)
+		// Minimum execution time: 48_000_000 picoseconds.
+		Weight::from_parts(53_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 8253786))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(5))
@@ -91,8 +93,8 @@ impl<T: frame_system::Config> pallet_proposals::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `1557`
 		//  Estimated: `265649`
-		// Minimum execution time: 1_797_000_000 picoseconds.
-		Weight::from_parts(1_872_000_000, 0)
+		// Minimum execution time: 135_000_000 picoseconds.
+		Weight::from_parts(152_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 265649))
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(6))
@@ -102,7 +104,7 @@ impl<T: frame_system::Config> pallet_proposals::WeightInfo for WeightInfo<T> {
 	/// Storage: `ImbueProposals::NoConfidenceVotes` (r:1 w:1)
 	/// Proof: `ImbueProposals::NoConfidenceVotes` (`max_values`: None, `max_size`: Some(37), added: 2512, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::RoundsExpiring` (r:1 w:1)
-	/// Proof: `ImbueProposals::RoundsExpiring` (`max_values`: None, `max_size`: Some(471), added: 2946, mode: `MaxEncodedLen`)
+	/// Proof: `ImbueProposals::RoundsExpiring` (`max_values`: None, `max_size`: Some(291), added: 2766, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::UserHasVoted` (r:1 w:1)
 	/// Proof: `ImbueProposals::UserHasVoted` (`max_values`: None, `max_size`: Some(165018), added: 167493, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::Rounds` (r:0 w:1)
@@ -111,8 +113,8 @@ impl<T: frame_system::Config> pallet_proposals::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `1035`
 		//  Estimated: `264288`
-		// Minimum execution time: 294_000_000 picoseconds.
-		Weight::from_parts(306_000_000, 0)
+		// Minimum execution time: 23_000_000 picoseconds.
+		Weight::from_parts(25_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 264288))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -129,14 +131,14 @@ impl<T: frame_system::Config> pallet_proposals::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `1260`
 		//  Estimated: `264288`
-		// Minimum execution time: 276_000_000 picoseconds.
-		Weight::from_parts(283_000_000, 0)
+		// Minimum execution time: 23_000_000 picoseconds.
+		Weight::from_parts(25_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 264288))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
 	/// Storage: `ImbueProposals::RoundsExpiring` (r:1 w:1)
-	/// Proof: `ImbueProposals::RoundsExpiring` (`max_values`: None, `max_size`: Some(471), added: 2946, mode: `MaxEncodedLen`)
+	/// Proof: `ImbueProposals::RoundsExpiring` (`max_values`: None, `max_size`: Some(291), added: 2766, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::MilestoneVotes` (r:1 w:1)
 	/// Proof: `ImbueProposals::MilestoneVotes` (`max_values`: None, `max_size`: Some(1855), added: 4330, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::IndividualVoteStore` (r:1 w:1)
@@ -147,8 +149,8 @@ impl<T: frame_system::Config> pallet_proposals::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `97`
 		//  Estimated: `8253786`
-		// Minimum execution time: 139_000_000 picoseconds.
-		Weight::from_parts(143_000_000, 0)
+		// Minimum execution time: 9_000_000 picoseconds.
+		Weight::from_parts(10_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 8253786))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(4))

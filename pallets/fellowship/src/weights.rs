@@ -38,7 +38,7 @@ use core::marker::PhantomData;
 
 /// Weight functions for `pallet_fellowship`.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> pallet_fellowship::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> crate::traits::WeightInfoT for WeightInfo<T> {
 	/// Storage: `ImbueFellowship::Roles` (r:1 w:1)
 	/// Proof: `ImbueFellowship::Roles` (`max_values`: None, `max_size`: Some(51), added: 2526, mode: `MaxEncodedLen`)
 	/// Storage: `System::Account` (r:1 w:1)

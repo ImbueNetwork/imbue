@@ -45,6 +45,7 @@ common-types = { path = "../../libs/common-types", default-features = false }
 common-runtime = { path = "../common", default-features = false }
 imbue-kusama-runtime = { path = "../imbue-kusama", default-features = false }
 pallet-proposals = { path = "../../pallets/proposals", default-features = false }
+pallet-fellowship = { path = "../../pallets/fellowship", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }

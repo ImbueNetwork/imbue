@@ -38,7 +38,7 @@ use core::marker::PhantomData;
 
 /// Weight functions for `pallet_briefs`.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> pallet_briefs::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> crate::WeightInfoT for WeightInfo<T> {
 	/// Storage: `ImbueBriefs::Briefs` (r:1 w:1)
 	/// Proof: `ImbueBriefs::Briefs` (`max_values`: None, `max_size`: Some(3366), added: 5841, mode: `MaxEncodedLen`)
 	/// Storage: `Deposits::TicketId` (r:1 w:1)

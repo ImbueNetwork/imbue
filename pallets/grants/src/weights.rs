@@ -38,7 +38,7 @@ use core::marker::PhantomData;
 
 /// Weight functions for `pallet_grants`.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> pallet_grants::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> crate::WeightInfoT for WeightInfo<T> {
 	/// Storage: `ImbueGrants::GrantsSubmitted` (r:1 w:1)
 	/// Proof: `ImbueGrants::GrantsSubmitted` (`max_values`: None, `max_size`: Some(48), added: 2523, mode: `MaxEncodedLen`)
 	/// Storage: `ImbueProposals::ProjectCount` (r:1 w:1)

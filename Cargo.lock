@@ -10871,6 +10871,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-fellowship",
  "pallet-im-online",
  "pallet-proposals",
  "pallet-xcm",
