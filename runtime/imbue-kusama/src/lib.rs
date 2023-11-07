@@ -805,13 +805,13 @@ parameter_types! {
     pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
     pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
     pub const PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
-    pub const MaximumContributorsPerProject: u32 = 5000;
+    pub const MaximumContributorsPerProject: u32 = 50;
     pub const IsIdentityRequired: bool = false;
     pub const MilestoneVotingWindow: BlockNumber = 100800;
     pub const ImbueFee: Percent = Percent::from_percent(5_u8);
-    pub const ExpiringProjectRoundsPerBlock: u32 = 50;
+    pub const ExpiringProjectRoundsPerBlock: u32 = 10;
     pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
-    pub const MaxMilestonesPerProject: u32 = 50;
+    pub const MaxMilestonesPerProject: u32 = 10;
     pub const MaxProjectsPerAccount: u16 = u16::MAX;
     pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
 }
@@ -855,7 +855,7 @@ impl pallet_grants::Config for Runtime {
 parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32;
-    pub MaxBriefOwners: u32 = 100;
+    pub MaxBriefOwners: u32 = 50;
     pub BriefStorageItem: StorageDepositItems = StorageDepositItems::Brief;
 }
 

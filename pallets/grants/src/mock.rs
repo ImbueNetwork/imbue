@@ -162,14 +162,14 @@ parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
-    pub MaximumContributorsPerProject: u32 = 5000;
+    pub MaximumContributorsPerProject: u32 = 50;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
-    pub MaxMilestonesPerProject: u32 = 50;
+    pub MaxMilestonesPerProject: u32 = 10;
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
-    pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ExpiringProjectRoundsPerBlock: u32 = 10;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
     pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
