@@ -25,11 +25,11 @@ pub use weights::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use common_types::{CurrencyId, TreasuryOrigin};
+    use common_types::{CurrencyId, TreasuryOrigin, TreasuryOriginConverter};
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
+    use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone, Locality};
     use sp_arithmetic::{per_things::Percent, traits::One};
     use sp_core::H256;
     use sp_runtime::Saturating;
@@ -98,7 +98,9 @@ pub mod pallet {
         /// There are too many milestones.
         TooManyMilestones,
         /// This is an invalid Treasury origin.
-        InvalidTreasuryOrigin
+        InvalidTreasuryOrigin,
+        /// Too many approvers
+        TooManyApprovers,
     }
 
     #[pallet::call]
@@ -131,28 +133,28 @@ pub mod pallet {
             let mut contributions = BTreeMap::new();
             let _ = assigned_approvers
                 .iter()
-                .map(|approver_id| {
+                .for_each(|approver_id| {
                     contributions.insert(
                         approver_id.clone(),
                         Contribution {
                             value: amount_requested / (assigned_approvers.len() as u32).into(),
                             timestamp: frame_system::Pallet::<T>::block_number(),
                         },
-                    )
-                })
-                .collect::<Vec<_>>();
+                    );
+                });
 
-            let refund_locations = <T as Config>::IntoProposal::convert_contributions_to_refund_locations(&contributions);
+            let refund_locations = vec![Locality::from_foreign(treasury_origin.get_multi_location().map_err(|_| Error::<T>::InvalidTreasuryOrigin)?, Percent::from_parts(100u8))];
+
             <T as Config>::IntoProposal::convert_to_proposal(
                 currency_id,
-                contributions,
+                contributions.try_into().map_err(|_| Error::<T>::TooManyApprovers)?,
                 grant_id,
                 submitter.clone(),
                 proposed_milestones
                     .try_into()
                     .map_err(|_| Error::<T>::TooManyMilestones)?,
-                refund_locations,
-                treasury_origin.get_multi_location().map_err(Error::<T>::InvalidTreasuryOrigin)?,
+                refund_locations.try_into().map_err(|_| Error::<T>::TooManyApprovers)?,
+                assigned_approvers.to_vec().try_into().map_err(|_| Error::<T>::TooManyApprovers)?,
                 pallet_proposals::FundingPath::WaitForFunding
             )?;
 

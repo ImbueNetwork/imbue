@@ -191,7 +191,6 @@ parameter_types! {
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItems = StorageItems::Project;
     pub MaxProjectsPerAccount: u16 = 50;
-    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
     pub MaxJuryMembers: u32 = 100;
     pub TreasuryFeeAccount: AccountId = *TREASURY;
 }
@@ -213,7 +212,6 @@ impl pallet_proposals::Config for Test {
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler<Test>;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
     type MaxJuryMembers = MaxJuryMembers;
     type DisputeRaiser = MockDisputeRaiser;
 }

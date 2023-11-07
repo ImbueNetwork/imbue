@@ -41,8 +41,6 @@ pub trait ExternalRefundHandler<AccountId, Balance, CurrencyId> {
         currency: CurrencyId,
         treasury_origin: MultiLocation,
     ) -> Result<(), DispatchError>;
-    fn get_treasury_account_id(treasury_origin: TreasuryOrigin)
-        -> Result<AccountId, DispatchError>;
 }
 
 #[cfg(feature = "std")]
@@ -59,11 +57,6 @@ impl<T: crate::Config> ExternalRefundHandler<AccountIdOf<T>, BalanceOf<T>, Curre
         _multilocation: MultiLocation
     ) -> Result<(), DispatchError> {
         Ok(())
-    }
-    fn get_treasury_account_id(
-        _treasury_account: TreasuryOrigin,
-    ) -> Result<AccountIdOf<T>, DispatchError> {
-        Ok(PalletId(*b"py/trsry").into_account_truncating())
     }
 }
 
@@ -85,19 +78,5 @@ where
         // TODO: dest weight limit. or specify a fee.
         let _ = U::transfer(from, currency, amount, location, WeightLimit::Unlimited)?;
         Ok(())
-    }
-    fn get_treasury_account_id(
-        treasury_origin: TreasuryOrigin,
-    ) -> Result<AccountIdOf<T>, DispatchError> {
-        match treasury_origin {
-            TreasuryOrigin::Kusama => {
-                // TODO: make this dynamic so its always correct.
-                Ok(PalletId(*b"py/trsry").into_account_truncating())
-            }
-            _ => {
-                // At the moment just supporting kusama but allow this instead of a panic
-                Ok(PalletId(*b"py/trsry").into_account_truncating())
-            }
-        }
     }
 }

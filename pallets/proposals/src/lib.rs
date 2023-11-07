@@ -96,8 +96,6 @@ pub mod pallet {
         type MilestoneVotingWindow: Get<BlockNumberFor<Self>>;
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
         type PercentRequiredForVoteToPass: Get<Percent>;
-        /// The minimum percentage of votes, inclusive, that is required for a vote of no confidence to pass/finalize.
-        type PercentRequiredForVoteNoConfidenceToPass: Get<Percent>;
         /// Maximum number of contributors per project.
         type MaximumContributorsPerProject: Get<u32>;
         /// Maximum milestones allowed in a project.

@@ -180,7 +180,8 @@ parameter_types! {
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
-    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
+    pub MaxJuryMembers: u32 = 100;
+    pub FeeAccount: AccountId = *IMBUE_FEE_ACCOUNT;
 }
 
 impl pallet_proposals::Config for Test {
@@ -195,11 +196,13 @@ impl pallet_proposals::Config for Test {
     type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
+    type ImbueFeeAccount = FeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type DepositHandler = MockDepositHandler;
     type ProjectStorageItem = ProjectStorageItem;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
+    type MaxJuryMembers = MaxJuryMembers;
+    type DisputeRaiser = MockDisputeRaiser;
 }
 
 parameter_types! {
@@ -229,6 +232,7 @@ impl pallet_identity::Config for Test {
 pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
+pub static IMBUE_FEE_ACCOUNT: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()
@@ -244,4 +248,20 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
     });
     ext
+}
+
+pub struct MockDisputeRaiser;
+impl DisputeRaiser<AccountId> for MockDisputeRaiser {
+type DisputeKey = pallet_proposals::ProjectKey;
+type SpecificId = pallet_proposals::MilestoneKey;
+type MaxJurySize = MaxJuryMembers;
+type MaxSpecifics = MaxMilestonesPerProject;
+    fn raise_dispute(
+        dispute_key: Self::DisputeKey,
+        raised_by: AccountId,
+        jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+    ) -> Result<(), DispatchError> {
+        Ok(())
+    }
 }
