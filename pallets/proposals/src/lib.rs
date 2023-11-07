@@ -477,47 +477,24 @@ pub mod pallet {
                 });
 
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
+
             match funding_type {
                 FundingType::Proposal | FundingType::Brief => {
                     for (acc, cont) in contributions.iter() {
-                        match currency_id {
-                            common_types::CurrencyId::ForeignAsset(_) => {
-                                <T as crate::Config>::MultiCurrency::deposit(
-                                    currency_id,
-                                    &project_account_id,
-                                    cont.value,
-                                )?;
-                            }
-                            _ => {
-                                <<T as Config>::MultiCurrency as MultiReservableCurrency<
-                                    AccountIdOf<T>,
-                                >>::unreserve(
-                                    currency_id, acc, cont.value
-                                );
-                                <T as Config>::MultiCurrency::transfer(
-                                    currency_id,
-                                    acc,
-                                    &project_account_id,
-                                    cont.value,
-                                )?;
-                            }
-                        }
+                        let project_account_id =
+                            crate::Pallet::<T>::project_account_id(project_key);
+                        <<T as Config>::MultiCurrency as MultiReservableCurrency<
+                            AccountIdOf<T>,
+                        >>::unreserve(currency_id, acc, cont.value);
+                        <T as Config>::MultiCurrency::transfer(
+                            currency_id,
+                            acc,
+                            &project_account_id,
+                            cont.value,
+                        )?;
                     }
                 }
-                FundingType::Grant(_) => {
-                    for (_, cont) in contributions.iter() {
-                        match currency_id {
-                            common_types::CurrencyId::ForeignAsset(_) => {
-                                <T as crate::Config>::MultiCurrency::deposit(
-                                    currency_id,
-                                    &project_account_id,
-                                    cont.value,
-                                )?;
-                            }
-                            _ => {}
-                        }
-                    }
-                }
+                FundingType::Grant(_) => {}
             }
 
             // TODO: this milestone key has no relation to the milestones coming in except the order they come in.

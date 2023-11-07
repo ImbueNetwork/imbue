@@ -197,18 +197,8 @@ pub mod pallet {
                 CurrencyId::Native,
             )?;
 
-            match currency_id {
-                common_types::CurrencyId::ForeignAsset(_) => {}
-                _ => {
-                    <T as Config>::RMultiCurrency::reserve(
-                        currency_id,
-                        &who,
-                        initial_contribution,
-                    )?;
-                }
-            }
-
             // Now take the inital_contribution for the brief.
+            <T as Config>::RMultiCurrency::reserve(currency_id, &who, initial_contribution)?;
 
             if initial_contribution > Zero::zero() {
                 BriefContributions::<T>::try_mutate(brief_id, |contributions| {
