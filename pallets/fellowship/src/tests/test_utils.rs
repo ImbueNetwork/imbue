@@ -1,6 +1,5 @@
 use super::*;
 
-
 // Saves a bit of typing.
 pub(crate) fn add_to_fellowship_take_deposit(
     who: &AccountIdOf<Test>,
