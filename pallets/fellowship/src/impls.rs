@@ -4,8 +4,8 @@ use common_traits::MaybeConvert;
 use frame_support::{ensure, traits::Get};
 use orml_traits::MultiReservableCurrency;
 use sp_runtime::{
-    traits::{BadOrigin, Convert},
-    DispatchError, Percent,
+    traits::BadOrigin,
+    DispatchError,
 };
 use sp_std::{vec, vec::Vec};
 /// Ensure that a account is of a given role.

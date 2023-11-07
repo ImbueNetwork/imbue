@@ -1,7 +1,5 @@
 use super::*;
 
-pub(crate) static DEP_CURRENCY: Lazy<CurrencyId> =
-    Lazy::new(<Test as Config>::DepositCurrencyId::get);
 
 // Saves a bit of typing.
 pub(crate) fn add_to_fellowship_take_deposit(
@@ -23,18 +21,14 @@ pub(crate) fn revoke_fellowship(
     <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::revoke_fellowship(who, slash_deposit)
 }
 
-pub fn run_to_block<T: Config>(n: T::BlockNumber)
-where
-    T::BlockNumber: Into<u64>,
-{
-    loop {
-        let mut block: T::BlockNumber = frame_system::Pallet::<T>::block_number();
-        if block >= n {
-            break;
-        }
-        block = block.saturating_add(<T::BlockNumber as One>::one());
-        frame_system::Pallet::<T>::set_block_number(block);
-        frame_system::Pallet::<T>::on_initialize(block);
-        Fellowship::on_initialize(block.into());
+pub fn run_to_block<T: Config>(n: BlockNumber) {
+    while System::block_number() < n {
+        Tokens::on_finalize(System::block_number());
+        Fellowship::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Fellowship::on_initialize(System::block_number());
+        Tokens::on_initialize(System::block_number());
     }
 }

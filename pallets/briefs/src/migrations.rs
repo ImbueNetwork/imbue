@@ -10,10 +10,10 @@ use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::Percent;
+#[cfg(feature = "try-runtime")]
 use sp_runtime::TryRuntimeError;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
-
 mod v0 {
     use super::*;
 
@@ -173,13 +173,13 @@ mod test {
             .expect("2 should be lower than bound");
 
             let old_brief = v0::BriefDataV0 {
-                brief_owners: vec![*ALICE, *BOB]
+                brief_owners: vec![ALICE, BOB]
                     .try_into()
                     .expect("2 should be lower than bound"),
                 budget: 100_000u64,
                 currency_id: CurrencyId::Native,
                 created_at: frame_system::Pallet::<Test>::block_number(),
-                applicant: *CHARLIE,
+                applicant: CHARLIE,
                 milestones,
             };
             let key: H256 = [1; 32].into();

@@ -4,7 +4,7 @@ use common_runtime::MAXIMUM_BLOCK_WEIGHT;
 use pallet_fellowship::{Role, Roles};
 use pallet_proposals::{WeightInfo as PWeightInfo, WeightInfoT};
 use sp_arithmetic::{traits::Zero, Percent};
-use sp_runtime::AccountId32;
+use sp_runtime::{AccountId32, BuildStorage};
 use std::str::FromStr;
 
 #[test]
@@ -80,8 +80,8 @@ fn ensure_proposals_initialize_is_less_than_10_percent_block() {
 // Needed the Runtime type for easy testing with AccountId32 due to the bound on MigrateInitial.
 #[test]
 fn migrate_initial_check_accounts() {
-    let t = frame_system::GenesisConfig::default()
-        .build_storage::<Runtime>()
+    let t = frame_system::GenesisConfig::<Runtime>::default()
+        .build_storage()
         .unwrap();
     let mut ext = sp_io::TestExternalities::new(t);
 

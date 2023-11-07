@@ -13,10 +13,7 @@ use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
 use sp_std::convert::TryInto;
 
-#[benchmarks( where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
-    <T as frame_system::Config>::BlockNumber: From<u32>,
-)]
+#[benchmarks]
 mod benchmarks {
     use super::*;
 
@@ -64,7 +61,7 @@ mod benchmarks {
 
         #[extrinsic_call]
         vote_on_milestone(RawOrigin::Signed(bob.clone()), project_key, 0, true);
-        let current_block: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+        let current_block = frame_system::Pallet::<T>::block_number();
         assert_last_event::<T>(
             Event::<T>::VoteSubmitted(bob, project_key, 0, true, current_block).into(),
         )
@@ -164,7 +161,7 @@ mod benchmarks {
     // Benchmark for a single loop of on_initialise as a voting round (most expensive).
     #[benchmark]
     fn on_initialize() {
-        let block_number: <T as frame_system::Config>::BlockNumber = 100u32.into();
+        let block_number = 100u32.into();
         let keys: BoundedVec<
             (ProjectKey, RoundType, MilestoneKey),
             <T as Config>::ExpiringProjectRoundsPerBlock,

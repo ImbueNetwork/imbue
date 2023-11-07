@@ -26,7 +26,7 @@ fn take_deposit_takes_deposit() {
         let alice_reserved_before =
             <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
         assert_ok!(crate::Pallet::<Test>::take_deposit(
-            *ALICE,
+            ALICE,
             item,
             CurrencyId::Native
         ));
@@ -46,7 +46,7 @@ fn take_deposit_assert_last_event() {
         let item = StorageItem::CrowdFund;
         let deposit = MockDepositCalculator::calculate_deposit(item, CurrencyId::Native).unwrap();
         assert_ok!(crate::Pallet::<Test>::take_deposit(
-            *ALICE,
+            ALICE,
             item,
             CurrencyId::Native
         ));
@@ -63,7 +63,7 @@ fn take_deposit_unsupported_currency_type() {
     new_test_ext().execute_with(|| {
         let item = StorageItem::CrowdFund;
         assert_noop!(
-            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::KSM),
+            crate::Pallet::<Test>::take_deposit(ALICE, item, CurrencyId::KSM),
             Error::<Test>::UnsupportedCurrencyType
         );
     });
@@ -75,7 +75,7 @@ fn take_deposit_unsupported_storage_type() {
     new_test_ext().execute_with(|| {
         let item = StorageItem::Unsupported;
         assert_noop!(
-            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native),
+            crate::Pallet::<Test>::take_deposit(ALICE, item, CurrencyId::Native),
             Error::<Test>::UnsupportedStorageType
         );
     });
@@ -88,7 +88,7 @@ fn return_deposit_works() {
         let alice_reserved_before =
             <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
         let deposit_id =
-            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native).unwrap();
+            crate::Pallet::<Test>::take_deposit(ALICE, item, CurrencyId::Native).unwrap();
         assert_ok!(crate::Pallet::<Test>::return_deposit(deposit_id));
         let alice_reserved_after =
             <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
@@ -102,7 +102,7 @@ fn return_deposit_assert_event() {
         let item = StorageItem::CrowdFund;
         let deposit = MockDepositCalculator::calculate_deposit(item, CurrencyId::Native).unwrap();
         let deposit_id =
-            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native).unwrap();
+            crate::Pallet::<Test>::take_deposit(ALICE, item, CurrencyId::Native).unwrap();
         assert_ok!(crate::Pallet::<Test>::return_deposit(deposit_id));
         System::assert_last_event(mock::RuntimeEvent::Deposits(
             crate::Event::<Test>::DepositReturned(0, deposit),
@@ -124,7 +124,7 @@ fn slash_deposit_works() {
         let alice_reserved_before =
             <Test as Config>::MultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
         let deposit_id =
-            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native).unwrap();
+            crate::Pallet::<Test>::take_deposit(ALICE, item, CurrencyId::Native).unwrap();
 
         assert_ok!(Deposits::slash_reserve_deposit(deposit_id));
         let alice_reserved_after =
@@ -148,7 +148,7 @@ fn slash_deposit_assert_event() {
         let item = StorageItem::CrowdFund;
         let deposit = MockDepositCalculator::calculate_deposit(item, CurrencyId::Native).unwrap();
         let deposit_id =
-            crate::Pallet::<Test>::take_deposit(*ALICE, item, CurrencyId::Native).unwrap();
+            crate::Pallet::<Test>::take_deposit(ALICE, item, CurrencyId::Native).unwrap();
 
         assert_ok!(Deposits::slash_reserve_deposit(deposit_id));
         System::assert_last_event(mock::RuntimeEvent::Deposits(

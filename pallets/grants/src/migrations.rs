@@ -3,7 +3,9 @@ use common_types::{CurrencyId, TreasuryOrigin};
 use frame_support::{pallet_prelude::*, storage_alias, traits::OnRuntimeUpgrade, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
+#[cfg(feature = "try-runtime")]
 use sp_runtime::TryRuntimeError;
+#[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
 #[allow(unused)]

@@ -79,10 +79,10 @@ pub(crate) mod test_utils {
 fn crowdfund_key_actually_increments_lol() {
     new_test_ext().execute_with(|| {
         let a = CrowdFundCount::<Test>::get();
-        create_cf_default(*ALICE, 100_000u64);
+        create_cf_default(ALICE, 100_000u64);
         let b = CrowdFundCount::<Test>::get();
         assert_eq!(b - 1, a);
-        create_cf_default(*BOB, 100_000u64);
+        create_cf_default(BOB, 100_000u64);
         let c = CrowdFundCount::<Test>::get();
         assert_eq!(c - 1, b);
     });
@@ -98,7 +98,7 @@ fn milestones_must_sum_to_100_on_creation() {
         .expect("qed");
         assert_noop!(
             CrowdFunding::create_crowdfund(
-                RuntimeOrigin::signed(*ALICE),
+                RuntimeOrigin::signed(ALICE),
                 get_hash(1u8),
                 milestones_under_100,
                 100_000,
@@ -112,7 +112,7 @@ fn milestones_must_sum_to_100_on_creation() {
 #[test]
 fn update_crowdfund_ms_must_sum_to_100() {
     new_test_ext().execute_with(|| {
-        create_cf_default(*ALICE, 100_000u64);
+        create_cf_default(ALICE, 100_000u64);
         let milestones_under_100: BoundedProposedMilestones<Test> = vec![ProposedMilestone {
             percentage_to_unlock: Percent::from_percent(50u8),
         }]
@@ -120,7 +120,7 @@ fn update_crowdfund_ms_must_sum_to_100() {
         .expect("qed");
         assert_noop!(
             CrowdFunding::update_crowdfund(
-                RuntimeOrigin::signed(*ALICE),
+                RuntimeOrigin::signed(ALICE),
                 0u32,
                 Some(milestones_under_100),
                 None,
@@ -135,13 +135,13 @@ fn update_crowdfund_ms_must_sum_to_100() {
 #[test]
 fn update_crowdfund_already_converted() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default_and_contribute(*ALICE, vec![*BOB, *CHARLIE], 100_000);
+        let key = create_cf_default_and_contribute(ALICE, vec![BOB, CHARLIE], 100_000);
         let _ =
             CrowdFunding::approve_crowdfund_for_milestone_submission(RuntimeOrigin::root(), key)
                 .unwrap();
         assert_noop!(
             CrowdFunding::update_crowdfund(
-                RuntimeOrigin::signed(*ALICE),
+                RuntimeOrigin::signed(ALICE),
                 key,
                 None,
                 None,
@@ -156,11 +156,11 @@ fn update_crowdfund_already_converted() {
 #[test]
 fn update_crowdfund_already_approved() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 100_000);
+        let key = create_cf_default(ALICE, 100_000);
         assert_ok!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key));
         assert_noop!(
             CrowdFunding::update_crowdfund(
-                RuntimeOrigin::signed(*ALICE),
+                RuntimeOrigin::signed(ALICE),
                 key,
                 None,
                 None,
@@ -182,10 +182,10 @@ fn update_crowdfund_already_cancelled() {
 #[test]
 fn update_crowdfund_not_initiator() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 100_000);
+        let key = create_cf_default(ALICE, 100_000);
         assert_noop!(
             CrowdFunding::update_crowdfund(
-                RuntimeOrigin::signed(*BOB),
+                RuntimeOrigin::signed(BOB),
                 key,
                 None,
                 None,
@@ -200,10 +200,10 @@ fn update_crowdfund_not_initiator() {
 #[test]
 fn update_crowdfund_none_values_dont_mutate() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 100_000);
+        let key = create_cf_default(ALICE, 100_000);
         let cf_before = CrowdFunds::<Test>::get(key).expect("qed");
         assert_ok!(CrowdFunding::update_crowdfund(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             key,
             None,
             None,
@@ -218,10 +218,10 @@ fn update_crowdfund_none_values_dont_mutate() {
 #[test]
 fn update_crowdfund_actually_mutates() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 100_000);
+        let key = create_cf_default(ALICE, 100_000);
         let cf_before = CrowdFunds::<Test>::get(key).expect("qed");
         assert_ok!(CrowdFunding::update_crowdfund(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             key,
             Some(get_milestones(20)),
             Some(50_000),
@@ -240,7 +240,7 @@ fn update_crowdfund_actually_mutates() {
 #[test]
 fn open_contributions_already_in_round() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 100_000u64);
+        let key = create_cf_default(ALICE, 100_000u64);
         assert_ok!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key));
         assert_noop!(
             CrowdFunding::open_contributions(RuntimeOrigin::root(), key),
@@ -252,9 +252,9 @@ fn open_contributions_already_in_round() {
 #[test]
 fn open_contributions_not_authority() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 100_000u64);
+        let key = create_cf_default(ALICE, 100_000u64);
         assert_noop!(
-            CrowdFunding::open_contributions(RuntimeOrigin::signed(*ALICE), key),
+            CrowdFunding::open_contributions(RuntimeOrigin::signed(ALICE), key),
             BadOrigin
         );
     });
@@ -263,7 +263,7 @@ fn open_contributions_not_authority() {
 #[test]
 fn open_contributions_approves_for_funding() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 100_000u64);
+        let key = create_cf_default(ALICE, 100_000u64);
         assert_ok!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key));
         let cf = CrowdFunds::<Test>::get(key).expect("oops");
         assert!(cf.approved_for_funding);
@@ -283,9 +283,9 @@ fn open_contributions_crowdfund_doesnt_exist_fails() {
 #[test]
 fn cannot_contribute_before_round_start() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 100_000u64);
+        let key = create_cf_default(ALICE, 100_000u64);
         assert_noop!(
-            CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), key, 100_000),
+            CrowdFunding::contribute(RuntimeOrigin::signed(BOB), key, 100_000),
             Error::<Test>::ContributionRoundNotStarted
         );
     });
@@ -294,13 +294,13 @@ fn cannot_contribute_before_round_start() {
 #[test]
 fn cannot_contribute_after_round_end() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 100_000u64);
+        let key = create_cf_default(ALICE, 100_000u64);
         assert_ok!(CrowdFunding::open_contributions(RuntimeOrigin::root(), key));
         let expiry_block =
             frame_system::Pallet::<Test>::block_number() + <Test as Config>::RoundExpiry::get();
         run_to_block(expiry_block + 1);
         assert_noop!(
-            CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), key, 100_000),
+            CrowdFunding::contribute(RuntimeOrigin::signed(BOB), key, 100_000),
             Error::<Test>::ContributionRoundNotStarted
         );
     });
@@ -310,7 +310,7 @@ fn cannot_contribute_after_round_end() {
 fn new_contribute_doesnt_exist() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), 0, 100_000),
+            CrowdFunding::contribute(RuntimeOrigin::signed(BOB), 0, 100_000),
             Error::<Test>::CrowdFundDoesNotExist
         );
     });
@@ -319,13 +319,13 @@ fn new_contribute_doesnt_exist() {
 #[test]
 fn multiple_contributions_sum_contribution() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 1_000_000u64);
+        let key = create_cf_default(ALICE, 1_000_000u64);
         let _ =
             CrowdFunding::open_contributions(RuntimeOrigin::root(), key).expect("should be fine.");
 
         // Contribute once, assert it was added.
         assert_ok!(CrowdFunding::contribute(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             key,
             100_000
         ));
@@ -335,7 +335,7 @@ fn multiple_contributions_sum_contribution() {
 
         // Contribute twice assert it sums.
         assert_ok!(CrowdFunding::contribute(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             key,
             50_000
         ));
@@ -348,16 +348,16 @@ fn multiple_contributions_sum_contribution() {
 #[test]
 fn contribution_reserves_balance() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 1_000_000u64);
+        let key = create_cf_default(ALICE, 1_000_000u64);
         let _ =
             CrowdFunding::open_contributions(RuntimeOrigin::root(), key).expect("should be fine.");
-        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), key, 100_000);
+        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(BOB), key, 100_000);
         let bob_reserved = <<Test as Config>::MultiCurrency as MultiReservableCurrency<
             AccountId,
         >>::reserved_balance(CurrencyId::Native, &BOB);
         assert_eq!(bob_reserved, 100_000u64);
 
-        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), key, 50_000);
+        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(BOB), key, 50_000);
         let bob_reserved = <<Test as Config>::MultiCurrency as MultiReservableCurrency<
             AccountId,
         >>::reserved_balance(CurrencyId::Native, &BOB);
@@ -368,15 +368,15 @@ fn contribution_reserves_balance() {
 #[test]
 fn contribution_mutates_raised_funds() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 1_000_000u64);
+        let key = create_cf_default(ALICE, 1_000_000u64);
         let _ =
             CrowdFunding::open_contributions(RuntimeOrigin::root(), key).expect("should be fine.");
-        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), key, 100_000);
-        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(*CHARLIE), key, 50_000);
+        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(BOB), key, 100_000);
+        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(CHARLIE), key, 50_000);
 
         let cf = CrowdFunds::<Test>::get(key).expect("just created it;");
         assert_eq!(cf.raised_funds, 150_000);
-        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), key, 25_000);
+        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(BOB), key, 25_000);
         let cf = CrowdFunds::<Test>::get(key).expect("just created it;");
         assert_eq!(cf.raised_funds, 175_000);
     });
@@ -385,26 +385,26 @@ fn contribution_mutates_raised_funds() {
 #[test]
 fn ensure_initiator_works() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 1_000_000u64);
-        assert!(CrowdFunding::ensure_initiator(*ALICE, key).is_ok());
-        assert!(CrowdFunding::ensure_initiator(*BOB, key).is_err());
+        let key = create_cf_default(ALICE, 1_000_000u64);
+        assert!(CrowdFunding::ensure_initiator(ALICE, key).is_ok());
+        assert!(CrowdFunding::ensure_initiator(BOB, key).is_err());
     });
 }
 
 #[test]
 fn do_approve_not_authority() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default_and_contribute(*ALICE, vec![*BOB], 100_000);
+        let key = create_cf_default_and_contribute(ALICE, vec![BOB], 100_000);
         assert_noop!(
             CrowdFunding::approve_crowdfund_for_milestone_submission(
-                RuntimeOrigin::signed(*ALICE),
+                RuntimeOrigin::signed(ALICE),
                 key
             ),
             BadOrigin
         );
         assert_noop!(
             CrowdFunding::approve_crowdfund_for_milestone_submission(
-                RuntimeOrigin::signed(*BOB),
+                RuntimeOrigin::signed(BOB),
                 key
             ),
             BadOrigin
@@ -416,10 +416,10 @@ fn do_approve_not_authority() {
 fn do_approve_raised_funds_not_reached() {
     new_test_ext().execute_with(|| {
         let amount: Balance = 1_000_000;
-        let key = create_cf_default(*ALICE, amount);
+        let key = create_cf_default(ALICE, amount);
         let _ =
             CrowdFunding::open_contributions(RuntimeOrigin::root(), key).expect("should be fine.");
-        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(*BOB), key, amount - 100);
+        let _ = CrowdFunding::contribute(RuntimeOrigin::signed(BOB), key, amount - 100);
 
         assert_noop!(
             CrowdFunding::approve_crowdfund_for_milestone_submission(RuntimeOrigin::root(), key),
@@ -441,7 +441,7 @@ fn do_approve_does_not_exist() {
 #[test]
 fn on_initialize_removes_contribution_round() {
     new_test_ext().execute_with(|| {
-        let key = create_cf_default(*ALICE, 1_000_000u64);
+        let key = create_cf_default(ALICE, 1_000_000u64);
         let _ =
             CrowdFunding::open_contributions(RuntimeOrigin::root(), key).expect("should be fine.");
         let expiry_block: BlockNumber =

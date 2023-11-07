@@ -146,6 +146,7 @@ impl xcm_executor::Config for XcmConfig {
     type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
     type CallDispatcher = RuntimeCall;
     type SafeCallFilter = Everything;
+    type Aliasers = ();
 }
 
 pub type LocalAssetTransactor = MultiCurrencyAdapter<

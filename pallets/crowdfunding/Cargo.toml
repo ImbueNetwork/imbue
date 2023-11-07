@@ -13,67 +13,76 @@ publish = false
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = [
-	"derive",
-] }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false}
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false}
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = ["derive", "max-encoded-len"] }
+scale-info = { version = "2.9.0", default-features = false, features = ["derive"] }
+
+sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false}
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+pallet-identity = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
 
 common-types = { path = "../../libs/common-types", default-features = false }
+common-runtime = { path = "../../runtime/common", default-features = false }
 pallet-proposals = { path= "../proposals", default-features = false}
 pallet-deposits = {path= "../deposits", default-features = false }
-common-runtime = { path = "../../runtime/common"}
+
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+pallet-identity = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
+pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
+pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0"}
+pallet-deposits = {path= "../deposits"}
 pallet-proposals = { path= "../proposals"}
 common-types = { path = "../../libs/common-types"}
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
-pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43"}
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}
-pallet-deposits = {path= "../deposits"}
-
 
 [features]
-default = ["std"]
+default = [ "std" ]
 std = [
 	"codec/std",
+	"common-runtime/std",
+	"common-types/std",
 	"frame-benchmarking?/std",
 	"frame-support/std",
 	"frame-system/std",
-	"scale-info/std",
-	"pallet-proposals/std",
-	"sp-core/std",
+	"orml-traits/std",
+	"pallet-deposits/std",
 	"pallet-identity/std",
-	"pallet-xcm/std",
-	"common-runtime/std",
+	"pallet-proposals/std",
+	"scale-info/std",
+	"sp-arithmetic/std",
+	"sp-core/std",
+	"sp-std/std",
 ]
 
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks", "pallet-xcm/runtime-benchmarks",	"common-runtime/runtime-benchmarks",]
+runtime-benchmarks = [
+	"common-runtime/runtime-benchmarks",
+	"frame-benchmarking/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+	"pallet-deposits/runtime-benchmarks",
+	"pallet-proposals/runtime-benchmarks"
+]
 try-runtime = [
-	"frame-support/try-runtime",
-	"frame-system/try-runtime",
-	"sp-runtime/try-runtime",
 	"common-runtime/try-runtime",
 	"common-types/try-runtime",
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
 	"orml-tokens/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-deposits/try-runtime",
 	"pallet-identity/try-runtime",
 	"pallet-proposals/try-runtime",
 	"pallet-timestamp/try-runtime",
-	"pallet-xcm/try-runtime"
+	"pallet-xcm/try-runtime",
+	"sp-runtime/try-runtime",
 ]

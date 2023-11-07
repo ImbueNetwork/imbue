@@ -1,8 +1,9 @@
-use crate::{AccountIdOf, BalanceOf, Contribution, ProposedMilestone};
+use crate::{AccountIdOf, BalanceOf, BlockNumberFor, Contribution, ProposedMilestone};
 use common_types::{CurrencyId, FundingType, TreasuryOrigin, TreasuryOriginConverter};
-use frame_support::{inherent::Vec, pallet_prelude::DispatchError, transactional, PalletId};
+use frame_support::{pallet_prelude::DispatchError, transactional, PalletId};
 use orml_traits::XcmTransfer;
 use orml_xtokens::Error;
+use sp_std::vec::Vec;
 
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
@@ -40,7 +41,7 @@ pub trait RefundHandler<AccountId, Balance, CurrencyId> {
 }
 
 // Some implementations used in Imbue of the traits above.
-type BlockNumberFor<T> = <T as frame_system::Config>::BlockNumber;
+
 // For test purposes
 impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>> for T {
     fn convert_to_proposal(
