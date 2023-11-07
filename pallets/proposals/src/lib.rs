@@ -116,6 +116,11 @@ pub mod pallet {
     #[pallet::getter(fn projects)]
     pub type Projects<T: Config> = StorageMap<_, Identity, ProjectKey, Project<T>, OptionQuery>;
 
+    /// The `AccountId` of the multichain signer
+    #[pallet::storage]
+    #[pallet::getter(fn key)]
+    pub type ForeignCurrencySigner<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
     // BTree of users that has voted, bounded by the number of contributors in a project.
     #[pallet::storage]
     pub(super) type UserHasVoted<T: Config> = StorageMap<
@@ -220,6 +225,10 @@ pub mod pallet {
         NoConfidenceRoundFinalised(T::AccountId, ProjectKey),
         /// This milestone has been rejected.
         MilestoneRejected(ProjectKey, MilestoneKey),
+        /// Foreign Asset Signer Changed
+        ForeignAssetSignerChanged(T::AccountId),
+        /// Foreign Asset Signer Changed
+        ForeignAssetMinted(T::AccountId, T::AccountId, CurrencyId, BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -279,6 +288,8 @@ pub mod pallet {
         TooManyMilestoneVotes,
         /// An internal error, a collection of votes for a milestone has been lost.s
         IndividualVoteNotFound,
+        /// Only the ForeignAssetSigner can mint tokens
+        RequireForeignAssetSigner,
     }
 
     #[pallet::hooks]
@@ -387,6 +398,51 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             Self::add_vote_no_confidence(who, project_key, is_yay)
+        }
+
+        /// Sets the given AccountId (`new`) as the new Foreign asset signer
+        /// key.
+        ///
+        /// The dispatch origin for this call must be _Signed_.
+        ///
+        #[pallet::call_index(14)]
+        #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
+        pub fn set_foreign_asset_signer(
+            origin: OriginFor<T>,
+            new: AccountIdOf<T>,
+        ) -> DispatchResult {
+            T::AuthorityOrigin::ensure_origin(origin)?;
+            ForeignCurrencySigner::<T>::put(&new);
+            Self::deposit_event(Event::ForeignAssetSignerChanged(new));
+            Ok(())
+        }
+
+        /// Mints offchain assets to a users address
+        ///
+        /// The dispatch origin for this call must be the pre defined foreign asset signer.
+        ///
+        #[pallet::call_index(15)]
+        #[pallet::weight(<T as Config>::WeightInfo::vote_on_no_confidence_round())]
+        pub fn mint_offchain_assets(
+            origin: OriginFor<T>,
+            beneficiary: AccountIdOf<T>,
+            currency_id: CurrencyId,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                Self::key().map_or(false, |authority_signer| who == authority_signer),
+                Error::<T>::RequireForeignAssetSigner
+            );
+            <T as crate::Config>::MultiCurrency::deposit(currency_id, &beneficiary, amount)?;
+            Self::deposit_event(Event::ForeignAssetMinted(
+                who,
+                beneficiary,
+                currency_id,
+                amount,
+            ));
+
+            Ok(())
         }
     }
     impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
