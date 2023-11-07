@@ -9,7 +9,7 @@ update change withdraw to uses can_withdraw - done
 benchmark for hooks to return weight. - done didnt need, we can do it directly in the method.
 removal of old no confidence logic. - done
 
-fix all tests -
+fix all tests - done
 get jury in each pallet (briefs, grants, crowdfunding.)
 update the function call in each pallet (jury, TreasuryOrigin, )
 code cov check

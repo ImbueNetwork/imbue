@@ -104,7 +104,9 @@ pub mod pallet {
     }
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
+    impl<T: Config> Pallet<T> 
+    where AccountIdOf<T>: Into<[u8; 32]> 
+    {
         /// Instead of iterating, create a project from the parameters of a grant.
         #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::create_and_convert())]
@@ -143,7 +145,9 @@ pub mod pallet {
                     );
                 });
 
-            let refund_locations = vec![Locality::from_foreign(treasury_origin.get_multi_location().map_err(|_| Error::<T>::InvalidTreasuryOrigin)?, Percent::from_parts(100u8))];
+
+            let treasury_multilocation = <TreasuryOrigin as TreasuryOriginConverter<AccountIdOf<T>>>::get_multi_location(&treasury_origin).map_err(|_| Error::<T>::InvalidTreasuryOrigin)?;
+            let refund_locations = vec![(Locality::Foreign(treasury_multilocation), Percent::from_parts(100u8))];
 
             <T as Config>::IntoProposal::convert_to_proposal(
                 currency_id,
@@ -151,6 +155,7 @@ pub mod pallet {
                 grant_id,
                 submitter.clone(),
                 proposed_milestones
+                    .to_vec()
                     .try_into()
                     .map_err(|_| Error::<T>::TooManyMilestones)?,
                 refund_locations.try_into().map_err(|_| Error::<T>::TooManyApprovers)?,

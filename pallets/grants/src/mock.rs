@@ -251,7 +251,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 pub struct MockDisputeRaiser;
-impl DisputeRaiser<AccountId> for MockDisputeRaiser {
+impl pallet_disputes::traits::DisputeRaiser<AccountId> for MockDisputeRaiser {
 type DisputeKey = pallet_proposals::ProjectKey;
 type SpecificId = pallet_proposals::MilestoneKey;
 type MaxJurySize = MaxJuryMembers;
