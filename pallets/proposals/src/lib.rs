@@ -242,6 +242,8 @@ pub mod pallet {
         NoConfidenceRoundFinalised(T::AccountId, ProjectKey),
         /// This milestone has been rejected.
         MilestoneRejected(ProjectKey, MilestoneKey),
+        /// A project has been refunded either partially or completely.
+        ProjectRefunded{project_key: ProjectKey, total_amount: BalanceOf<T>},
     }
 
     // Errors inform users that something went wrong.
@@ -449,6 +451,9 @@ pub mod pallet {
                         }
                     }
 
+                    // Just so we dont multiply by zero.
+                    ensure!(total_to_refund_including_fee != Zero::zero(), Error::<T>::NoAvailableFundsToWithdraw);
+
                     let fee = <T as Config>::ImbueFee::get().mul_floor(total_to_refund_including_fee);
                     // Take the fee and send to ImbueFeeAccount   
                     T::MultiCurrency::transfer(
@@ -487,11 +492,14 @@ pub mod pallet {
                     if project.refunded_funds.saturating_add(project.withdrawn_funds) == project.raised_funds {
                         *maybe_project = None;
                     }
+
+                    Self::deposit_event(Event::<T>::ProjectRefunded {project_key, total_amount: total_to_refund_including_fee});
                     Ok::<(), DispatchError>(())
                 } else {
                     Ok::<(), DispatchError>(())
                 }
             })?;
+
             Ok(().into())
         }
     }

@@ -137,16 +137,23 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn withdraw() {
+    fn refund() {
         let alice: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
-            create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
-        let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
-        let raised_funds: BalanceOf<T> = 100_000_000_000_000_000u128.saturated_into();
+            create_funded_user::<T>("contributor", 0, 1_000_000_000_000_000_000u128);
 
+        let contributors: Vec<T::AccountId> = (0..<T as Config>::MaximumContributorsPerProject::get()).map(|i| {
+            create_funded_user::<T>("contributor", i, 1_000_000_000_000_000_000u128);
+        }).collect();
+
+        dbg!(&contributors);
+        assert!(false);
+
+        let contributions = get_contributions::<T>(contributors, 100_000_000_000_000_000u128);
         let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
         let prop_milestones = get_milestones(milestone_count as u8);
+        let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32..prop_milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
 
         let project_key = create_and_fund_project::<T>(
             alice.clone(),
@@ -155,12 +162,11 @@ mod benchmarks {
             CurrencyId::Native,
         );
 
-        // All the milestones are approved now
-        let fee: BalanceOf<T> = <T as Config>::ImbueFee::get().mul_floor(raised_funds);
-        let refunded: BalanceOf<T> = raised_funds.saturating_sub(fee);
+        assert_ok!(crate::Pallet::<T>::raise_dispute(RawOrigin::Signed(bob.clone()), project_key, milestone_keys));
+        let _ = <crate::Pallet::<T> as DisputeHooks>::on_dispute_complete(project_key, milestone_keys.into_inner(), DisputeResult::Success);
 
         #[extrinsic_call]
-        withdraw(RawOrigin::Signed(alice.clone()), project_key);
+        refund(RawOrigin::Signed(bob.clone()), project_key);
         assert_last_event::<T>(
             Event::<T>::ProjectFundsWithdrawn(alice, project_key, withdrawn, CurrencyId::Native)
                 .into(),
