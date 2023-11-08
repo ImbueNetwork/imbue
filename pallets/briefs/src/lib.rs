@@ -84,7 +84,7 @@ pub mod pallet {
         type BriefStorageItem: Get<StorageItemOf<Self>>;
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The jury size of each brief as selected by JurySelector.
-        type StandardJurySize: Get<u32>
+        type StandardJurySize: Get<u8>
         /// The type that selects a list of jury members.
         type JurySelector: SelectJury<AccountIdOf<Self>>;
         /// The weight info for the extrinsics. 
@@ -152,6 +152,8 @@ pub mod pallet {
         FreelancerApprovalRequired,
         /// Milestones total do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
+        /// too many milestones here mate fixed with https://github.com/ImbueNetwork/imbue/issues/267
+
     }
 
     #[pallet::call]
@@ -296,13 +298,28 @@ pub mod pallet {
             let contributions = BriefContributions::<T>::get(brief_id);
 
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
+            fn convert_to_proposal(
+                currency_id: CurrencyId,
+                current_contribution: BoundedBTreeMap<AccountId, Contribution<Balance, BlockNumber>, Self::MaximumContributorsPerProject>,
+                brief_hash: H256,
+                benificiary: AccountId,
+                milestones: BoundedVec<ProposedMilestone, Self::MaxMilestonesPerProject>,
+                refund_locations: BoundedVec<(Locality<AccountId>, Percent), Self::MaximumContributorsPerProject>,
+                jury: BoundedVec<AccountId, Self::MaxJuryMembers>,
+                on_creation_funding: FundingPath,
+            ) -> Result<(), DispatchError>;
+            
+            let refund_locations = <T as Config>::IntoProposal::convert_contributions_to_refund_locations(&contributions.into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners))?;
+
             <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
-                contributions.into_inner(),
+                contributions.into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners)?,
                 brief_id,
                 brief.applicant,
-                brief.milestones.into(),
-                FundingType::Brief,
+                brief.milestones.to_vec().try_into().map_err(|_|Error::<T>::),
+                refund_locations,
+                <JurySelector as SelectJury>::select_jury(<T as Config>::StandardJurySize::get()),
+                FundingPath::TakeFromReserved,
             )?;
 
             BriefContributions::<T>::remove(brief_id);

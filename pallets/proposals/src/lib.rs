@@ -435,54 +435,55 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
             ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanInitiateRefund);
-
-            let mut total_refunded: BalanceOf<T> = Zero::zero();
             let project_account = Self::project_account_id(project_key);
 
             Projects::<T>::try_mutate_exists(project_key, |maybe_project|{
                 if let Some(project) = maybe_project {
+                    let mut total_to_refund_including_fee: BalanceOf<T> = Zero::zero();
+
                     for (ms_key, mut ms) in project.milestones.iter_mut() {
                         if ms.can_refund && ms.transfer_status.is_none() {
-                            for (refund_location, percent_share) in &project.refund_locations {
-                                let milestone_amount = ms.percentage_to_unlock.mul_floor(project.raised_funds);
-                                let total_amount = percent_share.mul_floor(milestone_amount);
-                                let fee = <T as Config>::ImbueFee::get().mul_floor(total_amount);
-                                let refund_amount = total_amount.saturating_sub(fee);
-                
-                                match refund_location {
-                                    Locality::Local(acc) => {
-                                        T::MultiCurrency::transfer(
-                                            project.currency_id,
-                                            &project_account,
-                                            &acc,
-                                            refund_amount,
-                                        )?;
-                                    },
-                                    Locality::Foreign(multilocation) => {
-                                        T::ExternalRefundHandler::send_refund_message_to_treasury(
-                                            // TODO: change this to reference so that we dont have to clone....
-                                            project_account.clone(),
-                                            refund_amount,
-                                            project.currency_id,
-                                            *multilocation,
-                                        )?;
-                                    }
-                                }
-
-                                // Take the fee and send to ImbueFeeAccount   
-                                T::MultiCurrency::transfer(
-                                    project.currency_id,
-                                    &project_account,
-                                    &<T as Config>::ImbueFeeAccount::get(),
-                                    fee,
-                                )?;
-
-                                total_refunded = total_refunded.saturating_add(total_amount);
-                            }
+                            let milestone_amount = ms.percentage_to_unlock.mul_floor(project.raised_funds);
+                            total_to_refund_including_fee = total_to_refund_including_fee.saturating_add(milestone_amount);
                             ms.transfer_status = Some(TransferStatus::Refunded{on: frame_system::Pallet::<T>::block_number()});
                         }
                     }
-                    project.refunded_funds = project.refunded_funds.saturating_add(total_refunded);
+
+                    let fee = <T as Config>::ImbueFee::get().mul_floor(total_to_refund_including_fee);
+                    // Take the fee and send to ImbueFeeAccount   
+                    T::MultiCurrency::transfer(
+                        project.currency_id,
+                        &project_account,
+                        &<T as Config>::ImbueFeeAccount::get(),
+                        fee,
+                    )?;
+
+                    let total_to_refund = total_to_refund_including_fee.saturating_sub(fee);
+                        
+                    for (refund_location, percent_share) in &project.refund_locations {
+                        let per_refund = percent_share.mul_floor(total_to_refund);
+                        match refund_location {
+                            Locality::Local(acc) => {
+                                T::MultiCurrency::transfer(
+                                    project.currency_id,
+                                    &project_account,
+                                    &acc,
+                                    per_refund,
+                                )?;
+                            },
+                            Locality::Foreign(multilocation) => {
+                                T::ExternalRefundHandler::send_refund_message_to_treasury(
+                                    // TODO: change this to reference so that we dont have to clone....
+                                    project_account.clone(),
+                                    per_refund,
+                                    project.currency_id,
+                                    *multilocation,
+                                )?;
+                            }
+                        }
+                        
+                    }
+                    project.refunded_funds = project.refunded_funds.saturating_add(total_to_refund_including_fee);
                     if project.refunded_funds.saturating_add(project.withdrawn_funds) == project.raised_funds {
                         *maybe_project = None;
                     }

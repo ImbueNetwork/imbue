@@ -1,5 +1,4 @@
 #![cfg(feature = "runtime-benchmarks")]
-
 use super::*;
 use crate::test_utils::*;
 use crate::Pallet as Proposals;
@@ -29,7 +28,7 @@ mod benchmarks {
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let contributions = get_contributions::<T>(vec![alice], 100_000_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
-        let project_key = create_project::<T>(
+        let project_key = create_and_fund_project::<T>(
             bob.clone(),
             contributions,
             prop_milestones,
@@ -50,7 +49,7 @@ mod benchmarks {
         // TODO: should update the contributors list to have maximum available length
         let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
-        let project_key = create_project::<T>(
+        let project_key = create_and_fund_project::<T>(
             alice.clone(),
     z        contributions,
             prop_milestones,
@@ -83,7 +82,7 @@ mod benchmarks {
         let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
         let prop_milestones = get_milestones(milestone_count as u8);
 
-        let project_key = create_project::<T>(
+        let project_key = create_and_fund_project::<T>(
             alice.clone(),
             contributions,
             prop_milestones,
@@ -136,6 +135,38 @@ mod benchmarks {
             crate::Pallet::<T>::on_initialize(block_number);
         }
     }
+
+    #[benchmark]
+    fn withdraw() {
+        let alice: T::AccountId =
+            create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId =
+            create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
+        let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
+        let raised_funds: BalanceOf<T> = 100_000_000_000_000_000u128.saturated_into();
+
+        let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
+        let prop_milestones = get_milestones(milestone_count as u8);
+
+        let project_key = create_and_fund_project::<T>(
+            alice.clone(),
+            contributions,
+            prop_milestones,
+            CurrencyId::Native,
+        );
+
+        // All the milestones are approved now
+        let fee: BalanceOf<T> = <T as Config>::ImbueFee::get().mul_floor(raised_funds);
+        let refunded: BalanceOf<T> = raised_funds.saturating_sub(fee);
+
+        #[extrinsic_call]
+        withdraw(RawOrigin::Signed(alice.clone()), project_key);
+        assert_last_event::<T>(
+            Event::<T>::ProjectFundsWithdrawn(alice, project_key, withdrawn, CurrencyId::Native)
+                .into(),
+        );
+    }
+
 
     impl_benchmark_test_suite!(
         Proposals,
