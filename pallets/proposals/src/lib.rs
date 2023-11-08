@@ -793,4 +793,6 @@ pub trait WeightInfoT {
     fn vote_on_milestone() -> Weight;
     fn withdraw() -> Weight;
     fn on_initialize() -> Weight;
+    fn raise_dispute() -> Weight;
+    fn refund() -> Weight;
 }
