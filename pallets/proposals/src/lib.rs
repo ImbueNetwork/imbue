@@ -102,8 +102,6 @@ pub mod pallet {
         type MaxMilestonesPerProject: Get<u32>;
         /// Maximum project a user can submit, make sure its pretty big.
         type MaxProjectsPerAccount: Get<u32>;
-        /// Maximum size of the accounts responsible for handling disputes.
-        type MaxJuryMembers: Get<u32>;
         /// The maximum projects to be dealt with per block. Must be small as is dealt with in the hooks.
         type ExpiringProjectRoundsPerBlock: Get<u32>;
         /// Imbue fee in percent 0-99
@@ -118,6 +116,8 @@ pub mod pallet {
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
         /// The trait that handler the raising of a dispute.
         type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxJurySize = Self::MaxJuryMembers, MaxSpecifics = Self::MaxMilestonesPerProject>;
+        /// Maximum jury members, usually defined elsewhere.
+        type MaxJuryMembers: Get<u8>;
     }
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);

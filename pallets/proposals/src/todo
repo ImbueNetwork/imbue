@@ -1,6 +1,6 @@
 raise-dispute extrinsic. - done
 tests for above implementation. - done?? check code cov
-benchmark for raise dispute extrinsic
+benchmark for raise dispute extrinsic -done
 ALLOW VOTING ON SUBMITTED MILESTONE - done
 make sure when raising a dispute you cannot raise it on approved milestones. - done
 OnDisputeCompleteHooks.
@@ -14,10 +14,12 @@ get jury in each pallet (briefs, grants, crowdfunding.)
 update the function call in each pallet (jury, TreasuryOrigin, )
 code cov check
 
+
 initiate refund extrinsic - done
+benchmark refund - done
 tests! - done
 add total_refunded to withdraw extrinsic - done
-tests for these - not done
+tests for these - done
 
 Migration for removing NoConfidenceLogic
     #[pallet::storage]

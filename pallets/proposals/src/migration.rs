@@ -1,8 +1,9 @@
 use crate::*;
 use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::*;
-
 use frame_system::pallet_prelude::BlockNumberFor;
+
+use common_types::TreasuryOriginConverter;
 use pallet_fellowship::traits::SelectJury;
 pub use pallet::*;
 
@@ -168,7 +169,7 @@ mod v2 {
         pub approved_for_funding: bool,
         pub funding_threshold_met: bool,
         pub cancelled: bool,
-        pub funding_type: FundingType,
+        pub funding_type: v5::FundingType,
     }
 
     #[derive(Clone, Debug, Encode, Decode, TypeInfo)]
@@ -211,7 +212,7 @@ mod v2 {
                 funding_threshold_met: project.funding_threshold_met,
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
-                funding_type: FundingType::Proposal,
+                funding_type: v5::FundingType::Proposal,
             };
             Some(migrated_project)
         });
@@ -234,7 +235,7 @@ pub mod v3 {
     #[derive(Encode, Decode, Clone)]
     pub struct ProjectV3<AccountId, Balance, BlockNumber> {
         pub agreement_hash: H256,
-        pub milestones: BTreeMap<MilestoneKey, Milestone>,
+        pub milestones: BTreeMap<MilestoneKey, v6::V6Milestone>,
         pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
         pub currency_id: common_types::CurrencyId,
         pub withdrawn_funds: Balance,
@@ -242,7 +243,7 @@ pub mod v3 {
         pub initiator: AccountId,
         pub created_on: BlockNumber,
         pub cancelled: bool,
-        pub funding_type: FundingType,
+        pub funding_type: v5::FundingType,
     }
 
     pub fn migrate_contribution_and_project<T: Config + pallet_timestamp::Config>(
@@ -252,7 +253,7 @@ pub mod v3 {
         let mut migrated_contributions = BTreeMap::new();
         let mut migrated_milestones = BTreeMap::new();
 
-        Projects::<T>::translate(|_project_key, project: v2::ProjectV2Of<T>| {
+        v6::Projects::<T>::translate(|_project_key, project: v2::ProjectV2Of<T>| {
             project.contributions.iter().for_each(|(key, cont)| {
                 *weight += T::DbWeight::get().reads_writes(1, 1);
                 migrated_contributions.insert(
@@ -267,7 +268,7 @@ pub mod v3 {
                 *weight += T::DbWeight::get().reads_writes(1, 1);
                 migrated_milestones.insert(
                     *key,
-                    Milestone {
+                    v6::V6Milestone {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,
                         percentage_to_unlock: Percent::from_percent(
@@ -277,14 +278,14 @@ pub mod v3 {
                     },
                 );
             });
-            let bounded_milestone: Result<BoundedBTreeMilestones<T>, _> =
+            let bounded_milestone: Result<v6::V6BoundedBTreeMilestones<T>, _> =
                 migrated_milestones.clone().try_into();
             let bounded_contributions: Result<ContributionsFor<T>, _> =
                 migrated_contributions.clone().try_into();
             if let Ok(ms) = bounded_milestone {
                 if let Ok(cont) = bounded_contributions {
                     *weight += T::DbWeight::get().reads_writes(1, 1);
-                    let migrated_project: Project<T> = Project {
+                    let migrated_project: v6::Project<T> = Project {
                         milestones: ms,
                         contributions: cont,
                         currency_id: project.currency_id,
@@ -294,7 +295,7 @@ pub mod v3 {
                         agreement_hash: Default::default(),
                         cancelled: project.cancelled,
                         raised_funds: project.raised_funds,
-                        funding_type: FundingType::Proposal,
+                        funding_type: v5::FundingType::Proposal,
                         // A deposit_id of u32::MAX is ignored.
                         deposit_id: u32::MAX.into(),
                     };
@@ -508,7 +509,7 @@ pub mod v5 {
     pub enum FundingType {
         Proposal,
         Brief,
-        Grant(TreasuryOrigin),
+        Grant(common_types::TreasuryOrigin),
     }
 
     /// 1: Custom StorageVersion is removed, macro StorageVersion is used: https://github.com/ImbueNetwork/imbue/issues/178
@@ -569,9 +570,21 @@ pub mod v5 {
 pub mod v6 {
     use super::*;
 
-    pub struct ProjectV6<T: Config> {
+    pub(crate) type V6BoundedBTreeMilestones<T> = BoundedBTreeMap<MilestoneKey, V6Milestone, <T as Config>::MaxMilestonesPerProject>;
+
+    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+    pub(crate) struct V6Milestone {
+        pub project_key: ProjectKey,
+        pub milestone_key: MilestoneKey,
+        pub percentage_to_unlock: Percent,
+        pub is_approved: bool,
+    }
+
+    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
+    #[scale_info(skip_type_params(T))]
+    pub(crate) struct ProjectV6<T: Config> {
         pub agreement_hash: H256,
-        pub milestones: BoundedBTreeMilestones<T>,
+        pub milestones: V6BoundedBTreeMilestones<T>,
         pub contributions: ContributionsFor<T>,
         pub currency_id: common_types::CurrencyId,
         pub withdrawn_funds: BalanceOf<T>,
@@ -579,12 +592,12 @@ pub mod v6 {
         pub initiator: AccountIdOf<T>,
         pub created_on: BlockNumberFor<T>,
         pub cancelled: bool,
-        pub funding_type: FundingType,
+        pub funding_type: v5::FundingType,
         pub deposit_id: DepositIdOf<T>,
     }
 
     #[storage_alias]
-    pub type Projects<T: Config> = StorageMap<_, Identity, ProjectKey, ProjectV6<T>, OptionQuery>;
+    pub type Projects<T: Config> = StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV6<T>, OptionQuery>;
 
     #[storage_alias]
     pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
@@ -710,10 +723,11 @@ pub mod v6 {
 }
 
 pub mod v7 {
+    use super::*;
 
-    struct MigrateToV7<T: Config, U: SelectJury>(T, U);
+    struct MigrateToV7<T: Config, U: SelectJury<AccountIdOf<T>>>(T, U);
 
-    impl<T: Config, U: SelectJury> OnRuntimeUpgrade for MigrateToV7<T, U> {
+    impl<T: Config, U: SelectJury<AccountIdOf<T>>> OnRuntimeUpgrade for MigrateToV7<T, U> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
@@ -734,7 +748,7 @@ pub mod v7 {
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
             if current == 7 && onchain == 6 {
 
-                migrate_new_fields::<T, U>()
+                migrate_new_fields::<T, U>(&mut weight);
                 current.put::<Pallet<T>>();
                 log::warn!("v7 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
@@ -760,30 +774,50 @@ pub mod v7 {
         }
     }
 
-    fn migrate_new_fields<T: Config, U: SelectJury>(weight &mut Weight) {
+    fn migrate_new_fields<T: Config, U: SelectJury<AccountIdOf<T>>>(weight: &mut Weight) {
         v6::Projects::<T>::drain().for_each(|(key, project)|{
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
             let on_creation_funding = match project.funding_type {
-                Proposal => crate::FundingPath::TakeFromReserved,
-                Brief => crate::FundingPath::TakeFromReserved,
-                Grant(_) => crate::FundingPath::WaitForFunding,
-            }
+                v5::FundingType::Proposal => crate::FundingPath::TakeFromReserved,
+                v5::FundingType::Brief => crate::FundingPath::TakeFromReserved,
+                v5::FundingType::Grant(_) => crate::FundingPath::WaitForFunding,
+            };
 
-            let jury = <U as SelectJury>::select_jury(<T as Config>::MaxJuryMembers::get());
+            let jury = <U as SelectJury<AccountIdOf<T>>>::select_jury(<T as Config>::MaxJuryMembers::get());
 
-            let refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = match funding.funding_type {
-                Proposal => crate::Pallet::<T>::convert_contributions_to_refund_locations(project.contributions),
-                Brief => crate::Pallet::<T>::convert_contributions_to_refund_locations(project.contributions),
-                Grant(treasury_origin) => {
-                    let beneficiary = PalletId(*b"py/trsry").into_account_truncating();
-                    Vec::from((Locality(treasury_origin.get_multi_location(beneficiary)), Percent::from_parts(100))).try_into().expect("1 is lower than bound; qed")
+            let refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = match project.funding_type {
+                v5::FundingType::Proposal => crate::Pallet::<T>::convert_contributions_to_refund_locations(&project.contributions),
+                v5::FundingType::Brief => crate::Pallet::<T>::convert_contributions_to_refund_locations(&project.contributions),
+                v5::FundingType::Grant(treasury_origin) => {
+                    Vec::from((Locality::Foreign(treasury_origin.get_multi_location()), Percent::from_parts(100))).try_into().expect("1 is lower than bound if it isnt then the system is broken anyway; qed")
                 },
             };
 
+            let mut new_milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
+            project.milestones.iter().for_each(|ms_key, ms: v6::V6Milestone| {
+                
+                // assume that if its approved then its been withdrawn.
+                let mut transfer_status: Option<TransferStatus<BlockNumberFor<T>>> = None;
+                if ms.is_approved {
+                    transfer_status = Some(TransferStatus::Withdraw{on: frame_system::Pallet::<T>::block_number()});
+                }
+
+                let new_ms = crate::Milestone {
+                    project_key: ms.project_key,
+                    milestone_key: ms.milestone_key,
+                    percentage_to_unlock: ms.percentage_to_unlock,
+                    is_approved: ms.is_approved,
+                    can_refund: false,
+                    transfer_status
+                };
+                // This only fails if the bound has been reduced and the old milestones were at max which is unlikely. 
+                new_milestones.try_push(new_ms).expect("If this fails in try_runtime we have an issue. Dont reduce bound of milestones.");
+            });
+
             let migrated_project = crate::Project {
                 agreement_hash: project.agreement_hash,
-                milestones: project.milestones,
+                milestones: new_milestones,
                 contributions: project.contributions,
                 currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
@@ -793,8 +827,9 @@ pub mod v7 {
                 cancelled: project.cancelled,
                 deposit_id: project.deposit_id,
                 refund_locations,
-                jury.try_into().expect("MaxJuryMembers is used in bound and creation; qed"),
+                jury: jury.try_into().expect("MaxJuryMembers is used in bound and creation; qed"),
                 on_creation_funding,
+                refunded_funds: Zero::zero(),
             };
 
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
@@ -952,7 +987,7 @@ mod test {
             );
 
             assert_eq!(H256::default(), migrated_project.agreement_hash);
-            assert_eq!(FundingType::Proposal, migrated_project.funding_type);
+            assert_eq!(v5::FundingType::Proposal, migrated_project.funding_type);
         })
     }
 
@@ -1017,7 +1052,7 @@ mod test {
                 approved_for_funding: false,
                 funding_threshold_met: false,
                 cancelled: false,
-                funding_type: FundingType::Brief,
+                funding_type: v5::FundingType::Brief,
             };
             v2::Projects::<Test>::insert(0, &project);
             v3::UserVotes::<Test>::insert((*ALICE, 10u32, 10u32, v3::RoundType::VotingRound), true);
