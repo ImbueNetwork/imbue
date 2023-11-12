@@ -12,7 +12,7 @@ use xcm::latest::{MultiLocation, WeightLimit};
 pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
     type MaximumContributorsPerProject: Get<u32>;
     type MaxMilestonesPerProject: Get<u32>;
-    type MaxJuryMembers: Get<u8>;
+    type MaxJuryMembers: Get<u32>;
     /// Convert the propoerties of a project into a project.
     /// This is the main method when wanting to use pallet_proposals and is how one configures a project.
     fn convert_to_proposal(

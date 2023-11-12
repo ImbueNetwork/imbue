@@ -3,7 +3,7 @@ use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::*;
 use frame_system::pallet_prelude::BlockNumberFor;
 
-use common_types::TreasuryOriginConverter;
+use common_types::{TreasuryOriginConverter, TreasuryOrigin};
 use pallet_fellowship::traits::SelectJury;
 pub use pallet::*;
 
@@ -285,7 +285,7 @@ pub mod v3 {
             if let Ok(ms) = bounded_milestone {
                 if let Ok(cont) = bounded_contributions {
                     *weight += T::DbWeight::get().reads_writes(1, 1);
-                    let migrated_project: v6::Project<T> = Project {
+                    let migrated_project: v6::ProjectV6<T> = v6::ProjectV6 {
                         milestones: ms,
                         contributions: cont,
                         currency_id: project.currency_id,
@@ -570,10 +570,10 @@ pub mod v5 {
 pub mod v6 {
     use super::*;
 
-    pub(crate) type V6BoundedBTreeMilestones<T> = BoundedBTreeMap<MilestoneKey, V6Milestone, <T as Config>::MaxMilestonesPerProject>;
+    pub type V6BoundedBTreeMilestones<T> = BoundedBTreeMap<MilestoneKey, V6Milestone, <T as Config>::MaxMilestonesPerProject>;
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
-    pub(crate) struct V6Milestone {
+    pub struct V6Milestone {
         pub project_key: ProjectKey,
         pub milestone_key: MilestoneKey,
         pub percentage_to_unlock: Percent,
@@ -582,7 +582,7 @@ pub mod v6 {
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
     #[scale_info(skip_type_params(T))]
-    pub(crate) struct ProjectV6<T: Config> {
+    pub struct ProjectV6<T: Config> {
         pub agreement_hash: H256,
         pub milestones: V6BoundedBTreeMilestones<T>,
         pub contributions: ContributionsFor<T>,
@@ -727,12 +727,17 @@ pub mod v7 {
 
     struct MigrateToV7<T: Config, U: SelectJury<AccountIdOf<T>>>(T, U);
 
-    impl<T: Config, U: SelectJury<AccountIdOf<T>>> OnRuntimeUpgrade for MigrateToV7<T, U> {
+    impl<T: Config, U: SelectJury<AccountIdOf<T>>> OnRuntimeUpgrade for MigrateToV7<T, U>
+    where AccountIdOf<T>: Into<[u8; 32]>
+    {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
+            
+            ensure!(<T as Config>::MaxJuryMembers::get() < u8::MAX as u32, "Max jury members must be smaller than u8");
+
             ensure!(
                 current == 7 && onchain == 6,
                 "Current version must be set to v7 and onchain to v6"
@@ -774,7 +779,9 @@ pub mod v7 {
         }
     }
 
-    fn migrate_new_fields<T: Config, U: SelectJury<AccountIdOf<T>>>(weight: &mut Weight) {
+    fn migrate_new_fields<T: Config, U: SelectJury<AccountIdOf<T>>>(weight: &mut Weight)
+    where AccountIdOf<T>: Into<[u8; 32]>
+    {
         v6::Projects::<T>::drain().for_each(|(key, project)|{
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
@@ -784,23 +791,35 @@ pub mod v7 {
                 v5::FundingType::Grant(_) => crate::FundingPath::WaitForFunding,
             };
 
-            let jury = <U as SelectJury<AccountIdOf<T>>>::select_jury(<T as Config>::MaxJuryMembers::get());
+            let jury = <U as SelectJury<AccountIdOf<T>>>::select_jury(<T as Config>::MaxJuryMembers::get().try_into().expect("checked in the pre_upgrade."));
 
             let refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = match project.funding_type {
                 v5::FundingType::Proposal => crate::Pallet::<T>::convert_contributions_to_refund_locations(&project.contributions),
                 v5::FundingType::Brief => crate::Pallet::<T>::convert_contributions_to_refund_locations(&project.contributions),
+
                 v5::FundingType::Grant(treasury_origin) => {
-                    Vec::from((Locality::Foreign(treasury_origin.get_multi_location()), Percent::from_parts(100))).try_into().expect("1 is lower than bound if it isnt then the system is broken anyway; qed")
+                    let multilocation = match treasury_origin {
+                        TreasuryOrigin::Kusama => {
+                            <TreasuryOrigin as TreasuryOriginConverter<AccountIdOf<T>>>::get_multi_location(&treasury_origin).expect("known good.")
+                        },
+                        TreasuryOrigin::Imbue => {
+                            <TreasuryOrigin as TreasuryOriginConverter<AccountIdOf<T>>>::get_multi_location(&treasury_origin).expect("known good.")
+                        },   
+                        TreasuryOrigin::Karura => {
+                            <TreasuryOrigin as TreasuryOriginConverter<AccountIdOf<T>>>::get_multi_location(&TreasuryOrigin::Imbue).expect("known good.")
+                        },     
+                    };
+                    vec![(Locality::Foreign(multilocation), Percent::from_parts(100))].try_into().expect("1 is lower than bound if it isnt then the system is broken anyway; qed")
                 },
             };
 
             let mut new_milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
-            project.milestones.iter().for_each(|ms_key, ms: v6::V6Milestone| {
+            project.milestones.iter().for_each(|(ms_key, ms): (&MilestoneKey, &v6::V6Milestone)| {
                 
                 // assume that if its approved then its been withdrawn.
                 let mut transfer_status: Option<TransferStatus<BlockNumberFor<T>>> = None;
                 if ms.is_approved {
-                    transfer_status = Some(TransferStatus::Withdraw{on: frame_system::Pallet::<T>::block_number()});
+                    transfer_status = Some(TransferStatus::Withdrawn{on: frame_system::Pallet::<T>::block_number()});
                 }
 
                 let new_ms = crate::Milestone {
@@ -812,7 +831,7 @@ pub mod v7 {
                     transfer_status
                 };
                 // This only fails if the bound has been reduced and the old milestones were at max which is unlikely. 
-                new_milestones.try_push(new_ms).expect("If this fails in try_runtime we have an issue. Dont reduce bound of milestones.");
+                new_milestones.try_insert(ms.milestone_key, new_ms).expect("If this fails in try_runtime we have an issue. Dont reduce bound of milestones.");
             });
 
             let migrated_project = crate::Project {
@@ -1078,7 +1097,7 @@ mod test {
 
             let _w = v3::migrate_all::<Test>();
 
-            let project_apres = crate::Projects::<Test>::get(0).unwrap();
+            let project_apres = v6::Projects::<Test>::get(0).unwrap();
             // #1, 2, 7 & 8
             assert_eq!(project.agreement_hash, project_apres.agreement_hash);
             assert_eq!(
@@ -1138,7 +1157,7 @@ mod test {
             let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
             let prop_milestones = get_milestones(10);
             let project_key =
-                create_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native);
+                create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).expect("project wasnt created!");
             let milestone_key: MilestoneKey = 0;
             let expiry_block: BlockNumber = 10;
             let rounds_expiring: BoundedProjectKeysPerBlock<Test> =

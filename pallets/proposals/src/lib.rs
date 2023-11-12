@@ -38,7 +38,7 @@ pub(crate) mod tests;
 pub mod weights;
 pub use weights::*;
 
-//pub mod migration;
+pub mod migration;
 
 pub mod impls;
 
@@ -117,7 +117,7 @@ pub mod pallet {
         /// The trait that handler the raising of a dispute.
         type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxJurySize = Self::MaxJuryMembers, MaxSpecifics = Self::MaxMilestonesPerProject>;
         /// Maximum jury members, usually defined elsewhere.
-        type MaxJuryMembers: Get<u8>;
+        type MaxJuryMembers: Get<u32>;
     }
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
