@@ -106,21 +106,15 @@ impl<T: Config> Pallet<T> {
 
                     //check if the everyone has voted and its still less than the
                     // funding threshold just reject it
-                    if vote.yay + vote.nay == project.raised_funds && vote.yay < funding_threshold
-                    {
+                    if vote.yay + vote.nay == project.raised_funds && vote.yay < funding_threshold {
                         Self::close_voting_round(project_key, user_has_voted_key)?;
-                        Self::deposit_event(Event::MilestoneRejected(project_key,milestone_key));
+                        Self::deposit_event(Event::MilestoneRejected(project_key, milestone_key));
                     }
                     Ok::<Vote<BalanceOf<T>>, DispatchError>(vote.clone())
-
                 } else {
                     Err(Error::<T>::VotingRoundNotStarted.into())
                 }
             })?;
-
-
-
-
 
         Self::try_auto_finalise_milestone_voting(
             project_key,

@@ -27,7 +27,6 @@ fn ensure_role_in_works() {
     });
 }
 
-
 #[test]
 fn ensure_role_in_works_with_rank() {
     new_test_ext().execute_with(|| {
