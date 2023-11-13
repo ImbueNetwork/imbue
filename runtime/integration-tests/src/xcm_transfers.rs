@@ -27,9 +27,7 @@ use crate::kusama_test_net::{
 use crate::setup::{ksm_amount, mgx_amount, native_amount, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING};
 use common_runtime::Balance;
 use common_types::{CurrencyId, FundingType, TreasuryOrigin};
-use imbue_kusama_runtime::{
-    OrmlTokens, Runtime as R, RuntimeOrigin, XTokens,
-};
+use imbue_kusama_runtime::{OrmlTokens, Runtime as R, RuntimeOrigin, XTokens};
 use orml_traits::MultiCurrency;
 use pallet_proposals::traits::RefundHandler;
 
