@@ -17,61 +17,42 @@ use crate::constants::SAFE_XCM_VERSION;
 pub use imbue_kusama_runtime::{AccountId, AuraId, Balance, BlockNumber};
 
 use crate::constants::{
-    accounts::{ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE},
+    accounts::{ALICE, BOB},
     imbue, kusama,
 };
 pub use sp_core::{sr25519, storage::Storage, Get};
 use xcm::prelude::*;
 use xcm_emulator::{
-    decl_test_networks, decl_test_parachains, decl_test_relay_chains, Parachain, RelayChain,
-    TestExt,
+    decl_test_networks, decl_test_parachains, decl_test_relay_chains,
+    decl_test_sender_receiver_accounts_parameter_types, DefaultMessageProcessor,
 };
 
 use crate::setup::{PARA_ID_DEVELOPMENT, PARA_ID_SIBLING};
-use frame_support::{parameter_types, sp_io, sp_tracing};
-use xcm_builder::test_utils::XcmHash;
-use xcm_executor::traits::Convert;
+
 decl_test_relay_chains! {
+    #[api_version(5)]
     pub struct Kusama {
         genesis = kusama::genesis(),
         on_init = (
-            // kusama_runtime::XcmPallet::force_default_xcm_version(
-            // kusama_runtime::RuntimeOrigin::root(),
-            // Some(SAFE_XCM_VERSION)),
-            //
-            // kusama_runtime::XcmPallet::force_xcm_version(
-            // kusama_runtime::RuntimeOrigin::root(),
-            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_SIBLING)))),
-            // SAFE_XCM_VERSION),
-            //
-            // kusama_runtime::XcmPallet::force_xcm_version(
-            // kusama_runtime::RuntimeOrigin::root(),
-            // Box::new(MultiLocation::new(1, X1(Parachain(PARA_ID_DEVELOPMENT)))),
-            // SAFE_XCM_VERSION),
-
             kusama_runtime::XcmPallet::force_xcm_version(
             kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(0, X1(Parachain(PARA_ID_SIBLING)))),
-            SAFE_XCM_VERSION),
+            SAFE_XCM_VERSION).expect("Failed to set XCM version"),
 
             kusama_runtime::XcmPallet::force_xcm_version(
             kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(0, X1(Parachain(PARA_ID_DEVELOPMENT)))),
-            SAFE_XCM_VERSION),
+            SAFE_XCM_VERSION).expect("Failed to set XCM version"),
         ),
-        runtime = {
-            Runtime: kusama_runtime::Runtime,
-            RuntimeOrigin: kusama_runtime::RuntimeOrigin,
-            RuntimeCall: kusama_runtime::RuntimeCall,
-            RuntimeEvent: kusama_runtime::RuntimeEvent,
-            MessageQueue: kusama_runtime::MessageQueue,
-            XcmConfig: kusama_runtime::xcm_config::XcmConfig,
+        runtime = kusama_runtime,
+        core = {
+            MessageProcessor: DefaultMessageProcessor<Kusama>,
             SovereignAccountOf: kusama_runtime::xcm_config::SovereignAccountOf,
-            System: kusama_runtime::System,
-            Balances: kusama_runtime::Balances,
         },
-        pallets_extra = {
+        pallets = {
             XcmPallet: kusama_runtime::XcmPallet,
+            Balances: kusama_runtime::Balances,
+            Hrmp: kusama_runtime::Hrmp,
         }
     }
 }
@@ -82,22 +63,16 @@ decl_test_parachains! {
             imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
             imbue_kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(1, Here)),
-            SAFE_XCM_VERSION),
+            SAFE_XCM_VERSION).expect("Failed to set XCM version"),
         ),
-        runtime = {
-            Runtime: imbue_kusama_runtime::Runtime,
-            RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
-            RuntimeCall: imbue_kusama_runtime::RuntimeCall,
-            RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
+        runtime = imbue_kusama_runtime,
+        core = {
             XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
             DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
             LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
-            System: imbue_kusama_runtime::System,
-            Balances: imbue_kusama_runtime::Balances,
-            ParachainSystem: imbue_kusama_runtime::ParachainSystem,
             ParachainInfo: imbue_kusama_runtime::ParachainInfo,
         },
-        pallets_extra = {
+        pallets = {
             PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,
             XTokens: imbue_kusama_runtime::XTokens,
         }
@@ -108,22 +83,16 @@ decl_test_parachains! {
             imbue_kusama_runtime::PolkadotXcm::force_xcm_version(
             imbue_kusama_runtime::RuntimeOrigin::root(),
             Box::new(MultiLocation::new(1, Here)),
-            SAFE_XCM_VERSION),
+            SAFE_XCM_VERSION).expect("Failed to set XCM version"),
         ),
-        runtime = {
-            Runtime: imbue_kusama_runtime::Runtime,
-            RuntimeOrigin: imbue_kusama_runtime::RuntimeOrigin,
-            RuntimeCall: imbue_kusama_runtime::RuntimeCall,
-            RuntimeEvent: imbue_kusama_runtime::RuntimeEvent,
+        runtime = imbue_kusama_runtime,
+        core = {
             XcmpMessageHandler: imbue_kusama_runtime::XcmpQueue,
             DmpMessageHandler: imbue_kusama_runtime::DmpQueue,
             LocationToAccountId: imbue_kusama_runtime::xcm_config::LocationToAccountId,
-            System: imbue_kusama_runtime::System,
-            Balances: imbue_kusama_runtime::Balances,
-            ParachainSystem: imbue_kusama_runtime::ParachainSystem,
             ParachainInfo: imbue_kusama_runtime::ParachainInfo,
         },
-        pallets_extra = {
+        pallets = {
             PolkadotXcm: imbue_kusama_runtime::PolkadotXcm,
             XTokens: imbue_kusama_runtime::XTokens,
         }
@@ -136,21 +105,14 @@ decl_test_networks! {
         parachains = vec![
             Development,
             Sibling,
-            // Karura,
         ],
-    }
+        bridge = ()
+    },
 }
-
-parameter_types! {
-    // Kusama
-    pub KusamaSender: AccountId = Kusama::account_id_of(ALICE);
-    pub KusamaReceiver: AccountId = Kusama::account_id_of(BOB);
-    // Imbue Kusama
-    pub ImbueKusamaSender: AccountId = Development::account_id_of(CHARLIE);
-    pub ImbueKusamaReceiver: AccountId = Development::account_id_of(DAVE);
-    // Sibling Kusama
-    pub SiblingKusamaSender: AccountId = Sibling::account_id_of(EVE);
-    pub SiblingKusamaReceiver: AccountId = Sibling::account_id_of(FERDIE);
+decl_test_sender_receiver_accounts_parameter_types! {
+    Kusama { sender: ALICE, receiver: BOB },
+    Development { sender: ALICE, receiver: BOB },
+    Sibling { sender: ALICE, receiver: BOB }
 }
 
 // decl_test_parachains! {

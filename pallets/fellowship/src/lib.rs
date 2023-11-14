@@ -33,9 +33,8 @@ pub mod pallet {
     use sp_runtime::traits::Zero;
     use sp_std::{convert::TryInto, vec};
 
-    use crate::impls::EnsureFellowshipRole;
     use crate::traits::WeightInfoT;
-    use crate::traits::{EnsureRole, FellowshipHandle, FellowshipPermissions};
+    use crate::traits::{FellowshipHandle, FellowshipPermissions};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type VetterIdOf<T> = AccountIdOf<T>;

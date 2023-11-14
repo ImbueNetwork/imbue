@@ -92,6 +92,9 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
 
+        let funding_threshold: BalanceOf<T> =
+            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
+
         let vote: Vote<BalanceOf<T>> =
             MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
                 if let Some(vote) = vote_btree.get_mut(&milestone_key) {
@@ -100,14 +103,18 @@ impl<T: Config> Pallet<T> {
                     } else {
                         vote.nay = vote.nay.saturating_add(contribution_amount);
                     }
+
+                    //check if the everyone has voted and its still less than the
+                    // funding threshold just reject it
+                    if vote.yay + vote.nay == project.raised_funds && vote.yay < funding_threshold {
+                        Self::close_voting_round(project_key, user_has_voted_key)?;
+                        Self::deposit_event(Event::MilestoneRejected(project_key, milestone_key));
+                    }
                     Ok::<Vote<BalanceOf<T>>, DispatchError>(vote.clone())
                 } else {
                     Err(Error::<T>::VotingRoundNotStarted.into())
                 }
             })?;
-
-        let funding_threshold: BalanceOf<T> =
-            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
 
         Self::try_auto_finalise_milestone_voting(
             project_key,

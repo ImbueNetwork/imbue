@@ -1,10 +1,8 @@
-use crate::Config;
-use crate::Pallet as Proposals;
 use crate::*;
 use common_types::{CurrencyId, FundingType};
 #[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{account, Vec};
-use frame_support::{assert_ok, traits::Hooks};
+use frame_benchmarking::account;
+use frame_support::assert_ok;
 use frame_system::EventRecord;
 use orml_traits::MultiCurrency;
 use pallet_deposits::traits::DepositHandler;
@@ -12,21 +10,9 @@ use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
 use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
+#[cfg(feature = "runtime-benchmarks")]
+use sp_std::vec::Vec;
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
-
-#[allow(dead_code)]
-pub fn run_to_block<T: Config>(n: T::BlockNumber) {
-    loop {
-        let mut block = frame_system::Pallet::<T>::block_number();
-        if block >= n {
-            break;
-        }
-        block = block.saturating_add(1u32.into());
-        frame_system::Pallet::<T>::set_block_number(block);
-        frame_system::Pallet::<T>::on_initialize(block);
-        Proposals::<T>::on_initialize(block);
-    }
-}
 
 pub fn get_contributions<T: Config>(
     accounts: Vec<AccountIdOf<T>>,
@@ -77,7 +63,7 @@ pub fn create_project<T: Config>(
     let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
 
     let mut raised_funds: BalanceOf<T> = 0u32.into();
-    let project_account_id = Proposals::<T>::project_account_id(project_key);
+    let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
 
     for (account, contribution) in contributions.iter() {
         let amount = contribution.value;
@@ -147,10 +133,7 @@ pub fn create_funded_user<T: Config>(
     user
 }
 
-pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
-where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
-{
+pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     let events = frame_system::Pallet::<T>::events();
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
     // compare to the last event record

@@ -6,11 +6,9 @@ use crate::Pallet as PalletDisputes;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get, BoundedVec};
 use frame_system::Pallet as System;
-use orml_traits::MultiCurrency;
-use sp_runtime::SaturatedConversion;
 use sp_std::vec::Vec;
 
-#[benchmarks( where <T as frame_system::Config>::AccountId: AsRef<[u8]>, Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
+#[benchmarks(where Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
 mod benchmarks {
     use super::*;
     use frame_support::dispatch::RawOrigin;

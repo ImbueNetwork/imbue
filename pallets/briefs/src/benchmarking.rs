@@ -12,11 +12,11 @@ use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::SaturatedConversion;
-use sp_std::{convert::TryInto, str, vec::Vec};
+use sp_std::{convert::TryInto, str, vec, vec::Vec};
 
 const SEED: u32 = 0;
 
-#[benchmarks( where<T as frame_system::Config>::AccountId: AsRef<[u8]>,)]
+#[benchmarks]
 mod benchmarks {
     use super::*;
 
@@ -144,10 +144,7 @@ fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
     user
 }
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
-where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
-{
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     let events = frame_system::Pallet::<T>::events();
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
     // compare to the last event record

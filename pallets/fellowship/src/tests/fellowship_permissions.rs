@@ -1,5 +1,4 @@
 use super::*;
-use crate::impls::VetterAndFreelancerAllPermissions;
 
 #[test]
 fn get_permission_works_implementation() {

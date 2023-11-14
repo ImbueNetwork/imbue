@@ -24,9 +24,9 @@ fn create_brief_brief_owner_overflow() {
     build_test_externality().execute_with(|| {
         assert_noop!(
             BriefsMod::create_brief(
-                RuntimeOrigin::signed(*BOB),
+                RuntimeOrigin::signed(BOB),
                 get_brief_owners(u32::MAX),
-                *ALICE,
+                ALICE,
                 100000,
                 10000,
                 gen_hash(1),
@@ -42,9 +42,9 @@ fn create_brief_brief_owner_overflow() {
 fn create_brief_with_no_contribution_ok() {
     build_test_externality().execute_with(|| {
         assert_ok!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             get_brief_owners(1),
-            *ALICE,
+            ALICE,
             100000,
             10,
             gen_hash(1),
@@ -59,12 +59,12 @@ fn create_brief_no_contribution_and_contribute() {
     build_test_externality().execute_with(|| {
         let brief_id = gen_hash(1);
         let contribution_value = 1000;
-        let bob_initial_balance = Tokens::free_balance(CurrencyId::Native, &*BOB);
+        let bob_initial_balance = Tokens::free_balance(CurrencyId::Native, &BOB);
 
         assert_ok!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             get_brief_owners(1),
-            *ALICE,
+            ALICE,
             100000,
             0,
             brief_id,
@@ -74,7 +74,7 @@ fn create_brief_no_contribution_and_contribute() {
 
         (0..5).for_each(|_| {
             assert_ok!(BriefsMod::contribute_to_brief(
-                RuntimeOrigin::signed(*BOB),
+                RuntimeOrigin::signed(BOB),
                 brief_id,
                 contribution_value,
             ));
@@ -87,11 +87,11 @@ fn create_brief_no_contribution_and_contribute() {
 
         assert_eq!(
             latest_event,
-            mock::RuntimeEvent::from(briefs::Event::BriefContribution(*BOB, brief_id))
+            mock::RuntimeEvent::from(briefs::Event::BriefContribution(BOB, brief_id))
         );
 
         assert_eq!(
-            Tokens::free_balance(CurrencyId::Native, &*BOB),
+            Tokens::free_balance(CurrencyId::Native, &BOB),
             bob_initial_balance - contribution_value.saturating_mul(5)
         );
     });
@@ -103,9 +103,9 @@ fn contribute_to_brief_not_brief_owner() {
         let brief_id = gen_hash(1);
         let contribution_value = 1000;
         assert_ok!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             get_brief_owners(1),
-            *ALICE,
+            ALICE,
             100000,
             100,
             brief_id,
@@ -115,7 +115,7 @@ fn contribute_to_brief_not_brief_owner() {
 
         assert_noop!(
             BriefsMod::contribute_to_brief(
-                RuntimeOrigin::signed(*ALICE),
+                RuntimeOrigin::signed(ALICE),
                 brief_id,
                 contribution_value,
             ),
@@ -131,9 +131,9 @@ fn contribute_to_brief_more_than_total_ok() {
         let contribution_value = 1000;
 
         assert_ok!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             get_brief_owners(1),
-            *ALICE,
+            ALICE,
             contribution_value,
             contribution_value,
             brief_id,
@@ -141,7 +141,7 @@ fn contribute_to_brief_more_than_total_ok() {
             get_milestones(10),
         ));
         assert_ok!(BriefsMod::contribute_to_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             brief_id,
             contribution_value,
         ));
@@ -155,9 +155,9 @@ fn create_brief_already_exists() {
         let contribution_value = 1000;
 
         assert_ok!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             get_brief_owners(1),
-            *ALICE,
+            ALICE,
             contribution_value,
             contribution_value,
             brief_id,
@@ -167,9 +167,9 @@ fn create_brief_already_exists() {
 
         assert_noop!(
             BriefsMod::create_brief(
-                RuntimeOrigin::signed(*BOB),
+                RuntimeOrigin::signed(BOB),
                 get_brief_owners(1),
-                *ALICE,
+                ALICE,
                 contribution_value,
                 contribution_value,
                 brief_id,
@@ -188,9 +188,9 @@ fn only_applicant_can_start_work() {
         let contribution_value = 1000;
 
         assert_ok!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             get_brief_owners(1),
-            *ALICE,
+            ALICE,
             contribution_value,
             contribution_value,
             brief_id,
@@ -199,12 +199,12 @@ fn only_applicant_can_start_work() {
         ));
 
         assert_noop!(
-            BriefsMod::commence_work(RuntimeOrigin::signed(*BOB), brief_id,),
+            BriefsMod::commence_work(RuntimeOrigin::signed(BOB), brief_id,),
             Error::<Test>::MustBeApplicant
         );
 
         assert_ok!(BriefsMod::commence_work(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             brief_id,
         ));
     });
@@ -217,9 +217,9 @@ fn initial_contribution_and_extra_contribution_aggregates() {
         let contribution_value = 1000;
 
         assert_ok!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             get_brief_owners(1),
-            *ALICE,
+            ALICE,
             contribution_value,
             contribution_value,
             brief_id,
@@ -228,13 +228,13 @@ fn initial_contribution_and_extra_contribution_aggregates() {
         ));
 
         assert_ok!(BriefsMod::contribute_to_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             brief_id,
             contribution_value,
         ));
 
         assert_ok!(BriefsMod::commence_work(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             brief_id,
         ));
 
@@ -253,9 +253,9 @@ fn reserved_funds_are_transferred_to_project_kitty() {
         let contribution_value: Balance = 10000;
 
         let _ = BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             tests::get_brief_owners(1),
-            *ALICE,
+            ALICE,
             contribution_value,
             contribution_value,
             brief_id,
@@ -264,7 +264,7 @@ fn reserved_funds_are_transferred_to_project_kitty() {
         );
 
         assert_ok!(BriefsMod::commence_work(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             brief_id
         ));
 
@@ -282,12 +282,12 @@ fn cancel_brief_works() {
         let initial_contribution: Balance = 5000;
         let contribution: Balance = 1000;
         let owners: BoundedVec<AccountId, MaxBriefOwners> =
-            vec![*ALICE, *CHARLIE].try_into().unwrap();
+            vec![ALICE, CHARLIE].try_into().unwrap();
 
         assert_ok!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             owners,
-            *BOB,
+            BOB,
             budget,
             initial_contribution,
             brief_id,
@@ -296,18 +296,18 @@ fn cancel_brief_works() {
         ));
 
         assert_ok!(BriefsMod::contribute_to_brief(
-            RuntimeOrigin::signed(*CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             brief_id,
             contribution
         ));
 
         let alice_reserve_before =
-            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &*ALICE);
+            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
         let charlie_reserve_before =
-            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &*CHARLIE);
+            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &CHARLIE);
 
         assert_ok!(BriefsMod::cancel_brief(
-            RuntimeOrigin::signed(*CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             brief_id
         ));
 
@@ -322,9 +322,9 @@ fn cancel_brief_works() {
         );
 
         let alice_reserve_after =
-            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &*ALICE);
+            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &ALICE);
         let charlie_reserve_after =
-            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &*CHARLIE);
+            <Test as Config>::RMultiCurrency::reserved_balance(CurrencyId::Native, &CHARLIE);
 
         assert_eq!(
             alice_reserve_after + initial_contribution,
@@ -338,7 +338,7 @@ fn cancel_brief_works() {
 fn cancel_brief_brief_not_found() {
     build_test_externality().execute_with(|| {
         assert_noop!(
-            BriefsMod::cancel_brief(RuntimeOrigin::signed(*ALICE), gen_hash(2)),
+            BriefsMod::cancel_brief(RuntimeOrigin::signed(ALICE), gen_hash(2)),
             Error::<Test>::BriefNotFound
         );
     });
@@ -351,9 +351,9 @@ fn cancel_brief_not_brief_owner() {
         let contribution_value: Balance = 10000;
 
         assert_ok!(BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             tests::get_brief_owners(1),
-            *ALICE,
+            ALICE,
             contribution_value,
             contribution_value,
             brief_id,
@@ -362,7 +362,7 @@ fn cancel_brief_not_brief_owner() {
         ));
 
         assert_noop!(
-            BriefsMod::cancel_brief(RuntimeOrigin::signed(*ALICE), brief_id),
+            BriefsMod::cancel_brief(RuntimeOrigin::signed(ALICE), brief_id),
             Error::<Test>::MustBeBriefOwner
         );
     });
@@ -383,7 +383,7 @@ pub(crate) fn get_brief_owners(mut n: u32) -> BoundedBriefOwners<Test> {
         n = max;
     }
     (0..n)
-        .map(|_| AccountId::from_raw([n as u8; 32]))
+        .map(|account| account as AccountId)
         .collect::<Vec<AccountId>>()
         .try_into()
         .expect("qed")
