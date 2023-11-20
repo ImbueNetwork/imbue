@@ -798,8 +798,6 @@ impl pallet_treasury::Config for Runtime {
 parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub const MaxProjectsPerRound: u32 = 256;
-    pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
-    pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
     pub const PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub const MaximumContributorsPerProject: u32 = 5000;
     pub const IsIdentityRequired: bool = false;
@@ -809,7 +807,6 @@ parameter_types! {
     pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
     pub const MaxMilestonesPerProject: u32 = 50;
     pub const MaxProjectsPerAccount: u16 = u16::MAX;
-    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
 }
 
 impl pallet_proposals::Config for Runtime {
@@ -817,8 +814,6 @@ impl pallet_proposals::Config for Runtime {
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Currencies;
     type AuthorityOrigin = AdminOrigin;
-    type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type WeightInfo = pallet_proposals::weights::WeightInfo<Self>;
@@ -830,7 +825,6 @@ impl pallet_proposals::Config for Runtime {
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = Deposits;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
 }
 
 parameter_types! {
@@ -1297,3 +1291,33 @@ cumulus_pallet_parachain_system::register_validate_block! {
     BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
     CheckInherents = CheckInherents,
 }
+
+/// Select a jury randomly, if there is not enough member is Roles then a truncated list will be provided.
+/// Currently bound to u8 for size.
+impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for Pallet<T> {
+    type JurySize = MaxJurySize;
+    fn select_jury() -> BoundedVec<AccountIdOf<T>, Self::JurySize> {
+        let mut out: Vec<AccountIdOf<T>> = Vec::new();
+        let mut rng = rand::thread_rng();
+        let length = Roles::<T>::iter_keys().count();
+        let mut jury_size = Self::JurySize::get();
+
+        if jury_size > length {
+            jury_size = length;
+        }
+
+        // SAFETY: panics is jury_size > length.
+        let sample = rand::seq::index::sample(&mut rng, length, jury_size);
+
+        let keys = Roles::<T>::iter_keys().collect::<Vec<AccountIdOf<T>>>();
+        for index in sample.iter() {
+            // Defensive guard to avoid panic on indexing.
+            if index < keys.len() {
+                let key = &keys[index];
+                out.push(key.clone())
+            }
+        }
+        out
+    }
+}
+

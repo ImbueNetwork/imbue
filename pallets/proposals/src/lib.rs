@@ -59,6 +59,7 @@ pub type StorageItemOf<T> =
     <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
 pub type DepositIdOf<T> =
     <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
+pub type MaxJurySizeOf<T> = <<T as Config>::JurySelector<AccountIdOf<T>>>::JurySize;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedBTreeMilestones<T> =
@@ -90,8 +91,6 @@ pub mod pallet {
         type PalletId: Get<PalletId>;
         /// The currency type.
         type MultiCurrency: MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-        /// The amount of time given, up to point of decision, when a vote of no confidence is held.
-        type NoConfidenceTimeLimit: Get<BlockNumberFor<Self>>;
         /// Defines the length that a milestone can be voted on.
         type MilestoneVotingWindow: Get<BlockNumberFor<Self>>;
         /// The minimum percentage of votes, inclusive, that is required for a vote to pass.  
@@ -115,9 +114,7 @@ pub mod pallet {
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
         /// The trait that handler the raising of a dispute.
-        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxJurySize = Self::MaxJuryMembers, MaxSpecifics = Self::MaxMilestonesPerProject>;
-        /// Maximum jury members, usually defined elsewhere.
-        type MaxJuryMembers: Get<u32>;
+        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxSpecifics = Self::MaxMilestonesPerProject, MaxJuryMembers> = MaxJurySizeOf<Self>;
     }
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
@@ -234,12 +231,6 @@ pub mod pallet {
         ),
         /// A milestone has been approved.
         MilestoneApproved(T::AccountId, ProjectKey, MilestoneKey, BlockNumberFor<T>),
-        /// You have created a vote of no confidence.
-        NoConfidenceRoundCreated(T::AccountId, ProjectKey),
-        /// You have voted upon a round of no confidence.
-        NoConfidenceRoundVotedUpon(T::AccountId, ProjectKey),
-        /// You have finalised a vote of no confidence.
-        NoConfidenceRoundFinalised(T::AccountId, ProjectKey),
         /// This milestone has been rejected.
         MilestoneRejected(ProjectKey, MilestoneKey),
         /// A project has been refunded either partially or completely.

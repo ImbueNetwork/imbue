@@ -46,33 +46,6 @@ impl<T: Config> MaybeConvert<&AccountIdOf<T>, VetterIdOf<T>> for Pallet<T> {
     }
 }
 
-/// Select a jury randomly, if there is not enough member is Roles then a truncated list will be provided.
-/// Currently bound to u8 for size.
-impl<T: Config> crate::traits::SelectJury<AccountIdOf<T>> for Pallet<T> {
-    fn select_jury(jury_size: u8) -> Vec<AccountIdOf<T>> {
-        let mut jury_size = jury_size as usize;
-        let mut out: Vec<AccountIdOf<T>> = Vec::new();
-        let mut rng = rand::thread_rng();
-        let length = Roles::<T>::iter_keys().count();
-
-        if jury_size > length {
-            jury_size = length;
-        }
-
-        // SAFETY: panics is jury_size > length.
-        let sample = rand::seq::index::sample(&mut rng, length, jury_size);
-
-        let keys = Roles::<T>::iter_keys().collect::<Vec<AccountIdOf<T>>>();
-        for index in sample.iter() {
-            // Defensive guard to avoid panic on indexing.
-            if index < keys.len() {
-                let key = &keys[index];
-                out.push(key.clone())
-            }
-        }
-        out
-    }
-}
 
 impl<T: Config> Pallet<T> {
     /// Try take the membership deposit from who

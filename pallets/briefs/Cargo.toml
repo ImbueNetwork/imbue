@@ -35,6 +35,7 @@ common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 pallet-proposals = {path= "../proposals", default-features = false }
 pallet-deposits = {path= "../deposits", default-features = false }
+pallet-fellowship = { path = "../fellowship", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 
 [dev-dependencies]
@@ -71,6 +72,7 @@ std = [
 	"sp-io/std",
 	"pallet-balances/std",
 	"pallet-proposals/std",
+	"pallet-fellowship/std",
 	"pallet-identity/std",
 	"pallet-timestamp/std",
 	"common-runtime/std",
@@ -98,5 +100,6 @@ try-runtime = [
 	"orml-tokens/try-runtime",
 	"pallet-identity/try-runtime",
 	"pallet-timestamp/try-runtime",
-	"pallet-transaction-payment/try-runtime"
+	"pallet-transaction-payment/try-runtime",
+	"pallet-fellowship/try-runtime",
 ]

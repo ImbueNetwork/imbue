@@ -166,9 +166,7 @@ impl pallet_timestamp::Config for Test {
 }
 
 parameter_types! {
-    pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 5000;
     pub RefundsPerBlock: u8 = 2;
@@ -189,7 +187,6 @@ impl pallet_proposals::Config for Test {
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Tokens;
     type WeightInfo = pallet_proposals::WeightInfo<Self>;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;

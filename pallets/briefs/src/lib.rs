@@ -20,11 +20,11 @@ mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
 
-pub mod migrations;
+//pub mod migrations;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use common_types::{milestone_origin::FundingType, CurrencyId};
+    use common_types::{CurrencyId};
     use frame_support::{
         pallet_prelude::*, sp_runtime::Saturating, traits::Get, weights::Weight, BoundedBTreeMap,
     };
@@ -32,7 +32,7 @@ pub mod pallet {
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
     use pallet_proposals::traits::IntoProposal;
-    use pallet_proposals::{Contribution, ProposedMilestone};
+    use pallet_proposals::{Contribution, ProposedMilestone, FundingPath};
     use sp_arithmetic::per_things::Percent;
     use sp_core::H256;
     use sp_runtime::traits::Zero;
@@ -84,7 +84,7 @@ pub mod pallet {
         type BriefStorageItem: Get<StorageItemOf<Self>>;
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The jury size of each brief as selected by JurySelector.
-        type StandardJurySize: Get<u8>
+        type StandardJurySize: Get<u32>;
         /// The type that selects a list of jury members.
         type JurySelector: SelectJury<AccountIdOf<Self>>;
         /// The weight info for the extrinsics. 
@@ -153,7 +153,7 @@ pub mod pallet {
         /// Milestones total do not add up to 100%.
         MilestonesTotalPercentageMustEqual100,
         /// too many milestones here mate fixed with https://github.com/ImbueNetwork/imbue/issues/267
-
+        TooManyMilestones,
     }
 
     #[pallet::call]
@@ -298,27 +298,17 @@ pub mod pallet {
             let contributions = BriefContributions::<T>::get(brief_id);
 
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
-            fn convert_to_proposal(
-                currency_id: CurrencyId,
-                current_contribution: BoundedBTreeMap<AccountId, Contribution<Balance, BlockNumber>, Self::MaximumContributorsPerProject>,
-                brief_hash: H256,
-                benificiary: AccountId,
-                milestones: BoundedVec<ProposedMilestone, Self::MaxMilestonesPerProject>,
-                refund_locations: BoundedVec<(Locality<AccountId>, Percent), Self::MaximumContributorsPerProject>,
-                jury: BoundedVec<AccountId, Self::MaxJuryMembers>,
-                on_creation_funding: FundingPath,
-            ) -> Result<(), DispatchError>;
             
-            let refund_locations = <T as Config>::IntoProposal::convert_contributions_to_refund_locations(&contributions.into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners))?;
+            let refund_locations = <T as Config>::IntoProposal::convert_contributions_to_refund_locations(&contributions.into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners)?)?;
 
             <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
                 contributions.into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners)?,
                 brief_id,
                 brief.applicant,
-                brief.milestones.to_vec().try_into().map_err(|_|Error::<T>::),
+                brief.milestones.to_vec().try_into().map_err(|_|Error::<T>::TooManyMilestones),
                 refund_locations,
-                <JurySelector as SelectJury>::select_jury(<T as Config>::StandardJurySize::get()),
+                <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury(<T as Config>::StandardJurySize::get()),
                 FundingPath::TakeFromReserved,
             )?;
 
