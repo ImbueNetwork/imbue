@@ -248,10 +248,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     ext
 }
 
-pub struct MockJurySelector<T: pallet_fellowship::Config>(T);
-impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for MockJurySelector<T> {
-    type JurySize = MaxJurySize;
-    fn select_jury() -> BoundedVec<AccountIdOf<T>, Self::JurySize> {
+pub struct MockJurySelector;
+impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
+    type JurySize = MaxJuryMembers;
+    fn select_jury() -> BoundedVec<AccountId, Self::JurySize> {
         BoundedVec::new()
     }
 }

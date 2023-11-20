@@ -297,16 +297,16 @@ pub mod pallet {
 
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
             
-            let refund_locations = <T as Config>::IntoProposal::convert_contributions_to_refund_locations(&contributions.into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners)?)?;
+            let refund_locations = <T as Config>::IntoProposal::convert_contributions_to_refund_locations(&contributions.clone().into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners)?);
 
             <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
                 contributions.into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners)?,
                 brief_id,
                 brief.applicant,
-                brief.milestones.to_vec().try_into().map_err(|_|Error::<T>::TooManyMilestones),
+                brief.milestones.to_vec().try_into().map_err(|_|Error::<T>::TooManyMilestones)?,
                 refund_locations,
-                <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury(),
+                <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury().to_vec().try_into().map_err(|_|Error::<T>::TooManyMilestones)?,
                 FundingPath::TakeFromReserved,
             )?;
 

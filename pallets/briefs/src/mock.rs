@@ -225,6 +225,7 @@ impl pallet_briefs::Config for Test {
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = MockDepositHandler;
     type WeightInfo = pallet_briefs::WeightInfo<Self>;
+    type JurySelector = MockJurySelector;
 }
 
 parameter_types! {
@@ -240,6 +241,8 @@ parameter_types! {
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
+    pub ImbueFeeAccount: AccountId = *TREASURY;
+    pub MaxJuryMembers: u32 = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -253,7 +256,7 @@ impl pallet_proposals::Config for Test {
     type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
-    type ImbueFeeAccount = FeeAccount;
+    type ImbueFeeAccount = ImbueFeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type DepositHandler = MockDepositHandler;
     type ProjectStorageItem = ProjectStorageItem;
@@ -293,6 +296,7 @@ parameter_types! {
 pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
+pub static TREASURY: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
@@ -302,7 +306,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     GenesisConfig::default().assimilate_storage(&mut t).unwrap();
     orml_tokens::GenesisConfig::<Test> {
         balances: {
-            vec![*ALICE, *BOB, *CHARLIE, *JURY]
+            vec![*ALICE, *BOB, *CHARLIE]
                 .into_iter()
                 .map(|id| (id, CurrencyId::Native, 1000000))
                 .collect::<Vec<_>>()
@@ -318,11 +322,27 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     ext
 }
 
-pub struct MockJurySelector<T: pallet_fellowship::Config>(T);
-impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for MockJurySelector<T> {
-    type JurySize = MaxJurySize;
-    fn select_jury() -> BoundedVec<AccountIdOf<T>, Self::JurySize> {
+pub struct MockJurySelector;
+impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
+    type JurySize = MaxJuryMembers;
+    fn select_jury() -> BoundedVec<AccountId, Self::JurySize> {
         BoundedVec::new()
+    }
+}
+
+pub struct MockDisputeRaiser;
+impl pallet_disputes::traits::DisputeRaiser<AccountId> for MockDisputeRaiser {
+type DisputeKey = u32;
+type SpecificId = u32;
+type MaxJurySize = MaxJuryMembers;
+type MaxSpecifics = MaxMilestonesPerProject;
+    fn raise_dispute(
+        dispute_key: Self::DisputeKey,
+        raised_by: AccountId,
+        jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+    ) -> Result<(), DispatchError> {
+        Ok(())
     }
 }
 
