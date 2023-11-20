@@ -59,7 +59,7 @@ pub type StorageItemOf<T> =
     <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
 pub type DepositIdOf<T> =
     <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
-pub type MaxJurySizeOf<T> = <<T as Config>::JurySelector<AccountIdOf<T>>>::JurySize;
+pub type MaxJuryOf<T> = <<T as Config>::JurySelector as pallet_fellowship::traits::SelectJury<AccountIdOf<T>>>::JurySize;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
 type BoundedBTreeMilestones<T> =
@@ -114,7 +114,9 @@ pub mod pallet {
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
         /// The trait that handler the raising of a dispute.
-        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxSpecifics = Self::MaxMilestonesPerProject, MaxJuryMembers> = MaxJurySizeOf<Self>;
+        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxSpecifics = Self::MaxMilestonesPerProject, MaxJurySize = MaxJuryOf<Self>>;
+        /// The jury selector type which is defining the max jury size.
+        type JurySelector: pallet_fellowship::traits::SelectJury<AccountIdOf<Self>>;
     }
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
@@ -502,7 +504,7 @@ pub mod pallet {
     {
         type MaximumContributorsPerProject = T::MaximumContributorsPerProject;
         type MaxMilestonesPerProject = T::MaxMilestonesPerProject;
-        type MaxJuryMembers = T::MaxJuryMembers;
+        type MaxJuryMembers = MaxJuryOf<T>;
         /// The caller is used to take the storage deposit from.
         /// With briefs and grants the caller is the beneficiary, so the fee will come from them.
         fn convert_to_proposal(
@@ -712,7 +714,7 @@ pub struct Project<T: Config> {
     /// Where do the refunds end up and what percent they get.
     pub refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject>,
     /// Who should deal with disputes.
-    pub jury: BoundedVec<AccountIdOf<T>, T::MaxJuryMembers>,
+    pub jury: BoundedVec<AccountIdOf<T>, MaxJuryOf<T>>,
     /// When is the project funded and how is it taken.
     pub on_creation_funding: FundingPath,
     /// The amount of funds refunded.

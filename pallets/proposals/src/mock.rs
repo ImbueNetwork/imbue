@@ -191,27 +191,27 @@ parameter_types! {
     pub ProjectStorageItem: StorageItems = StorageItems::Project;
     pub MaxProjectsPerAccount: u16 = 50;
     pub MaxJuryMembers: u32 = 100;
-    pub TreasuryFeeAccount: AccountId = *TREASURY;
+    pub ImbueFeeAccount: AccountId = *TREASURY;
 }
 
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Tokens;
-    type WeightInfo = crate::WeightInfo<Self>;
+    type WeightInfo = pallet_proposals::WeightInfo<Self>;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
-    type ImbueFeeAccount = TreasuryFeeAccount;
+    type ImbueFeeAccount = ImbueFeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
+    type DepositHandler = MockDepositHandler;
     type ProjectStorageItem = ProjectStorageItem;
-    type DepositHandler = MockDepositHandler<Test>;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type MaxJuryMembers = MaxJuryMembers;
     type DisputeRaiser = MockDisputeRaiser;
+    type JurySelector = MockJurySelector;
 }
 
 parameter_types! {
@@ -284,14 +284,14 @@ pub enum StorageItems {
     Project,
 }
 
-pub struct MockDepositHandler<T>(T);
-impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>>
-    for MockDepositHandler<T>
+pub struct MockDepositHandler;
+impl DepositHandler<Balance, AccountId>
+    for MockDepositHandler
 {
     type DepositId = u64;
     type StorageItem = StorageItems;
     fn take_deposit(
-        _who: crate::AccountIdOf<T>,
+        _who: AccountId,
         _storage_item: Self::StorageItem,
         _currency_id: CurrencyId,
     ) -> Result<Self::DepositId, DispatchError> {
@@ -318,5 +318,14 @@ type MaxSpecifics = MaxMilestonesPerProject;
         specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
     ) -> Result<(), DispatchError> {
         Ok(())
+    }
+}
+
+
+pub struct MockJurySelector;
+impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
+    type JurySize = MaxJuryMembers;
+    fn select_jury() -> BoundedVec<AccountId, Self::JurySize> {
+        BoundedVec::new()
     }
 }

@@ -247,18 +247,21 @@ impl pallet_proposals::Config for Test {
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Tokens;
     type WeightInfo = pallet_proposals::WeightInfo<Self>;
-    // Adding 2 weeks as th expiration time
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
+    type ImbueFeeAccount = FeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
-    type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler;
+    type ProjectStorageItem = ProjectStorageItem;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
+    type DisputeRaiser = MockDisputeRaiser;
+    type JurySelector = MockJurySelector;
 }
+
 parameter_types! {
     pub const BasicDeposit: u64 = 10;
     pub const FieldDeposit: u64 = 10;
@@ -299,7 +302,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     GenesisConfig::default().assimilate_storage(&mut t).unwrap();
     orml_tokens::GenesisConfig::<Test> {
         balances: {
-            vec![*ALICE, *BOB, *CHARLIE]
+            vec![*ALICE, *BOB, *CHARLIE, *JURY]
                 .into_iter()
                 .map(|id| (id, CurrencyId::Native, 1000000))
                 .collect::<Vec<_>>()
@@ -314,3 +317,12 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     });
     ext
 }
+
+pub struct MockJurySelector<T: pallet_fellowship::Config>(T);
+impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for MockJurySelector<T> {
+    type JurySize = MaxJurySize;
+    fn select_jury() -> BoundedVec<AccountIdOf<T>, Self::JurySize> {
+        BoundedVec::new()
+    }
+}
+

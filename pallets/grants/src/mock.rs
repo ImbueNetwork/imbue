@@ -198,8 +198,8 @@ impl pallet_proposals::Config for Test {
     type DepositHandler = MockDepositHandler;
     type ProjectStorageItem = ProjectStorageItem;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type MaxJuryMembers = MaxJuryMembers;
     type DisputeRaiser = MockDisputeRaiser;
+    type JurySelector = MockJurySelector;
 }
 
 parameter_types! {
@@ -260,5 +260,14 @@ type MaxSpecifics = MaxMilestonesPerProject;
         specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
     ) -> Result<(), DispatchError> {
         Ok(())
+    }
+}
+
+
+pub struct MockJurySelector<T: pallet_fellowship::Config>(T);
+impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for MockJurySelector<T> {
+    type JurySize = MaxJurySize;
+    fn select_jury() -> BoundedVec<AccountIdOf<T>, Self::JurySize> {
+        BoundedVec::new()
     }
 }

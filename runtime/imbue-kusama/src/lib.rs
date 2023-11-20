@@ -182,7 +182,7 @@ pub mod migrations {
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
         pallet_proposals::migration::v7::MigrateToV7<Runtime>,
-        pallet_fellowship::migration::v0::MigrateInitial<Runtime, pallet_fellowship::Pallet<Runtime>,
+        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
     );
 }
 
@@ -825,6 +825,8 @@ impl pallet_proposals::Config for Runtime {
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = Deposits;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
+    type JurySelector = PseudoRandomJurySelector<Runtime>;
+
 }
 
 parameter_types! {
@@ -1292,9 +1294,11 @@ cumulus_pallet_parachain_system::register_validate_block! {
     CheckInherents = CheckInherents,
 }
 
+
+struct PseudoRandomJurySelector<T: pallet_fellowship::Config>(T);
 /// Select a jury randomly, if there is not enough member is Roles then a truncated list will be provided.
 /// Currently bound to u8 for size.
-impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for Pallet<T> {
+impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for PseudoRandomJurySelector<T> {
     type JurySize = MaxJurySize;
     fn select_jury() -> BoundedVec<AccountIdOf<T>, Self::JurySize> {
         let mut out: Vec<AccountIdOf<T>> = Vec::new();

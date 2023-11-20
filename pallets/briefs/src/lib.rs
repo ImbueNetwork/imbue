@@ -83,8 +83,6 @@ pub mod pallet {
         /// Storage deposits.
         type BriefStorageItem: Get<StorageItemOf<Self>>;
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
-        /// The jury size of each brief as selected by JurySelector.
-        type StandardJurySize: Get<u32>;
         /// The type that selects a list of jury members.
         type JurySelector: SelectJury<AccountIdOf<Self>>;
         /// The weight info for the extrinsics. 
@@ -308,7 +306,7 @@ pub mod pallet {
                 brief.applicant,
                 brief.milestones.to_vec().try_into().map_err(|_|Error::<T>::TooManyMilestones),
                 refund_locations,
-                <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury(<T as Config>::StandardJurySize::get()),
+                <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury(),
                 FundingPath::TakeFromReserved,
             )?;
 

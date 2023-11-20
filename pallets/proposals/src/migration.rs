@@ -725,9 +725,9 @@ pub mod v6 {
 pub mod v7 {
     use super::*;
 
-    struct MigrateToV7<T: Config, U: SelectJury<AccountIdOf<T>>>(T, U);
+    struct MigrateToV7<T: Config>(T);
 
-    impl<T: Config, U: SelectJury<AccountIdOf<T>>> OnRuntimeUpgrade for MigrateToV7<T, U>
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV7<T>
     where AccountIdOf<T>: Into<[u8; 32]>
     {
         #[cfg(feature = "try-runtime")]
@@ -753,7 +753,7 @@ pub mod v7 {
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
             if current == 7 && onchain == 6 {
 
-                migrate_new_fields::<T, U>(&mut weight);
+                migrate_new_fields::<T>(&mut weight);
                 current.put::<Pallet<T>>();
                 log::warn!("v7 has been successfully applied");
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
@@ -779,8 +779,8 @@ pub mod v7 {
         }
     }
 
-    fn migrate_new_fields<T: Config, U: SelectJury<AccountIdOf<T>>>(weight: &mut Weight)
-    where AccountIdOf<T>: Into<[u8; 32]>
+    fn migrate_new_fields<T: Config>(weight: &mut Weight)
+    where AccountIdOf<T>: Into<[u8; 32]>,
     {
         v6::Projects::<T>::drain().for_each(|(key, project)|{
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
@@ -791,7 +791,7 @@ pub mod v7 {
                 v5::FundingType::Grant(_) => crate::FundingPath::WaitForFunding,
             };
 
-            let jury = <U as SelectJury<AccountIdOf<T>>>::select_jury(<T as Config>::MaxJuryMembers::get().try_into().expect("checked in the pre_upgrade."));
+            let jury = <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury();
 
             let refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = match project.funding_type {
                 v5::FundingType::Proposal => crate::Pallet::<T>::convert_contributions_to_refund_locations(&project.contributions),
@@ -846,7 +846,7 @@ pub mod v7 {
                 cancelled: project.cancelled,
                 deposit_id: project.deposit_id,
                 refund_locations,
-                jury: jury.try_into().expect("MaxJuryMembers is used in bound and creation; qed"),
+                jury: jury,
                 on_creation_funding,
                 refunded_funds: Zero::zero(),
             };

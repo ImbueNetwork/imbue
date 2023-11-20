@@ -70,3 +70,80 @@ fn ensure_proposals_initialize_is_less_than_10_percent_block() {
         "ExpiringProjectRoundsPerBlock is exceeding proof size limits."
     );
 }
+
+#[test]
+fn test_select_jury_is_random() {
+    new_test_ext().execute_with(|| {
+        let size: u8 = 255;
+        for i in 0..size {
+            assert_ok!(Fellowship::force_add_fellowship(
+                RuntimeOrigin::root(),
+                Public::from_raw([i as u8; 32]),
+                Role::Freelancer,
+                10
+            ));
+        }
+        let jury_1 = <PseudoRandomJurySelector<Runtime> as SelectJury<AccountId>>::select_jury();
+        let jury_2 = <PseudoRandomJurySelector<Runtime> as SelectJury<AccountId>>::select_jury();
+
+        assert!(jury_1[0] != jury_2[0]);
+
+        let jury_1 = <PseudoRandomJurySelector<Runtime> as SelectJury<AccountId>>::select_jury();
+        let jury_2 = <PseudoRandomJurySelector<Runtime> as SelectJury<AccountId>>::select_jury();
+
+        assert!(jury_1 != jury_2);
+    });
+}
+
+#[test]
+fn test_select_jury_stress_test() {
+    new_test_ext().execute_with(|| {
+        let size: u8 = 255;
+        for i in 0..size {
+            assert_ok!(Fellowship::force_add_fellowship(
+                RuntimeOrigin::root(),
+                Public::from_raw([i as u8; 32]),
+                Role::Freelancer,
+                10
+            ));
+        }
+        for _ in 0..u8::MAX {
+            <PseudoRandomJurySelector<Runtime> as SelectJury<AccountId>>::select_jury(255);
+        }
+    });
+}
+
+#[test]
+fn test_select_jury_select_correct_amount_in_normal_conditions() {
+    new_test_ext().execute_with(|| {
+        for i in 0..255 {
+            assert_ok!(Fellowship::force_add_fellowship(
+                RuntimeOrigin::root(),
+                Public::from_raw([i as u8; 32]),
+                Role::Freelancer,
+                10
+            ));
+        }
+
+        let jury = <PseudoRandomJurySelector<Runtime> as SelectJury<AccountId>>::select_jury(50);
+        assert_eq!(jury.len(), <>, "jury members should be exactly 50.")
+    });
+}
+
+#[test]
+fn test_select_jury_doesnt_panic_amount_more_than_length() {
+    new_test_ext().execute_with(|| {
+        let size: u8 = 100;
+        for i in 0..size {
+            assert_ok!(Fellowship::force_add_fellowship(
+                RuntimeOrigin::root(),
+                Public::from_raw([i as u8; 32]),
+                Role::Freelancer,
+                10
+            ));
+        }
+        let jury = <PseudoRandomJurySelector<Runtime> as SelectJury<AccountId>>::select_jury();
+        assert_eq!(jury.len(), 100, "jury size should have been truncated to size of roles or not enough roles have been selected.");
+    });
+}
+

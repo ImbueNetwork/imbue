@@ -184,20 +184,21 @@ parameter_types! {
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = pallet_proposals::WeightInfo<Self>;
-    type MaxWithdrawalExpiration = TwoWeekBlockUnit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
     type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
+    type ImbueFeeAccount = FeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
-    type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler;
+    type ProjectStorageItem = ProjectStorageItem;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
+    type DisputeRaiser = MockDisputeRaiser;
+    type JurySelector = MockJurySelector;
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
@@ -245,4 +246,12 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
     });
     ext
+}
+
+pub struct MockJurySelector<T: pallet_fellowship::Config>(T);
+impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for MockJurySelector<T> {
+    type JurySize = MaxJurySize;
+    fn select_jury() -> BoundedVec<AccountIdOf<T>, Self::JurySize> {
+        BoundedVec::new()
+    }
 }
