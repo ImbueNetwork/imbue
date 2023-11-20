@@ -273,7 +273,8 @@ pub mod v3 {
                             milestone.percentage_to_unlock as u8,
                         ),
                         is_approved: milestone.is_approved,
-                        withdrawn: milestone.withdrawn
+
+                        withdrawn: milestone.is_approved,
                     },
                 );
             });
@@ -297,7 +298,7 @@ pub mod v3 {
                         funding_type: FundingType::Proposal,
                         // A deposit_id of u32::MAX is ignored.
                         deposit_id: u32::MAX.into(),
-                        payment_address: project.payment_address,
+                        payment_address: Default::default(),
                     };
                     Some(migrated_project)
                 } else {
@@ -678,6 +679,77 @@ pub mod v6 {
             Ok(())
         }
     }
+}
+
+pub mod v7{
+    use super::*;
+
+    #[derive(Encode, Clone, Decode, Debug)]
+    pub struct MilestoneV7 {
+        pub project_key: u32,
+        pub milestone_key: u32,
+        pub percentage_to_unlock: u32,
+        pub is_approved: bool,
+        pub withdrawn: bool,
+    }
+    #[derive(Encode, Decode, Clone)]
+    pub struct ProjectV7<AccountId, Balance, BlockNumber> {
+        pub agreement_hash: H256,
+        pub milestones: BTreeMap<MilestoneKey, MilestoneV7>,
+        pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
+        pub currency_id: common_types::CurrencyId,
+        pub withdrawn_funds: Balance,
+        pub required_funds: Balance,
+        pub raised_funds: Balance,
+        pub initiator: AccountId,
+        pub created_on: BlockNumber,
+        pub cancelled: bool,
+        pub funding_type: FundingType,
+        //pub payment_address: [u8; 20],
+    }
+    pub type ProjectV7Of<T> = ProjectV7<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>;
+    #[storage_alias]
+    pub type Projects<T: Config> = StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV7Of<T>, OptionQuery>;
+
+    pub fn migrate_milestones_and_payment_address<T:Config>() -> Weight
+    {
+        let mut weight = T::DbWeight::get().reads_writes(1, 1);
+        let mut migrated_milestones: BTreeMap<MilestoneKey, MilestoneV7> = BTreeMap::new();
+        v7::Projects::<T>::translate(|_project_key, project: ProjectV7Of<T>| {
+            let _ = project
+                .milestones
+                .into_values()
+                .map(|milestone| {
+                    let migrated_milestone = MilestoneV7 {
+                        project_key: milestone.project_key,
+                        milestone_key: milestone.milestone_key,
+                        percentage_to_unlock: milestone.percentage_to_unlock,
+                        is_approved: milestone.is_approved,
+                        withdrawn: true,
+                    };
+                    migrated_milestones.insert(milestone.milestone_key, migrated_milestone)
+                })
+                .collect::<Vec<_>>();
+
+            weight += T::DbWeight::get().reads_writes(1, 1);
+            let migrated_project: ProjectV7Of<T> = ProjectV7 {
+                milestones: migrated_milestones.clone(),
+                contributions: project.contributions,
+                required_funds: project.required_funds,
+                currency_id: project.currency_id,
+                withdrawn_funds: project.withdrawn_funds,
+                initiator: project.initiator,
+                created_on: project.created_on,
+                agreement_hash: Default::default(),
+                cancelled: project.cancelled,
+                raised_funds: project.raised_funds,
+                funding_type: FundingType::Proposal,
+            };
+            Some(migrated_project)
+        });
+        weight
+    }
+
 }
 
 #[cfg(test)]
