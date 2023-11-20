@@ -45,6 +45,7 @@ pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 pallet-proposals = { path = "../proposals" }
 pallet-disputes = { path = "../disputes"}
+pallet-fellowship = { path = "../fellowship"}
 common-types = { path = "../../libs/common-types" }
 common-runtime = { path = "../../runtime/common" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}

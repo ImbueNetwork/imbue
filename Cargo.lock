@@ -7008,6 +7008,7 @@ dependencies = [
  "pallet-balances",
  "pallet-deposits",
  "pallet-disputes",
+ "pallet-fellowship",
  "pallet-identity",
  "pallet-proposals",
  "pallet-timestamp",
