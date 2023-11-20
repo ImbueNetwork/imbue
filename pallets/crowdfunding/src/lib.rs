@@ -15,7 +15,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
     use crate::weights::WeightInfo;
-    use common_types::{CurrencyId, FundingType};
+    use common_types::{CurrencyId};
     use frame_support::sp_runtime::Saturating;
     use frame_support::{pallet_prelude::*, transactional, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
@@ -40,7 +40,7 @@ pub mod pallet {
     pub type BoundedMilestoneKeys<T> =
         BoundedVec<MilestoneKey, <T as Config>::MaxMilestonesPerCrowdFund>;
     pub type BoundedMilestones<T> =
-        BoundedBTreeMap<MilestoneKey, Milestone, <T as Config>::MaxMilestonesPerCrowdFund>;
+        BoundedBTreeMap<MilestoneKey, Milestone<BlockNumberFor<T>>, <T as Config>::MaxMilestonesPerCrowdFund>;
     pub type BoundedWhitelistSpots<T> =
         BoundedBTreeMap<AccountIdOf<T>, BalanceOf<T>, <T as Config>::MaxWhitelistPerCrowdFund>;
     pub type BoundedProposedMilestones<T> =

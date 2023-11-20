@@ -725,7 +725,7 @@ pub mod v6 {
 pub mod v7 {
     use super::*;
 
-    struct MigrateToV7<T: Config>(T);
+    pub struct MigrateToV7<T: Config>(T);
 
     impl<T: Config> OnRuntimeUpgrade for MigrateToV7<T>
     where AccountIdOf<T>: Into<[u8; 32]>

@@ -813,7 +813,6 @@ impl pallet_proposals::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Currencies;
-    type AuthorityOrigin = AdminOrigin;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type WeightInfo = pallet_proposals::weights::WeightInfo<Self>;
@@ -854,7 +853,6 @@ parameter_types! {
 impl pallet_briefs::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Currencies;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
@@ -929,8 +927,8 @@ impl pallet_disputes::Config for Runtime {
     type MaxDisputesPerBlock = MaxDisputesPerBlock;
     type VotingTimeLimit = VotingTimeLimit;
     type ForceOrigin = EnsureRootOr<HalfOfCouncil>;
-    type DisputeHooks = todo!();
-    type WeightInfo = todo!();
+    type DisputeHooks = pallet_proposals::Pallet<Runtime>;
+    type WeightInfo = pallet_disputes::weights::WeightInfo<Runtime>;
 }
 
 construct_runtime! {
@@ -1295,13 +1293,16 @@ cumulus_pallet_parachain_system::register_validate_block! {
 }
 
 
+
+use pallet_fellowship::Roles;
+
 struct PseudoRandomJurySelector<T: pallet_fellowship::Config>(T);
 /// Select a jury randomly, if there is not enough member is Roles then a truncated list will be provided.
 /// Currently bound to u8 for size.
-impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for PseudoRandomJurySelector<T> {
+impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<AccountId> for PseudoRandomJurySelector<T> {
     type JurySize = MaxJurySize;
-    fn select_jury() -> BoundedVec<AccountIdOf<T>, Self::JurySize> {
-        let mut out: Vec<AccountIdOf<T>> = Vec::new();
+    fn select_jury() -> sp_runtime::BoundedVec<AccountId, Self::JurySize> {
+        let mut out: Vec<AccountId> = Vec::new();
         let mut rng = rand::thread_rng();
         let length = Roles::<T>::iter_keys().count();
         let mut jury_size = Self::JurySize::get();
@@ -1313,7 +1314,7 @@ impl<T: Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for Pseudo
         // SAFETY: panics is jury_size > length.
         let sample = rand::seq::index::sample(&mut rng, length, jury_size);
 
-        let keys = Roles::<T>::iter_keys().collect::<Vec<AccountIdOf<T>>>();
+        let keys = Roles::<T>::iter_keys().collect::<Vec<AccountId>>();
         for index in sample.iter() {
             // Defensive guard to avoid panic on indexing.
             if index < keys.len() {

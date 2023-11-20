@@ -147,7 +147,7 @@ pub mod pallet {
 
 
             let treasury_multilocation = <TreasuryOrigin as TreasuryOriginConverter<AccountIdOf<T>>>::get_multi_location(&treasury_origin).map_err(|_| Error::<T>::InvalidTreasuryOrigin)?;
-            let refund_locations = vec![(Locality::Foreign(treasury_multilocation), Percent::from_parts(100u8))];
+            let refund_locations = sp_std::vec![(Locality::Foreign(treasury_multilocation), Percent::from_parts(100u8))];
 
             <T as Config>::IntoProposal::convert_to_proposal(
                 currency_id,

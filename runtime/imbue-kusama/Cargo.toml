@@ -13,7 +13,7 @@ targets = ['x86_64-unknown-linux-gnu']
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "max-encoded-len"] }
 scale-info = { version = "2.3.1", default-features = false, features = ["derive"] }
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
-
+rand = { version = "0.7.3", default-features = false, features = ["alloc"]}
 log = { version = "0.4.14", default-features = false }
 
 # Substrate Dependencies
@@ -103,6 +103,7 @@ pallet-briefs = {path = '../../pallets/briefs', default-features = false }
 pallet-grants = {path = '../../pallets/grants', default-features = false }
 pallet-deposits = {path = '../../pallets/deposits', default-features = false }
 pallet-fellowship = {path = '../../pallets/fellowship', default-features = false }
+pallet-disputes = {path = '../../pallets/disputes', default-features = false }
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 pallet-proposals-rpc-runtime-api = {path = "../../pallets/proposals/rpc/runtime-api", default-features = false}

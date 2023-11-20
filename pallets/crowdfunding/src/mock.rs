@@ -179,6 +179,8 @@ parameter_types! {
     pub ExpiringProjectRoundsPerBlock: u32 = 100;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
+    pub FeeAccount: AccountId = *TREASURY;
+    pub MaxJuryMembers: u32 = 100;
 }
 
 impl pallet_proposals::Config for Test {
@@ -231,6 +233,7 @@ impl DepositHandler<Balance, AccountId> for MockDepositHandler {
 pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
+pub static TREASURY: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()
@@ -247,6 +250,23 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     });
     ext
 }
+
+pub struct MockDisputeRaiser;
+impl pallet_disputes::traits::DisputeRaiser<AccountId> for MockDisputeRaiser {
+type DisputeKey = u32;
+type SpecificId = u32;
+type MaxJurySize = MaxJuryMembers;
+type MaxSpecifics = MaxMilestonesPerProject;
+    fn raise_dispute(
+        dispute_key: Self::DisputeKey,
+        raised_by: AccountId,
+        jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+    ) -> Result<(), DispatchError> {
+        Ok(())
+    }
+}
+
 
 pub struct MockJurySelector;
 impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {

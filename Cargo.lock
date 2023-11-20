@@ -4346,6 +4346,7 @@ dependencies = [
  "pallet-collective",
  "pallet-democracy",
  "pallet-deposits",
+ "pallet-disputes",
  "pallet-fellowship",
  "pallet-grants",
  "pallet-identity",
@@ -4368,6 +4369,7 @@ dependencies = [
  "parity-scale-codec 3.6.5",
  "polkadot-parachain",
  "polkadot-runtime-common",
+ "rand 0.7.3",
  "scale-info 2.9.0",
  "serde",
  "sp-api",
@@ -6793,32 +6795,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-crowdfunding"
-version = "0.1.0"
-dependencies = [
- "common-runtime",
- "common-types",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-deposits",
- "pallet-identity",
- "pallet-proposals",
- "pallet-timestamp",
- "pallet-xcm",
- "parity-scale-codec 3.6.5",
- "scale-info 2.9.0",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-democracy"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
@@ -6959,7 +6935,6 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "parity-scale-codec 3.6.5",
- "rand 0.7.3",
  "scale-info 2.9.0",
  "serde",
  "sp-arithmetic",
