@@ -824,7 +824,9 @@ impl pallet_proposals::Config for Runtime {
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = Deposits;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type JurySelector = PseudoRandomJurySelector<Runtime>;
+    type JurySelector = PointerBasedJurySelector<Runtime>;
+    type ImbueFeeAccount = TreasuryAccount;
+    type DisputeRaiser = pallet_disputes::Pallet<Runtime>;
 
 }
 
@@ -859,6 +861,7 @@ impl pallet_briefs::Config for Runtime {
     type WeightInfo = pallet_briefs::weights::WeightInfo<Self>;
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = Deposits;
+    type JurySelector = PointerBasedJurySelector<Runtime>;
 }
 
 parameter_types! {
@@ -918,8 +921,8 @@ parameter_types! {
 
 impl pallet_disputes::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type DisputeKey = u32;
-    type SpecificId = u32;
+    type DisputeKey = pallet_proposals::ProjectKey;
+    type SpecificId = pallet_proposals::MilestoneKey;
     type MaxJurySize = MaxJurySize;
     // TODO: this syntax for each max milestones per brief grant and projet.
     // it binds automatically.
@@ -989,6 +992,7 @@ construct_runtime! {
         ImbueGrants: pallet_grants::{Pallet, Call, Storage, Event<T>} = 102,
         Deposits: pallet_deposits::{Pallet, Storage, Event<T>} = 103,
         ImbueFellowship: pallet_fellowship::{Pallet, Call, Storage, Event<T>} = 104,
+        ImbueDisputes: pallet_disputes::{Pallet, Call, Storage, Event<T>} = 105,
     }
 }
 
@@ -1027,6 +1031,7 @@ mod benches {
         [pallet_briefs, ImbueBriefs]
         [pallet_grants, ImbueGrants]
         [pallet_fellowship, ImbueFellowship]
+        [pallet_fellowship, ImbueDisputes]
     );
 }
 
@@ -1294,34 +1299,32 @@ cumulus_pallet_parachain_system::register_validate_block! {
 
 
 
-use pallet_fellowship::Roles;
-
-struct PseudoRandomJurySelector<T: pallet_fellowship::Config>(T);
-/// Select a jury randomly, if there is not enough member is Roles then a truncated list will be provided.
-/// Currently bound to u8 for size.
-impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<AccountId> for PseudoRandomJurySelector<T> {
+type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+pub struct PointerBasedJurySelector<T: pallet_fellowship::Config>(T);
+impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for PointerBasedJurySelector<T> {
     type JurySize = MaxJurySize;
-    fn select_jury() -> sp_runtime::BoundedVec<AccountId, Self::JurySize> {
-        let mut out: Vec<AccountId> = Vec::new();
-        let mut rng = rand::thread_rng();
-        let length = Roles::<T>::iter_keys().count();
-        let mut jury_size = Self::JurySize::get();
-
-        if jury_size > length {
-            jury_size = length;
-        }
-
-        // SAFETY: panics is jury_size > length.
-        let sample = rand::seq::index::sample(&mut rng, length, jury_size);
-
-        let keys = Roles::<T>::iter_keys().collect::<Vec<AccountId>>();
-        for index in sample.iter() {
-            // Defensive guard to avoid panic on indexing.
+    fn select_jury() -> frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> {
+        let mut out: frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> = frame_support::BoundedVec::new();
+        let mut amount = Self::JurySize::get(); 
+        let keys = pallet_fellowship::Roles::<T>::iter_keys().collect::<Vec<AccountIdOf<T>>>();
+        let keys_len = keys.len();
+        let pointer = pallet_fellowship::JuryPointer::<T>::get();
+        let pointer_with_bound = pointer.saturating_add(amount.into());
+        for i in pointer..pointer_with_bound {
+            let index = i as usize % keys_len;
+            // shouldnt be an issue due to mod.
             if index < keys.len() {
                 let key = &keys[index];
-                out.push(key.clone())
+                // Here weve gone in a circle! break.
+                if out.contains(&key) {
+                    break
+                }
+                if let Err(_) = out.try_push(key.clone()) {
+                    break
+                }
             }
         }
+        pallet_fellowship::JuryPointer::<T>::put(pointer_with_bound);
         out
     }
 }

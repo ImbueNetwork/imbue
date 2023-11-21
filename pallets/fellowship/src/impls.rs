@@ -82,3 +82,4 @@ impl crate::traits::FellowshipPermissions<crate::Role, crate::Permission>
         }
     }
 }
+

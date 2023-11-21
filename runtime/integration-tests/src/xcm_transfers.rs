@@ -10,9 +10,9 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-use frame_support::assert_ok;
+use frame_support::{assert_ok, PalletId};
 use frame_support::dispatch::RawOrigin;
-
+use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::{bx, TestExt};
 
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
@@ -24,9 +24,9 @@ use crate::kusama_test_net::{
     Development, ImbueKusamaReceiver, ImbueKusamaSender, Kusama, KusamaReceiver, KusamaSender,
     Sibling, SiblingKusamaReceiver,
 };
-use crate::setup::{ksm_amount, mgx_amount, native_amount, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING};
+use crate::setup::{ksm_amount, mgx_amount, native_amount, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING, AccountId};
 use common_runtime::Balance;
-use common_types::{CurrencyId, FundingType, TreasuryOrigin};
+use common_types::{CurrencyId, TreasuryOrigin, TreasuryOriginConverter};
 use imbue_kusama_runtime::{
     CanonicalImbuePerSecond, OrmlTokens, Runtime as R, RuntimeOrigin, XTokens,
 };
@@ -37,11 +37,8 @@ use pallet_proposals::traits::ExternalRefundHandler;
 fn transfer_treasury_to_parachain_grant_escrow_address() {
     let transfer_amount: Balance = ksm_amount(1);
     let treasury_origin = TreasuryOrigin::Kusama;
-    let kusama_treasury_address =
-        <R as pallet_proposals::Config>::ExternalRefundHandler::get_treasury_account_id(
-            treasury_origin,
-        )
-        .unwrap();
+    let kusama_treasury_address: AccountId = PalletId(*b"py/trsry").into_account_truncating();
+
     Development::execute_with(|| {
         assert_eq!(
             OrmlTokens::free_balance(CurrencyId::KSM, &ImbueKusamaReceiver::get()),
@@ -134,11 +131,7 @@ fn transfer_ksm_to_relay_chain() {
 #[test]
 fn test_xcm_refund_handler_to_kusama() {
     let treasury_origin = TreasuryOrigin::Kusama;
-    let kusama_treasury_address =
-        <R as pallet_proposals::Config>::ExternalRefundHandler::get_treasury_account_id(
-            treasury_origin,
-        )
-        .unwrap();
+    let kusama_treasury_address: AccountId = PalletId(*b"py/trsry").into_account_truncating();
     let _kusama_treasury_balance_before =
         Kusama::account_data_of(kusama_treasury_address.clone()).free;
     let transfer_amount: Balance = ksm_amount(10);
@@ -170,7 +163,7 @@ fn test_xcm_refund_handler_to_kusama() {
                 ImbueKusamaReceiver::get(),
                 ksm_balance,
                 CurrencyId::KSM,
-                FundingType::Grant(TreasuryOrigin::Kusama)
+                <TreasuryOrigin as TreasuryOriginConverter<AccountId>>::get_multi_location(&TreasuryOrigin::Kusama).unwrap()
             )
         );
     });

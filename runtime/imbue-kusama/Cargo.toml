@@ -13,7 +13,6 @@ targets = ['x86_64-unknown-linux-gnu']
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "max-encoded-len"] }
 scale-info = { version = "2.3.1", default-features = false, features = ["derive"] }
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
-rand = { version = "0.7.3", default-features = false, features = ["alloc"]}
 log = { version = "0.4.14", default-features = false }
 
 # Substrate Dependencies
