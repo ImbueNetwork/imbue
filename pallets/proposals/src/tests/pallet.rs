@@ -584,14 +584,11 @@ fn vote_on_milestone_autofinalises_on_all_voted_and_fail() {
             true
         ));
 
-        
-
         assert_last_event::<Test>(
-            Event::<Test>::MilestoneRejected(project_key, milestone_key).into()
+            Event::<Test>::MilestoneRejected(project_key, milestone_key).into(),
         )
     });
 }
-
 
 #[test]
 fn withdraw_not_initiator() {

@@ -109,14 +109,14 @@ impl<T: Config> Pallet<T> {
                 }
             })?;
 
-            Self::deposit_event(Event::VoteSubmitted(
-                who.clone(),
-                project_key,
-                milestone_key,
-                approve_milestone,
-                now,
-            ));
-        
+        Self::deposit_event(Event::VoteSubmitted(
+            who.clone(),
+            project_key,
+            milestone_key,
+            approve_milestone,
+            now,
+        ));
+
         Self::try_auto_finalise_milestone_voting(
             project_key,
             &vote,
@@ -126,7 +126,6 @@ impl<T: Config> Pallet<T> {
             project.raised_funds,
         )?;
 
-        
         Ok(().into())
     }
 
@@ -455,7 +454,9 @@ impl<T: Config> Pallet<T> {
             ));
         }
 
-        if vote.nay >= funding_threshold || (vote.yay.saturating_add(vote.nay) == raised_funds && vote.yay < funding_threshold) {
+        if vote.nay >= funding_threshold
+            || (vote.yay.saturating_add(vote.nay) == raised_funds && vote.yay < funding_threshold)
+        {
             Self::close_voting_round(project_key, user_has_voted_key)?;
             Self::deposit_event(Event::MilestoneRejected(
                 user_has_voted_key.0,
