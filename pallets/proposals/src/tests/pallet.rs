@@ -554,6 +554,46 @@ fn vote_on_milestone_actually_adds_to_vote() {
 }
 
 #[test]
+fn vote_on_milestone_autofinalises_on_all_voted_and_fail() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE, DAVE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native);
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(ALICE),
+            project_key,
+            milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(BOB),
+            project_key,
+            milestone_key,
+            false
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(CHARLIE),
+            project_key,
+            milestone_key,
+            false
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(DAVE),
+            project_key,
+            milestone_key,
+            true
+        ));
+
+        
+
+        assert_last_event::<Test>(
+            Event::<Test>::MilestoneRejected(project_key, milestone_key).into()
+        )
+    });
+}
+
+
+#[test]
 fn withdraw_not_initiator() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);

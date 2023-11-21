@@ -235,6 +235,7 @@ pub static ALICE: AccountId = 125;
 pub static BOB: AccountId = 126;
 pub static CHARLIE: AccountId = 127;
 pub static DAVE: AccountId = 128;
+pub static STEVE: AccountId = 254;
 pub static JOHN: AccountId = 255;
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
@@ -251,6 +252,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &DAVE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &JOHN, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &STEVE, initial_balance);
     });
     ext
 }
