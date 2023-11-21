@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+      - staging
     paths-ignore:
       - "**.md"
   pull_request:
     branches:
       - main
+      - staging
     paths-ignore:
       - "**.md"
 env:
@@ -16,6 +18,15 @@ env:
   GCP_ZONE: europe-west3-a
 
 jobs:
+  check_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch
+        if: github.base_ref == 'main' && github.head_ref != 'staging'
+        run: |
+          echo "ERROR: You can only merge to main from staging."
+          exit 1
+
   create-runner:
     runs-on: ubuntu-latest
     outputs:
