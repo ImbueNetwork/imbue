@@ -17,7 +17,6 @@ members = [
 	"pallets/proposals",
 	"pallets/briefs",
 	"pallets/grants",
-	"pallets/crowdfunding",
 	"pallets/deposits",
 	"pallets/disputes",
 	"pallets/fellowship",
