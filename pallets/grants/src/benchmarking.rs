@@ -17,6 +17,10 @@ use sp_std::{convert::TryInto, str, vec::Vec};
 
 const SEED: u32 = 0;
 
+#[benchmarks( where
+    [u8; 32]: From<<T as frame_system::Config>::AccountId>,
+)]
+
 #[benchmarks]
 mod benchmarks {
     use super::*;

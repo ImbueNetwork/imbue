@@ -151,9 +151,6 @@ mod benchmarks {
             create_funded_user::<T>("contributor", i, 1_000_000_000_000_000_000u128)
         }).collect();
 
-        dbg!(&contributors);
-        assert!(false);
-
         let contributions = get_contributions::<T>(contributors, 100_000_000_000_000_000u128);
         let total_amount = 100_000_000_000_000_000u128 * <T as Config>::MaximumContributorsPerProject::get() as u128;
         let milestone_count = <T as Config>::MaxMilestonesPerProject::get();

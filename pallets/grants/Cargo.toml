@@ -48,7 +48,6 @@ pallet-disputes = { path = "../disputes"}
 pallet-fellowship = { path = "../fellowship"}
 common-types = { path = "../../libs/common-types" }
 common-runtime = { path = "../../runtime/common" }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43"}
 
 [features]
 default = ["std"]
@@ -63,15 +62,20 @@ std = [
 	"pallet-identity/std",
 	"pallet-balances/std",
 	"pallet-proposals/std",
-	"pallet-xcm/std",
-	"common-runtime/std"
+	"common-runtime/std",
+	"common-types/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"pallet-xcm/runtime-benchmarks",
-	"common-runtime/runtime-benchmarks"
+	"common-runtime/runtime-benchmarks",
+	"pallet-timestamp/runtime-benchmarks",
+	"pallet-identity/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+	"pallet-proposals/runtime-benchmarks",
+	"pallet-disputes/runtime-benchmarks",
+	"pallet-fellowship/runtime-benchmarks",
 ]
 try-runtime = [
 	"frame-support/try-runtime",
@@ -86,5 +90,4 @@ try-runtime = [
 	"pallet-identity/try-runtime",
 	"pallet-proposals/try-runtime",
 	"pallet-timestamp/try-runtime",
-	"pallet-xcm/try-runtime"
 ]

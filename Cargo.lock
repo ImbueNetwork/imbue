@@ -6986,7 +6986,6 @@ dependencies = [
  "pallet-identity",
  "pallet-proposals",
  "pallet-timestamp",
- "pallet-xcm",
  "parity-scale-codec 3.6.5",
  "scale-info 2.9.0",
  "sp-arithmetic",

@@ -189,6 +189,7 @@ try-runtime = [
 	'pallet-briefs/try-runtime',
 	'pallet-grants/try-runtime',
 	'pallet-deposits/try-runtime',
+	'pallet-disputes/try-runtime',
 	'common-traits/try-runtime',
 	'common-types/try-runtime',
 	'pallet-proposals-rpc-runtime-api/try-runtime',
@@ -256,6 +257,8 @@ std = [
 	'pallet-proposals-rpc-runtime-api/std',
 	'pallet-briefs/std',
 	'pallet-grants/std',
+	'pallet-fellowship/std',
+	'pallet-disputes/std',
 ]
 
 runtime-benchmarks = [
@@ -275,6 +278,7 @@ runtime-benchmarks = [
 	'pallet-briefs/runtime-benchmarks',
 	'pallet-grants/runtime-benchmarks',
 	'pallet-fellowship/runtime-benchmarks',
+	'pallet-disputes/runtime-benchmarks',
 ]
 
 # A feature that should be enabled when the runtime should be build for on-chain

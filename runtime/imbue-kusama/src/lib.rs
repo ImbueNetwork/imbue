@@ -1031,7 +1031,7 @@ mod benches {
         [pallet_briefs, ImbueBriefs]
         [pallet_grants, ImbueGrants]
         [pallet_fellowship, ImbueFellowship]
-        [pallet_fellowship, ImbueDisputes]
+        [pallet_disputes, ImbueDisputes]
     );
 }
 
