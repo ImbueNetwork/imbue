@@ -46,8 +46,8 @@ mod benchmarks {
 
     #[benchmark]
     fn vote_on_milestone() {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000u128);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000u128);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
         // TODO: should update the contributors list to have maximum available length
         let contributions = get_contributions::<T>(vec![bob.clone()], 1_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
@@ -138,13 +138,13 @@ mod benchmarks {
 
     #[benchmark]
     fn raise_dispute() {
-        let contribution_amount = 1_000_000_000_000u128;
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, contribution_amount);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 0, contribution_amount);
+        let contribution_amount = 10_000_000_000_000_000u128;
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 0, 100_000_000_000_000_000_000u128);
 
         let contributors: Vec<T::AccountId> = (0
             ..<T as Config>::MaximumContributorsPerProject::get())
-            .map(|i| create_funded_user::<T>("contributor", i, contribution_amount))
+            .map(|i| create_funded_user::<T>("contributor", i, 100_000_000_000_000_000_000u128))
             .collect();
 
         let contributions = get_contributions::<T>(contributors, contribution_amount);
@@ -174,13 +174,13 @@ mod benchmarks {
 
     #[benchmark]
     fn refund() {
-        let contribution_amount = 1_000_000_000_000u128.saturated_into();
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, contribution_amount);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 0, contribution_amount);
+        let contribution_amount = 10_000_000_000_000_000u128.saturated_into();
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 100_000_000_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 0, 100_000_000_000_000_000_000u128);
 
         let contributors: Vec<T::AccountId> = (0
             ..<T as Config>::MaximumContributorsPerProject::get())
-            .map(|i| create_funded_user::<T>("contributor", i, contribution_amount))
+            .map(|i| create_funded_user::<T>("contributor", i, 100_000_000_000_000_000_000u128))
             .collect();
 
         let contributions = get_contributions::<T>(contributors, contribution_amount);
