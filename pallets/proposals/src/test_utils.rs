@@ -93,7 +93,8 @@ pub fn create_and_fund_project<T: Config>(
 }
 
 // For testing grants and errors pre funding
-pub fn create_project_awaiting_funding<T: Config>(
+// TODO: tests for these!
+pub fn _create_project_awaiting_funding<T: Config>(
     beneficiary: AccountIdOf<T>,
     contributions: ContributionsFor<T>,
     proposed_milestones: Vec<ProposedMilestone>,

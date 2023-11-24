@@ -33,7 +33,7 @@ pub mod pallet {
     use sp_arithmetic::{per_things::Percent, traits::One};
     use sp_core::H256;
     use sp_runtime::Saturating;
-    use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+    use sp_std::{collections::btree_map::BTreeMap};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =

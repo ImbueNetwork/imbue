@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, EncodeLike};
-use common_traits::MaybeConvert;
 use common_types::CurrencyId;
 use frame_support::{
     pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap, traits::EnsureOrigin, PalletId,
@@ -11,7 +10,7 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
 use pallet_disputes::traits::DisputeRaiser;
-use pallet_fellowship::{traits::EnsureRole, Role};
+use pallet_fellowship::{traits::EnsureRole};
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
@@ -51,8 +50,6 @@ pub type IndividualVotes<T> = BoundedBTreeMap<
 >;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-type VetterIdOf<T> = AccountIdOf<T>;
-
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 pub type StorageItemOf<T> =
     <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
@@ -482,7 +479,7 @@ pub mod pallet {
                 if let Some(project) = maybe_project {
                     let mut total_to_refund_including_fee: BalanceOf<T> = Zero::zero();
 
-                    for (ms_key, mut ms) in project.milestones.iter_mut() {
+                    for (_ms_key, ms) in project.milestones.iter_mut() {
                         if ms.can_refund && ms.transfer_status.is_none() {
                             let milestone_amount =
                                 ms.percentage_to_unlock.mul_floor(project.raised_funds);
@@ -638,13 +635,14 @@ pub mod pallet {
 
             let project_account_id = crate::Pallet::<T>::project_account_id(project_key);
             // todo: Error handling here can be improved.
-            let is_funded = Self::fund_project(
+            let _is_funded = Self::fund_project(
                 &on_creation_funding,
                 &contributions,
                 &project_account_id,
                 currency_id,
             )
             .map_err(|_| Error::<T>::ProjectFundingFailed)?;
+
             let converted_milestones =
                 Self::try_convert_to_milestones(proposed_milestones.clone(), project_key)
                     .map_err(|_| Error::<T>::MilestoneConversionFailed)?;
@@ -657,7 +655,7 @@ pub mod pallet {
             let bounded_milestone_keys = proposed_milestones
                 .iter()
                 .enumerate()
-                .map(|(i, ms)| i as u32)
+                .map(|(i, _ms)| i as u32)
                 .collect::<Vec<MilestoneKey>>()
                 .try_into()
                 .map_err(|_| Error::<T>::TooManyMilestones)?;
@@ -853,7 +851,7 @@ pub enum Locality<AccountId> {
 }
 
 impl<AccountId> Locality<AccountId> {
-    fn from_multilocation(m: MultiLocation) -> Self {
+    fn _from_multilocation(m: MultiLocation) -> Self {
         Self::Foreign(m)
     }
     fn from_local(l: AccountId) -> Self {

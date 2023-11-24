@@ -813,7 +813,7 @@ pub mod v7 {
             };
 
             let mut new_milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
-            project.milestones.iter().for_each(|(ms_key, ms): (&MilestoneKey, &v6::V6Milestone)| {
+            project.milestones.iter().for_each(|(_ms_key, ms): (&MilestoneKey, &v6::V6Milestone)| {
                 // assume that if its approved then its been withdrawn.
                 let mut transfer_status: Option<TransferStatus<BlockNumberFor<T>>> = None;
                 if ms.is_approved {

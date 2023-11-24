@@ -140,7 +140,7 @@ impl<T: Config> Pallet<T> {
                 let withdrawable_percent: Percent = project
                     .milestones
                     .iter_mut()
-                    .map(|(_key, mut ms)| {
+                    .map(|(_key, ms)| {
                         if ms.is_approved && ms.transfer_status == None {
                             ms.transfer_status = Some(TransferStatus::Withdrawn {
                                 on: frame_system::Pallet::<T>::block_number(),

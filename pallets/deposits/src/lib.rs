@@ -19,7 +19,6 @@ pub mod pallet {
     use codec::{FullCodec, FullEncode};
     use common_types::CurrencyId;
     use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::BlockNumberFor;
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use sp_runtime::{
         traits::{AtLeast32BitUnsigned, One},

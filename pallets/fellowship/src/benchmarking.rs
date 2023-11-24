@@ -6,7 +6,6 @@ use crate::{traits::FellowshipHandle, Config, Role};
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
-use frame_system::pallet_prelude::BlockNumberFor;
 use frame_system::Pallet as System;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;

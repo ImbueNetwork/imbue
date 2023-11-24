@@ -110,10 +110,6 @@ mod benchmarks {
             ));
         }
 
-        // All the milestones are approved now
-        let fee: BalanceOf<T> = <T as Config>::ImbueFee::get().mul_floor(raised_funds);
-        let withdrawn: BalanceOf<T> = raised_funds.saturating_sub(fee);
-
         #[extrinsic_call]
         withdraw(RawOrigin::Signed(alice.clone()), project_key);
         assert_last_event::<T>(
@@ -152,8 +148,6 @@ mod benchmarks {
             .collect();
 
         let contributions = get_contributions::<T>(contributors, contribution_amount);
-        let total_amount =
-            contribution_amount * <T as Config>::MaximumContributorsPerProject::get() as u128;
         let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
         let prop_milestones = get_milestones(milestone_count as u8);
         let milestone_keys: BoundedVec<u32, <T as Config>::MaxMilestonesPerProject> = (0u32

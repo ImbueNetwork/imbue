@@ -1,13 +1,10 @@
 use crate::{AccountIdOf, BalanceOf, Contribution, FundingPath, Locality, ProposedMilestone};
-use common_types::{CurrencyId, TreasuryOrigin, TreasuryOriginConverter};
-use frame_support::{pallet_prelude::*, transactional, BoundedBTreeMap, PalletId};
-use frame_system::pallet_prelude::*;
+use common_types::CurrencyId;
+use frame_support::{pallet_prelude::*, transactional, BoundedBTreeMap};
 use orml_traits::XcmTransfer;
-use orml_xtokens::Error;
 use sp_arithmetic::{traits::AtLeast32BitUnsigned, Percent};
 use sp_core::H256;
-use sp_runtime::traits::AccountIdConversion;
-use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+use sp_std::{vec::Vec};
 use xcm::latest::{MultiLocation, WeightLimit};
 
 pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
