@@ -318,10 +318,10 @@ impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
 
 pub struct MockDisputeRaiser;
 impl pallet_disputes::traits::DisputeRaiser<AccountId> for MockDisputeRaiser {
-type DisputeKey = u32;
-type SpecificId = u32;
-type MaxJurySize = MaxJuryMembers;
-type MaxSpecifics = MaxMilestonesPerProject;
+    type DisputeKey = u32;
+    type SpecificId = u32;
+    type MaxJurySize = MaxJuryMembers;
+    type MaxSpecifics = MaxMilestonesPerProject;
     fn raise_dispute(
         _dispute_key: Self::DisputeKey,
         _raised_by: AccountId,
@@ -331,4 +331,3 @@ type MaxSpecifics = MaxMilestonesPerProject;
         Ok(())
     }
 }
-

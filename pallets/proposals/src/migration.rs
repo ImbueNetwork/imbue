@@ -3,9 +3,9 @@ use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::*;
 use frame_system::pallet_prelude::BlockNumberFor;
 
-use common_types::{TreasuryOriginConverter, TreasuryOrigin};
-use pallet_fellowship::traits::SelectJury;
+use common_types::{TreasuryOrigin, TreasuryOriginConverter};
 pub use pallet::*;
+use pallet_fellowship::traits::SelectJury;
 
 pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 
@@ -490,7 +490,6 @@ pub mod v5 {
     #[storage_alias]
     pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
 
-
     #[derive(Default, Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
     #[repr(u32)]
     pub enum Release {
@@ -502,7 +501,6 @@ pub mod v5 {
         V4,
     }
 
-    
     #[derive(
         Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
     )]
@@ -570,7 +568,8 @@ pub mod v5 {
 pub mod v6 {
     use super::*;
 
-    pub type V6BoundedBTreeMilestones<T> = BoundedBTreeMap<MilestoneKey, V6Milestone, <T as Config>::MaxMilestonesPerProject>;
+    pub type V6BoundedBTreeMilestones<T> =
+        BoundedBTreeMap<MilestoneKey, V6Milestone, <T as Config>::MaxMilestonesPerProject>;
 
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
     pub struct V6Milestone {
@@ -597,7 +596,8 @@ pub mod v6 {
     }
 
     #[storage_alias]
-    pub type Projects<T: Config> = StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV6<T>, OptionQuery>;
+    pub type Projects<T: Config> =
+        StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV6<T>, OptionQuery>;
 
     #[storage_alias]
     pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
@@ -669,8 +669,6 @@ pub mod v6 {
         })
     }
 
-
-
     pub struct MigrateToV6<T: Config>(T);
     impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
         #[cfg(feature = "try-runtime")]
@@ -728,15 +726,19 @@ pub mod v7 {
     pub struct MigrateToV7<T: Config>(T);
 
     impl<T: Config> OnRuntimeUpgrade for MigrateToV7<T>
-    where AccountIdOf<T>: Into<[u8; 32]>
+    where
+        AccountIdOf<T>: Into<[u8; 32]>,
     {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
             log::warn!( target: "pallet-proposals", "Running pre_upgrade()");
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
-            
-            ensure!(<T as Config>::MaxJuryMembers::get() < u8::MAX as u32, "Max jury members must be smaller than u8");
+
+            ensure!(
+                <T as Config>::MaxJuryMembers::get() < u8::MAX as u32,
+                "Max jury members must be smaller than u8"
+            );
 
             ensure!(
                 current == 7 && onchain == 6,
@@ -752,7 +754,6 @@ pub mod v7 {
             let current = <Pallet<T> as GetStorageVersion>::current_storage_version();
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
             if current == 7 && onchain == 6 {
-
                 migrate_new_fields::<T>(&mut weight);
                 current.put::<Pallet<T>>();
                 log::warn!("v7 has been successfully applied");
@@ -761,7 +762,7 @@ pub mod v7 {
                 log::warn!("Skipping v7 due to mismatched version, this be removed from Executive");
                 weight = weight.saturating_add(T::DbWeight::get().reads(1));
             }
-            
+
             log::warn!("****** ENDING MIGRATION *****");
             weight
         }
@@ -780,7 +781,8 @@ pub mod v7 {
     }
 
     fn migrate_new_fields<T: Config>(weight: &mut Weight)
-    where AccountIdOf<T>: Into<[u8; 32]>,
+    where
+        AccountIdOf<T>: Into<[u8; 32]>,
     {
         v6::Projects::<T>::drain().for_each(|(key, project)|{
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
@@ -801,21 +803,17 @@ pub mod v7 {
                     let multilocation = match treasury_origin {
                         TreasuryOrigin::Kusama => {
                             <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(&treasury_origin).expect("known good.")
-                        },
-                        TreasuryOrigin::Imbue => {
+                        },TreasuryOrigin::Imbue => {
                             <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(&treasury_origin).expect("known good.")
-                        },   
-                        TreasuryOrigin::Karura => {
+                        },TreasuryOrigin::Karura => {
                             <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(&TreasuryOrigin::Imbue).expect("known good.")
-                        },     
-                    };
+                        }};
                     vec![(Locality::Foreign(multilocation), Percent::from_parts(100))].try_into().expect("1 is lower than bound if it isnt then the system is broken anyway; qed")
                 },
             };
 
             let mut new_milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
             project.milestones.iter().for_each(|(ms_key, ms): (&MilestoneKey, &v6::V6Milestone)| {
-                
                 // assume that if its approved then its been withdrawn.
                 let mut transfer_status: Option<TransferStatus<BlockNumberFor<T>>> = None;
                 if ms.is_approved {
@@ -855,7 +853,6 @@ pub mod v7 {
             crate::Projects::<T>::insert(key, migrated_project);
         });
     }
-
 }
 
 #[cfg(test)]
@@ -1157,7 +1154,8 @@ mod test {
             let cont = get_contributions::<Test>(vec![BOB, DAVE], 100_000);
             let prop_milestones = get_milestones(10);
             let project_key =
-                create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).expect("project wasnt created!");
+                create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
+                    .expect("project wasnt created!");
             let milestone_key: MilestoneKey = 0;
             let expiry_block: BlockNumber = 10;
             let rounds_expiring: BoundedProjectKeysPerBlock<Test> =

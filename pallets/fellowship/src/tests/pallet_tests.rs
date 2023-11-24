@@ -623,4 +623,3 @@ fn e2e() {
         assert_eq!(Roles::<Test>::get(EMPTY).unwrap(), (Role::Freelancer, 10));
     });
 }
-

@@ -1,10 +1,7 @@
 use crate::*;
+use pallet_disputes::{traits::DisputeHooks, DisputeResult};
 use scale_info::prelude::format;
 use sp_runtime::traits::{Saturating, Zero};
-use pallet_disputes::{
-    traits::DisputeHooks,
-    DisputeResult,
-};
 
 impl<T: Config> Pallet<T> {
     /// The account ID of the fund pot.
@@ -76,7 +73,7 @@ impl<T: Config> Pallet<T> {
             Rounds::<T>::contains_key((project_key, milestone_key), RoundType::VotingRound),
             Error::<T>::VotingRoundNotStarted
         );
-        
+
         let contribution_amount = project
             .contributions
             .get(&who)
@@ -138,17 +135,22 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::UserIsNotInitiator);
 
-        let withdrawable = Projects::<T>::try_mutate_exists(project_key, |maybe_project|{
+        let withdrawable = Projects::<T>::try_mutate_exists(project_key, |maybe_project| {
             if let Some(project) = maybe_project {
-                let withdrawable_percent: Percent = project.milestones.iter_mut().map(|(_key, mut ms)|{
-                    if ms.is_approved && ms.transfer_status == None {
-                        ms.transfer_status = Some(TransferStatus::Withdrawn{on: frame_system::Pallet::<T>::block_number()});
-                        ms.percentage_to_unlock
-                    } else {
-                        <Percent as Zero>::zero()
-                    }
-                    
-                }).fold(<Percent as Zero>::zero(), |acc, item| acc + item);
+                let withdrawable_percent: Percent = project
+                    .milestones
+                    .iter_mut()
+                    .map(|(_key, mut ms)| {
+                        if ms.is_approved && ms.transfer_status == None {
+                            ms.transfer_status = Some(TransferStatus::Withdrawn {
+                                on: frame_system::Pallet::<T>::block_number(),
+                            });
+                            ms.percentage_to_unlock
+                        } else {
+                            <Percent as Zero>::zero()
+                        }
+                    })
+                    .fold(<Percent as Zero>::zero(), |acc, item| acc + item);
 
                 ensure!(
                     withdrawable_percent != Zero::zero(),
@@ -160,14 +162,14 @@ impl<T: Config> Pallet<T> {
                 let initiator_payment = withdrawable.saturating_sub(fee);
                 let project_account = Self::project_account_id(project_key);
 
-                // Take the fee and send to ImbueFeeAccount   
+                // Take the fee and send to ImbueFeeAccount
                 T::MultiCurrency::transfer(
                     project.currency_id,
                     &project_account,
                     &<T as Config>::ImbueFeeAccount::get(),
                     fee,
                 )?;
-            
+
                 // Transfer to initiator
                 T::MultiCurrency::transfer(
                     project.currency_id,
@@ -177,8 +179,12 @@ impl<T: Config> Pallet<T> {
                 )?;
 
                 project.withdrawn_funds = project.withdrawn_funds.saturating_add(withdrawable);
-        
-                if project.withdrawn_funds.saturating_add(project.refunded_funds) == project.raised_funds {
+
+                if project
+                    .withdrawn_funds
+                    .saturating_add(project.refunded_funds)
+                    == project.raised_funds
+                {
                     <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
                     CompletedProjects::<T>::try_mutate(
                         &project.initiator,
@@ -194,7 +200,7 @@ impl<T: Config> Pallet<T> {
                 Ok::<BalanceOf<T>, DispatchError>(withdrawable)
             } else {
                 Ok::<BalanceOf<T>, DispatchError>(<BalanceOf<T> as Zero>::zero())
-            } 
+            }
         })?;
 
         Self::deposit_event(Event::ProjectFundsWithdrawn(
@@ -208,7 +214,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Try and fund a project based on its FundingPath.
-    /// Will error is the 
+    /// Will error is the
     /// If the funds have actually been transferred this will return and Ok(true)
     /// If the funds have not been transferred (i.e awaiting funding) then it will return Ok(false)
     pub(crate) fn fund_project<'a>(
@@ -248,9 +254,9 @@ impl<T: Config> Pallet<T> {
             let milestone = Milestone::new(
                 project_key,
                 milestone_key,
-                proposed_milestone.percentage_to_unlock
+                proposed_milestone.percentage_to_unlock,
             );
-            
+
             milestones
                 .try_insert(milestone_key, milestone)
                 .map_err(|_| Error::<T>::TooManyMilestones)?;
@@ -321,8 +327,6 @@ impl<T: Config> Pallet<T> {
 
         Ok(())
     }
-
-
 }
 
 impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
@@ -332,36 +336,35 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
         dispute_result: pallet_disputes::pallet::DisputeResult,
     ) -> Weight {
         ProjectsInDispute::<T>::remove(project_key);
-        Projects::<T>::mutate(project_key, |maybe_project|{
-                match maybe_project {
-                    Some(project) => {
+        Projects::<T>::mutate(project_key, |maybe_project| {
+            match maybe_project {
+                Some(project) => {
                     match dispute_result {
                         DisputeResult::Success => {
                             for milestone_key in specifics.iter() {
                                 if let Some(milestone) = project.milestones.get_mut(milestone_key) {
-                                // Shouldnt be needed but nice to have this check.
-                                // Will prevent someone calling both refund and withdraw on the same milestone. 
-                                if milestone.transfer_status == None {
-                                    milestone.can_refund = true;
+                                    // Shouldnt be needed but nice to have this check.
+                                    // Will prevent someone calling both refund and withdraw on the same milestone.
+                                    if milestone.transfer_status == None {
+                                        milestone.can_refund = true;
+                                    }
                                 }
                             }
-                            }
-                        },
+                        }
                         DisputeResult::Failure => {
                             // I Guess do nothing.. ProjectsInDispute gets cleared regardless allowing further disputes.
-                        },
+                        }
                     };
-                },
-                // Looks like the project was deleted somehow during the dispute. 
+                }
+                // Looks like the project was deleted somehow during the dispute.
                 // The only way this is possible is through a refund or final withdraw.
                 // Not a massive issue as either way the project has been finalised.
                 // Just ignore and return weight.
-                None => {
-                }
+                None => {}
             }
         });
         // ProjectsInDispute::remove
         // Projects::mutate
-        return T::DbWeight::get().reads_writes(2, 2)
+        return T::DbWeight::get().reads_writes(2, 2);
     }
 }

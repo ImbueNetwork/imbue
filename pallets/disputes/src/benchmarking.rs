@@ -5,9 +5,9 @@ use crate::traits::DisputeRaiser;
 use crate::Pallet as PalletDisputes;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get, BoundedVec};
-use frame_system::Pallet as System;
-use sp_std::{vec::Vec, vec};
 use frame_system::pallet_prelude::BlockNumberFor;
+use frame_system::Pallet as System;
+use sp_std::{vec, vec::Vec};
 
 #[benchmarks(where Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
 mod benchmarks {

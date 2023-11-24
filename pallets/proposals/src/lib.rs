@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode, EncodeLike};
 use common_traits::MaybeConvert;
 use common_types::CurrencyId;
-use codec::{Decode, Encode, EncodeLike};
 use frame_support::{
     pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap, traits::EnsureOrigin, PalletId,
 };
@@ -10,8 +10,8 @@ use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
-use pallet_fellowship::{traits::EnsureRole, Role};
 use pallet_disputes::traits::DisputeRaiser;
+use pallet_fellowship::{traits::EnsureRole, Role};
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
@@ -20,7 +20,10 @@ use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 use xcm::latest::MultiLocation;
 
 pub mod traits;
-use traits::{IntoProposal, ExternalRefundHandler};
+use traits::{ExternalRefundHandler, IntoProposal};
+
+#[cfg(test)]
+pub(crate) mod tests;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod mock;
@@ -30,9 +33,6 @@ mod benchmarking;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 mod test_utils;
-
-#[cfg(test)]
-pub(crate) mod tests;
 
 pub mod weights;
 pub use weights::*;
@@ -58,11 +58,16 @@ pub type StorageItemOf<T> =
     <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::StorageItem;
 pub type DepositIdOf<T> =
     <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
-pub type MaxJuryOf<T> = <<T as Config>::JurySelector as pallet_fellowship::traits::SelectJury<AccountIdOf<T>>>::JurySize;
+pub type MaxJuryOf<T> = <<T as Config>::JurySelector as pallet_fellowship::traits::SelectJury<
+    AccountIdOf<T>,
+>>::JurySize;
 
 // These are the bounded types which are suitable for handling user input due to their restriction of vector length.
-type BoundedBTreeMilestones<T> =
-    BoundedBTreeMap<MilestoneKey, Milestone<BlockNumberFor<T>>, <T as Config>::MaxMilestonesPerProject>;
+type BoundedBTreeMilestones<T> = BoundedBTreeMap<
+    MilestoneKey,
+    Milestone<BlockNumberFor<T>>,
+    <T as Config>::MaxMilestonesPerProject,
+>;
 pub type BoundedProposedMilestones<T> =
     BoundedVec<ProposedMilestone, <T as Config>::MaxMilestonesPerProject>;
 pub type AgreementHash = H256;
@@ -107,13 +112,23 @@ pub mod pallet {
         /// The account the imbue fee goes to.
         type ImbueFeeAccount: Get<AccountIdOf<Self>>;
         /// The type responisble for handling refunds.
-        type ExternalRefundHandler: traits::ExternalRefundHandler<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+        type ExternalRefundHandler: traits::ExternalRefundHandler<
+            AccountIdOf<Self>,
+            BalanceOf<Self>,
+            CurrencyId,
+        >;
         /// The type responsible for storage deposits.
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that will be used to calculate the deposit of a project.
         type ProjectStorageItem: Get<StorageItemOf<Self>>;
         /// The trait that handler the raising of a dispute.
-        type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxSpecifics = Self::MaxMilestonesPerProject, MaxJurySize = MaxJuryOf<Self>>;
+        type DisputeRaiser: DisputeRaiser<
+            AccountIdOf<Self>,
+            DisputeKey = ProjectKey,
+            SpecificId = MilestoneKey,
+            MaxSpecifics = Self::MaxMilestonesPerProject,
+            MaxJurySize = MaxJuryOf<Self>,
+        >;
         /// The jury selector type which is defining the max jury size.
         type JurySelector: pallet_fellowship::traits::SelectJury<AccountIdOf<Self>>;
         /// The origin responsible for setting the address responsible for minting tokens.
@@ -240,7 +255,10 @@ pub mod pallet {
         /// This milestone has been rejected.
         MilestoneRejected(ProjectKey, MilestoneKey),
         /// A project has been refunded either partially or completely.
-        ProjectRefunded{project_key: ProjectKey, total_amount: BalanceOf<T>},
+        ProjectRefunded {
+            project_key: ProjectKey,
+            total_amount: BalanceOf<T>,
+        },
         /// Foreign Asset Signer Changed
         ForeignAssetSignerChanged(T::AccountId),
         /// Foreign Asset Signer Changed
@@ -415,15 +433,33 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-            ensure!(milestone_keys.iter().all(|ms_key|project.milestones.contains_key(ms_key)), Error::<T>::MilestoneDoesNotExist);
-            ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanRaiseDispute);
-            ensure!(!ProjectsInDispute::<T>::contains_key(&project_key), Error::<T>::MilestonesAlreadyInDispute);
             ensure!(
-                !project.milestones.iter().any(|(milestone_key, milestone)|{milestone_keys.contains(milestone_key) && milestone.is_approved}),
+                milestone_keys
+                    .iter()
+                    .all(|ms_key| project.milestones.contains_key(ms_key)),
+                Error::<T>::MilestoneDoesNotExist
+            );
+            ensure!(
+                project.contributions.contains_key(&who),
+                Error::<T>::OnlyContributorsCanRaiseDispute
+            );
+            ensure!(
+                !ProjectsInDispute::<T>::contains_key(&project_key),
+                Error::<T>::MilestonesAlreadyInDispute
+            );
+            ensure!(
+                !project.milestones.iter().any(|(milestone_key, milestone)| {
+                    milestone_keys.contains(milestone_key) && milestone.is_approved
+                }),
                 Error::<T>::CannotRaiseDisputeOnApprovedMilestone
             );
 
-            <T as Config>::DisputeRaiser::raise_dispute(project_key, who, project.jury, milestone_keys.clone())?;
+            <T as Config>::DisputeRaiser::raise_dispute(
+                project_key,
+                who,
+                project.jury,
+                milestone_keys.clone(),
+            )?;
             ProjectsInDispute::<T>::insert(project_key, milestone_keys);
 
             Ok(().into())
@@ -433,32 +469,40 @@ pub mod pallet {
         /// Will only refund milestones that have can_refund set to true.
         #[pallet::call_index(15)]
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
-        pub fn refund(
-            origin: OriginFor<T>,
-            project_key: ProjectKey,
-        ) -> DispatchResult {
+        pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-            ensure!(project.contributions.contains_key(&who), Error::<T>::OnlyContributorsCanInitiateRefund);
+            ensure!(
+                project.contributions.contains_key(&who),
+                Error::<T>::OnlyContributorsCanInitiateRefund
+            );
             let project_account = Self::project_account_id(project_key);
 
-            Projects::<T>::try_mutate_exists(project_key, |maybe_project|{
+            Projects::<T>::try_mutate_exists(project_key, |maybe_project| {
                 if let Some(project) = maybe_project {
                     let mut total_to_refund_including_fee: BalanceOf<T> = Zero::zero();
 
                     for (ms_key, mut ms) in project.milestones.iter_mut() {
                         if ms.can_refund && ms.transfer_status.is_none() {
-                            let milestone_amount = ms.percentage_to_unlock.mul_floor(project.raised_funds);
-                            total_to_refund_including_fee = total_to_refund_including_fee.saturating_add(milestone_amount);
-                            ms.transfer_status = Some(TransferStatus::Refunded{on: frame_system::Pallet::<T>::block_number()});
+                            let milestone_amount =
+                                ms.percentage_to_unlock.mul_floor(project.raised_funds);
+                            total_to_refund_including_fee =
+                                total_to_refund_including_fee.saturating_add(milestone_amount);
+                            ms.transfer_status = Some(TransferStatus::Refunded {
+                                on: frame_system::Pallet::<T>::block_number(),
+                            });
                         }
                     }
 
                     // Just so we dont multiply by zero.
-                    ensure!(total_to_refund_including_fee != Zero::zero(), Error::<T>::NoAvailableFundsToWithdraw);
+                    ensure!(
+                        total_to_refund_including_fee != Zero::zero(),
+                        Error::<T>::NoAvailableFundsToWithdraw
+                    );
 
-                    let fee = <T as Config>::ImbueFee::get().mul_floor(total_to_refund_including_fee);
-                    // Take the fee and send to ImbueFeeAccount   
+                    let fee =
+                        <T as Config>::ImbueFee::get().mul_floor(total_to_refund_including_fee);
+                    // Take the fee and send to ImbueFeeAccount
                     T::MultiCurrency::transfer(
                         project.currency_id,
                         &project_account,
@@ -467,7 +511,7 @@ pub mod pallet {
                     )?;
 
                     let total_to_refund = total_to_refund_including_fee.saturating_sub(fee);
-                        
+
                     for (refund_location, percent_share) in &project.refund_locations {
                         let per_refund = percent_share.mul_floor(total_to_refund);
                         match refund_location {
@@ -478,7 +522,7 @@ pub mod pallet {
                                     &acc,
                                     per_refund,
                                 )?;
-                            },
+                            }
                             Locality::Foreign(multilocation) => {
                                 T::ExternalRefundHandler::send_refund_message_to_treasury(
                                     // TODO: change this to reference so that we dont have to clone....
@@ -489,14 +533,22 @@ pub mod pallet {
                                 )?;
                             }
                         }
-                        
                     }
-                    project.refunded_funds = project.refunded_funds.saturating_add(total_to_refund_including_fee);
-                    if project.refunded_funds.saturating_add(project.withdrawn_funds) == project.raised_funds {
+                    project.refunded_funds = project
+                        .refunded_funds
+                        .saturating_add(total_to_refund_including_fee);
+                    if project
+                        .refunded_funds
+                        .saturating_add(project.withdrawn_funds)
+                        == project.raised_funds
+                    {
                         *maybe_project = None;
                     }
 
-                    Self::deposit_event(Event::<T>::ProjectRefunded {project_key, total_amount: total_to_refund_including_fee});
+                    Self::deposit_event(Event::<T>::ProjectRefunded {
+                        project_key,
+                        total_amount: total_to_refund_including_fee,
+                    });
                     Ok::<(), DispatchError>(())
                 } else {
                     Ok::<(), DispatchError>(())
@@ -568,7 +620,10 @@ pub mod pallet {
             agreement_hash: H256,
             benificiary: AccountIdOf<T>,
             proposed_milestones: BoundedVec<ProposedMilestone, Self::MaxMilestonesPerProject>,
-            refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), Self::MaximumContributorsPerProject>,
+            refund_locations: BoundedVec<
+                (Locality<AccountIdOf<T>>, Percent),
+                Self::MaximumContributorsPerProject,
+            >,
             jury: BoundedVec<AccountIdOf<T>, Self::MaxJuryMembers>,
             on_creation_funding: FundingPath,
         ) -> Result<(), DispatchError> {
@@ -598,14 +653,14 @@ pub mod pallet {
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
                     acc.saturating_add(x.value)
                 });
-            
+
             let bounded_milestone_keys = proposed_milestones
                 .iter()
                 .enumerate()
-                .map(|(i, ms)|{i as u32})
+                .map(|(i, ms)| i as u32)
                 .collect::<Vec<MilestoneKey>>()
                 .try_into()
-                .map_err(|_|Error::<T>::TooManyMilestones)?;
+                .map_err(|_| Error::<T>::TooManyMilestones)?;
 
             let project: Project<T> = Project {
                 agreement_hash,
@@ -625,7 +680,7 @@ pub mod pallet {
                     .try_into()
                     .map_err(|_| Error::<T>::TooManyJuryMembers)?,
                 on_creation_funding,
-                refunded_funds: Zero::zero()
+                refunded_funds: Zero::zero(),
             };
 
             let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
@@ -649,7 +704,8 @@ pub mod pallet {
         /// Only for local contributions.
         fn convert_contributions_to_refund_locations(
             contributions: &ContributionsFor<T>,
-        ) -> BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> {
+        ) -> BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject>
+        {
             let sum_of_contributions = contributions
                 .values()
                 .fold(Default::default(), |acc: BalanceOf<T>, x| {
@@ -657,7 +713,10 @@ pub mod pallet {
                 });
 
             let mut sum_of_percents: Percent = Zero::zero();
-            let mut ret: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = contributions
+            let mut ret: BoundedVec<
+                (Locality<AccountIdOf<T>>, Percent),
+                T::MaximumContributorsPerProject,
+            > = contributions
                 .iter()
                 .map(|c| {
                     let percent = Percent::from_rational(c.1.value, sum_of_contributions);
@@ -665,16 +724,21 @@ pub mod pallet {
                     // Since these are local we can use MultiLocation::Default;
                     (Locality::from_local(c.0.clone()), percent)
                 })
-                .collect::<Vec<(Locality<AccountIdOf<T>>, Percent)>>().try_into().expect("Both input and output are bound by the same quantifier; qed");
+                .collect::<Vec<(Locality<AccountIdOf<T>>, Percent)>>()
+                .try_into()
+                .expect("Both input and output are bound by the same quantifier; qed");
 
             // TEST THIS
             if sum_of_percents != One::one() {
-                // We are missing a part of the fund so take the remainder and use the pallet_id as the return address. 
+                // We are missing a part of the fund so take the remainder and use the pallet_id as the return address.
                 //(as is used throughout the rest of the pallet for fees)
                 let diff = <Percent as One>::one().saturating_sub(sum_of_percents);
                 // TODO: IF THE CONTRIBUTION BOUND IS MAX ALREADY THEN WE CANNOT PUSH THE DUST ACCOUNT ON
                 // FAIL SILENTLY AND CLEAN UP ON FINAL WITHDRAW INSTEAD.
-                let _ = ret.try_push((Locality::from_local(<T as Config>::ImbueFeeAccount::get()), diff));
+                let _ = ret.try_push((
+                    Locality::from_local(<T as Config>::ImbueFeeAccount::get()),
+                    diff,
+                ));
             }
 
             ret
@@ -713,7 +777,11 @@ pub struct Milestone<BlockNumber> {
 }
 
 impl<B> Milestone<B> {
-    fn new(project_key: ProjectKey, milestone_key: MilestoneKey, percentage_to_unlock: Percent) -> Self {
+    fn new(
+        project_key: ProjectKey,
+        milestone_key: MilestoneKey,
+        percentage_to_unlock: Percent,
+    ) -> Self {
         Self {
             project_key,
             milestone_key,
@@ -767,7 +835,8 @@ pub struct Project<T: Config> {
     /// The deposit_id is reponsible for returning deposits held in pallet-deposits.
     pub deposit_id: DepositIdOf<T>,
     /// Where do the refunds end up and what percent they get.
-    pub refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject>,
+    pub refund_locations:
+        BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject>,
     /// Who should deal with disputes.
     pub jury: BoundedVec<AccountIdOf<T>, MaxJuryOf<T>>,
     /// When is the project funded and how is it taken.
@@ -813,7 +882,6 @@ pub struct Whitelist<AccountId, Balance> {
 pub enum FundingPath {
     // TODO: Possibly wise to change this to actually define where the reserves are coming from.
     // This allows us to break the notion of a "contributor" finally and worry only about the "approvers".
-
     /// Take from the reserved amounts of the contributors account.
     #[default]
     TakeFromReserved,
@@ -825,8 +893,8 @@ pub enum FundingPath {
 /// Contians the block number for possible further investigation.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub enum TransferStatus<BlockNumber> {
-    Refunded{on: BlockNumber},
-    Withdrawn{on: BlockNumber},
+    Refunded { on: BlockNumber },
+    Withdrawn { on: BlockNumber },
 }
 
 /// Stores the btree for each individual vote.

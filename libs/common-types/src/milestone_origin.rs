@@ -1,19 +1,15 @@
 use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::{sp_runtime::traits::AccountIdConversion, PalletId};
 use scale_info::TypeInfo;
 use xcm::latest::{Junction, Junctions::*, MultiLocation};
-use frame_support::{PalletId, sp_runtime::traits::AccountIdConversion};
 
 /// A wrapper around
 pub trait TreasuryOriginConverter {
-    fn get_multi_location(
-        &self,
-    ) -> Result<MultiLocation, TreasuryOriginError>;
+    fn get_multi_location(&self) -> Result<MultiLocation, TreasuryOriginError>;
 }
 
 impl TreasuryOriginConverter for TreasuryOrigin {
-    fn get_multi_location(
-        &self,
-    ) -> Result<MultiLocation, TreasuryOriginError> {
+    fn get_multi_location(&self) -> Result<MultiLocation, TreasuryOriginError> {
         match &self {
             TreasuryOrigin::Kusama => Ok(MultiLocation::new(
                 1,

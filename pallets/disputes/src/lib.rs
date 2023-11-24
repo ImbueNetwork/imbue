@@ -21,11 +21,10 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating, Zero};
     use sp_std::fmt::Debug;
-    
+
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-    pub type BoundedVotes<T> =
-        BoundedBTreeMap<AccountIdOf<T>, bool, <T as Config>::MaxJurySize>;
+    pub type BoundedVotes<T> = BoundedBTreeMap<AccountIdOf<T>, bool, <T as Config>::MaxJurySize>;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);

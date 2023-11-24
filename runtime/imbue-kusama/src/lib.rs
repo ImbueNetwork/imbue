@@ -890,7 +890,6 @@ impl pallet_fellowship::Config for Runtime {
     type WeightInfo = pallet_fellowship::weights::WeightInfo<Runtime>;
 }
 
-
 pub type DepositId = u64;
 pub struct ImbueDepositCalculator;
 impl DepositCalculator<Balance> for ImbueDepositCalculator {
@@ -1305,15 +1304,16 @@ cumulus_pallet_parachain_system::register_validate_block! {
     CheckInherents = CheckInherents,
 }
 
-
-
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub struct PointerBasedJurySelector<T: pallet_fellowship::Config>(T);
-impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>> for PointerBasedJurySelector<T> {
+impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>>
+    for PointerBasedJurySelector<T>
+{
     type JurySize = MaxJurySize;
     fn select_jury() -> frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> {
-        let mut out: frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> = frame_support::BoundedVec::new();
-        let mut amount = Self::JurySize::get(); 
+        let mut out: frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> =
+            frame_support::BoundedVec::new();
+        let mut amount = Self::JurySize::get();
         let keys = pallet_fellowship::Roles::<T>::iter_keys().collect::<Vec<AccountIdOf<T>>>();
         let keys_len = keys.len();
         let pointer = pallet_fellowship::JuryPointer::<T>::get();
@@ -1325,10 +1325,10 @@ impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<Account
                 let key = &keys[index];
                 // Here weve gone in a circle! break.
                 if out.contains(&key) {
-                    break
+                    break;
                 }
                 if let Err(_) = out.try_push(key.clone()) {
-                    break
+                    break;
                 }
             }
         }
@@ -1336,4 +1336,3 @@ impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<Account
         out
     }
 }
-

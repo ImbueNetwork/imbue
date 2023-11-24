@@ -15,7 +15,7 @@ use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-    BuildStorage
+    BuildStorage,
 };
 
 use sp_std::{
@@ -219,7 +219,6 @@ parameter_types! {
     pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
 }
 
-
 parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
@@ -256,9 +255,7 @@ pub enum StorageItems {
 }
 
 pub struct MockDepositHandler;
-impl DepositHandler<Balance, AccountId>
-    for MockDepositHandler
-{
+impl DepositHandler<Balance, AccountId> for MockDepositHandler {
     type DepositId = u64;
     type StorageItem = StorageItems;
     fn take_deposit(
@@ -278,10 +275,10 @@ impl DepositHandler<Balance, AccountId>
 
 pub struct MockDisputeRaiser;
 impl DisputeRaiser<AccountId> for MockDisputeRaiser {
-type DisputeKey = ProjectKey;
-type SpecificId = MilestoneKey;
-type MaxJurySize = MaxJuryMembers;
-type MaxSpecifics = MaxMilestonesPerProject;
+    type DisputeKey = ProjectKey;
+    type SpecificId = MilestoneKey;
+    type MaxJurySize = MaxJuryMembers;
+    type MaxSpecifics = MaxMilestonesPerProject;
     fn raise_dispute(
         dispute_key: Self::DisputeKey,
         raised_by: AccountId,
@@ -291,7 +288,6 @@ type MaxSpecifics = MaxMilestonesPerProject;
         Ok(())
     }
 }
-
 
 pub struct MockJurySelector;
 impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {

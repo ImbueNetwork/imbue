@@ -10,8 +10,8 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-use frame_support::{assert_ok, PalletId};
 use frame_support::dispatch::RawOrigin;
+use frame_support::{assert_ok, PalletId};
 
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::{bx, Chain, TestExt};
@@ -25,7 +25,9 @@ use crate::kusama_test_net::{
     Development, DevelopmentReceiver, DevelopmentSender, Kusama, KusamaReceiver, KusamaSender,
     Sibling, SiblingReceiver,
 };
-use crate::setup::{ksm_amount, mgx_amount, native_amount, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING, AccountId};
+use crate::setup::{
+    ksm_amount, mgx_amount, native_amount, AccountId, PARA_ID_DEVELOPMENT, PARA_ID_SIBLING,
+};
 use common_runtime::Balance;
 use common_types::{CurrencyId, TreasuryOrigin, TreasuryOriginConverter};
 use imbue_kusama_runtime::{OrmlTokens, Runtime as R, RuntimeOrigin, XTokens};
@@ -165,7 +167,10 @@ fn test_xcm_refund_handler_to_kusama() {
                 DevelopmentReceiver::get(),
                 ksm_balance,
                 CurrencyId::KSM,
-                <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(&TreasuryOrigin::Kusama).unwrap()
+                <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(
+                    &TreasuryOrigin::Kusama
+                )
+                .unwrap()
             )
         );
     });

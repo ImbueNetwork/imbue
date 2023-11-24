@@ -1,22 +1,21 @@
+use crate::mock::*;
 use crate::*;
-use common_types::{CurrencyId};
+use common_types::CurrencyId;
 use frame_support::{assert_ok, traits::Hooks, BoundedVec};
 use frame_system::EventRecord;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use pallet_deposits::traits::DepositHandler;
+use pallet_disputes::traits::DisputeHooks;
 use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
 use sp_runtime::Saturating;
 use sp_runtime::{DispatchError, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
-use pallet_disputes::traits::DisputeHooks;
-use crate::mock::*;
 
+#[cfg(feature = "runtime-benchmarks")]
+use frame_benchmarking::account;
 #[cfg(feature = "runtime-benchmarks")]
 use sp_std::vec::Vec;
-#[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{account};
-
 
 pub fn run_to_block(n: BlockNumber) {
     while System::block_number() < n {
@@ -29,7 +28,6 @@ pub fn run_to_block(n: BlockNumber) {
         Proposals::on_initialize(System::block_number());
     }
 }
-
 
 pub fn get_contributions<T: Config>(
     accounts: Vec<AccountIdOf<T>>,
@@ -69,8 +67,7 @@ pub fn create_and_fund_project<T: Config>(
     contributions: ContributionsFor<T>,
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
-) -> Result<ProjectKey, DispatchError>
-{
+) -> Result<ProjectKey, DispatchError> {
     contributions.iter().for_each(|(acc, c)| {
         <T as Config>::MultiCurrency::reserve(currency_id, acc, c.value).unwrap();
     });
@@ -79,9 +76,7 @@ pub fn create_and_fund_project<T: Config>(
         AccountIdOf<T>,
         BalanceOf<T>,
         BlockNumberFor<T>,
-    >>::convert_contributions_to_refund_locations(
-        &contributions.clone()
-    );
+    >>::convert_contributions_to_refund_locations(&contributions.clone());
 
     // Reserve the assets from the contributors used.
     <crate::Pallet<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
@@ -129,16 +124,22 @@ pub fn create_funded_user<T: Config>(
     balance_factor: u128,
 ) -> T::AccountId {
     let user = account(seed, n, 0);
-    assert_ok!(<T::MultiCurrency as MultiCurrency<
-        AccountIdOf<T>,
-    >>::deposit(
-        CurrencyId::Native, &user, balance_factor.saturated_into()
-    ));
+    assert_ok!(
+        <T::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::deposit(
+            CurrencyId::Native,
+            &user,
+            balance_factor.saturated_into()
+        )
+    );
     user
 }
 
 /// Manually call the hook OnDisputeCompleteWith a predefined result for testing>
-pub fn complete_dispute<T: Config>(project_key: ProjectKey, milestone_keys: Vec<MilestoneKey>, result: pallet_disputes::DisputeResult) -> crate::Weight {
+pub fn complete_dispute<T: Config>(
+    project_key: ProjectKey,
+    milestone_keys: Vec<MilestoneKey>,
+    result: pallet_disputes::DisputeResult,
+) -> crate::Weight {
     Proposals::on_dispute_complete(project_key, milestone_keys, result)
 }
 

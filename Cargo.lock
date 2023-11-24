@@ -7638,6 +7638,7 @@ dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-system-benchmarking",
  "hex",
  "integer-sqrt",
  "lite-json",

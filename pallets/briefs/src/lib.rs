@@ -24,20 +24,20 @@ mod test_utils;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use common_types::{CurrencyId};
+    use common_types::CurrencyId;
     use frame_support::{
         pallet_prelude::*, sp_runtime::Saturating, traits::Get, weights::Weight, BoundedBTreeMap,
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
+    use pallet_fellowship::traits::SelectJury;
     use pallet_proposals::traits::IntoProposal;
-    use pallet_proposals::{Contribution, ProposedMilestone, FundingPath};
+    use pallet_proposals::{Contribution, FundingPath, ProposedMilestone};
     use sp_arithmetic::per_things::Percent;
     use sp_core::H256;
     use sp_runtime::traits::Zero;
     use sp_std::convert::{From, TryInto};
-    use pallet_fellowship::traits::SelectJury;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -85,7 +85,7 @@ pub mod pallet {
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that selects a list of jury members.
         type JurySelector: SelectJury<AccountIdOf<Self>>;
-        /// The weight info for the extrinsics. 
+        /// The weight info for the extrinsics.
         type WeightInfo: WeightInfoT;
     }
 
@@ -296,17 +296,34 @@ pub mod pallet {
             let contributions = BriefContributions::<T>::get(brief_id);
 
             <T as Config>::DepositHandler::return_deposit(brief.deposit_id)?;
-            
-            let refund_locations = <T as Config>::IntoProposal::convert_contributions_to_refund_locations(&contributions.clone().into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners)?);
+
+            let refund_locations =
+                <T as Config>::IntoProposal::convert_contributions_to_refund_locations(
+                    &contributions
+                        .clone()
+                        .into_inner()
+                        .try_into()
+                        .map_err(|_| Error::<T>::TooManyBriefOwners)?,
+                );
 
             <T as Config>::IntoProposal::convert_to_proposal(
                 brief.currency_id,
-                contributions.into_inner().try_into().map_err(|_|Error::<T>::TooManyBriefOwners)?,
+                contributions
+                    .into_inner()
+                    .try_into()
+                    .map_err(|_| Error::<T>::TooManyBriefOwners)?,
                 brief_id,
                 brief.applicant,
-                brief.milestones.to_vec().try_into().map_err(|_|Error::<T>::TooManyMilestones)?,
+                brief
+                    .milestones
+                    .to_vec()
+                    .try_into()
+                    .map_err(|_| Error::<T>::TooManyMilestones)?,
                 refund_locations,
-                <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury().to_vec().try_into().map_err(|_|Error::<T>::TooManyMilestones)?,
+                <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury()
+                    .to_vec()
+                    .try_into()
+                    .map_err(|_| Error::<T>::TooManyMilestones)?,
                 FundingPath::TakeFromReserved,
             )?;
 

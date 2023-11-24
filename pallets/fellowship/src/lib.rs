@@ -110,7 +110,7 @@ pub mod pallet {
     pub type FellowToVetter<T> =
         StorageMap<_, Blake2_128Concat, AccountIdOf<T>, VetterIdOf<T>, OptionQuery>;
 
-    /// Jury pointer for setting the mark at which fellows have been selected for jury. 
+    /// Jury pointer for setting the mark at which fellows have been selected for jury.
     #[pallet::storage]
     pub type JuryPointer<T> = StorageValue<_, u128, ValueQuery>;
 
