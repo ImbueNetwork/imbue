@@ -44,10 +44,8 @@ pub trait ExternalRefundHandler<AccountId, Balance, CurrencyId> {
     ) -> Result<(), DispatchError>;
 }
 
-#[cfg(feature = "std")]
 pub struct MockRefundHandler<T>(T);
 
-#[cfg(feature = "std")]
 impl<T: crate::Config> ExternalRefundHandler<AccountIdOf<T>, BalanceOf<T>, CurrencyId>
     for MockRefundHandler<T>
 {

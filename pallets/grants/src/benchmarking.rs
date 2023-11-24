@@ -9,6 +9,7 @@ use common_types::{CurrencyId, TreasuryOrigin};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get};
 use frame_system::RawOrigin;
+use frame_system::pallet_prelude::BlockNumberFor;
 use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
@@ -16,10 +17,6 @@ use sp_runtime::SaturatedConversion;
 use sp_std::{convert::TryInto, str, vec, vec::Vec};
 
 const SEED: u32 = 0;
-
-#[benchmarks( where
-    [u8; 32]: From<BlockNumberFor<T>>,
-)]
 
 #[benchmarks]
 mod benchmarks {

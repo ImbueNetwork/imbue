@@ -15,7 +15,7 @@ use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-    BuildStorage,
+    BuildStorage
 };
 
 use sp_std::{
@@ -53,7 +53,6 @@ frame_support::construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Tokens: orml_tokens::{Pallet, Storage, Event<T>},
         Currencies: orml_currencies::{Pallet, Call, Storage},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         IdentityPallet: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
@@ -82,19 +81,6 @@ impl orml_tokens::Config for Test {
     type DustRemovalWhitelist = Nothing;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-}
-
-parameter_types! {
-    pub const TransactionByteFee: u64 = 1;
-    pub const OperationalFeeMultiplier: u8 = 5;
-}
-impl pallet_transaction_payment::Config for Test {
-    type RuntimeEvent = RuntimeEvent;
-    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
-    type WeightToFee = IdentityFee<u64>;
-    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-    type FeeMultiplierUpdate = ();
-    type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
 parameter_types! {

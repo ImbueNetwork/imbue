@@ -130,7 +130,7 @@ pub fn create_funded_user<T: Config>(
 ) -> T::AccountId {
     let user = account(seed, n, 0);
     assert_ok!(<T::MultiCurrency as MultiCurrency<
-        BlockNumberFor<T>,
+        AccountIdOf<T>,
     >>::deposit(
         CurrencyId::Native, &user, balance_factor.saturated_into()
     ));

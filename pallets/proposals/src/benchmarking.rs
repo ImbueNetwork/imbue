@@ -4,7 +4,7 @@ use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
-use frame_system::RawOrigin;
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
 
 use sp_core::Get;
 use sp_runtime::SaturatedConversion;
@@ -14,10 +14,10 @@ use sp_std::convert::TryInto;
 use pallet_disputes::DisputeResult;
 use pallet_disputes::traits::DisputeHooks;
 
-use test_utils::{create_and_fund_project, assert_last_event, create_funded_user, get_contributions, get_max_milestones};
+use test_utils::{create_and_fund_project, assert_last_event, create_funded_user, get_contributions, get_max_milestones, get_milestones};
 
 #[benchmarks( where
-    <T as frame_system::Config>::BlockNumber: From<u32>,
+    BlockNumberFor<T>: From<u32>,
     BalanceOf<T>: From<u64>,
 )]
 

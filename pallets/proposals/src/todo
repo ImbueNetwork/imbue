@@ -22,10 +22,6 @@ add total_refunded to withdraw extrinsic - done
 tests for these - done
 
 Migration for removing NoConfidenceLogic
-    #[pallet::storage]
-    #[pallet::getter(fn no_confidence_votes)]
-    pub(super) type NoConfidenceVotes<T: Config> =
-        StorageMap<_, Identity, ProjectKey, Vote<BalanceOf<T>>, OptionQuery>;
 Migration removing NoConfidenceRound,
 
 
