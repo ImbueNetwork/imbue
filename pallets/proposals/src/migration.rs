@@ -844,7 +844,7 @@ pub mod v7 {
                 cancelled: project.cancelled,
                 deposit_id: project.deposit_id,
                 refund_locations,
-                jury: jury,
+                jury,
                 on_creation_funding,
                 refunded_funds: Zero::zero(),
             };

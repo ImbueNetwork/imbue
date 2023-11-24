@@ -2,7 +2,6 @@ use crate as pallet_proposals;
 use frame_support::{
     parameter_types,
     traits::{ConstU32, Nothing},
-    weights::{ConstantMultiplier, IdentityFee},
     PalletId,
 };
 
@@ -280,10 +279,10 @@ impl DisputeRaiser<AccountId> for MockDisputeRaiser {
     type MaxJurySize = MaxJuryMembers;
     type MaxSpecifics = MaxMilestonesPerProject;
     fn raise_dispute(
-        dispute_key: Self::DisputeKey,
-        raised_by: AccountId,
-        jury: BoundedVec<AccountId, Self::MaxJurySize>,
-        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+        _dispute_key: Self::DisputeKey,
+        _raised_by: AccountId,
+        _jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        _specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
     ) -> Result<(), DispatchError> {
         Ok(())
     }

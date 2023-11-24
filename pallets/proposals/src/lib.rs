@@ -10,11 +10,11 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use pallet_deposits::traits::DepositHandler;
 use pallet_disputes::traits::DisputeRaiser;
-use pallet_fellowship::{traits::EnsureRole};
+
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Percent;
 use sp_core::H256;
-use sp_runtime::traits::{AccountIdConversion, Convert, One, Saturating, Zero};
+use sp_runtime::traits::{AccountIdConversion, One, Saturating, Zero};
 use sp_std::{collections::btree_map::*, convert::TryInto, prelude::*};
 use xcm::latest::MultiLocation;
 
@@ -441,7 +441,7 @@ pub mod pallet {
                 Error::<T>::OnlyContributorsCanRaiseDispute
             );
             ensure!(
-                !ProjectsInDispute::<T>::contains_key(&project_key),
+                !ProjectsInDispute::<T>::contains_key(project_key),
                 Error::<T>::MilestonesAlreadyInDispute
             );
             ensure!(
@@ -459,7 +459,7 @@ pub mod pallet {
             )?;
             ProjectsInDispute::<T>::insert(project_key, milestone_keys);
 
-            Ok(().into())
+            Ok(())
         }
 
         /// Attempt a refund of milestones.
@@ -516,7 +516,7 @@ pub mod pallet {
                                 T::MultiCurrency::transfer(
                                     project.currency_id,
                                     &project_account,
-                                    &acc,
+                                    acc,
                                     per_refund,
                                 )?;
                             }
@@ -552,7 +552,7 @@ pub mod pallet {
                 }
             })?;
 
-            Ok(().into())
+            Ok(())
         }
 
         /// Sets the given AccountId (`new`) as the new Foreign asset signer

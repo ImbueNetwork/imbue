@@ -1,15 +1,15 @@
 use crate::*;
 use common_types::CurrencyId;
-use frame_support::{assert_ok, traits::Hooks, BoundedVec};
+use frame_support::{assert_ok, BoundedVec};
 use frame_system::EventRecord;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use pallet_deposits::traits::DepositHandler;
+
 use pallet_disputes::traits::DisputeHooks;
 use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
-use sp_runtime::Saturating;
+
 use sp_runtime::{DispatchError, SaturatedConversion};
-use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
+use sp_std::{convert::TryInto};
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::account;
@@ -75,7 +75,7 @@ pub fn create_and_fund_project<T: Config>(
         AccountIdOf<T>,
         BalanceOf<T>,
         BlockNumberFor<T>,
-    >>::convert_contributions_to_refund_locations(&contributions.clone());
+    >>::convert_contributions_to_refund_locations(&contributions);
 
     // Reserve the assets from the contributors used.
     <crate::Pallet<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(

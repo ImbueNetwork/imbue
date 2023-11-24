@@ -4,7 +4,7 @@ use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use frame_system::{RawOrigin};
 
 use sp_core::Get;
 use sp_runtime::SaturatedConversion;
@@ -157,7 +157,7 @@ mod benchmarks {
             .unwrap();
 
         let project_key = create_and_fund_project::<T>(
-            alice.clone(),
+            alice,
             contributions,
             prop_milestones,
             CurrencyId::Native,
@@ -166,9 +166,9 @@ mod benchmarks {
 
         #[extrinsic_call]
         raise_dispute(
-            RawOrigin::Signed(bob.clone()),
+            RawOrigin::Signed(bob),
             project_key,
-            milestone_keys.clone(),
+            milestone_keys,
         );
     }
 
@@ -195,7 +195,7 @@ mod benchmarks {
             .unwrap();
 
         let project_key = create_and_fund_project::<T>(
-            alice.clone(),
+            alice,
             contributions,
             prop_milestones,
             CurrencyId::Native,
@@ -214,7 +214,7 @@ mod benchmarks {
         );
 
         #[extrinsic_call]
-        refund(RawOrigin::Signed(bob.clone()), project_key);
+        refund(RawOrigin::Signed(bob), project_key);
         assert_last_event::<T>(
             Event::<T>::ProjectRefunded {
                 project_key,

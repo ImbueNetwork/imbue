@@ -1,5 +1,5 @@
 use crate as pallet_fellowship;
-use crate::{Permission, Role};
+
 use common_types::CurrencyId;
 use frame_support::traits::{ConstU16, Nothing};
 use frame_system::EnsureRoot;

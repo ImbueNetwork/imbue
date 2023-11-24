@@ -4,7 +4,7 @@ use frame_support::{pallet_prelude::*, transactional, BoundedBTreeMap};
 use orml_traits::XcmTransfer;
 use sp_arithmetic::{traits::AtLeast32BitUnsigned, Percent};
 use sp_core::H256;
-use sp_std::{vec::Vec};
+
 use xcm::latest::{MultiLocation, WeightLimit};
 
 pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {

@@ -65,7 +65,7 @@ fn raise_dispute_milestone_already_in_dispute() {
             project_key,
             milestone_keys
         ));
-        for (i, index) in milestones.iter().enumerate() {
+        for (i, _index) in milestones.iter().enumerate() {
             assert_noop!(
                 Proposals::raise_dispute(
                     RuntimeOrigin::signed(CHARLIE),
@@ -86,7 +86,7 @@ fn raise_dispute_invalid_milestone_key() {
         let project_key = create_and_fund_project::<Test>(
             ALICE,
             contributions,
-            milestones.clone(),
+            milestones,
             CurrencyId::Native,
         )
         .unwrap();
@@ -125,7 +125,7 @@ fn raise_dispute_cant_raise_on_approved_milestone() {
         let project_key = create_and_fund_project::<Test>(
             ALICE,
             contributions,
-            milestones.clone(),
+            milestones,
             CurrencyId::Native,
         )
         .unwrap();
@@ -328,7 +328,7 @@ fn raise_dispute_allows_milestone_voting() {
         assert_ok!(Proposals::raise_dispute(
             RuntimeOrigin::signed(BOB),
             project_key,
-            dispute_milestone_keys.clone()
+            dispute_milestone_keys
         ));
 
         assert_ok!(Proposals::vote_on_milestone(
@@ -368,7 +368,7 @@ fn raise_dispute_allows_milestone_voting_on_non_disputed_milestones() {
         assert_ok!(Proposals::raise_dispute(
             RuntimeOrigin::signed(BOB),
             project_key,
-            dispute_milestone_keys.clone()
+            dispute_milestone_keys
         ));
 
         assert_ok!(Proposals::submit_milestone(
@@ -414,7 +414,7 @@ fn raise_dispute_allows_submission() {
         assert_ok!(Proposals::raise_dispute(
             RuntimeOrigin::signed(BOB),
             project_key,
-            dispute_milestone_keys.clone()
+            dispute_milestone_keys
         ));
         assert_ok!(Proposals::submit_milestone(
             RuntimeOrigin::signed(ALICE),
@@ -429,7 +429,7 @@ fn failed_dispute_tests() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let milestone_key = 0;
+        let _milestone_key = 0;
         let project_key = create_and_fund_project::<Test>(
             ALICE,
             contributions,
@@ -472,13 +472,13 @@ fn assert_can_recall_dispute_after_success() {
         let project_key = create_and_fund_project::<Test>(
             ALICE,
             contributions,
-            milestones.clone(),
+            milestones,
             CurrencyId::Native,
         )
         .unwrap();
         // Only call the dispute on part.
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
-            (0u32..5 as u32).collect::<Vec<u32>>().try_into().unwrap();
+            (0u32..5_u32).collect::<Vec<u32>>().try_into().unwrap();
 
         assert_ok!(Proposals::raise_dispute(
             RuntimeOrigin::signed(BOB),
@@ -491,11 +491,11 @@ fn assert_can_recall_dispute_after_success() {
             DisputeResult::Success,
         );
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
-            (5u32..10 as u32).collect::<Vec<u32>>().try_into().unwrap();
+            (5u32..10_u32).collect::<Vec<u32>>().try_into().unwrap();
         assert_ok!(Proposals::raise_dispute(
             RuntimeOrigin::signed(BOB),
             project_key,
-            milestone_keys.clone()
+            milestone_keys
         ));
     })
 }
@@ -508,13 +508,13 @@ fn assert_can_recall_dispute_after_failure() {
         let project_key = create_and_fund_project::<Test>(
             ALICE,
             contributions,
-            milestones.clone(),
+            milestones,
             CurrencyId::Native,
         )
         .unwrap();
         // Only call the dispute on part.
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
-            (0u32..5 as u32).collect::<Vec<u32>>().try_into().unwrap();
+            (0u32..5_u32).collect::<Vec<u32>>().try_into().unwrap();
 
         assert_ok!(Proposals::raise_dispute(
             RuntimeOrigin::signed(BOB),
@@ -527,11 +527,11 @@ fn assert_can_recall_dispute_after_failure() {
             DisputeResult::Failure,
         );
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
-            (5u32..10 as u32).collect::<Vec<u32>>().try_into().unwrap();
+            (5u32..10_u32).collect::<Vec<u32>>().try_into().unwrap();
         assert_ok!(Proposals::raise_dispute(
             RuntimeOrigin::signed(BOB),
             project_key,
-            milestone_keys.clone()
+            milestone_keys
         ));
     })
 }

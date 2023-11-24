@@ -141,7 +141,7 @@ impl<T: Config> Pallet<T> {
                     .milestones
                     .iter_mut()
                     .map(|(_key, ms)| {
-                        if ms.is_approved && ms.transfer_status == None {
+                        if ms.is_approved && ms.transfer_status.is_none() {
                             ms.transfer_status = Some(TransferStatus::Withdrawn {
                                 on: frame_system::Pallet::<T>::block_number(),
                             });
@@ -345,7 +345,7 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
                                 if let Some(milestone) = project.milestones.get_mut(milestone_key) {
                                     // Shouldnt be needed but nice to have this check.
                                     // Will prevent someone calling both refund and withdraw on the same milestone.
-                                    if milestone.transfer_status == None {
+                                    if milestone.transfer_status.is_none() {
                                         milestone.can_refund = true;
                                     }
                                 }
@@ -365,6 +365,6 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
         });
         // ProjectsInDispute::remove
         // Projects::mutate
-        return T::DbWeight::get().reads_writes(2, 2);
+        T::DbWeight::get().reads_writes(2, 2)
     }
 }
