@@ -1320,19 +1320,18 @@ impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<Account
         let pointer_with_bound = pointer.saturating_add(amount.into());
         for i in pointer..pointer_with_bound {
             if keys_len > 0 {
-
-            let index = i as usize % keys_len;
-            // shouldnt be an issue due to mod.
-            if index < keys.len() {
-                let key = &keys[index];
-                // Here weve gone in a circle! break.
-                if out.contains(&key) {
-                    break;
+                let index = i as usize % keys_len;
+                // shouldnt be an issue due to mod.
+                if index < keys.len() {
+                    let key = &keys[index];
+                    // Here weve gone in a circle! break.
+                    if out.contains(&key) {
+                        break;
+                    }
+                    if let Err(_) = out.try_push(key.clone()) {
+                        break;
+                    }
                 }
-                if let Err(_) = out.try_push(key.clone()) {
-                    break;
-                }
-            }
             }
         }
         pallet_fellowship::JuryPointer::<T>::put(pointer_with_bound);

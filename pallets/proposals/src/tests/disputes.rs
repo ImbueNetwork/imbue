@@ -83,13 +83,9 @@ fn raise_dispute_invalid_milestone_key() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native)
+                .unwrap();
         assert_noop!(
             Proposals::raise_dispute(
                 RuntimeOrigin::signed(BOB),
@@ -122,13 +118,9 @@ fn raise_dispute_cant_raise_on_approved_milestone() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native)
+                .unwrap();
         let submitted_milestone_key = 0u32;
 
         assert_ok!(Proposals::submit_milestone(
@@ -469,13 +461,9 @@ fn assert_can_recall_dispute_after_success() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native)
+                .unwrap();
         // Only call the dispute on part.
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
             (0u32..5_u32).collect::<Vec<u32>>().try_into().unwrap();
@@ -505,13 +493,9 @@ fn assert_can_recall_dispute_after_failure() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native)
+                .unwrap();
         // Only call the dispute on part.
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
             (0u32..5_u32).collect::<Vec<u32>>().try_into().unwrap();

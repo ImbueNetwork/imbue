@@ -4,7 +4,7 @@ use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
-use frame_system::{RawOrigin};
+use frame_system::RawOrigin;
 
 use sp_core::Get;
 use sp_runtime::SaturatedConversion;
@@ -46,8 +46,10 @@ mod benchmarks {
 
     #[benchmark]
     fn vote_on_milestone() {
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
+        let alice: T::AccountId =
+            create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId =
+            create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
         // TODO: should update the contributors list to have maximum available length
         let contributions = get_contributions::<T>(vec![bob.clone()], 1_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
@@ -139,8 +141,10 @@ mod benchmarks {
     #[benchmark]
     fn raise_dispute() {
         let contribution_amount = 1_000_000_000_000u128;
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 0, 1_000_000_000_000_000_000u128);
+        let alice: T::AccountId =
+            create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId =
+            create_funded_user::<T>("contributor", 0, 1_000_000_000_000_000_000u128);
 
         let contributors: Vec<T::AccountId> = (0
             ..<T as Config>::MaximumContributorsPerProject::get())
@@ -156,27 +160,21 @@ mod benchmarks {
             .try_into()
             .unwrap();
 
-        let project_key = create_and_fund_project::<T>(
-            alice,
-            contributions,
-            prop_milestones,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        let project_key =
+            create_and_fund_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native)
+                .unwrap();
 
         #[extrinsic_call]
-        raise_dispute(
-            RawOrigin::Signed(bob),
-            project_key,
-            milestone_keys,
-        );
+        raise_dispute(RawOrigin::Signed(bob), project_key, milestone_keys);
     }
 
     #[benchmark]
     fn refund() {
         let contribution_amount = 1_000_000_000_000u128.saturated_into();
-        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId = create_funded_user::<T>("contributor", 0, 1_000_000_000_000_000_000u128);
+        let alice: T::AccountId =
+            create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let bob: T::AccountId =
+            create_funded_user::<T>("contributor", 0, 1_000_000_000_000_000_000u128);
 
         let contributors: Vec<T::AccountId> = (0
             ..<T as Config>::MaximumContributorsPerProject::get())
@@ -194,13 +192,9 @@ mod benchmarks {
             .try_into()
             .unwrap();
 
-        let project_key = create_and_fund_project::<T>(
-            alice,
-            contributions,
-            prop_milestones,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        let project_key =
+            create_and_fund_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native)
+                .unwrap();
 
         assert_ok!(crate::Pallet::<T>::raise_dispute(
             RawOrigin::Signed(bob.clone()).into(),

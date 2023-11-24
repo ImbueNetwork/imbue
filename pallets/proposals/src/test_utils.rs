@@ -9,7 +9,7 @@ use sp_arithmetic::per_things::Percent;
 use sp_core::{Get, H256};
 
 use sp_runtime::{DispatchError, SaturatedConversion};
-use sp_std::{convert::TryInto};
+use sp_std::convert::TryInto;
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::account;

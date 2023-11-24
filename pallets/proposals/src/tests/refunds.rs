@@ -41,13 +41,9 @@ fn refund_assert_milestone_state_change() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB], 1_000_000u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native)
+                .unwrap();
         // Only dispute some keys so that we can
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
             (0u32..5_u32).collect::<Vec<u32>>().try_into().unwrap();
@@ -235,13 +231,9 @@ fn refund_then_withdraw_no_double_spend() {
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         let _bob_before_creation =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones,
-            CurrencyId::Native,
-        )
-        .unwrap();
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native)
+                .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
             (0u32..5_u32).collect::<Vec<u32>>().try_into().unwrap();
         let _ = Proposals::raise_dispute(
