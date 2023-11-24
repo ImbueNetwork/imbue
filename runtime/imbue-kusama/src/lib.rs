@@ -1313,12 +1313,14 @@ impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<Account
     fn select_jury() -> frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> {
         let mut out: frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> =
             frame_support::BoundedVec::new();
-        let mut amount = Self::JurySize::get();
+        let amount = Self::JurySize::get();
         let keys = pallet_fellowship::Roles::<T>::iter_keys().collect::<Vec<AccountIdOf<T>>>();
         let keys_len = keys.len();
         let pointer = pallet_fellowship::JuryPointer::<T>::get();
         let pointer_with_bound = pointer.saturating_add(amount.into());
         for i in pointer..pointer_with_bound {
+            if keys_len > 0 {
+
             let index = i as usize % keys_len;
             // shouldnt be an issue due to mod.
             if index < keys.len() {
@@ -1330,6 +1332,7 @@ impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<Account
                 if let Err(_) = out.try_push(key.clone()) {
                     break;
                 }
+            }
             }
         }
         pallet_fellowship::JuryPointer::<T>::put(pointer_with_bound);
