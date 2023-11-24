@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::traits::DisputeRaiser;
+use crate::Pallet as PalletDisputes;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get, BoundedVec};
 use frame_system::Pallet as System;
