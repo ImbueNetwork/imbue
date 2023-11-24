@@ -106,7 +106,7 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-    pub MaxMilestonesPerGrant: u32 = 50;
+    pub MaxMilestonesPerGrant: u32 = 100;
     pub MaxApprovers: u32 = 100;
     pub GrantStorageItem: StorageItem = StorageItem::Grant;
 }
@@ -160,11 +160,11 @@ impl pallet_timestamp::Config for Test {
 parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
-    pub MaximumContributorsPerProject: u32 = 50;
+    pub MaximumContributorsPerProject: u32 = 100;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
-    pub MaxMilestonesPerProject: u32 = 10;
+    pub MaxMilestonesPerProject: u32 = 100;
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 10;
@@ -242,10 +242,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 pub struct MockDisputeRaiser;
 impl pallet_disputes::traits::DisputeRaiser<AccountId> for MockDisputeRaiser {
-type DisputeKey = pallet_proposals::ProjectKey;
-type SpecificId = pallet_proposals::MilestoneKey;
-type MaxJurySize = MaxJuryMembers;
-type MaxSpecifics = MaxMilestonesPerProject;
+    type DisputeKey = pallet_proposals::ProjectKey;
+    type SpecificId = pallet_proposals::MilestoneKey;
+    type MaxJurySize = MaxJuryMembers;
+    type MaxSpecifics = MaxMilestonesPerProject;
     fn raise_dispute(
         dispute_key: Self::DisputeKey,
         raised_by: AccountId,
@@ -255,7 +255,6 @@ type MaxSpecifics = MaxMilestonesPerProject;
         Ok(())
     }
 }
-
 
 pub struct MockJurySelector;
 impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
