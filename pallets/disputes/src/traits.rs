@@ -2,11 +2,11 @@ use codec::{FullCodec, FullEncode, MaxEncodedLen};
 use frame_support::pallet_prelude::*;
 use scale_info::TypeInfo;
 use sp_runtime::{traits::AtLeast32BitUnsigned, BoundedVec, DispatchError};
+use sp_std::vec::Vec;
 
 pub trait DisputeRaiser<AccountId> {
     type DisputeKey: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
     type SpecificId: AtLeast32BitUnsigned + FullEncode + FullCodec + MaxEncodedLen + TypeInfo;
-    type MaxReasonLength: Get<u32>;
     type MaxJurySize: Get<u32>;
     type MaxSpecifics: Get<u32>;
 
@@ -18,11 +18,12 @@ pub trait DisputeRaiser<AccountId> {
     ) -> Result<(), DispatchError>;
 }
 
-pub trait DisputeHooks<DisputeKey> {
-    // Outcome
-    // handle the completed dispute
+pub trait DisputeHooks<DisputeKey, SpecificId> {
+    /// On the completion of a dispute, this hooks is called.
+    /// Returning only the key that has been handled and the result of the dispute.
     fn on_dispute_complete(
         dispute_key: DisputeKey,
+        specifics: Vec<SpecificId>,
         dispute_result: crate::pallet::DisputeResult,
     ) -> Weight;
 }

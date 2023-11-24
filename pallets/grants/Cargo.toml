@@ -44,6 +44,8 @@ orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 common-types = { path = "../../libs/common-types" }
 common-runtime = { path = "../../runtime/common" }
 pallet-proposals = { path = "../proposals" }
+pallet-disputes = { path = "../disputes" }
+pallet-fellowship = { path = "../fellowship" }
 
 [features]
 default = [ "std" ]

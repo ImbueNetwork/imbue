@@ -153,7 +153,7 @@ fn create_funded_user<T: Config>(
 ) -> T::AccountId {
     let user = account(string, n, 99);
     let balance: BalanceOf<T> = balance_factor.into();
-    let _ = <T::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::deposit(
+    let _ = <T::MultiCurrency as MultiCurrency<BlockNumberFor<T>>>::deposit(
         CurrencyId::Native,
         &user,
         balance,

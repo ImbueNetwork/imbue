@@ -33,6 +33,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 pallet-deposits = {path= "../deposits", default-features = false }
+pallet-fellowship = { path = "../fellowship", default-features = false }
 pallet-proposals = {path= "../proposals", default-features = false }
 
 [dev-dependencies]
@@ -54,7 +55,7 @@ common-types = { path = "../../libs/common-types" }
 common-runtime = { path = "../../runtime/common"}
 pallet-proposals = {path= "../proposals"}
 pallet-deposits = {path= "../deposits"}
-
+pallet-disputes = {path= "../disputes"}
 
 [features]
 default = [ 'std' ]
@@ -70,7 +71,7 @@ std = [
 	"pallet-balances/std",
 	"pallet-deposits/std",
 	"pallet-proposals/std",
-	"pallet-timestamp/std",
+	"pallet-fellowship/std",
 	"scale-info/std",
 	"serde/std",
 	"sp-api/std",
@@ -102,6 +103,7 @@ try-runtime = [
 	"pallet-proposals/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
+	"pallet-fellowship/try-runtime",
 	"pallet-xcm/try-runtime",
 	"sp-runtime/try-runtime",
 ]

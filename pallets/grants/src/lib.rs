@@ -25,15 +25,15 @@ pub use weights::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use common_types::{milestone_origin::FundingType, CurrencyId, TreasuryOrigin};
+    use common_types::{CurrencyId, TreasuryOrigin, TreasuryOriginConverter};
     use frame_support::{pallet_prelude::*, BoundedVec};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use pallet_proposals::{traits::IntoProposal, Contribution, ProposedMilestone};
+    use pallet_proposals::{traits::IntoProposal, Contribution, Locality, ProposedMilestone};
     use sp_arithmetic::{per_things::Percent, traits::One};
     use sp_core::H256;
     use sp_runtime::Saturating;
-    use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+    use sp_std::collections::btree_map::BTreeMap;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
@@ -97,6 +97,10 @@ pub mod pallet {
         GrantAlreadyExists,
         /// There are too many milestones.
         TooManyMilestones,
+        /// This is an invalid Treasury origin.
+        InvalidTreasuryOrigin,
+        /// Too many approvers
+        TooManyApprovers,
     }
 
     #[pallet::call]
@@ -127,28 +131,43 @@ pub mod pallet {
             );
 
             let mut contributions = BTreeMap::new();
-            let _ = assigned_approvers
-                .iter()
-                .map(|approver_id| {
-                    contributions.insert(
-                        approver_id.clone(),
-                        Contribution {
-                            value: amount_requested / (assigned_approvers.len() as u32).into(),
-                            timestamp: frame_system::Pallet::<T>::block_number(),
-                        },
-                    )
-                })
-                .collect::<Vec<_>>();
+            let _ = assigned_approvers.iter().for_each(|approver_id| {
+                contributions.insert(
+                    approver_id.clone(),
+                    Contribution {
+                        value: amount_requested / (assigned_approvers.len() as u32).into(),
+                        timestamp: frame_system::Pallet::<T>::block_number(),
+                    },
+                );
+            });
+
+            let treasury_multilocation =
+                <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(&treasury_origin)
+                    .map_err(|_| Error::<T>::InvalidTreasuryOrigin)?;
+            let refund_locations = sp_std::vec![(
+                Locality::Foreign(treasury_multilocation),
+                Percent::from_parts(100u8)
+            )];
 
             <T as Config>::IntoProposal::convert_to_proposal(
                 currency_id,
-                contributions,
+                contributions
+                    .try_into()
+                    .map_err(|_| Error::<T>::TooManyApprovers)?,
                 grant_id,
                 submitter.clone(),
                 proposed_milestones
+                    .to_vec()
                     .try_into()
                     .map_err(|_| Error::<T>::TooManyMilestones)?,
-                FundingType::Grant(treasury_origin),
+                refund_locations
+                    .try_into()
+                    .map_err(|_| Error::<T>::TooManyApprovers)?,
+                assigned_approvers
+                    .to_vec()
+                    .try_into()
+                    .map_err(|_| Error::<T>::TooManyApprovers)?,
+                pallet_proposals::FundingPath::WaitForFunding,
             )?;
 
             GrantsSubmittedBy::<T>::insert(&submitter, grant_id, ());

@@ -106,7 +106,7 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-    pub MaxMilestonesPerGrant: u32 = 50;
+    pub MaxMilestonesPerGrant: u32 = 100;
     pub MaxApprovers: u32 = 100;
     pub GrantStorageItem: StorageItem = StorageItem::Grant;
 }
@@ -158,43 +158,41 @@ impl pallet_timestamp::Config for Test {
 }
 
 parameter_types! {
-    pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
-    pub MaximumContributorsPerProject: u32 = 50;
+    pub MaximumContributorsPerProject: u32 = 100;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
-    pub MaxMilestonesPerProject: u32 = 10;
+    pub MaxMilestonesPerProject: u32 = 100;
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
     pub ExpiringProjectRoundsPerBlock: u32 = 10;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
-    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
+    pub MaxJuryMembers: u32 = 100;
+    pub FeeAccount: AccountId = TREASURY;
 }
 
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = pallet_proposals::WeightInfo<Self>;
-    // Adding 2 weeks as th expiration time
-    type MaxWithdrawalExpiration = TwoWeekBlockUnit;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
+    type ImbueFeeAccount = FeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type DepositHandler = MockDepositHandler;
     type ProjectStorageItem = ProjectStorageItem;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
+    type DisputeRaiser = MockDisputeRaiser;
+    type JurySelector = MockJurySelector;
+    type AssetSignerOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -224,6 +222,7 @@ impl pallet_identity::Config for Test {
 pub static ALICE: AccountId = 125;
 pub static BOB: AccountId = 126;
 pub static CHARLIE: AccountId = 127;
+pub static TREASURY: AccountId = 222;
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::<Test>::default()
@@ -239,4 +238,28 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
     });
     ext
+}
+
+pub struct MockDisputeRaiser;
+impl pallet_disputes::traits::DisputeRaiser<AccountId> for MockDisputeRaiser {
+    type DisputeKey = pallet_proposals::ProjectKey;
+    type SpecificId = pallet_proposals::MilestoneKey;
+    type MaxJurySize = MaxJuryMembers;
+    type MaxSpecifics = MaxMilestonesPerProject;
+    fn raise_dispute(
+        dispute_key: Self::DisputeKey,
+        raised_by: AccountId,
+        jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+    ) -> Result<(), DispatchError> {
+        Ok(())
+    }
+}
+
+pub struct MockJurySelector;
+impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
+    type JurySize = MaxJuryMembers;
+    fn select_jury() -> BoundedVec<AccountId, Self::JurySize> {
+        BoundedVec::new()
+    }
 }

@@ -486,7 +486,7 @@ fn on_initialize_adds_to_fellowship_from_shortlist() {
             Role::Vetter,
             10
         ));
-        run_to_block::<Test>(
+        run_to_block(
             frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
         );
         assert_eq!(Roles::<Test>::get(CHARLIE).unwrap(), (Role::Vetter, 10));
@@ -512,7 +512,7 @@ fn on_initialize_doesnt_add_removed_shortlist_members() {
             RuntimeOrigin::signed(ALICE),
             CHARLIE,
         ));
-        run_to_block::<Test>(
+        run_to_block(
             frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
         );
         assert!(Roles::<Test>::get(CHARLIE).is_none());
@@ -541,7 +541,7 @@ fn on_initialize_cleans_storage_for_next_round() {
                 .len()
                 == 1
         );
-        run_to_block::<Test>(
+        run_to_block(
             frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
         );
 
@@ -600,7 +600,7 @@ fn e2e() {
         ));
 
         // wait for blocks to pass
-        run_to_block::<Test>(
+        run_to_block(
             frame_system::Pallet::<Test>::block_number() + <Test as Config>::ShortlistPeriod::get(),
         );
 

@@ -1,10 +1,11 @@
+use super::*;
 use frame_support::traits::OnRuntimeUpgrade;
 use frame_support::{pallet_prelude::*, *};
 use hex_literal::hex;
 use sp_runtime::AccountId32;
 use sp_std::{vec, vec::Vec};
 
-use crate::{traits::*, *};
+use crate::traits::*;
 
 pub mod v0 {
     use super::*;
@@ -16,11 +17,7 @@ pub mod v0 {
     {
         pub fn insert_initial_fellows(
             weight: &mut Weight,
-            initial_fellows: Vec<(
-                <T as frame_system::Config>::AccountId,
-                crate::Role,
-                crate::Rank,
-            )>,
+            initial_fellows: Vec<(AccountIdOf<T>, crate::Role, crate::Rank)>,
         ) {
             for (acc, role, rank) in initial_fellows.into_iter() {
                 <Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
@@ -29,11 +26,7 @@ pub mod v0 {
                 *weight = weight.saturating_add(T::WeightInfo::add_to_fellowship())
             }
         }
-        pub fn get_initial_fellows() -> Vec<(
-            <T as frame_system::Config>::AccountId,
-            crate::Role,
-            crate::Rank,
-        )> {
+        pub fn get_initial_fellows() -> Vec<(AccountIdOf<T>, crate::Role, crate::Rank)> {
             vec![
                 // EARNEST
                 //"5Da1Fna8wvgQNmCFPhcRGR9oxmhyPd7MNhPZADq2X6GiKkkr",

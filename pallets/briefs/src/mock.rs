@@ -202,19 +202,17 @@ parameter_types! {
 impl pallet_briefs::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Tokens;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposal = pallet_proposals::Pallet<Test>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = MockDepositHandler;
     type WeightInfo = pallet_briefs::WeightInfo<Self>;
+    type JurySelector = MockJurySelector;
 }
 
 parameter_types! {
-    pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 50;
     pub RefundsPerBlock: u8 = 2;
@@ -226,30 +224,31 @@ parameter_types! {
     pub ExpiringProjectRoundsPerBlock: u32 = 10;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
-    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
+    pub ImbueFeeAccount: AccountId = TREASURY;
+    pub MaxJuryMembers: u32 = 100;
 }
 
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = pallet_proposals::WeightInfo<Self>;
-    // Adding 2 weeks as th expiration time
-    type MaxWithdrawalExpiration = TwoWeekBlockUnit;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
+    type ImbueFeeAccount = ImbueFeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
-    type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler;
+    type ProjectStorageItem = ProjectStorageItem;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
+    type DisputeRaiser = MockDisputeRaiser;
+    type JurySelector = MockJurySelector;
+    type AssetSignerOrigin = EnsureRoot<AccountId>;
 }
+
 parameter_types! {
     pub const BasicDeposit: u64 = 10;
     pub const FieldDeposit: u64 = 10;
@@ -281,6 +280,7 @@ parameter_types! {
 pub static ALICE: AccountId = 125;
 pub static BOB: AccountId = 126;
 pub static CHARLIE: AccountId = 127;
+pub static TREASURY: AccountId = 200;
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::<Test>::default()
@@ -306,4 +306,28 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         System::set_block_number(1);
     });
     ext
+}
+
+pub struct MockJurySelector;
+impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
+    type JurySize = MaxJuryMembers;
+    fn select_jury() -> BoundedVec<AccountId, Self::JurySize> {
+        BoundedVec::new()
+    }
+}
+
+pub struct MockDisputeRaiser;
+impl pallet_disputes::traits::DisputeRaiser<AccountId> for MockDisputeRaiser {
+    type DisputeKey = u32;
+    type SpecificId = u32;
+    type MaxJurySize = MaxJuryMembers;
+    type MaxSpecifics = MaxMilestonesPerProject;
+    fn raise_dispute(
+        _dispute_key: Self::DisputeKey,
+        _raised_by: AccountId,
+        _jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        _specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+    ) -> Result<(), DispatchError> {
+        Ok(())
+    }
 }
