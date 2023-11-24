@@ -890,26 +890,6 @@ impl pallet_fellowship::Config for Runtime {
     type WeightInfo = pallet_fellowship::weights::WeightInfo<Runtime>;
 }
 
-parameter_types! {
-    pub MaxCandidatesPerShortlist: u32 = 50;
-    pub ShortlistPeriod: BlockNumber = 14 * DAYS;
-    pub MembershipDeposit: Balance = DOLLARS.saturating_mul(500);
-    pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
-}
-
-impl pallet_fellowship::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type MultiCurrency = Currencies;
-    type ForceAuthority = EnsureRootOr<HalfOfCouncil>;
-    type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
-    type ShortlistPeriod = ShortlistPeriod;
-    type MembershipDeposit = MembershipDeposit;
-    type DepositCurrencyId = DepositCurrencyId;
-    // Send slashes to the treasury.
-    type SlashAccount = TreasuryAccount;
-    type Permissions = pallet_fellowship::impls::VetterAndFreelancerAllPermissions;
-    type WeightInfo = pallet_fellowship::weights::WeightInfo<Runtime>;
-}
 
 pub type DepositId = u64;
 pub struct ImbueDepositCalculator;

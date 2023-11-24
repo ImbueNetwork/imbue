@@ -161,7 +161,7 @@ fn test_xcm_refund_handler_to_kusama() {
         let ksm_balance = OrmlTokens::free_balance(CurrencyId::KSM, &DevelopmentReceiver::get());
         assert!(ksm_balance > 0);
         assert_ok!(
-            <R as pallet_proposals::Config>::RefundHandler::send_refund_message_to_treasury(
+            <R as pallet_proposals::Config>::ExternalRefundHandler::send_refund_message_to_treasury(
                 DevelopmentReceiver::get(),
                 ksm_balance,
                 CurrencyId::KSM,

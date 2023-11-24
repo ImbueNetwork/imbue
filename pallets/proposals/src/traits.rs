@@ -14,7 +14,8 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
     type MaximumContributorsPerProject: Get<u32>;
     type MaxMilestonesPerProject: Get<u32>;
     type MaxJuryMembers: Get<u32>;
-    /// Convert the propoerties of a project into a project.
+    
+    /// Convert the properties of a project into a project.
     /// This is the main method when wanting to use pallet_proposals and is how one configures a project.
     fn convert_to_proposal(
         currency_id: CurrencyId,
@@ -27,7 +28,6 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
         on_creation_funding: FundingPath,
     ) -> Result<(), DispatchError>;
 
-    /// Convert a btreemap of contributions to multilocations with the Here junction.
     /// Use when the contributors are the refund locations.
     fn convert_contributions_to_refund_locations(
         contributions: &BoundedBTreeMap<AccountId, Contribution<Balance, BlockNumber>, Self::MaximumContributorsPerProject>,
@@ -62,7 +62,7 @@ impl<T: crate::Config> ExternalRefundHandler<AccountIdOf<T>, BalanceOf<T>, Curre
 pub struct XcmRefundHandler<T, U>(T, U);
 impl<T, U> ExternalRefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for XcmRefundHandler<T, U>
 where
-    [u8; 32]: From<BlockNumberFor<T>>,
+    [u8; 32]: From<AccountIdOf<T>>,
     T: orml_xtokens::Config,
     U: XcmTransfer<T::AccountId, T::Balance, CurrencyId>,
 {
