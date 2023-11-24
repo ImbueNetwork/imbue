@@ -101,6 +101,7 @@ runtime-benchmarks = [
 	"common-runtime/runtime-benchmarks",
 	"frame-benchmarking/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
 	"pallet-deposits/runtime-benchmarks",
 ]
 try-runtime = [

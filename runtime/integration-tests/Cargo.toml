@@ -102,6 +102,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"kusama-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+    "xcm-executor/runtime-benchmarks",
 	"common-runtime/runtime-benchmarks"
 ]
 try-runtime = [
