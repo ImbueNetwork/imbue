@@ -14,9 +14,9 @@ fn create_proposal_from_brief() {
         let contribution_value: Balance = 10000;
 
         let _ = BriefsMod::create_brief(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             get_brief_owners(1),
-            *ALICE,
+            ALICE,
             contribution_value,
             contribution_value,
             brief_id,
@@ -25,7 +25,7 @@ fn create_proposal_from_brief() {
         );
 
         assert_ok!(BriefsMod::commence_work(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             brief_id
         ));
 

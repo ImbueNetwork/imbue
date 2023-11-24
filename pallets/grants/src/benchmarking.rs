@@ -13,12 +13,12 @@ use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::SaturatedConversion;
-use sp_std::{convert::TryInto, str, vec::Vec};
+use sp_std::{convert::TryInto, str, vec, vec::Vec};
 
 const SEED: u32 = 0;
 
 #[benchmarks( where
-    [u8; 32]: From<<T as frame_system::Config>::AccountId>,
+    [u8; 32]: From<BlockNumberFor<T>>,
 )]
 
 #[benchmarks]

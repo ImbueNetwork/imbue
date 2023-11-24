@@ -4,13 +4,13 @@ use xcm::latest::{Junction, Junctions::*, MultiLocation};
 use frame_support::{PalletId, sp_runtime::traits::AccountIdConversion};
 
 /// A wrapper around
-pub trait TreasuryOriginConverter<AccountId: Into<[u8; 32]>> {
+pub trait TreasuryOriginConverter {
     fn get_multi_location(
         &self,
     ) -> Result<MultiLocation, TreasuryOriginError>;
 }
 
-impl<AccountId: Into<[u8; 32]>> TreasuryOriginConverter<AccountId> for TreasuryOrigin {
+impl TreasuryOriginConverter for TreasuryOrigin {
     fn get_multi_location(
         &self,
     ) -> Result<MultiLocation, TreasuryOriginError> {

@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use imbue_kusama_runtime::{opaque::Block, AccountId, Balance, Index as Nonce};
+use imbue_kusama_runtime::{opaque::Block, AccountId, Balance, Nonce};
 
 use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};

@@ -9,30 +9,27 @@ use frame_support::{
 use crate::*;
 use common_types::CurrencyId;
 use frame_system::EnsureRoot;
-use sp_core::{sr25519::Signature, H256};
+use sp_core::H256;
 
-use frame_support::once_cell::sync::Lazy;
 use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::Percent;
-use sp_core::sr25519;
 use sp_runtime::{
-    testing::Header,
-    traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
-    vec::Vec,
 };
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u64;
 pub type Moment = u64;
+pub type AccountId = u128;
 
 parameter_types! {
     pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
@@ -49,19 +46,16 @@ impl orml_currencies::Config for Test {
 }
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Tokens: orml_tokens::{Pallet, Storage, Event<T>},
         Currencies: orml_currencies::{Pallet, Call, Storage},
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
-        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
+        IdentityPallet: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -114,13 +108,12 @@ impl frame_system::Config for Test {
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
-    type Index = u64;
-    type BlockNumber = u64;
+    type Nonce = u64;
+    type Block = Block;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -132,13 +125,6 @@ impl frame_system::Config for Test {
     type SS58Prefix = ();
     type OnSetCode = ();
     type MaxConsumers = ConstU32<16>;
-}
-
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-impl frame_system::offchain::SigningTypes for Test {
-    type Public = <Signature as Verify>::Signer;
-    type Signature = Signature;
 }
 
 parameter_types! {
@@ -162,10 +148,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-    type HoldIdentifier = ();
     type FreezeIdentifier = ();
     type MaxHolds = ConstU32<0>;
     type MaxFreezes = ConstU32<0>;
+    type RuntimeHoldReason = ();
 }
 
 parameter_types! {
@@ -185,13 +171,13 @@ parameter_types! {
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
-    pub MaxMilestonesPerProject: u32 = 100;
+    pub MaxMilestonesPerProject: u32 = 10;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
-    pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ExpiringProjectRoundsPerBlock: u32 = 10;
     pub ProjectStorageItem: StorageItems = StorageItems::Project;
     pub MaxProjectsPerAccount: u16 = 50;
     pub MaxJuryMembers: u32 = 100;
-    pub ImbueFeeAccount: AccountId = *TREASURY;
+    pub ImbueFeeAccount: AccountId = TREASURY;
 }
 
 impl pallet_proposals::Config for Test {
@@ -212,6 +198,7 @@ impl pallet_proposals::Config for Test {
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
     type DisputeRaiser = MockDisputeRaiser;
     type JurySelector = MockJurySelector;
+    type AssetSignerOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -242,7 +229,7 @@ parameter_types! {
     pub MaxCandidatesPerShortlist: u32 = 100;
     pub ShortlistPeriod: BlockNumber = 100;
     pub MembershipDeposit: Balance = 50_000_000;
-    pub SlashAccount: AccountId = sr25519::Public::from_raw([1u8; 32]);
+    pub SlashAccount: AccountId = TREASURY;
     pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
 }
 
@@ -251,18 +238,16 @@ parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
-
-pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
-pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
-pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
-pub static DAVE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([128u8; 32]));
-pub static JOHN: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([255u8; 32]));
-pub static TREASURY: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([246u8; 32]));
-pub static EMPTY: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([123u8; 32]));
+pub static ALICE: AccountId = 125;
+pub static BOB: AccountId = 126;
+pub static CHARLIE: AccountId = 127;
+pub static DAVE: AccountId = 128;
+pub static TREASURY: AccountId = 222;
+pub static JOHN: AccountId = 255;
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let t = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);

@@ -1,9 +1,5 @@
-use crate::Config;
-use crate::Pallet as Proposals;
 use crate::*;
 use common_types::{CurrencyId};
-#[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{account, Vec};
 use frame_support::{assert_ok, traits::Hooks, BoundedVec};
 use frame_system::EventRecord;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -14,20 +10,26 @@ use sp_runtime::Saturating;
 use sp_runtime::{DispatchError, SaturatedConversion};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 use pallet_disputes::traits::DisputeHooks;
+use crate::mock::*;
 
-#[allow(dead_code)]
-pub fn run_to_block<T: Config>(n: T::BlockNumber) {
-    loop {
-        let mut block = frame_system::Pallet::<T>::block_number();
-        if block >= n {
-            break;
-        }
-        block = block.saturating_add(1u32.into());
-        frame_system::Pallet::<T>::set_block_number(block);
-        frame_system::Pallet::<T>::on_initialize(block);
-        Proposals::<T>::on_initialize(block);
+#[cfg(feature = "runtime-benchmarks")]
+use sp_std::vec::Vec;
+#[cfg(feature = "runtime-benchmarks")]
+use frame_benchmarking::{account};
+
+
+pub fn run_to_block(n: BlockNumber) {
+    while System::block_number() < n {
+        Tokens::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        Proposals::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        Tokens::on_initialize(System::block_number());
+        System::on_initialize(System::block_number());
+        Proposals::on_initialize(System::block_number());
     }
 }
+
 
 pub fn get_contributions<T: Config>(
     accounts: Vec<AccountIdOf<T>>,
@@ -67,12 +69,13 @@ pub fn create_and_fund_project<T: Config>(
     contributions: ContributionsFor<T>,
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
-) -> Result<ProjectKey, DispatchError> {
+) -> Result<ProjectKey, DispatchError>
+{
     contributions.iter().for_each(|(acc, c)| {
         <T as Config>::MultiCurrency::reserve(currency_id, acc, c.value).unwrap();
     });
     let agreement_hash: H256 = Default::default();
-    let refund_locations = <Proposals<T> as IntoProposal<
+    let refund_locations = <crate::Pallet<T> as IntoProposal<
         AccountIdOf<T>,
         BalanceOf<T>,
         BlockNumberFor<T>,
@@ -81,7 +84,7 @@ pub fn create_and_fund_project<T: Config>(
     );
 
     // Reserve the assets from the contributors used.
-    <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
+    <crate::Pallet<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
         contributions,
         agreement_hash,
@@ -92,7 +95,7 @@ pub fn create_and_fund_project<T: Config>(
         FundingPath::TakeFromReserved,
     )?;
 
-    Ok(ProjectCount::<T>::get())
+    Ok(ProjectCount::<Test>::get())
 }
 
 // For testing grants and errors pre funding
@@ -105,7 +108,7 @@ pub fn create_project_awaiting_funding<T: Config>(
 ) -> Result<ProjectKey, DispatchError> {
     let agreement_hash: H256 = Default::default();
     // Reserve the assets from the contributors used.
-    <Proposals<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
+    <crate::Pallet<T> as IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>>::convert_to_proposal(
         currency_id,
         contributions,
         agreement_hash,
@@ -127,7 +130,7 @@ pub fn create_funded_user<T: Config>(
 ) -> T::AccountId {
     let user = account(seed, n, 0);
     assert_ok!(<T::MultiCurrency as MultiCurrency<
-        <T as frame_system::Config>::AccountId,
+        BlockNumberFor<T>,
     >>::deposit(
         CurrencyId::Native, &user, balance_factor.saturated_into()
     ));
@@ -136,13 +139,10 @@ pub fn create_funded_user<T: Config>(
 
 /// Manually call the hook OnDisputeCompleteWith a predefined result for testing>
 pub fn complete_dispute<T: Config>(project_key: ProjectKey, milestone_keys: Vec<MilestoneKey>, result: pallet_disputes::DisputeResult) -> crate::Weight {
-    Proposals::<T>::on_dispute_complete(project_key, milestone_keys, result)
+    Proposals::on_dispute_complete(project_key, milestone_keys, result)
 }
 
-pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent)
-where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
-{
+pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     let events = frame_system::Pallet::<T>::events();
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
     // compare to the last event record

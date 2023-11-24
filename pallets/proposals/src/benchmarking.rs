@@ -1,6 +1,5 @@
 #![cfg(feature = "runtime-benchmarks")]
 use super::*;
-use crate::test_utils::*;
 use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
@@ -15,8 +14,9 @@ use sp_std::convert::TryInto;
 use pallet_disputes::DisputeResult;
 use pallet_disputes::traits::DisputeHooks;
 
+use test_utils::{create_and_fund_project, assert_last_event, create_funded_user, get_contributions, get_max_milestones};
+
 #[benchmarks( where
-    <T as frame_system::Config>::AccountId: AsRef<[u8]>,
     <T as frame_system::Config>::BlockNumber: From<u32>,
     BalanceOf<T>: From<u64>,
 )]
@@ -68,7 +68,7 @@ mod benchmarks {
 
         #[extrinsic_call]
         vote_on_milestone(RawOrigin::Signed(bob.clone()), project_key, 0, true);
-        let current_block: T::BlockNumber = frame_system::Pallet::<T>::block_number();
+        let current_block = frame_system::Pallet::<T>::block_number();
         assert_last_event::<T>(
             Event::<T>::VoteSubmitted(bob, project_key, 0, true, current_block).into(),
         )
@@ -125,7 +125,7 @@ mod benchmarks {
     // Benchmark for a single loop of on_initialise as a voting round (most expensive).
     #[benchmark]
     fn on_initialize() {
-        let block_number: <T as frame_system::Config>::BlockNumber = 100u32.into();
+        let block_number = 100u32.into();
         let keys: BoundedVec<
             (ProjectKey, RoundType, MilestoneKey),
             <T as Config>::ExpiringProjectRoundsPerBlock,

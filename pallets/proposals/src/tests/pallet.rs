@@ -7,13 +7,12 @@ use test_utils::*;
 #[test]
 fn submit_milestone_milestone_doesnt_exist() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 11),
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 11),
             Error::<Test>::MilestoneDoesNotExist
         );
     });
@@ -23,7 +22,7 @@ fn submit_milestone_milestone_doesnt_exist() {
 fn submit_milestone_no_project() {
     build_test_externality().execute_with(|| {
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), 0, 1),
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), 0, 1),
             Error::<Test>::ProjectDoesNotExist
         );
     });
@@ -32,17 +31,16 @@ fn submit_milestone_no_project() {
 #[test]
 fn submit_milestone_not_initiator() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*BOB), project_key, 1),
+            Proposals::submit_milestone(RuntimeOrigin::signed(BOB), project_key, 1),
             Error::<Test>::UserIsNotInitiator
         );
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*DAVE), project_key, 1),
+            Proposals::submit_milestone(RuntimeOrigin::signed(DAVE), project_key, 1),
             Error::<Test>::UserIsNotInitiator
         );
     });
@@ -52,12 +50,12 @@ fn submit_milestone_not_initiator() {
 fn submit_milestones_too_many_this_block() {
     build_test_externality().execute_with(|| {
         let max = <Test as Config>::ExpiringProjectRoundsPerBlock::get();
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
 
         (0..=max).for_each(|i| {
             let project_key = create_and_fund_project::<Test>(
-                *ALICE,
+                ALICE,
                 cont.clone(),
                 prop_milestones.clone(),
                 CurrencyId::Native,
@@ -65,13 +63,13 @@ fn submit_milestones_too_many_this_block() {
             .unwrap();
             if i != max {
                 assert_ok!(Proposals::submit_milestone(
-                    RuntimeOrigin::signed(*ALICE),
+                    RuntimeOrigin::signed(ALICE),
                     project_key,
                     1
                 ));
             } else {
                 assert_noop!(
-                    Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1),
+                    Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 1),
                     Error::<Test>::Overflow
                 );
             }
@@ -82,13 +80,12 @@ fn submit_milestones_too_many_this_block() {
 #[test]
 fn submit_milestone_creates_non_bias_vote() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             1
         ));
@@ -103,25 +100,24 @@ fn submit_milestone_creates_non_bias_vote() {
 #[test]
 fn submit_milestone_can_resubmit_during_voting_round() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true
         ));
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key
         ));
@@ -149,21 +145,20 @@ fn submit_milestone_can_resubmit_during_voting_round() {
 #[test]
 fn submit_milestone_can_submit_again_after_failed_vote() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             1
         ));
         let expiry_block = frame_system::Pallet::<Test>::block_number()
             + <Test as Config>::MilestoneVotingWindow::get();
-        run_to_block::<Test>(expiry_block + 1);
+        run_to_block(expiry_block + 1);
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             1
         ));
@@ -173,25 +168,24 @@ fn submit_milestone_can_submit_again_after_failed_vote() {
 #[test]
 fn submit_milestone_cannot_submit_again_after_success_vote() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             project_key,
             milestone_key,
             true
@@ -199,9 +193,9 @@ fn submit_milestone_cannot_submit_again_after_success_vote() {
         // The auto approval should have approved it here.
         let expiry_block = frame_system::Pallet::<Test>::block_number()
             + <Test as Config>::MilestoneVotingWindow::get();
-        run_to_block::<Test>(expiry_block + 1);
+        run_to_block(expiry_block + 1);
         assert_noop!(
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key),
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, milestone_key),
             Error::<Test>::MilestoneAlreadyApproved
         );
     });
@@ -210,17 +204,17 @@ fn submit_milestone_cannot_submit_again_after_success_vote() {
 #[test]
 fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
+        let project_key = create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true
@@ -249,7 +243,7 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
 
         // Assert the storage has been cleared up after finalisation
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             project_key,
             milestone_key,
             true
@@ -275,17 +269,17 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_for() {
 #[test]
 fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
+        let project_key = create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             false
@@ -313,7 +307,7 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
         );
         // Assert the storage has been cleared up after finalisation
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             project_key,
             milestone_key,
             false
@@ -339,29 +333,29 @@ fn ensure_milestone_vote_data_is_cleaned_after_autofinalisation_against() {
 #[test]
 fn users_can_submit_multiple_milestones_and_vote_independantly() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
+        let project_key = create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key_0 = 0;
         let milestone_key_1 = 1;
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key_0
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key_0,
             true
         ));
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key_1
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key_1,
             true
@@ -387,7 +381,7 @@ fn users_can_submit_multiple_milestones_and_vote_independantly() {
 fn vote_on_milestone_no_project() {
     build_test_externality().execute_with(|| {
         assert_noop!(
-            Proposals::vote_on_milestone(RuntimeOrigin::signed(*ALICE), 0, 0, true),
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(ALICE), 0, 0, true),
             Error::<Test>::ProjectDoesNotExist
         );
     });
@@ -396,15 +390,14 @@ fn vote_on_milestone_no_project() {
 #[test]
 fn vote_on_milestone_before_round_starts_fails() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_noop!(
             Proposals::vote_on_milestone(
-                RuntimeOrigin::signed(*BOB),
+                RuntimeOrigin::signed(BOB),
                 project_key,
                 milestone_key,
                 true
@@ -417,23 +410,22 @@ fn vote_on_milestone_before_round_starts_fails() {
 #[test]
 fn vote_on_milestone_after_round_end_fails() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         let expiring_block = frame_system::Pallet::<Test>::block_number()
             + <Test as Config>::MilestoneVotingWindow::get();
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key
         ));
-        run_to_block::<Test>(expiring_block);
+        run_to_block(expiring_block);
         assert_noop!(
             Proposals::vote_on_milestone(
-                RuntimeOrigin::signed(*BOB),
+                RuntimeOrigin::signed(BOB),
                 project_key,
                 milestone_key,
                 true
@@ -446,18 +438,17 @@ fn vote_on_milestone_after_round_end_fails() {
 #[test]
 fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             0
         ));
         assert_noop!(
-            Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true),
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 1, true),
             Error::<Test>::VotingRoundNotStarted
         );
     });
@@ -466,25 +457,25 @@ fn vote_on_milestone_where_voting_round_is_active_but_not_the_correct_milestone(
 #[test]
 fn if_double_submission_and_one_finalises_voting_on_the_second_can_vote() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
+        let project_key = create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let expiring_block = frame_system::Pallet::<Test>::block_number()
             + <Test as Config>::MilestoneVotingWindow::get();
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             0
         ));
-        run_to_block::<Test>(frame_system::Pallet::<Test>::block_number() + 10);
+        run_to_block(frame_system::Pallet::<Test>::block_number() + 10);
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             1
         ));
-        run_to_block::<Test>(expiring_block);
+        run_to_block(expiring_block);
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             1,
             true
@@ -495,20 +486,19 @@ fn if_double_submission_and_one_finalises_voting_on_the_second_can_vote() {
 #[test]
 fn vote_on_milestone_not_contributor() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key
         ));
         assert_noop!(
             Proposals::vote_on_milestone(
-                RuntimeOrigin::signed(*DAVE),
+                RuntimeOrigin::signed(DAVE),
                 project_key,
                 milestone_key,
                 true
@@ -521,19 +511,18 @@ fn vote_on_milestone_not_contributor() {
 #[test]
 fn vote_on_milestone_actually_adds_to_vote() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true
@@ -543,7 +532,7 @@ fn vote_on_milestone_actually_adds_to_vote() {
         assert!(vote.yay == 100_000u64);
         assert!(vote.nay == 0u64);
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             project_key,
             milestone_key,
             false
@@ -557,38 +546,74 @@ fn vote_on_milestone_actually_adds_to_vote() {
 }
 
 #[test]
-fn withdraw_not_initiator() {
+fn vote_on_milestone_autofinalises_on_all_voted_and_fail() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE, DAVE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_ok!(Proposals::submit_milestone(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key,
             milestone_key
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
+            project_key,
+            milestone_key,
+            false
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(CHARLIE),
+            project_key,
+            milestone_key,
+            false
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(DAVE),
+            project_key,
+            milestone_key,
+            true
+        ));
+
+        assert_last_event::<Test>(
+            Event::<Test>::MilestoneRejected(project_key, milestone_key).into(),
+        )
+    });
+}
+
+#[test]
+fn withdraw_not_initiator() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key = create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
+        let milestone_key = 0;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(ALICE),
+            project_key,
+            milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true
         ));
         assert_ok!(Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             project_key,
             milestone_key,
             true
         ));
 
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*BOB), project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(BOB), project_key),
             Error::<Test>::UserIsNotInitiator
         );
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*DAVE), project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(DAVE), project_key),
             Error::<Test>::UserIsNotInitiator
         );
     });
@@ -598,25 +623,24 @@ fn withdraw_not_initiator() {
 fn withdraw_only_transfers_approved_milestones() {
     build_test_externality().execute_with(|| {
         let per_contribution = 100_000;
-        let cont = get_contributions::<Test>(vec![*BOB, *CHARLIE], per_contribution);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], per_contribution);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let project_account = crate::Pallet::<Test>::project_account_id(project_key);
         let milestone_key = 0;
         let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, milestone_key)
                 .unwrap();
         let _ = Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true,
         )
         .unwrap();
         let _ = Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             project_key,
             milestone_key,
             true,
@@ -625,7 +649,7 @@ fn withdraw_only_transfers_approved_milestones() {
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key
         ));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
@@ -648,17 +672,16 @@ fn withdraw_only_transfers_approved_milestones() {
 #[test]
 fn withdraw_removes_project_after_all_funds_taken() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = get_milestones(1);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, milestone_key)
                 .unwrap();
         let _ = Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true,
@@ -666,7 +689,7 @@ fn withdraw_removes_project_after_all_funds_taken() {
         .unwrap();
         assert!(Projects::<Test>::get(project_key).is_some());
         assert_ok!(Proposals::withdraw(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key
         ));
 
@@ -680,17 +703,16 @@ fn withdraw_removes_project_after_all_funds_taken() {
 #[test]
 fn store_project_info_after_project_is_completed() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = get_milestones(1);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, milestone_key)
                 .unwrap();
         let _ = Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true,
@@ -698,7 +720,7 @@ fn store_project_info_after_project_is_completed() {
         .unwrap();
         assert!(Projects::<Test>::get(project_key).is_some());
         assert_ok!(Proposals::withdraw(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key
         ));
 
@@ -713,25 +735,25 @@ fn store_project_info_after_project_is_completed() {
 fn store_too_many_projects_for_account() {
     build_test_externality().execute_with(|| {
         let max = <Test as Config>::MaxProjectsPerAccount::get();
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = get_milestones(1);
         let milestone_key = 0;
         (0..=max).for_each(|i| {
             let project_key = create_and_fund_project::<Test>(
-                *ALICE,
+                ALICE,
                 cont.clone(),
                 prop_milestones.clone(),
                 CurrencyId::Native,
             )
             .unwrap();
             let _ = Proposals::submit_milestone(
-                RuntimeOrigin::signed(*ALICE),
+                RuntimeOrigin::signed(ALICE),
                 project_key,
                 milestone_key,
             )
             .unwrap();
             let _ = Proposals::vote_on_milestone(
-                RuntimeOrigin::signed(*BOB),
+                RuntimeOrigin::signed(BOB),
                 project_key,
                 milestone_key,
                 true,
@@ -740,12 +762,12 @@ fn store_too_many_projects_for_account() {
 
             if i != max {
                 assert_ok!(Proposals::withdraw(
-                    RuntimeOrigin::signed(*ALICE),
+                    RuntimeOrigin::signed(ALICE),
                     project_key
                 ));
             } else {
                 assert_noop!(
-                    Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+                    Proposals::withdraw(RuntimeOrigin::signed(ALICE), project_key),
                     Error::<Test>::TooManyProjects
                 );
             }
@@ -756,27 +778,26 @@ fn store_too_many_projects_for_account() {
 #[test]
 fn withdraw_takes_imbue_fee() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         let fee_account: AccountId = <Test as Config>::ImbueFeeAccount::get();
         let fee_account_balance_before = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &fee_account);
 
         let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, milestone_key)
                 .unwrap();
         let _ = Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true,
         )
         .unwrap();
         assert_ok!(Proposals::withdraw(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key
         ));
         let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(10_000);
@@ -793,28 +814,27 @@ fn withdraw_takes_imbue_fee() {
 #[test]
 fn withdraw_cannot_double_withdraw() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, milestone_key)
                 .unwrap();
         let _ = Proposals::vote_on_milestone(
-            RuntimeOrigin::signed(*BOB),
+            RuntimeOrigin::signed(BOB),
             project_key,
             milestone_key,
             true,
         )
         .unwrap();
         assert_ok!(Proposals::withdraw(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key
         ));
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(ALICE), project_key),
             Error::<Test>::NoAvailableFundsToWithdraw
         );
     });
@@ -823,22 +843,21 @@ fn withdraw_cannot_double_withdraw() {
 #[test]
 fn withdraw_once_times_with_double_submissions() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true)
             .unwrap();
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true)
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 1).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 1, true)
             .unwrap();
 
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key
         ));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
@@ -855,20 +874,19 @@ fn withdraw_once_times_with_double_submissions() {
 #[test]
 fn withdraw_twice_with_intermitent_submission() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
 
         // The first submission and withdraw
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
-            .unwrap();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 0).unwrap();
+        let _ =
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true).unwrap();
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key
         ));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
@@ -880,13 +898,13 @@ fn withdraw_twice_with_intermitent_submission() {
         );
 
         // The second submission and withdraw
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 1).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 1, true)
-            .unwrap();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 1).unwrap();
+        let _ =
+            Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 1, true).unwrap();
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key
         ));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
@@ -902,7 +920,7 @@ fn withdraw_twice_with_intermitent_submission() {
 #[test]
 fn withdraw_with_variable_percentage() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = vec![
             ProposedMilestone {
                 percentage_to_unlock: Percent::from_percent(70u8),
@@ -912,15 +930,14 @@ fn withdraw_with_variable_percentage() {
             },
         ];
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
-        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, 0).unwrap();
-        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(*BOB), project_key, 0, true)
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
+        let _ = Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 0).unwrap();
+        let _ = Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true)
             .unwrap();
         let alice_before =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         assert_ok!(Proposals::withdraw(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             project_key
         ));
         let alice_after = <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
@@ -936,21 +953,20 @@ fn withdraw_with_variable_percentage() {
 #[test]
 fn withdraw_fails_before_approval() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(ALICE), project_key),
             Error::<Test>::NoAvailableFundsToWithdraw
         );
         let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, milestone_key)
                 .unwrap();
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(ALICE), project_key),
             Error::<Test>::NoAvailableFundsToWithdraw
         );
     });
@@ -959,21 +975,20 @@ fn withdraw_fails_before_approval() {
 #[test]
 fn withdraw_assert_milestone_state_change() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![*BOB], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
-            create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native)
-                .unwrap();
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).unwrap();
         let milestone_key = 0;
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(ALICE), project_key),
             Error::<Test>::NoAvailableFundsToWithdraw
         );
         let _ =
-            Proposals::submit_milestone(RuntimeOrigin::signed(*ALICE), project_key, milestone_key)
+            Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, milestone_key)
                 .unwrap();
         assert_noop!(
-            Proposals::withdraw(RuntimeOrigin::signed(*ALICE), project_key),
+            Proposals::withdraw(RuntimeOrigin::signed(ALICE), project_key),
             Error::<Test>::NoAvailableFundsToWithdraw
         );
     });

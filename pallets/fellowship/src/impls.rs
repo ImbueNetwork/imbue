@@ -3,10 +3,7 @@ use crate::*;
 use common_traits::MaybeConvert;
 use frame_support::{ensure, traits::Get};
 use orml_traits::MultiReservableCurrency;
-use sp_runtime::{
-    traits::{BadOrigin, Convert},
-    DispatchError, Percent,
-};
+use sp_runtime::{traits::BadOrigin, DispatchError};
 use sp_std::{vec, vec::Vec};
 /// Ensure that a account is of a given role.
 /// Used in other pallets like an ensure origin.
@@ -46,7 +43,6 @@ impl<T: Config> MaybeConvert<&AccountIdOf<T>, VetterIdOf<T>> for Pallet<T> {
     }
 }
 
-
 impl<T: Config> Pallet<T> {
     /// Try take the membership deposit from who
     /// If the deposit was taken, this will return true, else false.
@@ -82,4 +78,3 @@ impl crate::traits::FellowshipPermissions<crate::Role, crate::Permission>
         }
     }
 }
-

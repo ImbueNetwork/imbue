@@ -18,7 +18,7 @@ fn ensure_milestone_percent_equal_100() {
 
         assert_noop!(
             Grant::create_and_convert(
-                RuntimeOrigin::signed(*ALICE),
+                RuntimeOrigin::signed(ALICE),
                 milestones,
                 get_approvers(5),
                 CurrencyId::Native,
@@ -41,7 +41,7 @@ fn create_grant_already_exists() {
         let grant_id: H256 = Default::default();
 
         let _ = Grant::create_and_convert(
-            RuntimeOrigin::signed(*ALICE),
+            RuntimeOrigin::signed(ALICE),
             milestones,
             approvers,
             CurrencyId::Native,
@@ -51,7 +51,7 @@ fn create_grant_already_exists() {
         );
         assert_noop!(
             Grant::create_and_convert(
-                RuntimeOrigin::signed(*ALICE),
+                RuntimeOrigin::signed(ALICE),
                 milestones2,
                 approvers2,
                 CurrencyId::Native,
@@ -85,8 +85,8 @@ pub(crate) fn get_approvers(mut n: u32) -> BoundedApprovers<Test> {
         n = max;
     }
     (0..n)
-        .map(|i| sp_core::sr25519::Public::from_raw([i as u8; 32]))
-        .collect::<Vec<sp_core::sr25519::Public>>()
+        .map(|i| i as u128)
+        .collect::<Vec<AccountId>>()
         .try_into()
         .expect("qed")
 }

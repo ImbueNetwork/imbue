@@ -105,7 +105,6 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> 
-    where AccountIdOf<T>: Into<[u8; 32]> 
     {
         /// Instead of iterating, create a project from the parameters of a grant.
         #[pallet::call_index(5)]
@@ -146,7 +145,7 @@ pub mod pallet {
                 });
 
 
-            let treasury_multilocation = <TreasuryOrigin as TreasuryOriginConverter<AccountIdOf<T>>>::get_multi_location(&treasury_origin).map_err(|_| Error::<T>::InvalidTreasuryOrigin)?;
+            let treasury_multilocation = <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(&treasury_origin).map_err(|_| Error::<T>::InvalidTreasuryOrigin)?;
             let refund_locations = sp_std::vec![(Locality::Foreign(treasury_multilocation), Percent::from_parts(100u8))];
 
             <T as Config>::IntoProposal::convert_to_proposal(

@@ -1,29 +1,23 @@
 use crate as pallet_disputes;
 use common_types::CurrencyId;
-use frame_support::once_cell::sync::Lazy;
 use frame_support::traits::{ConstU16, Nothing};
 use frame_support::{pallet_prelude::*, parameter_types};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
-use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header,
-    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+    traits::{BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 use sp_std::convert::{TryFrom, TryInto};
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-type BlockNumber = u64;
+pub type BlockNumber = u64;
 pub type Balance = u64;
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+pub type AccountId = u64;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
         System: frame_system,
         PalletDisputes: pallet_disputes,
@@ -37,13 +31,12 @@ impl frame_system::Config for Test {
     type BlockLength = ();
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
-    type Index = u64;
-    type BlockNumber = BlockNumber;
+    type Nonce = u64;
+    type Block = Block;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = ();
     type DbWeight = ();
@@ -103,15 +96,14 @@ impl orml_tokens::Config for Test {
     type ReserveIdentifier = [u8; 8];
 }
 
-pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
-pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
-pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
-pub static FERDIE: Lazy<Public> = Lazy::new(|| Public::from_raw([128u8; 32]));
-pub static EMPTY: Lazy<Public> = Lazy::new(|| Public::from_raw([66u8; 32]));
+pub static ALICE: AccountId = 125;
+pub static BOB: AccountId = 126;
+pub static CHARLIE: AccountId = 127;
+pub static FERDIE: AccountId = 128;
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let t = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);

@@ -1,8 +1,9 @@
+use super::*;
 #[test]
 fn ensure_role_in_works() {
     new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(*ALICE, (Role::Vetter, 10));
-        Roles::<Test>::insert(*BOB, (Role::Freelancer, 10));
+        Roles::<Test>::insert(ALICE, (Role::Vetter, 10));
+        Roles::<Test>::insert(BOB, (Role::Freelancer, 10));
 
         assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(
             &ALICE,
@@ -26,12 +27,10 @@ fn ensure_role_in_works() {
     });
 }
 
-use super::*;
-
 #[test]
 fn ensure_role_in_works_with_rank() {
     new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(*ALICE, (Role::Vetter, 10));
+        Roles::<Test>::insert(ALICE, (Role::Vetter, 10));
         assert_ok!(EnsureFellowshipRole::<Test>::ensure_role_in(
             &ALICE,
             vec![Role::Vetter],
@@ -48,7 +47,7 @@ fn ensure_role_in_works_with_rank() {
 #[test]
 fn ensure_role_works() {
     new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(*ALICE, (Role::Vetter, 0));
+        Roles::<Test>::insert(ALICE, (Role::Vetter, 0));
         assert_ok!(EnsureFellowshipRole::<Test>::ensure_role(
             &ALICE,
             Role::Vetter,
@@ -61,7 +60,7 @@ fn ensure_role_works() {
 #[test]
 fn ensure_role_works_with_rank() {
     new_test_ext().execute_with(|| {
-        Roles::<Test>::insert(*ALICE, (Role::Vetter, 10));
+        Roles::<Test>::insert(ALICE, (Role::Vetter, 10));
         assert_ok!(EnsureFellowshipRole::<Test>::ensure_role(
             &ALICE,
             Role::Vetter,

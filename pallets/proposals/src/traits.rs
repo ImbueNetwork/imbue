@@ -1,12 +1,13 @@
 use crate::{AccountIdOf, BalanceOf, Contribution, FundingPath, ProposedMilestone, Locality};
 use common_types::{CurrencyId, TreasuryOrigin, TreasuryOriginConverter};
-use frame_support::{inherent::Vec, pallet_prelude::*, transactional, PalletId, BoundedBTreeMap};
+use frame_support::{pallet_prelude::*, transactional, PalletId, BoundedBTreeMap};
+use frame_system::pallet_prelude::*;
 use orml_traits::XcmTransfer;
 use orml_xtokens::Error;
 use sp_arithmetic::{traits::AtLeast32BitUnsigned, Percent};
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::collections::btree_map::BTreeMap;
+use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 use xcm::latest::{MultiLocation, WeightLimit};
 
 pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
@@ -63,7 +64,7 @@ impl<T: crate::Config> ExternalRefundHandler<AccountIdOf<T>, BalanceOf<T>, Curre
 pub struct XcmRefundHandler<T, U>(T, U);
 impl<T, U> ExternalRefundHandler<AccountIdOf<T>, T::Balance, CurrencyId> for XcmRefundHandler<T, U>
 where
-    [u8; 32]: From<<T as frame_system::Config>::AccountId>,
+    [u8; 32]: From<BlockNumberFor<T>>,
     T: orml_xtokens::Config,
     U: XcmTransfer<T::AccountId, T::Balance, CurrencyId>,
 {

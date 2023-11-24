@@ -1,31 +1,25 @@
 use crate as pallet_crowdfunding;
 use common_types::CurrencyId;
-use frame_support::once_cell::sync::Lazy;
 use frame_support::traits::{ConstU16, ConstU64, Nothing};
 use frame_support::{pallet_prelude::*, parameter_types, PalletId};
 use frame_system::EnsureRoot;
 use orml_traits::MultiCurrency;
 use pallet_deposits::traits::DepositHandler;
 use sp_arithmetic::per_things::Percent;
-use sp_core::sr25519::{Public, Signature};
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header,
-    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+    traits::{BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 pub type BlockNumber = u64;
 pub type Balance = u64;
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+pub type AccountId = u128;
 pub type Moment = u64;
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
         System: frame_system,
         CrowdFunding: pallet_crowdfunding,
@@ -44,13 +38,12 @@ impl frame_system::Config for Test {
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
-    type Index = u64;
-    type BlockNumber = BlockNumber;
+    type Nonce = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
+    type Block = Block;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = ConstU64<250>;
     type Version = ();
@@ -160,26 +153,26 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-    type HoldIdentifier = ();
     type FreezeIdentifier = ();
     type MaxHolds = ConstU32<0>;
     type MaxFreezes = ConstU32<0>;
+    type RuntimeHoldReason = ();
 }
 parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
-    pub MaximumContributorsPerProject: u32 = 5000;
+    pub MaximumContributorsPerProject: u32 = 50;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
-    pub MaxMilestonesPerProject: u32 = 50;
+    pub MaxMilestonesPerProject: u32 = 10;
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
-    pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ExpiringProjectRoundsPerBlock: u32 = 10;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
-    pub FeeAccount: AccountId = *TREASURY;
+    pub FeeAccount: AccountId = TREASURY;
     pub MaxJuryMembers: u32 = 100;
 }
 
@@ -230,14 +223,20 @@ impl DepositHandler<Balance, AccountId> for MockDepositHandler {
     }
 }
 
+<<<<<<< HEAD
 pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
 pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
 pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
 pub static TREASURY: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
+=======
+pub static ALICE: AccountId = 125;
+pub static BOB: AccountId = 126;
+pub static CHARLIE: AccountId = 127;
+>>>>>>> 691fff9d503ce4e6ba20c8cc81f451649c04c07e
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let t = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);

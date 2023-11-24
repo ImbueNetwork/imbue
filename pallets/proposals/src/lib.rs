@@ -1,11 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
 use common_traits::MaybeConvert;
 use common_types::CurrencyId;
+use codec::{Decode, Encode, EncodeLike};
 use frame_support::{
-    dispatch::EncodeLike, pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap,
-    traits::EnsureOrigin, PalletId,
+    pallet_prelude::*, storage::bounded_btree_map::BoundedBTreeMap, traits::EnsureOrigin, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -23,7 +22,7 @@ use xcm::latest::MultiLocation;
 pub mod traits;
 use traits::{IntoProposal, ExternalRefundHandler};
 
-#[cfg(test)]
+#[cfg(any(feature = "runtime-benchmarks", test))]
 mod mock;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -117,6 +116,8 @@ pub mod pallet {
         type DisputeRaiser: DisputeRaiser<AccountIdOf<Self>, DisputeKey = ProjectKey, SpecificId = MilestoneKey, MaxSpecifics = Self::MaxMilestonesPerProject, MaxJurySize = MaxJuryOf<Self>>;
         /// The jury selector type which is defining the max jury size.
         type JurySelector: pallet_fellowship::traits::SelectJury<AccountIdOf<Self>>;
+        /// The origin responsible for setting the address responsible for minting tokens.
+        type AssetSignerOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
@@ -130,9 +131,12 @@ pub mod pallet {
     #[pallet::getter(fn projects)]
     pub type Projects<T: Config> = StorageMap<_, Identity, ProjectKey, Project<T>, OptionQuery>;
 
-    /// BTree of users that has voted, bounded by the number of contributors in a project.
-    /// Now only stores the UserHasVoted for votes of no confidence. 
-    // TODO: Remove this with vote of no confidence.
+    /// The `AccountId` of the multichain signer
+    #[pallet::storage]
+    #[pallet::getter(fn key)]
+    pub type ForeignCurrencySigner<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
+    // BTree of users that has voted, bounded by the number of contributors in a project.
     #[pallet::storage]
     pub(super) type UserHasVoted<T: Config> = StorageMap<
         _,
@@ -237,6 +241,10 @@ pub mod pallet {
         MilestoneRejected(ProjectKey, MilestoneKey),
         /// A project has been refunded either partially or completely.
         ProjectRefunded{project_key: ProjectKey, total_amount: BalanceOf<T>},
+        /// Foreign Asset Signer Changed
+        ForeignAssetSignerChanged(T::AccountId),
+        /// Foreign Asset Signer Changed
+        ForeignAssetMinted(T::AccountId, T::AccountId, CurrencyId, BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -314,6 +322,8 @@ pub mod pallet {
         CannotRaiseDisputeOnApprovedMilestone,
         /// Only a contributor can initiate a refund.
         OnlyContributorsCanInitiateRefund,
+        /// Only the ForeignAssetSigner can mint tokens
+        RequireForeignAssetSigner,
     }
 
     #[pallet::hooks]
@@ -397,7 +407,7 @@ pub mod pallet {
 
         /// Raise a dispute using the handle DisputeRaiser in the Config.
         #[pallet::call_index(14)]
-        #[pallet::weight(<Weight as Zero>::zero())]
+        #[pallet::weight(<T as Config>::WeightInfo::raise_dispute())]
         pub fn raise_dispute(
             origin: OriginFor<T>,
             project_key: ProjectKey,
@@ -422,7 +432,7 @@ pub mod pallet {
         /// Attempt a refund of milestones.
         /// Will only refund milestones that have can_refund set to true.
         #[pallet::call_index(15)]
-        #[pallet::weight(<Weight as Zero>::zero())]
+        #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(
             origin: OriginFor<T>,
             project_key: ProjectKey,
@@ -494,6 +504,51 @@ pub mod pallet {
             })?;
 
             Ok(().into())
+        }
+
+        /// Sets the given AccountId (`new`) as the new Foreign asset signer
+        /// key.
+        ///
+        /// The dispatch origin for this call must be _Signed_.
+        ///
+        #[pallet::call_index(16)]
+        #[pallet::weight(T::DbWeight::get().reads_writes(2, 2))]
+        pub fn set_foreign_asset_signer(
+            origin: OriginFor<T>,
+            new: AccountIdOf<T>,
+        ) -> DispatchResult {
+            T::AssetSignerOrigin::ensure_origin(origin)?;
+            ForeignCurrencySigner::<T>::put(&new);
+            Self::deposit_event(Event::ForeignAssetSignerChanged(new));
+            Ok(())
+        }
+
+        /// Mints offchain assets to a users address
+        ///
+        /// The dispatch origin for this call must be the pre defined foreign asset signer.
+        ///
+        #[pallet::call_index(17)]
+        #[pallet::weight(T::DbWeight::get().reads_writes(2, 2))]
+        pub fn mint_offchain_assets(
+            origin: OriginFor<T>,
+            beneficiary: AccountIdOf<T>,
+            currency_id: CurrencyId,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                Self::key().map_or(false, |authority_signer| who == authority_signer),
+                Error::<T>::RequireForeignAssetSigner
+            );
+            <T as crate::Config>::MultiCurrency::deposit(currency_id, &beneficiary, amount)?;
+            Self::deposit_event(Event::ForeignAssetMinted(
+                who,
+                beneficiary,
+                currency_id,
+                amount,
+            ));
+
+            Ok(())
         }
     }
 

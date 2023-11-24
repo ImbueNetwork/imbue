@@ -800,13 +800,13 @@ pub mod v7 {
                 v5::FundingType::Grant(treasury_origin) => {
                     let multilocation = match treasury_origin {
                         TreasuryOrigin::Kusama => {
-                            <TreasuryOrigin as TreasuryOriginConverter<AccountIdOf<T>>>::get_multi_location(&treasury_origin).expect("known good.")
+                            <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(&treasury_origin).expect("known good.")
                         },
                         TreasuryOrigin::Imbue => {
-                            <TreasuryOrigin as TreasuryOriginConverter<AccountIdOf<T>>>::get_multi_location(&treasury_origin).expect("known good.")
+                            <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(&treasury_origin).expect("known good.")
                         },   
                         TreasuryOrigin::Karura => {
-                            <TreasuryOrigin as TreasuryOriginConverter<AccountIdOf<T>>>::get_multi_location(&TreasuryOrigin::Imbue).expect("known good.")
+                            <TreasuryOrigin as TreasuryOriginConverter>::get_multi_location(&TreasuryOrigin::Imbue).expect("known good.")
                         },     
                     };
                     vec![(Locality::Foreign(multilocation), Percent::from_parts(100))].try_into().expect("1 is lower than bound if it isnt then the system is broken anyway; qed")
@@ -891,11 +891,11 @@ mod test {
 
             let old_contributions = vec![
                 ContributionV0 {
-                    account_id: *ALICE,
+                    account_id: ALICE,
                     value: contribution_value,
                 },
                 ContributionV0 {
-                    account_id: *BOB,
+                    account_id: BOB,
                     value: contribution_value,
                 },
             ];
@@ -910,7 +910,7 @@ mod test {
                 currency_id: CurrencyId::KSM,
                 required_funds: (100_000_000u32).into(),
                 withdrawn_funds: (0u32).into(),
-                initiator: *ALICE,
+                initiator: ALICE,
                 create_block_number: 100u64,
                 approved_for_funding: true,
                 funding_threshold_met: true,
@@ -961,7 +961,7 @@ mod test {
             > = BTreeMap::new();
 
             contributions.insert(
-                *ALICE,
+                ALICE,
                 Contribution {
                     value: contribution_value,
                     timestamp: TimestampOf::<Test>::default(),
@@ -969,7 +969,7 @@ mod test {
             );
 
             contributions.insert(
-                *BOB,
+                BOB,
                 Contribution {
                     value: contribution_value,
                     timestamp: TimestampOf::<Test>::default(),
@@ -987,7 +987,7 @@ mod test {
                 required_funds: (100_000_000u32).into(),
                 raised_funds: (100_000_000u32).into(),
                 withdrawn_funds: (0u32).into(),
-                initiator: *ALICE,
+                initiator: ALICE,
                 create_block_number: 100u64,
                 approved_for_funding: true,
                 funding_threshold_met: true,
@@ -1001,8 +1001,8 @@ mod test {
             assert_eq!(old_project.create_block_number, migrated_project.created_on);
 
             assert_eq!(
-                &old_project.contributions.get(&*ALICE).unwrap().value,
-                &migrated_project.contributions.get(&*ALICE).unwrap().value
+                &old_project.contributions.get(&ALICE).unwrap().value,
+                &migrated_project.contributions.get(&ALICE).unwrap().value
             );
 
             assert_eq!(H256::default(), migrated_project.agreement_hash);
@@ -1045,14 +1045,14 @@ mod test {
             );
             let mut contributions = BTreeMap::new();
             contributions.insert(
-                *CHARLIE,
+                CHARLIE,
                 Contribution {
                     value: 100_000,
                     timestamp: TimestampOf::<Test>::default(),
                 },
             );
             contributions.insert(
-                *BOB,
+                BOB,
                 Contribution {
                     value: 900_000,
                     timestamp: TimestampOf::<Test>::default(),
@@ -1066,7 +1066,7 @@ mod test {
                 required_funds: 1_000_000,
                 withdrawn_funds: 0,
                 raised_funds: 1_000_000,
-                initiator: *ALICE,
+                initiator: ALICE,
                 created_on: frame_system::Pallet::<Test>::block_number(),
                 approved_for_funding: false,
                 funding_threshold_met: false,
@@ -1074,9 +1074,9 @@ mod test {
                 funding_type: v5::FundingType::Brief,
             };
             v2::Projects::<Test>::insert(0, &project);
-            v3::UserVotes::<Test>::insert((*ALICE, 10u32, 10u32, v3::RoundType::VotingRound), true);
+            v3::UserVotes::<Test>::insert((ALICE, 10u32, 10u32, v3::RoundType::VotingRound), true);
             v3::UserVotes::<Test>::insert(
-                (*ALICE, 10u32, 10u32, v3::RoundType::VoteOfNoConfidence),
+                (ALICE, 10u32, 10u32, v3::RoundType::VoteOfNoConfidence),
                 true,
             );
             let v = Vote {
@@ -1154,10 +1154,10 @@ mod test {
     #[test]
     fn migrate_v3_to_v4() {
         build_test_externality().execute_with(|| {
-            let cont = get_contributions::<Test>(vec![*BOB, *DAVE], 100_000);
+            let cont = get_contributions::<Test>(vec![BOB, DAVE], 100_000);
             let prop_milestones = get_milestones(10);
             let project_key =
-                create_and_fund_project::<Test>(*ALICE, cont, prop_milestones, CurrencyId::Native).expect("project wasnt created!");
+                create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native).expect("project wasnt created!");
             let milestone_key: MilestoneKey = 0;
             let expiry_block: BlockNumber = 10;
             let rounds_expiring: BoundedProjectKeysPerBlock<Test> =

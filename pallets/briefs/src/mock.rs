@@ -1,5 +1,4 @@
 use crate as pallet_briefs;
-use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::GenesisBuild;
 use frame_support::{
     pallet_prelude::*,
     parameter_types,
@@ -8,16 +7,13 @@ use frame_support::{
     PalletId,
 };
 use frame_system::EnsureRoot;
-use sp_core::{sr25519::Signature, H256};
+use sp_core::H256;
 
 use common_types::CurrencyId;
 
-use frame_support::once_cell::sync::Lazy;
 use sp_arithmetic::per_things::Percent;
-use sp_core::sr25519;
 use sp_runtime::{
-    testing::Header,
-    traits::{AccountIdConversion, BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
     BuildStorage,
 };
 
@@ -28,14 +24,12 @@ use sp_std::{
     vec::Vec,
 };
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
 pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u64;
 pub type Moment = u64;
-//type AccountId = sp_core::sr25519::Public;
+pub type AccountId = u128;
 
 parameter_types! {
     pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
@@ -52,12 +46,9 @@ impl orml_currencies::Config for Test {
 }
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Tokens: orml_tokens::{Pallet, Storage, Event<T>},
         Currencies: orml_currencies::{Pallet, Call, Storage},
@@ -118,13 +109,12 @@ impl frame_system::Config for Test {
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
-    type Index = u64;
-    type BlockNumber = u64;
+    type Nonce = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
+    type Block = Block;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -136,13 +126,6 @@ impl frame_system::Config for Test {
     type SS58Prefix = ();
     type OnSetCode = ();
     type MaxConsumers = ConstU32<16>;
-}
-
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-impl frame_system::offchain::SigningTypes for Test {
-    type Public = <Signature as Verify>::Signer;
-    type Signature = Signature;
 }
 
 parameter_types! {
@@ -166,10 +149,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-    type HoldIdentifier = ();
     type FreezeIdentifier = ();
     type MaxHolds = ConstU32<0>;
     type MaxFreezes = ConstU32<0>;
+    type RuntimeHoldReason = ();
 }
 
 parameter_types! {
@@ -212,7 +195,7 @@ impl DepositHandler<Balance, AccountId> for MockDepositHandler {
 parameter_types! {
     pub MaximumApplicants: u32 = 10_000u32;
     pub ApplicationSubmissionTime: BlockNumber = 1000u32.into();
-    pub MaxBriefOwners: u32 = 100;
+    pub MaxBriefOwners: u32 = 50;
     pub BriefStorageItem: StorageItem = StorageItem::Brief;
 }
 
@@ -231,17 +214,17 @@ impl pallet_briefs::Config for Test {
 parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
-    pub MaximumContributorsPerProject: u32 = 5000;
+    pub MaximumContributorsPerProject: u32 = 50;
     pub RefundsPerBlock: u8 = 2;
     pub IsIdentityRequired: bool = false;
     pub MilestoneVotingWindow: BlockNumber  =  100800u64;
-    pub MaxMilestonesPerProject: u32 = 50;
+    pub MaxMilestonesPerProject: u32 = 10;
     pub ProjectStorageDeposit: Balance = 100;
     pub ImbueFee: Percent = Percent::from_percent(5u8);
-    pub ExpiringProjectRoundsPerBlock: u32 = 100;
+    pub ExpiringProjectRoundsPerBlock: u32 = 10;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
-    pub ImbueFeeAccount: AccountId = *TREASURY;
+    pub ImbueFeeAccount: AccountId = TREASURY;
     pub MaxJuryMembers: u32 = 100;
 }
 
@@ -263,6 +246,7 @@ impl pallet_proposals::Config for Test {
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
     type DisputeRaiser = MockDisputeRaiser;
     type JurySelector = MockJurySelector;
+    type AssetSignerOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -293,20 +277,22 @@ parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
-pub static ALICE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([125u8; 32]));
-pub static BOB: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([126u8; 32]));
-pub static CHARLIE: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
-pub static TREASURY: Lazy<sr25519::Public> = Lazy::new(|| sr25519::Public::from_raw([127u8; 32]));
+pub static ALICE: AccountId = 125;
+pub static BOB: AccountId = 126;
+pub static CHARLIE: AccountId = 127;
+pub static TREASURY: AccountId = 200;
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let mut t = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
 
-    GenesisConfig::default().assimilate_storage(&mut t).unwrap();
+    RuntimeGenesisConfig::default()
+        .assimilate_storage(&mut t)
+        .unwrap();
     orml_tokens::GenesisConfig::<Test> {
         balances: {
-            vec![*ALICE, *BOB, *CHARLIE]
+            vec![ALICE, BOB, CHARLIE]
                 .into_iter()
                 .map(|id| (id, CurrencyId::Native, 1000000))
                 .collect::<Vec<_>>()
@@ -337,10 +323,10 @@ type SpecificId = u32;
 type MaxJurySize = MaxJuryMembers;
 type MaxSpecifics = MaxMilestonesPerProject;
     fn raise_dispute(
-        dispute_key: Self::DisputeKey,
-        raised_by: AccountId,
-        jury: BoundedVec<AccountId, Self::MaxJurySize>,
-        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+        _dispute_key: Self::DisputeKey,
+        _raised_by: AccountId,
+        _jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        _specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
     ) -> Result<(), DispatchError> {
         Ok(())
     }

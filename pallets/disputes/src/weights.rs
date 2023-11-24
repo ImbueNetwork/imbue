@@ -38,7 +38,7 @@ use core::marker::PhantomData;
 
 /// Weight functions for `pallet_disputes`.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> pallet_disputes::WeightInfoT for WeightInfo<T> {
+impl<T: frame_system::Config> crate::WeightInfoT for WeightInfo<T> {
 	/// Storage: ImbueDisputes Disputes (r:1 w:1)
 	/// Proof: ImbueDisputes Disputes (max_values: None, max_size: Some(6762), added: 9237, mode: MaxEncodedLen)
 	/// Storage: ImbueDisputes DisputesFinaliseOn (r:1 w:1)

@@ -92,6 +92,9 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
 
+        let funding_threshold: BalanceOf<T> =
+            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
+
         let vote: Vote<BalanceOf<T>> =
             MilestoneVotes::<T>::try_mutate(project_key, |vote_btree| {
                 if let Some(vote) = vote_btree.get_mut(&milestone_key) {
@@ -106,24 +109,23 @@ impl<T: Config> Pallet<T> {
                 }
             })?;
 
-        let funding_threshold: BalanceOf<T> =
-            T::PercentRequiredForVoteToPass::get().mul_floor(project.raised_funds);
+        Self::deposit_event(Event::VoteSubmitted(
+            who.clone(),
+            project_key,
+            milestone_key,
+            approve_milestone,
+            now,
+        ));
 
         Self::try_auto_finalise_milestone_voting(
             project_key,
             &vote,
             funding_threshold,
             user_has_voted_key,
-            who.clone(),
+            who,
+            project.raised_funds,
         )?;
 
-        Self::deposit_event(Event::VoteSubmitted(
-            who,
-            project_key,
-            milestone_key,
-            approve_milestone,
-            now,
-        ));
         Ok(().into())
     }
 
@@ -263,6 +265,7 @@ impl<T: Config> Pallet<T> {
         funding_threshold: BalanceOf<T>,
         user_has_voted_key: (ProjectKey, RoundType, MilestoneKey),
         who: AccountIdOf<T>,
+        raised_funds: BalanceOf<T>,
     ) -> Result<(), DispatchError> {
         // If the yay votes is over the funding threshold then the milestone is approved.
         if vote.yay >= funding_threshold {
@@ -284,7 +287,9 @@ impl<T: Config> Pallet<T> {
             ));
         }
 
-        if vote.nay >= funding_threshold {
+        if vote.nay >= funding_threshold
+            || (vote.yay.saturating_add(vote.nay) == raised_funds && vote.yay < funding_threshold)
+        {
             Self::close_voting_round(project_key, user_has_voted_key)?;
             Self::deposit_event(Event::MilestoneRejected(
                 user_has_voted_key.0,
