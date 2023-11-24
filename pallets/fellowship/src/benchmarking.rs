@@ -6,14 +6,14 @@ use crate::{traits::FellowshipHandle, Config, Role};
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
+use frame_system::pallet_prelude::BlockNumberFor;
 use frame_system::Pallet as System;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
 use sp_std::vec;
-use frame_system::pallet_prelude::BlockNumberFor;
 
-#[benchmarks( where AccountIdOf<T>: AsRef<[u8]>, crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
+#[benchmarks( where crate::Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
 mod benchmarks {
     use super::*;
     #[benchmark]
@@ -24,7 +24,13 @@ mod benchmarks {
 
         #[block]
         {
-            <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
+            <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
+                &alice,
+                Role::Vetter,
+                10,
+                Some(&bob),
+                true,
+            );
         }
     }
 
@@ -48,7 +54,13 @@ mod benchmarks {
         let alice: T::AccountId =
             create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
-        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
+        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
+            &alice,
+            Role::Vetter,
+            10,
+            Some(&bob),
+            true,
+        );
 
         #[extrinsic_call]
         leave_fellowship(RawOrigin::Signed(alice.clone()));
@@ -61,7 +73,13 @@ mod benchmarks {
         let alice: T::AccountId =
             create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
-        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
+        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
+            &alice,
+            Role::Vetter,
+            10,
+            Some(&bob),
+            true,
+        );
 
         #[extrinsic_call]
         force_remove_and_slash_fellowship(RawOrigin::Root, alice.clone());
@@ -73,7 +91,13 @@ mod benchmarks {
         let alice: T::AccountId =
             create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
-        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
+        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
+            &alice,
+            Role::Vetter,
+            10,
+            Some(&bob),
+            true,
+        );
 
         #[extrinsic_call]
         add_candidate_to_shortlist(RawOrigin::Signed(alice), bob.clone(), Role::Vetter, 10);
@@ -85,7 +109,13 @@ mod benchmarks {
         let alice: T::AccountId =
             create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId = create_funded_user::<T>("bob", 1, 1_000_000_000_000_000_000u128);
-        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&alice, Role::Vetter, 10, Some(&bob), true);
+        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
+            &alice,
+            Role::Vetter,
+            10,
+            Some(&bob),
+            true,
+        );
         assert_ok!(Fellowship::<T>::add_candidate_to_shortlist(
             RawOrigin::Signed(alice.clone()).into(),
             bob.clone(),
@@ -106,14 +136,20 @@ mod benchmarks {
         let charlie: T::AccountId =
             create_funded_user::<T>("alice", 1, 1_000_000_000_000_000_000u128);
 
-        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(&bob, Role::Vetter, 10, Some(&charlie), true);
-        assert_ok!(<T::MultiCurrency as MultiCurrency<
-            AccountIdOf<T>,
-        >>::deposit(
-            CurrencyId::Native,
+        <crate::Pallet<T> as FellowshipHandle<AccountIdOf<T>>>::add_to_fellowship(
             &bob,
-            1_000_000_000_000_000_000u128.saturated_into()
-        ));
+            Role::Vetter,
+            10,
+            Some(&charlie),
+            true,
+        );
+        assert_ok!(
+            <T::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::deposit(
+                CurrencyId::Native,
+                &bob,
+                1_000_000_000_000_000_000u128.saturated_into()
+            )
+        );
 
         #[extrinsic_call]
         pay_deposit_to_remove_pending_status(RawOrigin::Signed(bob.clone()));
@@ -135,10 +171,12 @@ pub fn create_funded_user<T: Config>(
     balance_factor: u128,
 ) -> T::AccountId {
     let user = account(seed, n, 0);
-    assert_ok!(<T::MultiCurrency as MultiCurrency<
-        AccountIdOf<T>,
-    >>::deposit(
-        CurrencyId::Native, &user, balance_factor.saturated_into()
-    ));
+    assert_ok!(
+        <T::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::deposit(
+            CurrencyId::Native,
+            &user,
+            balance_factor.saturated_into()
+        )
+    );
     user
 }

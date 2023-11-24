@@ -4,17 +4,20 @@ use crate::Pallet as Proposals;
 use common_types::CurrencyId;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
-use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
+use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 
 use sp_core::Get;
 use sp_runtime::SaturatedConversion;
 use sp_runtime::Saturating;
 use sp_std::convert::TryInto;
 
-use pallet_disputes::DisputeResult;
 use pallet_disputes::traits::DisputeHooks;
+use pallet_disputes::DisputeResult;
 
-use test_utils::{create_and_fund_project, assert_last_event, create_funded_user, get_contributions, get_max_milestones, get_milestones};
+use test_utils::{
+    assert_last_event, create_and_fund_project, create_funded_user, get_contributions,
+    get_max_milestones, get_milestones,
+};
 
 #[benchmarks( where
     BlockNumberFor<T>: From<u32>,
@@ -37,7 +40,8 @@ mod benchmarks {
             contributions,
             prop_milestones,
             CurrencyId::Native,
-        ).unwrap();
+        )
+        .unwrap();
 
         #[extrinsic_call]
         submit_milestone(RawOrigin::Signed(bob), project_key, 0);
@@ -46,19 +50,18 @@ mod benchmarks {
 
     #[benchmark]
     fn vote_on_milestone() {
-        let alice: T::AccountId =
-            create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId =
-            create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, 1_000_000_000_000u128);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 1, 1_000_000_000_000u128);
         // TODO: should update the contributors list to have maximum available length
-        let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
+        let contributions = get_contributions::<T>(vec![bob.clone()], 1_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
         let project_key = create_and_fund_project::<T>(
             alice.clone(),
             contributions,
             prop_milestones,
             CurrencyId::Native,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_ok!(Proposals::<T>::submit_milestone(
             RawOrigin::Signed(alice).into(),
@@ -70,7 +73,7 @@ mod benchmarks {
         vote_on_milestone(RawOrigin::Signed(bob.clone()), project_key, 0, true);
         let current_block = frame_system::Pallet::<T>::block_number();
         assert_last_event::<T>(
-            Event::<T>::VoteSubmitted(bob, project_key, 0, true, current_block).into(),
+            Event::<T>::MilestoneApproved(bob, project_key, 0, current_block).into(),
         )
     }
 
@@ -91,7 +94,8 @@ mod benchmarks {
             contributions,
             prop_milestones,
             CurrencyId::Native,
-        ).unwrap();
+        )
+        .unwrap();
 
         for milestone_key in 0..milestone_count {
             // The initiator submits a milestone
@@ -117,7 +121,7 @@ mod benchmarks {
         #[extrinsic_call]
         withdraw(RawOrigin::Signed(alice.clone()), project_key);
         assert_last_event::<T>(
-            Event::<T>::ProjectFundsWithdrawn(alice, project_key, withdrawn, CurrencyId::Native)
+            Event::<T>::ProjectFundsWithdrawn(alice, project_key, raised_funds, CurrencyId::Native)
                 .into(),
         );
     }
@@ -142,68 +146,93 @@ mod benchmarks {
 
     #[benchmark]
     fn raise_dispute() {
-        let alice: T::AccountId =
-            create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId =
-            create_funded_user::<T>("contributor", 0, 1_000_000_000_000_000_000u128);
+        let contribution_amount = 1_000_000_000_000u128;
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, contribution_amount);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 0, contribution_amount);
 
-        let contributors: Vec<T::AccountId> = (0..<T as Config>::MaximumContributorsPerProject::get()).map(|i| {
-            create_funded_user::<T>("contributor", i, 1_000_000_000_000_000_000u128)
-        }).collect();
+        let contributors: Vec<T::AccountId> = (0
+            ..<T as Config>::MaximumContributorsPerProject::get())
+            .map(|i| create_funded_user::<T>("contributor", i, contribution_amount))
+            .collect();
 
-        let contributions = get_contributions::<T>(contributors, 100_000_000_000_000_000u128);
-        let total_amount = 100_000_000_000_000_000u128 * <T as Config>::MaximumContributorsPerProject::get() as u128;
+        let contributions = get_contributions::<T>(contributors, contribution_amount);
+        let total_amount =
+            contribution_amount * <T as Config>::MaximumContributorsPerProject::get() as u128;
         let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
         let prop_milestones = get_milestones(milestone_count as u8);
-        let milestone_keys: BoundedVec<u32, <T as Config>::MaxMilestonesPerProject> = (0u32..prop_milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
+        let milestone_keys: BoundedVec<u32, <T as Config>::MaxMilestonesPerProject> = (0u32
+            ..prop_milestones.len() as u32)
+            .collect::<Vec<u32>>()
+            .try_into()
+            .unwrap();
 
         let project_key = create_and_fund_project::<T>(
             alice.clone(),
             contributions,
             prop_milestones,
             CurrencyId::Native,
-        ).unwrap();
+        )
+        .unwrap();
 
         #[extrinsic_call]
-        raise_dispute(RawOrigin::Signed(bob.clone()), project_key, milestone_keys.clone());
+        raise_dispute(
+            RawOrigin::Signed(bob.clone()),
+            project_key,
+            milestone_keys.clone(),
+        );
     }
-
 
     #[benchmark]
     fn refund() {
-        let alice: T::AccountId =
-            create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
-        let bob: T::AccountId =
-            create_funded_user::<T>("contributor", 0, 1_000_000_000_000_000_000u128);
+        let contribution_amount = 1_000_000_000_000u128;
+        let alice: T::AccountId = create_funded_user::<T>("initiator", 1, contribution_amount);
+        let bob: T::AccountId = create_funded_user::<T>("contributor", 0, contribution_amount);
 
-        let contributors: Vec<T::AccountId> = (0..<T as Config>::MaximumContributorsPerProject::get()).map(|i| {
-            create_funded_user::<T>("contributor", i, 1_000_000_000_000_000_000u128)
-        }).collect();
+        let contributors: Vec<T::AccountId> = (0
+            ..<T as Config>::MaximumContributorsPerProject::get())
+            .map(|i| create_funded_user::<T>("contributor", i, contribution_amount))
+            .collect();
 
-        let contributions = get_contributions::<T>(contributors, 100_000_000_000u128);
-        let total_amount = 100_000_000_000u128 * <T as Config>::MaximumContributorsPerProject::get() as u128;
+        let contributions = get_contributions::<T>(contributors, contribution_amount);
+        let total_amount =
+            contribution_amount * <T as Config>::MaximumContributorsPerProject::get() as u128;
         let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
         let prop_milestones = get_milestones(milestone_count as u8);
-        let milestone_keys: BoundedVec<u32, <T as Config>::MaxMilestonesPerProject> = (0u32..prop_milestones.len() as u32).collect::<Vec<u32>>().try_into().unwrap();
+        let milestone_keys: BoundedVec<u32, <T as Config>::MaxMilestonesPerProject> = (0u32
+            ..prop_milestones.len() as u32)
+            .collect::<Vec<u32>>()
+            .try_into()
+            .unwrap();
 
         let project_key = create_and_fund_project::<T>(
             alice.clone(),
             contributions,
             prop_milestones,
             CurrencyId::Native,
-        ).unwrap();
+        )
+        .unwrap();
 
-        assert_ok!(crate::Pallet::<T>::raise_dispute(RawOrigin::Signed(bob.clone()).into(), project_key, milestone_keys.clone()));
-        let _ = <crate::Pallet::<T> as DisputeHooks<ProjectKey, MilestoneKey>>::on_dispute_complete(project_key, milestone_keys.into_inner(), DisputeResult::Success);
+        assert_ok!(crate::Pallet::<T>::raise_dispute(
+            RawOrigin::Signed(bob.clone()).into(),
+            project_key,
+            milestone_keys.clone()
+        ));
+        let _ = <crate::Pallet<T> as DisputeHooks<ProjectKey, MilestoneKey>>::on_dispute_complete(
+            project_key,
+            milestone_keys.into_inner(),
+            DisputeResult::Success,
+        );
 
         #[extrinsic_call]
         refund(RawOrigin::Signed(bob.clone()), project_key);
         assert_last_event::<T>(
-            Event::<T>::ProjectRefunded{project_key, total_amount: (total_amount as u64).into()}
-                .into(),
+            Event::<T>::ProjectRefunded {
+                project_key,
+                total_amount: (total_amount as u64).into(),
+            }
+            .into(),
         );
     }
-
 
     impl_benchmark_test_suite!(
         Proposals,
