@@ -4,6 +4,7 @@ use frame_support::*;
 
 use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
+use sp_runtime::traits::AccountIdConversion;
 
 pub type TimestampOf<T> = <T as pallet_timestamp::Config>::Moment;
 
@@ -559,7 +560,7 @@ pub mod v5 {
 
 pub mod v6 {
     use super::*;
-
+    pub type ProjectV6Of<T> = ProjectV6<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>;
     #[storage_alias]
     pub(super) type MilestoneVotes<T: Config> = StorageDoubleMap<
         Pallet<T>,
@@ -571,11 +572,37 @@ pub mod v6 {
         OptionQuery,
     >;
 
+    #[derive(Encode, Clone, Decode, Debug)]
+    pub struct MilestoneV6 {
+        pub project_key: u32,
+        pub milestone_key: u32,
+        pub percentage_to_unlock: Percent,
+        pub is_approved: bool,
+    }
+
+    #[derive(Encode, Decode, Clone)]
+    pub struct ProjectV6<AccountId, Balance, BlockNumber> {
+        pub agreement_hash: H256,
+        pub milestones: BTreeMap<MilestoneKey, MilestoneV6>,
+        pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
+        pub currency_id: common_types::CurrencyId,
+        pub withdrawn_funds: Balance,
+        pub required_funds: Balance,
+        pub raised_funds: Balance,
+        pub initiator: AccountId,
+        pub created_on: BlockNumber,
+        pub cancelled: bool,
+        pub funding_type: FundingType,
+    }
+
+    #[storage_alias]
+    pub type Projects<T: Config> = StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV6Of<T>, OptionQuery>;
+
     // Since we are keeping the depricated vote of no confidence for the meantime
     // only migrate the voting rounds awaiting the migration to remove no confidence rounds.
     // User votes is now handled by IndividualVoteStore::<T>
     fn migrate_user_has_voted<T: Config>(weight: &mut Weight) {
-        Projects::<T>::iter().for_each(|(project_key, project)| {
+        v6::Projects::<T>::iter().for_each(|(project_key, project)| {
             *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             project.milestones.keys().for_each(|milestone_key| {
                 *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
@@ -679,48 +706,23 @@ pub mod v6 {
             Ok(())
         }
     }
+
+
 }
 
 pub mod v7{
     use super::*;
 
-    #[derive(Encode, Clone, Decode, Debug)]
-    pub struct MilestoneV7 {
-        pub project_key: u32,
-        pub milestone_key: u32,
-        pub percentage_to_unlock: u32,
-        pub is_approved: bool,
-        pub withdrawn: bool,
-    }
-    #[derive(Encode, Decode, Clone)]
-    pub struct ProjectV7<AccountId, Balance, BlockNumber> {
-        pub agreement_hash: H256,
-        pub milestones: BTreeMap<MilestoneKey, MilestoneV7>,
-        pub contributions: BTreeMap<AccountId, Contribution<Balance, BlockNumber>>,
-        pub currency_id: common_types::CurrencyId,
-        pub withdrawn_funds: Balance,
-        pub required_funds: Balance,
-        pub raised_funds: Balance,
-        pub initiator: AccountId,
-        pub created_on: BlockNumber,
-        pub cancelled: bool,
-        pub funding_type: FundingType,
-        //pub payment_address: [u8; 20],
-    }
-    pub type ProjectV7Of<T> = ProjectV7<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>;
-    #[storage_alias]
-    pub type Projects<T: Config> = StorageMap<Pallet<T>, Identity, ProjectKey, ProjectV7Of<T>, OptionQuery>;
-
     pub fn migrate_milestones_and_payment_address<T:Config>() -> Weight
     {
         let mut weight = T::DbWeight::get().reads_writes(1, 1);
-        let mut migrated_milestones: BTreeMap<MilestoneKey, MilestoneV7> = BTreeMap::new();
-        v7::Projects::<T>::translate(|_project_key, project: ProjectV7Of<T>| {
+        let mut migrated_milestones: BoundedBTreeMilestones<T> = BoundedBTreeMilestones::new();
+        Projects::<T>::translate(|_project_key, project: v6::ProjectV6Of<T>| {
             let _ = project
                 .milestones
                 .into_values()
                 .map(|milestone| {
-                    let migrated_milestone = MilestoneV7 {
+                    let migrated_milestone = Milestone {
                         project_key: milestone.project_key,
                         milestone_key: milestone.milestone_key,
                         percentage_to_unlock: milestone.percentage_to_unlock,
@@ -732,10 +734,9 @@ pub mod v7{
                 .collect::<Vec<_>>();
 
             weight += T::DbWeight::get().reads_writes(1, 1);
-            let migrated_project: ProjectV7Of<T> = ProjectV7 {
+            let migrated_project: Project<T> = Project {
                 milestones: migrated_milestones.clone(),
                 contributions: project.contributions,
-                required_funds: project.required_funds,
                 currency_id: project.currency_id,
                 withdrawn_funds: project.withdrawn_funds,
                 initiator: project.initiator,
@@ -744,6 +745,8 @@ pub mod v7{
                 cancelled: project.cancelled,
                 raised_funds: project.raised_funds,
                 funding_type: FundingType::Proposal,
+                deposit_id: u32::MAX.into(),
+                payment_address: Default::default(),
             };
             Some(migrated_project)
         });
