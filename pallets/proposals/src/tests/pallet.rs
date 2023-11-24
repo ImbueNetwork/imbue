@@ -4,6 +4,18 @@ use crate::{mock::*, *};
 use common_types::CurrencyId;
 use test_utils::*;
 
+pub fn run_to_block(n: BlockNumber) {
+    while System::block_number() < n {
+        Tokens::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        Proposals::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        Tokens::on_initialize(System::block_number());
+        System::on_initialize(System::block_number());
+        Proposals::on_initialize(System::block_number());
+    }
+}
+
 #[test]
 fn submit_milestone_milestone_doesnt_exist() {
     build_test_externality().execute_with(|| {

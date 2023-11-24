@@ -19,11 +19,7 @@ use test_utils::{
     get_max_milestones, get_milestones,
 };
 
-#[benchmarks( where
-    BlockNumberFor<T>: From<u32>,
-    BalanceOf<T>: From<u64>,
-)]
-
+#[benchmarks]
 mod benchmarks {
     use super::*;
 
@@ -84,7 +80,7 @@ mod benchmarks {
         let bob: T::AccountId =
             create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
         let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
-        let raised_funds: BalanceOf<T> = 100_000_000_000_000_000u128.saturated_into();
+        let raised_funds = 100_000_000_000_000_000u128.saturated_into();
 
         let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
         let prop_milestones = get_milestones(milestone_count as u8);
@@ -184,7 +180,7 @@ mod benchmarks {
 
     #[benchmark]
     fn refund() {
-        let contribution_amount = 1_000_000_000_000u128;
+        let contribution_amount = 1_000_000_000_000u128.saturated_into();
         let alice: T::AccountId = create_funded_user::<T>("initiator", 1, contribution_amount);
         let bob: T::AccountId = create_funded_user::<T>("contributor", 0, contribution_amount);
 
@@ -228,7 +224,7 @@ mod benchmarks {
         assert_last_event::<T>(
             Event::<T>::ProjectRefunded {
                 project_key,
-                total_amount: (total_amount as u64).into(),
+                total_amount: total_amount.saturated_into(),
             }
             .into(),
         );

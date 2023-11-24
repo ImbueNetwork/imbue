@@ -1,4 +1,3 @@
-use crate::mock::*;
 use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_ok, traits::Hooks, BoundedVec};
@@ -17,17 +16,17 @@ use frame_benchmarking::account;
 #[cfg(feature = "runtime-benchmarks")]
 use sp_std::vec::Vec;
 
-pub fn run_to_block(n: BlockNumber) {
-    while System::block_number() < n {
-        Tokens::on_finalize(System::block_number());
-        System::on_finalize(System::block_number());
-        Proposals::on_finalize(System::block_number());
-        System::set_block_number(System::block_number() + 1);
-        Tokens::on_initialize(System::block_number());
-        System::on_initialize(System::block_number());
-        Proposals::on_initialize(System::block_number());
-    }
-}
+// pub fn run_to_block(n: BlockNumber) {
+//     while System::block_number() < n {
+//         Tokens::on_finalize(System::block_number());
+//         System::on_finalize(System::block_number());
+//         Proposals::on_finalize(System::block_number());
+//         System::set_block_number(System::block_number() + 1);
+//         Tokens::on_initialize(System::block_number());
+//         System::on_initialize(System::block_number());
+//         Proposals::on_initialize(System::block_number());
+//     }
+// }
 
 pub fn get_contributions<T: Config>(
     accounts: Vec<AccountIdOf<T>>,
@@ -90,7 +89,7 @@ pub fn create_and_fund_project<T: Config>(
         FundingPath::TakeFromReserved,
     )?;
 
-    Ok(ProjectCount::<Test>::get())
+    Ok(ProjectCount::<T>::get())
 }
 
 // For testing grants and errors pre funding
@@ -140,7 +139,7 @@ pub fn complete_dispute<T: Config>(
     milestone_keys: Vec<MilestoneKey>,
     result: pallet_disputes::DisputeResult,
 ) -> crate::Weight {
-    Proposals::on_dispute_complete(project_key, milestone_keys, result)
+    <crate::Pallet<T>>::on_dispute_complete(project_key, milestone_keys, result)
 }
 
 pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {

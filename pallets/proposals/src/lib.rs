@@ -23,10 +23,10 @@ pub mod traits;
 use traits::{ExternalRefundHandler, IntoProposal};
 
 #[cfg(test)]
-pub(crate) mod tests;
+mod tests;
 
-#[cfg(any(feature = "runtime-benchmarks", test))]
-mod mock;
+#[cfg(test)]
+pub mod mock;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
