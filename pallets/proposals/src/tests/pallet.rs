@@ -390,14 +390,14 @@ fn users_can_submit_multiple_milestones_and_vote_independantly() {
             .get(&milestone_key_0)
             .expect("vote 0 should exist");
 
-        assert!(vote_0.yay == 100_000u64);
-        assert!(vote_0.nay == 0u64);
+        assert!(vote_0.yay == 100_000u128);
+        assert!(vote_0.nay == 0u128);
 
         let vote_1 = total_votes
             .get(&milestone_key_1)
             .expect("vote 1 should exist");
-        assert!(vote_1.yay == 100_000u64);
-        assert!(vote_1.nay == 0u64);
+        assert!(vote_1.yay == 100_000u128);
+        assert!(vote_1.nay == 0u128);
     });
 }
 
@@ -560,8 +560,8 @@ fn vote_on_milestone_actually_adds_to_vote() {
         ));
         let total_votes = MilestoneVotes::<Test>::get(project_key);
         let vote = total_votes.get(&milestone_key).expect("vote should exist");
-        assert!(vote.yay == 100_000u64);
-        assert!(vote.nay == 0u64);
+        assert!(vote.yay == 100_000u128);
+        assert!(vote.nay == 0u128);
         assert_ok!(Proposals::vote_on_milestone(
             RuntimeOrigin::signed(CHARLIE),
             project_key,
@@ -571,8 +571,8 @@ fn vote_on_milestone_actually_adds_to_vote() {
         let total_votes = MilestoneVotes::<Test>::get(project_key);
         let vote = total_votes.get(&milestone_key).expect("vote should exist");
 
-        assert!(vote.yay == 100_000u64);
-        assert!(vote.nay == 100_000u64);
+        assert!(vote.yay == 100_000u128);
+        assert!(vote.nay == 100_000u128);
     });
 }
 
@@ -691,7 +691,7 @@ fn withdraw_only_transfers_approved_milestones() {
         let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(per_contribution * 2 / 10);
         // total_contribution / number of milestones - fee
         let alice_expected_balance =
-            alice_before + ((per_contribution * 2 / 10) as u64) - expected_fee as u64;
+            alice_before + ((per_contribution * 2 / 10) as u128) - expected_fee as u128;
         assert_eq!(
             alice_after, alice_expected_balance,
             "Alice account is not the expected balance"

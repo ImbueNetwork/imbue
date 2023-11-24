@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::traits::DisputeRaiser;
-
+use crate::Pallet as DisputesPallet;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get, BoundedVec};
 use frame_system::Pallet as System;
@@ -40,7 +40,7 @@ mod benchmarks {
 
         assert_ok!(<Pallet<T> as DisputeRaiser<AccountIdOf<T>>>::raise_dispute(
             10u32.into(),
-            alice,
+            alice.clone(),
             jury,
             specifics,
         ));
@@ -59,7 +59,7 @@ mod benchmarks {
 
         assert_ok!(<Pallet<T> as DisputeRaiser<AccountIdOf<T>>>::raise_dispute(
             10u32.into(),
-            alice,
+            alice.clone(),
             jury,
             specifics,
         ));
@@ -72,12 +72,12 @@ mod benchmarks {
     fn force_fail_dispute() {
         let alice: AccountIdOf<T> = account("ALICE", 0, 0);
         let bob: AccountIdOf<T> = account("BOB", 0, 0);
-        let jury = get_jury::<T>(vec![bob]);
+        let jury = get_jury::<T>(vec![bob.clone()]);
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
         let dispute_key = 10u32.into();
         assert_ok!(<Pallet<T> as DisputeRaiser<AccountIdOf<T>>>::raise_dispute(
             dispute_key,
-            alice,
+            alice.clone(),
             jury,
             specifics,
         ));
@@ -98,12 +98,12 @@ mod benchmarks {
     fn force_succeed_dispute() {
         let alice: AccountIdOf<T> = account("ALICE", 0, 0);
         let bob: AccountIdOf<T> = account("BOB", 0, 0);
-        let jury = get_jury::<T>(vec![bob]);
+        let jury = get_jury::<T>(vec![bob.clone()]);
         let specifics = get_specifics::<T>(vec![0u32.into(), 1u32.into()]);
         let dispute_key = 10u32.into();
         assert_ok!(<Pallet<T> as DisputeRaiser<AccountIdOf<T>>>::raise_dispute(
             dispute_key,
-            alice,
+            alice.clone(),
             jury,
             specifics,
         ));
@@ -154,7 +154,7 @@ mod benchmarks {
     }
 
     impl_benchmark_test_suite!(
-        PalletDisputes,
+        DisputesPallet,
         crate::mock::new_test_ext(),
         crate::mock::Test
     );

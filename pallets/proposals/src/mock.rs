@@ -26,7 +26,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
-pub type Balance = u64;
+pub type Balance = u128;
 pub type Moment = u64;
 pub type AccountId = u128;
 
@@ -119,14 +119,14 @@ parameter_types! {
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: u64 = 5;
+    pub const ExistentialDeposit: Balance = 5;
     pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type AccountStore = System;
-    type Balance = u64;
+    type Balance = Balance;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
@@ -187,9 +187,9 @@ impl pallet_proposals::Config for Test {
 }
 
 parameter_types! {
-    pub const BasicDeposit: u64 = 10;
-    pub const FieldDeposit: u64 = 10;
-    pub const SubAccountDeposit: u64 = 10;
+    pub const BasicDeposit: Balance = 10;
+    pub const FieldDeposit: Balance = 10;
+    pub const SubAccountDeposit: Balance = 10;
     pub const MaxSubAccounts: u32 = 2;
     pub const MaxAdditionalFields: u32 = 2;
     pub const MaxRegistrars: u32 = 20;
@@ -236,7 +236,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
-        let initial_balance = 100_000_000u64;
+        let initial_balance = 100_000_000_000u128;
         System::set_block_number(1);
         let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);

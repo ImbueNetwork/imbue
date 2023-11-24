@@ -280,7 +280,7 @@ fn refund_check_refund_amount() {
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &BOB);
         let charlie_pre_creation =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &CHARLIE);
-        let per_contribution = 100000u64;
+        let per_contribution = 100000u128;
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], per_contribution as u128);
         let milestones = get_milestones(10);
         let project_key = create_and_fund_project::<Test>(
@@ -337,7 +337,7 @@ fn refund_takes_imbue_fee() {
             CurrencyId::Native,
             &<Test as Config>::ImbueFeeAccount::get(),
         );
-        let per_contribution = 500000u64;
+        let per_contribution = 500000u128;
 
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], per_contribution as u128);
         let milestones = get_milestones(10);

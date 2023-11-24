@@ -865,7 +865,7 @@ mod test {
 
     #[test]
     fn migrate_v0_to_v1() {
-        let contribution_value = 1_000_000_u64;
+        let contribution_value = 1_000_000_u128;
 
         build_test_externality().execute_with(|| {
             let project_key = 1;
@@ -951,7 +951,7 @@ mod test {
     fn migrate_v1_to_v2() {
         build_test_externality().execute_with(|| {
             let project_key = 1;
-            let contribution_value = 1_000_000_u64;
+            let contribution_value = 1_000_000_u128;
             let mut contributions: BTreeMap<
                 AccountIdOf<Test>,
                 Contribution<BalanceOf<Test>, TimestampOf<Test>>,
@@ -1077,8 +1077,8 @@ mod test {
                 true,
             );
             let v = Vote {
-                yay: 100_000u64,
-                nay: 50_000u64,
+                yay: 100_000u128,
+                nay: 50_000u128,
                 is_approved: false,
             };
             v3::OldMilestoneVotes::<Test>::insert((10, 10), v);
