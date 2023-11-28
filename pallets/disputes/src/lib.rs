@@ -443,6 +443,11 @@ pub mod pallet {
     }
 
     #[derive(Clone, Copy, PartialEq, Debug, Encode, Decode, TypeInfo)]
+    pub struct DisputeVotes<T> {
+        pub votes: T
+    }
+
+    #[derive(Clone, Copy, PartialEq, Debug, Encode, Decode, TypeInfo)]
     pub enum DisputeResult {
         Success = 0,
         Failure = 1,

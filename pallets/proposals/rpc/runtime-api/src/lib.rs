@@ -7,6 +7,6 @@ sp_api::decl_runtime_apis! {
     where AccountId: codec::Codec + Ord,
     {
         fn get_project_account_by_id(project_id: u32) -> AccountId;
-        fn get_all_project_data(project_id: u32) -> Option<(Vec<u8>, Vec<u8>)>;
+        fn get_all_project_data(project_id: u32) -> (Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>);
     }
 }

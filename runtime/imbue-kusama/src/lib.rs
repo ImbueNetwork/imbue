@@ -1208,15 +1208,32 @@ impl_runtime_apis! {
             ImbueProposals::project_account_id(project_id)
         }
 
-        /// (Project<T>, ImmutableindividualVotes<T>)
-        fn get_all_project_data(project_key: u32) -> Option<(Vec<u8>, Vec<u8>)> {
+        /// (Project<T>, ImmutableindividualVotes<T>, DisputeVotes<T>)
+        fn get_all_project_data(project_key: u32) -> (Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>) {
             use pallet_proposals::{Project, Projects, ImmutableIndividualVotes, IndividualVoteStore};
+            use pallet_disputes::{Disputes, Dispute, DisputeVotes, BoundedVotes};
+            
+            let project_encoded = match Projects::<Runtime>::get(project_key) {
+                Some(p) => Some(<Project<Runtime> as Encode>::encode(&p)),
+                None => None
+            };
 
-            if let Some(project) = Projects::<Runtime>::get(project_key) {
-                IndividualVoteStore::<Runtime>::get(project_key).map(|individual_votes| (<Project<Runtime> as Encode>::encode(&project), <ImmutableIndividualVotes<Runtime> as Encode>::encode(&individual_votes)))
-            } else {
-                None
-            }
+            let project_votes_encoded = match IndividualVoteStore::<Runtime>::get(project_key) {
+                Some(i) => Some(<ImmutableIndividualVotes<Runtime> as Encode>::encode(&i)),
+                None => None
+            };
+
+            let dispute_votes_encoded = match  Disputes::<Runtime>::get(project_key) {
+                Some(d) => {
+                    let dispute_votes: DisputeVotes<BoundedVotes<Runtime>> = DisputeVotes {
+                        votes: d.votes
+                    };
+                    Some(<DisputeVotes<BoundedVotes<Runtime>> as Encode>::encode(&dispute_votes))
+                },
+                None => {None}
+            };
+
+            (project_encoded, project_votes_encoded, dispute_votes_encoded)
         }
     }
 
