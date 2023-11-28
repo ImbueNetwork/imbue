@@ -1212,7 +1212,7 @@ impl_runtime_apis! {
         fn get_all_project_data(project_key: u32) -> (Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>) {
             use pallet_proposals::{Project, Projects, ImmutableIndividualVotes, IndividualVoteStore};
             use pallet_disputes::{Disputes, Dispute, DisputeVotes, BoundedVotes};
-            
+
             let project_encoded = match Projects::<Runtime>::get(project_key) {
                 Some(p) => Some(<Project<Runtime> as Encode>::encode(&p)),
                 None => None

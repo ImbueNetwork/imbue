@@ -444,7 +444,7 @@ pub mod pallet {
 
     #[derive(Clone, Copy, PartialEq, Debug, Encode, Decode, TypeInfo)]
     pub struct DisputeVotes<T> {
-        pub votes: T
+        pub votes: T,
     }
 
     #[derive(Clone, Copy, PartialEq, Debug, Encode, Decode, TypeInfo)]

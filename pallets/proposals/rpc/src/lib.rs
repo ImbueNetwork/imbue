@@ -24,7 +24,10 @@ where
     #[method(name = "proposals_getProjectKitty")]
     fn project_account_id(&self, project_id: u32) -> RpcResult<AccountId>;
     #[method(name = "proposals_getAllProjectData")]
-    fn all_project_data(&self, project_id: u32) -> RpcResult<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>)>;
+    fn all_project_data(
+        &self,
+        project_id: u32,
+    ) -> RpcResult<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>)>;
 }
 
 pub struct Proposals<C, B> {
@@ -76,7 +79,10 @@ where
         api.get_project_account_by_id(at, project_id)
             .map_err(runtime_error_into_rpc_err)
     }
-    fn all_project_data(&self, project_id: u32) -> RpcResult<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>)> {
+    fn all_project_data(
+        &self,
+        project_id: u32,
+    ) -> RpcResult<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>)> {
         let api = self.client.runtime_api();
         let at = self.client.info().best_hash;
 
