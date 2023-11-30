@@ -29,6 +29,8 @@ mod benchmarks {
             create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
+        let jury = get_funded_jury::<T>(10);
+            
         let contributions = get_contributions::<T>(vec![alice], 100_000_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
         let project_key = create_and_fund_project::<T>(
@@ -36,6 +38,7 @@ mod benchmarks {
             contributions,
             prop_milestones,
             CurrencyId::Native,
+            jury,
         )
         .unwrap();
 
@@ -50,6 +53,8 @@ mod benchmarks {
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
             create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
+        let jury = get_funded_jury::<T>(10);
+
         // TODO: should update the contributors list to have maximum available length
         let contributions = get_contributions::<T>(vec![bob.clone()], 1_000_000_000_000u128);
         let prop_milestones = get_max_milestones::<T>();
@@ -58,6 +63,7 @@ mod benchmarks {
             contributions,
             prop_milestones,
             CurrencyId::Native,
+            jury,
         )
         .unwrap();
 
@@ -81,9 +87,9 @@ mod benchmarks {
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
             create_funded_user::<T>("contributor", 1, 1_000_000_000_000_000_000u128);
+        let jury = get_funded_jury::<T>(10);
         let contributions = get_contributions::<T>(vec![bob.clone()], 100_000_000_000_000_000u128);
         let raised_funds = 100_000_000_000_000_000u128.saturated_into();
-
         let milestone_count = <T as Config>::MaxMilestonesPerProject::get();
         let prop_milestones = get_milestones(milestone_count as u8);
 
@@ -92,6 +98,7 @@ mod benchmarks {
             contributions,
             prop_milestones,
             CurrencyId::Native,
+            jury,
         )
         .unwrap();
 
@@ -145,6 +152,7 @@ mod benchmarks {
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
             create_funded_user::<T>("contributor", 0, 1_000_000_000_000_000_000u128);
+        let jury = get_funded_jury::<T>(10);
 
         let contributors: Vec<T::AccountId> = (0
             ..<T as Config>::MaximumContributorsPerProject::get())
@@ -161,7 +169,7 @@ mod benchmarks {
             .unwrap();
 
         let project_key =
-            create_and_fund_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native)
+            create_and_fund_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native, jury)
                 .unwrap();
 
         #[extrinsic_call]
@@ -175,6 +183,7 @@ mod benchmarks {
             create_funded_user::<T>("initiator", 1, 1_000_000_000_000_000_000u128);
         let bob: T::AccountId =
             create_funded_user::<T>("contributor", 0, 1_000_000_000_000_000_000u128);
+        let jury = get_funded_jury::<T>(10);
 
         let contributors: Vec<T::AccountId> = (0
             ..<T as Config>::MaximumContributorsPerProject::get())
@@ -191,9 +200,10 @@ mod benchmarks {
             .collect::<Vec<u32>>()
             .try_into()
             .unwrap();
+        
 
         let project_key =
-            create_and_fund_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native)
+            create_and_fund_project::<T>(alice, contributions, prop_milestones, CurrencyId::Native, jury)
                 .unwrap();
 
         assert_ok!(crate::Pallet::<T>::raise_dispute(
@@ -223,4 +233,10 @@ mod benchmarks {
         crate::mock::build_test_externality(),
         crate::mock::Test
     );
+}
+
+fn get_funded_jury<T: Config>(n: u32) -> Vec<AccountIdOf<T>> {
+    (0..n).map(|n| {
+        create_funded_user::<T>("jury member", n, 1_000_000_000_000_000_000u128)
+    }).collect::<Vec<AccountIdOf<T>>>()
 }

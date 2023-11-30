@@ -8,12 +8,16 @@ fn you_can_actually_refund_after_dispute_success() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones.clone(),
-            CurrencyId::Native,
-        )
+                    let jury = vec![JURY_1, JURY_2];
+
+        let project_key =
+            create_and_fund_project::<Test>(
+                ALICE,
+                contributions,
+                milestones.clone(),
+                CurrencyId::Native,
+                jury
+            )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -41,8 +45,10 @@ fn refund_assert_milestone_state_change() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB], 1_000_000u128);
         let milestones = get_milestones(10);
+                    let jury = vec![JURY_1, JURY_2];
+
         let project_key =
-            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native)
+            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native, jury)
                 .unwrap();
         // Only dispute some keys so that we can
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
@@ -85,12 +91,16 @@ fn refund_not_contributor() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones.clone(),
-            CurrencyId::Native,
-        )
+                    let jury = vec![JURY_1, JURY_2];
+
+        let project_key =
+            create_and_fund_project::<Test>(
+                ALICE,
+                contributions,
+                milestones.clone(),
+                CurrencyId::Native,
+                jury
+            )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -119,12 +129,16 @@ fn refund_deletes_project_when_all_funds_are_refunded() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones.clone(),
-            CurrencyId::Native,
-        )
+                    let jury = vec![JURY_1, JURY_2];
+
+        let project_key =
+            create_and_fund_project::<Test>(
+                ALICE,
+                contributions,
+                milestones.clone(),
+                CurrencyId::Native,
+                jury
+            )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -161,12 +175,16 @@ fn withdraw_then_refund_no_double_spend() {
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         let bob_before_creation =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones.clone(),
-            CurrencyId::Native,
-        )
+                    let jury = vec![JURY_1, JURY_2];
+
+        let project_key =
+            create_and_fund_project::<Test>(
+                ALICE,
+                contributions,
+                milestones.clone(),
+                CurrencyId::Native,
+                jury
+            )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -231,8 +249,10 @@ fn refund_then_withdraw_no_double_spend() {
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
         let _bob_before_creation =
             <Test as Config>::MultiCurrency::free_balance(CurrencyId::Native, &ALICE);
+                    let jury = vec![JURY_1, JURY_2];
+
         let project_key =
-            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native)
+            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native, jury)
                 .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
             (0u32..5_u32).collect::<Vec<u32>>().try_into().unwrap();
@@ -275,12 +295,16 @@ fn refund_check_refund_amount() {
         let per_contribution = 100000u128;
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], per_contribution as u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones.clone(),
-            CurrencyId::Native,
-        )
+                    let jury = vec![JURY_1, JURY_2];
+
+        let project_key =
+            create_and_fund_project::<Test>(
+                ALICE,
+                contributions,
+                milestones.clone(),
+                CurrencyId::Native,
+                jury
+            )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -333,12 +357,16 @@ fn refund_takes_imbue_fee() {
 
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], per_contribution as u128);
         let milestones = get_milestones(10);
-        let project_key = create_and_fund_project::<Test>(
-            ALICE,
-            contributions,
-            milestones.clone(),
-            CurrencyId::Native,
-        )
+                    let jury = vec![JURY_1, JURY_2];
+
+        let project_key =
+            create_and_fund_project::<Test>(
+                ALICE,
+                contributions,
+                milestones.clone(),
+                CurrencyId::Native,
+                jury
+            )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
