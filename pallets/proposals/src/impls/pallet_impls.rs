@@ -313,9 +313,8 @@ impl<T: Config> Pallet<T> {
     ) -> Result<(), DispatchError> {
         let (project_key, round_type, milestone_key) = user_has_voted_key;
         // Prevent further voting.
-        let exp_block =
-            Rounds::<T>::take((project_key, milestone_key), RoundType::VotingRound)
-                .ok_or(Error::<T>::VotingRoundNotStarted)?;
+        let exp_block = Rounds::<T>::take((project_key, milestone_key), RoundType::VotingRound)
+            .ok_or(Error::<T>::VotingRoundNotStarted)?;
         // Prevent hook from calling.
         RoundsExpiring::<T>::remove(exp_block);
         // Allow future votes to occur on this milestone

@@ -200,9 +200,6 @@ pub mod pallet {
         OptionQuery,
     >;
 
-    
-
-
     /// Stores the project keys and round types ending on a given block
     #[pallet::storage]
     pub type RoundsExpiring<T> = StorageMap<
