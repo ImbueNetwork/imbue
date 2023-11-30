@@ -27,7 +27,7 @@ where
     fn all_project_data(
         &self,
         project_id: u32,
-    ) -> RpcResult<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>)>;
+    ) -> RpcResult<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>, Vec<u32>)>;
 }
 
 pub struct Proposals<C, B> {
@@ -82,7 +82,7 @@ where
     fn all_project_data(
         &self,
         project_id: u32,
-    ) -> RpcResult<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>)> {
+    ) -> RpcResult<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>, Vec<u32>)> {
         let api = self.client.runtime_api();
         let at = self.client.info().best_hash;
 

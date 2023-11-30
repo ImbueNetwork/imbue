@@ -37,7 +37,7 @@ use pallet_proposals::traits::ExternalRefundHandler;
 #[test]
 fn transfer_treasury_to_parachain_grant_escrow_address() {
     let transfer_amount: Balance = ksm_amount(1);
-    let treasury_origin = TreasuryOrigin::Kusama;
+    let _treasury_origin = TreasuryOrigin::Kusama;
     let kusama_treasury_address: AccountId = PalletId(*b"py/trsry").into_account_truncating();
 
     Development::execute_with(|| {
@@ -133,7 +133,7 @@ fn transfer_ksm_to_relay_chain() {
 
 #[test]
 fn test_xcm_refund_handler_to_kusama() {
-    let treasury_origin = TreasuryOrigin::Kusama;
+    let _treasury_origin = TreasuryOrigin::Kusama;
     let kusama_treasury_address: AccountId = PalletId(*b"py/trsry").into_account_truncating();
     let _kusama_treasury_balance_before =
         Kusama::account_data_of(kusama_treasury_address.clone()).free;

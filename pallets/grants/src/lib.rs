@@ -131,7 +131,7 @@ pub mod pallet {
             );
 
             let mut contributions = BTreeMap::new();
-            let _ = assigned_approvers.iter().for_each(|approver_id| {
+            assigned_approvers.iter().for_each(|approver_id| {
                 contributions.insert(
                     approver_id.clone(),
                     Contribution {

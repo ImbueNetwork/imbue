@@ -1,8 +1,8 @@
 use crate::*;
 use common_types::CurrencyId;
-use frame_support::{assert_ok, BoundedVec};
+use frame_support::{BoundedVec};
 use frame_system::EventRecord;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::{MultiReservableCurrency};
 
 use pallet_disputes::traits::DisputeHooks;
 use sp_arithmetic::per_things::Percent;

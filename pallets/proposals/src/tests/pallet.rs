@@ -691,7 +691,7 @@ fn withdraw_only_transfers_approved_milestones() {
         let expected_fee = <Test as Config>::ImbueFee::get().mul_floor(per_contribution * 2 / 10);
         // total_contribution / number of milestones - fee
         let alice_expected_balance =
-            alice_before + ((per_contribution * 2 / 10) as u128) - expected_fee as u128;
+            alice_before + (per_contribution * 2 / 10) - expected_fee;
         assert_eq!(
             alice_after, alice_expected_balance,
             "Alice account is not the expected balance"
@@ -1074,3 +1074,59 @@ fn close_voting_round_works() {
             .is_empty());
     })
 }
+
+
+
+#[test]
+fn project_in_voting_is_saved_on_submission() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
+                .unwrap();
+
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 0));
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 1));
+
+        assert!(ProjectInVoting::<Test>::contains_key(project_key, 0));
+        assert!(ProjectInVoting::<Test>::contains_key(project_key, 1));
+    })
+}
+
+#[test]
+fn project_in_voting_is_removed_on_init_hook() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
+                .unwrap();
+
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 0));
+
+        assert!(ProjectInVoting::<Test>::contains_key(project_key, 0));
+
+        run_to_block(frame_system::Pallet::<Test>::block_number() + <Test as Config>::MilestoneVotingWindow::get());
+        
+        assert!(!ProjectInVoting::<Test>::contains_key(project_key, 0));
+    })
+}
+
+#[test]
+fn project_in_voting_is_removed_on_milestone_autofinalisation() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![BOB], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
+                .unwrap();
+
+        assert_ok!(Proposals::submit_milestone(RuntimeOrigin::signed(ALICE), project_key, 0));
+        assert!(ProjectInVoting::<Test>::contains_key(project_key, 0));
+        assert_ok!(Proposals::vote_on_milestone(RuntimeOrigin::signed(BOB), project_key, 0, true));
+        assert!(!ProjectInVoting::<Test>::contains_key(project_key, 0));
+    })
+}
+
+
