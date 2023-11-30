@@ -6,10 +6,10 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use pallet_fellowship::traits::EnsureRole;
 use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::DispatchError::BadOrigin;
-use pallet_fellowship::traits::EnsureRole;
 
 use std::convert::TryInto;
 
@@ -36,24 +36,25 @@ fn create_brief_not_approved_applicant() {
 #[test]
 fn create_brief_approved_applicant() {
     build_test_externality().execute_with(|| {
-        assert_ok!(<Test as Config>::EnsureRole::ensure_role(&FREELANCER, pallet_fellowship::Role::Freelancer, None));
+        assert_ok!(<Test as Config>::EnsureRole::ensure_role(
+            &FREELANCER,
+            pallet_fellowship::Role::Freelancer,
+            None
+        ));
 
-         assert_ok!(
-             BriefsMod::create_brief(
-                 RuntimeOrigin::signed(BOB),
-                 get_brief_owners(10),
-                 FREELANCER,
-                 100000,
-                 10000,
-                 gen_hash(1),
-                 CurrencyId::Native,
-                 get_milestones(10),
-                 true,
-             )
-         );
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(BOB),
+            get_brief_owners(10),
+            FREELANCER,
+            100000,
+            10000,
+            gen_hash(1),
+            CurrencyId::Native,
+            get_milestones(10),
+            true,
+        ));
     });
 }
-
 
 #[test]
 fn create_brief_brief_owner_overflow() {

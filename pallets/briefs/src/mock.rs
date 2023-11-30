@@ -18,13 +18,13 @@ use sp_runtime::{
 };
 
 use pallet_deposits::traits::DepositHandler;
+use pallet_fellowship::traits::FellowshipHandle;
+use pallet_fellowship::Role;
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
     vec::Vec,
 };
-use pallet_fellowship::Role;
-use pallet_fellowship::traits::FellowshipHandle;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 pub type BlockNumber = u64;
@@ -297,7 +297,6 @@ impl pallet_fellowship::Config for Test {
     type Permissions = pallet_fellowship::impls::VetterAndFreelancerAllPermissions;
     type WeightInfo = pallet_fellowship::weights::WeightInfo<Test>;
 }
-
 
 parameter_types! {
     pub const UnitWeightCost: u64 = 10;

@@ -31,10 +31,10 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
+    use pallet_fellowship::traits::EnsureRole;
     use pallet_fellowship::traits::SelectJury;
     use pallet_proposals::traits::IntoProposal;
     use pallet_proposals::{Contribution, FundingPath, ProposedMilestone};
-    use pallet_fellowship::traits::EnsureRole;
     use sp_arithmetic::per_things::Percent;
     use sp_core::H256;
     use sp_runtime::traits::Zero;
@@ -91,7 +91,6 @@ pub mod pallet {
         type EnsureRole: pallet_fellowship::traits::EnsureRole<AccountIdOf<Self>>;
         /// The weight info for the extrinsics.
         type WeightInfo: WeightInfoT;
-
     }
 
     #[pallet::storage]
