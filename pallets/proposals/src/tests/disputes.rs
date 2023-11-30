@@ -9,16 +9,15 @@ fn raise_dispute_not_contributor() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -32,7 +31,6 @@ fn raise_dispute_not_contributor() {
         );
     })
 }
-
 
 #[test]
 fn raise_dispute_project_doesnt_exist() {
@@ -53,16 +51,15 @@ fn raise_dispute_milestone_already_in_dispute() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -92,11 +89,16 @@ fn raise_dispute_invalid_milestone_key() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native, jury)
-                .unwrap();
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones,
+            CurrencyId::Native,
+            jury,
+        )
+        .unwrap();
         assert_noop!(
             Proposals::raise_dispute(
                 RuntimeOrigin::signed(BOB),
@@ -129,11 +131,16 @@ fn raise_dispute_cant_raise_on_approved_milestone() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native, jury)
-                .unwrap();
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones,
+            CurrencyId::Native,
+            jury,
+        )
+        .unwrap();
         let submitted_milestone_key = 0u32;
 
         assert_ok!(Proposals::submit_milestone(
@@ -178,16 +185,15 @@ fn on_dispute_complete_success_removes_dispute_status() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -213,16 +219,15 @@ fn on_dispute_complete_failure_removes_dispute_status() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =             
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -248,16 +253,15 @@ fn dispute_success_does_not_cancel_project() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
             ..milestones.len() as u32)
@@ -286,16 +290,15 @@ fn dispute_success_approves_milestone_for_refund_but_only_ones_specified() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (1u32
             ..milestones.len() as u32)
@@ -322,16 +325,15 @@ fn raise_dispute_allows_milestone_voting() {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
         let submitted_milestone_key = 0;
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
 
         assert_ok!(Proposals::submit_milestone(
@@ -371,16 +373,15 @@ fn raise_dispute_allows_milestone_voting_on_non_disputed_milestones() {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
         let submitted_milestone_keys = [0, 1];
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
 
         assert_ok!(Proposals::submit_milestone(
@@ -427,16 +428,15 @@ fn raise_dispute_allows_submission() {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
         let milestone_key = 0;
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
 
         let dispute_milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
@@ -463,16 +463,15 @@ fn failed_dispute_tests() {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
         let _milestone_key = 0;
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
 
         let dispute_milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
@@ -506,11 +505,16 @@ fn assert_can_recall_dispute_after_success() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native, jury)
-                .unwrap();
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones,
+            CurrencyId::Native,
+            jury,
+        )
+        .unwrap();
         // Only call the dispute on part.
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
             (0u32..5_u32).collect::<Vec<u32>>().try_into().unwrap();
@@ -540,11 +544,16 @@ fn assert_can_recall_dispute_after_failure() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-                    let jury = vec![JURY_1, JURY_2];
+        let jury = vec![JURY_1, JURY_2];
 
-        let project_key =
-            create_and_fund_project::<Test>(ALICE, contributions, milestones, CurrencyId::Native, jury)
-                .unwrap();
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones,
+            CurrencyId::Native,
+            jury,
+        )
+        .unwrap();
         // Only call the dispute on part.
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
             (0u32..5_u32).collect::<Vec<u32>>().try_into().unwrap();
@@ -576,14 +585,13 @@ fn raise_dispute_with_single_jury_auto_completes() {
         let milestones = get_milestones(10);
         let jury = vec![JURY_1];
 
-        let project_key =
-            create_and_fund_project::<Test>(
-                ALICE,
-                contributions,
-                milestones.clone(),
-                CurrencyId::Native,
-                jury
-            )
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
         .unwrap();
 
         let milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> = (0u32
@@ -592,16 +600,26 @@ fn raise_dispute_with_single_jury_auto_completes() {
             .try_into()
             .unwrap();
 
-        assert_ok!(Proposals::raise_dispute(RuntimeOrigin::signed(BOB), project_key, milestone_keys.clone()));
+        assert_ok!(Proposals::raise_dispute(
+            RuntimeOrigin::signed(BOB),
+            project_key,
+            milestone_keys.clone()
+        ));
 
         let project = Projects::<Test>::get(project_key).unwrap();
 
         project.milestones.iter().for_each(|(key, ms)| {
             // if its meant to be approved for refund then check
             if milestone_keys.contains(key) {
-                assert!(ms.can_refund, "the dispute should have bypassed dispute pallet and autofinalised.");
+                assert!(
+                    ms.can_refund,
+                    "the dispute should have bypassed dispute pallet and autofinalised."
+                );
             } else {
-                assert!(!ms.can_refund, "This milestone should not have been approved for refund.");
+                assert!(
+                    !ms.can_refund,
+                    "This milestone should not have been approved for refund."
+                );
             }
 
             // They havent been transferred yet

@@ -3,7 +3,7 @@ use frame_support::BoundedVec;
 use sp_runtime::DispatchError;
 
 use crate::pallet::{AccountIdOf, Config, Dispute};
-use crate::traits::{DisputeRaiser, DisputeHooks};
+use crate::traits::{DisputeHooks, DisputeRaiser};
 
 impl<T: Config> DisputeRaiser<AccountIdOf<T>> for Pallet<T> {
     type DisputeKey = T::DisputeKey;

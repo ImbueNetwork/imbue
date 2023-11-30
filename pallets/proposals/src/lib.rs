@@ -465,7 +465,7 @@ pub mod pallet {
                 )?;
                 ProjectsInDispute::<T>::insert(project_key, milestone_keys);
             }
-            
+
             Ok(())
         }
 
@@ -631,7 +631,6 @@ pub mod pallet {
             jury: BoundedVec<AccountIdOf<T>, Self::MaxJuryMembers>,
             on_creation_funding: FundingPath,
         ) -> Result<(), DispatchError> {
-
             ensure!(jury.len() > 0, Error::<T>::JuryRequired);
             let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
 
