@@ -308,10 +308,10 @@ impl<T: Config> Pallet<T> {
     }
 
     pub(crate) fn close_voting_round(
-        project_key: ProjectKey,
+        _project_key: ProjectKey,
         user_has_voted_key: (ProjectKey, RoundType, MilestoneKey),
     ) -> Result<(), DispatchError> {
-        let (project_key, round_type, milestone_key) = user_has_voted_key;
+        let (project_key, _round_type, milestone_key) = user_has_voted_key;
         // Prevent further voting.
         let exp_block = Rounds::<T>::take((project_key, milestone_key), RoundType::VotingRound)
             .ok_or(Error::<T>::VotingRoundNotStarted)?;
