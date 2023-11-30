@@ -41,6 +41,7 @@ mod benchmarks {
             brief_id,
             CurrencyId::Native,
             milestones,
+            false,
         );
         assert_last_event::<T>(Event::<T>::BriefSubmitted(caller, brief_id).into());
     }
@@ -63,7 +64,8 @@ mod benchmarks {
             initial_contribution,
             brief_id,
             CurrencyId::Native,
-            milestones
+            milestones,
+            false,
         ));
         let brief_owner: T::AccountId = brief_owners[0].clone();
         // (brief_owner, brief_id, contribution)
@@ -93,7 +95,8 @@ mod benchmarks {
             initial_contribution,
             brief_id,
             CurrencyId::Native,
-            milestones
+            milestones,
+            false,
         ));
         // (origin, brief_id)
         #[extrinsic_call]
@@ -118,7 +121,8 @@ mod benchmarks {
             initial_contribution,
             brief_id,
             CurrencyId::Native,
-            milestones
+            milestones,
+            false,
         ));
         // (origin, brief_id)
         #[extrinsic_call]
