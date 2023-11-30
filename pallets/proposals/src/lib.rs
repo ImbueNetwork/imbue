@@ -210,12 +210,27 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    // TODO: Check if this is in use.
+    /// A helper to find what projects / milestones are in a dispute.
     #[pallet::storage]
     pub type ProjectsInDispute<T> = StorageMap<
         _,
         Blake2_128Concat,
         ProjectKey,
         BoundedVec<MilestoneKey, <T as Config>::MaxMilestonesPerProject>,
+        ValueQuery,
+    >;
+
+    /// Projects in Voting round.
+    /// A helper for the runtime api so we dont have to iterate over the Rounds Double map.
+    #[pallet::storage]
+    pub type ProjectInVoting<T> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        ProjectKey,
+        Blake2_128Concat,
+        MilestoneKey,
+        (),
         ValueQuery,
     >;
 
@@ -369,6 +384,8 @@ pub mod pallet {
                                 individual_votes.clear_milestone_votes(*milestone_key);
                             }
                         });
+
+                        ProjectInVoting::<T>::remove(project_key, milestone_key);
                     }
                     // Votes of no confidence do not finaliese automatically
                     RoundType::VoteOfNoConfidence => {

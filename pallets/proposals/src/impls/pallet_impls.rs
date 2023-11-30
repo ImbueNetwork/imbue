@@ -57,6 +57,8 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
 
+        ProjectInVoting::<T>::insert(project_key, milestone_key, ());
+
         Self::deposit_event(Event::MilestoneSubmitted(who, project_key, milestone_key));
         Self::deposit_event(Event::VotingRoundCreated(project_key));
         Ok(().into())
@@ -306,25 +308,25 @@ impl<T: Config> Pallet<T> {
     }
 
     pub(crate) fn close_voting_round(
-        project_key: ProjectKey,
+        _project_key: ProjectKey,
         user_has_voted_key: (ProjectKey, RoundType, MilestoneKey),
     ) -> Result<(), DispatchError> {
+        let (project_key, _round_type, milestone_key) = user_has_voted_key;
         // Prevent further voting.
-        let exp_block =
-            Rounds::<T>::take((project_key, user_has_voted_key.2), RoundType::VotingRound)
-                .ok_or(Error::<T>::VotingRoundNotStarted)?;
+        let exp_block = Rounds::<T>::take((project_key, milestone_key), RoundType::VotingRound)
+            .ok_or(Error::<T>::VotingRoundNotStarted)?;
         // Prevent hook from calling.
         RoundsExpiring::<T>::remove(exp_block);
         // Allow future votes to occur on this milestone
         IndividualVoteStore::<T>::try_mutate(project_key, |maybe_individual_votes| {
             if let Some(individual_votes) = maybe_individual_votes {
-                individual_votes.clear_milestone_votes(user_has_voted_key.2);
+                individual_votes.clear_milestone_votes(milestone_key);
             } else {
                 return Err(Error::<T>::IndividualVoteNotFound.into());
             }
             Ok::<(), DispatchError>(())
         })?;
-
+        ProjectInVoting::<T>::remove(project_key, milestone_key);
         Ok(())
     }
 }
