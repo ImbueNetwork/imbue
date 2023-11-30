@@ -284,7 +284,6 @@ pub static TREASURY: AccountId = 200;
 pub static JURY_1: AccountId = 1002;
 pub static JURY_2: AccountId = 1001;
 
-
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::<Test>::default()
         .build_storage()
@@ -315,7 +314,9 @@ pub struct MockJurySelector;
 impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
     type JurySize = MaxJuryMembers;
     fn select_jury() -> BoundedVec<AccountId, Self::JurySize> {
-        vec![JURY_1, JURY_2].try_into().expect("should be below bound.")
+        vec![JURY_1, JURY_2]
+            .try_into()
+            .expect("should be below bound.")
     }
 }
 
