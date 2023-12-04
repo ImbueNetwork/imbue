@@ -736,8 +736,8 @@ pub mod v7 {
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
 
             ensure!(
-
-                <<T as Config>::JurySelector as SelectJury<AccountIdOf<T>>>::JurySize::get() < u8::MAX as u32,
+                <<T as Config>::JurySelector as SelectJury<AccountIdOf<T>>>::JurySize::get()
+                    < u8::MAX as u32,
                 "Max jury members must be smaller than u8"
             );
 
@@ -768,13 +768,10 @@ pub mod v7 {
             weight
         }
 
-        
-
         #[cfg(feature = "try-runtime")]
         fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
             log::warn!( target:  "pallet-proposals", "Running post_upgrade()");
-            Projects::<T>::iter().for_each(|(_k, project)|{
-
+            Projects::<T>::iter().for_each(|(_k, project)| {
                 assert!(project.jury.len() > 0, "jury size must be > 0");
             });
 
