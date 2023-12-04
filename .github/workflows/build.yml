@@ -34,6 +34,30 @@ jobs:
           machine_zone: ${{ env.GCP_ZONE }}
           ephemeral: true
 
+  cargo-fmt:
+    needs: create-runner
+      runs-on: ${{ needs.create-runner.outputs.label }}
+      steps:
+      - uses: actions/checkout@v4
+
+      - name: Set HOME
+        run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
+
+      - name: Install minimal nightly Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2023-05-22
+          target: wasm32-unknown-unknown
+          override: true
+          components: rustfmt, clippy
+      
+      - name: 🫠 rustfmt 🫠
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --check
+
   test-features:
       needs: create-runner
       runs-on: ${{ needs.create-runner.outputs.label }}
@@ -50,16 +74,41 @@ jobs:
           toolchain: nightly-2023-05-22
           target: wasm32-unknown-unknown
           override: true
-          components: rustfmt, clippy
 
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler clang build-essential -y
 
-      - name: 🫠 rustfmt 🫠
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --check
-
       - name: Run tests with benchmarks
         run: cargo test --features runtime-benchmarks
+
+  try-runtime:
+      needs: create-runner
+      runs-on: ${{ needs.create-runner.outputs.label }}
+      steps:
+      - uses: actions/checkout@v4
+
+      - name: Set HOME
+        run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
+
+      - name: Install minimal nightly Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2023-05-22
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: Install Dependencies
+        run: sudo apt install protobuf-compiler clang build-essential -y
+
+      - name: Install try-runtime cli
+        run: cargo install --git https://github.com/paritytech/try-runtime-cli --locked
+
+      - name: build with try-runtime
+        run: cargo build --release --features try-runtime
+
+      - name: try-runtime kusama
+        run: try-runtime --runtime target/release/wbuild/imbue-kusama-runtime/imbue_kusama_runtime.wasm on-runtime-upgrade live --uri ws://34.123.139.91:9942
+      
+      - name: try-runtime rococo
+        run: try-runtime --runtime target/release/wbuild/imbue-kusama-runtime/imbue_kusama_runtime.wasm on-runtime-upgrade live --uri ws://35.202.116.137:9942
