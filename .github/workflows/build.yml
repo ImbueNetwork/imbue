@@ -36,8 +36,8 @@ jobs:
 
   cargo-fmt:
     needs: create-runner
-      runs-on: ${{ needs.create-runner.outputs.label }}
-      steps:
+    runs-on: ${{ needs.create-runner.outputs.label }}
+    steps:
       - uses: actions/checkout@v4
 
       - name: Set HOME
@@ -59,9 +59,9 @@ jobs:
           args: --check
 
   test-features:
-      needs: create-runner
-      runs-on: ${{ needs.create-runner.outputs.label }}
-      steps:
+    needs: create-runner
+    runs-on: ${{ needs.create-runner.outputs.label }}
+    steps:
       - uses: actions/checkout@v4
 
       - name: Set HOME
@@ -82,9 +82,9 @@ jobs:
         run: cargo test --features runtime-benchmarks
 
   try-runtime:
-      needs: create-runner
-      runs-on: ${{ needs.create-runner.outputs.label }}
-      steps:
+    needs: create-runner
+    runs-on: ${{ needs.create-runner.outputs.label }}
+    steps:
       - uses: actions/checkout@v4
 
       - name: Set HOME
