@@ -181,12 +181,13 @@ pub mod migrations {
     use super::*;
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
-        pallet_proposals::migration::v7::MigrateToV7<Runtime>,
+        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
         pallet_balances::migration::MigrateToTrackInactive<Runtime, xcm_config::CheckingAccount>,
         pallet_collator_selection::migration::v1::MigrateToV1<Runtime>,
         pallet_xcm::migration::v1::VersionUncheckedMigrateToV1<Runtime>,
-        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
         orml_unknown_tokens::Migration<Runtime>,
+        // PROPOSALS MIGRATION MUST BE RUN AFTER FELLOWSHIP MIGRATION
+        pallet_proposals::migration::v7::MigrateToV7<Runtime>,
     );
 }
 

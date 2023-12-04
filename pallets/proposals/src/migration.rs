@@ -736,7 +736,8 @@ pub mod v7 {
             let onchain = <Pallet<T> as GetStorageVersion>::on_chain_storage_version();
 
             ensure!(
-                <T as Config>::MaxJuryMembers::get() < u8::MAX as u32,
+
+                <<T as Config>::JurySelector as SelectJury<AccountIdOf<T>>>::JurySize::get() < u8::MAX as u32,
                 "Max jury members must be smaller than u8"
             );
 
@@ -767,9 +768,15 @@ pub mod v7 {
             weight
         }
 
+        
+
         #[cfg(feature = "try-runtime")]
         fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
             log::warn!( target:  "pallet-proposals", "Running post_upgrade()");
+            Projects::<T>::iter().for_each(|(_k, project)|{
+
+                assert!(project.jury.len() > 0, "jury size must be > 0");
+            });
 
             ensure!(
                 Pallet::<T>::current_storage_version() == 7,
@@ -793,8 +800,6 @@ pub mod v7 {
                 v5::FundingType::Grant(_) => crate::FundingPath::WaitForFunding,
             };
 
-            let jury = <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury();
-
             let refund_locations: BoundedVec<(Locality<AccountIdOf<T>>, Percent), T::MaximumContributorsPerProject> = match project.funding_type {
                 v5::FundingType::Proposal => crate::Pallet::<T>::convert_contributions_to_refund_locations(&project.contributions),
                 v5::FundingType::Brief => crate::Pallet::<T>::convert_contributions_to_refund_locations(&project.contributions),
@@ -810,6 +815,12 @@ pub mod v7 {
                         }};
                     vec![(Locality::Foreign(multilocation), Percent::from_parts(100))].try_into().expect("1 is lower than bound if it isnt then the system is broken anyway; qed")
                 },
+            };
+
+            let jury = match project.funding_type {
+                v5::FundingType::Grant(_) => project.contributions.keys().cloned().collect::<Vec<AccountIdOf<T>>>(),
+                v5::FundingType::Brief => <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury().to_vec(),
+                _ => <T::JurySelector as SelectJury<AccountIdOf<T>>>::select_jury().to_vec(),
             };
 
             let mut new_milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
@@ -844,7 +855,7 @@ pub mod v7 {
                 cancelled: project.cancelled,
                 deposit_id: project.deposit_id,
                 refund_locations,
-                jury,
+                jury: jury.try_into().expect("contributions bound is larger than jury bound, reduce contribution bound or increase jury bound."),
                 on_creation_funding,
                 refunded_funds: Zero::zero(),
             };
