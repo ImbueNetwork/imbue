@@ -59,7 +59,7 @@ jobs:
           args: --check
 
   test-features:
-    needs: create-runner
+    needs: create-runner cargo-fmt
     runs-on: ${{ needs.create-runner.outputs.label }}
     steps:
       - uses: actions/checkout@v4
@@ -82,7 +82,7 @@ jobs:
         run: cargo test --features runtime-benchmarks
 
   try-runtime:
-    needs: create-runner
+    needs: create-runner test-features cargo-fmt
     runs-on: ${{ needs.create-runner.outputs.label }}
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +97,7 @@ jobs:
           toolchain: nightly-2023-05-22
           target: wasm32-unknown-unknown
           override: true
+          components: rust-src
 
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler clang build-essential -y
