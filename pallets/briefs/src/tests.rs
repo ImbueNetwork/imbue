@@ -6,16 +6,53 @@ use crate::*;
 use common_types::CurrencyId;
 use frame_support::{assert_noop, assert_ok, pallet_prelude::*};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use pallet_fellowship::traits::EnsureRole;
 use pallet_proposals::{BoundedProposedMilestones, Projects, ProposedMilestone};
 use sp_arithmetic::per_things::Percent;
+use sp_runtime::DispatchError::BadOrigin;
 
 use std::convert::TryInto;
 
 #[test]
 fn create_brief_not_approved_applicant() {
     build_test_externality().execute_with(|| {
-        // TODO:
-        // Only accounts in the fellowship can apply for work
+        assert_noop!(
+            BriefsMod::create_brief(
+                RuntimeOrigin::signed(BOB),
+                get_brief_owners(u32::MAX),
+                ALICE,
+                100000,
+                10000,
+                gen_hash(1),
+                CurrencyId::Native,
+                get_milestones(10),
+                true,
+            ),
+            BadOrigin
+        );
+    });
+}
+
+#[test]
+fn create_brief_approved_applicant() {
+    build_test_externality().execute_with(|| {
+        assert_ok!(<Test as Config>::EnsureRole::ensure_role(
+            &FREELANCER,
+            pallet_fellowship::Role::Freelancer,
+            None
+        ));
+
+        assert_ok!(BriefsMod::create_brief(
+            RuntimeOrigin::signed(BOB),
+            get_brief_owners(10),
+            FREELANCER,
+            100000,
+            10000,
+            gen_hash(1),
+            CurrencyId::Native,
+            get_milestones(10),
+            true,
+        ));
     });
 }
 
@@ -32,6 +69,7 @@ fn create_brief_brief_owner_overflow() {
                 gen_hash(1),
                 CurrencyId::Native,
                 get_milestones(10),
+                false,
             ),
             Error::<Test>::TooManyBriefOwners
         );
@@ -50,6 +88,7 @@ fn create_brief_with_no_contribution_ok() {
             gen_hash(1),
             CurrencyId::Native,
             get_milestones(10),
+            false,
         ));
     });
 }
@@ -70,6 +109,7 @@ fn create_brief_no_contribution_and_contribute() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            false,
         ));
 
         (0..5).for_each(|_| {
@@ -111,6 +151,7 @@ fn contribute_to_brief_not_brief_owner() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            false,
         ));
 
         assert_noop!(
@@ -139,6 +180,7 @@ fn contribute_to_brief_more_than_total_ok() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            false,
         ));
         assert_ok!(BriefsMod::contribute_to_brief(
             RuntimeOrigin::signed(BOB),
@@ -163,6 +205,7 @@ fn create_brief_already_exists() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            false,
         ));
 
         assert_noop!(
@@ -175,6 +218,7 @@ fn create_brief_already_exists() {
                 brief_id,
                 CurrencyId::Native,
                 get_milestones(10),
+                false,
             ),
             Error::<Test>::BriefAlreadyExists
         );
@@ -196,6 +240,7 @@ fn only_applicant_can_start_work() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            false,
         ));
 
         assert_noop!(
@@ -225,6 +270,7 @@ fn initial_contribution_and_extra_contribution_aggregates() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            false,
         ));
 
         assert_ok!(BriefsMod::contribute_to_brief(
@@ -261,6 +307,7 @@ fn reserved_funds_are_transferred_to_project_kitty() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            false,
         );
 
         assert_ok!(BriefsMod::commence_work(
@@ -293,6 +340,7 @@ fn cancel_brief_works() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            false,
         ));
 
         assert_ok!(BriefsMod::contribute_to_brief(
@@ -359,6 +407,7 @@ fn cancel_brief_not_brief_owner() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            false,
         ));
 
         assert_noop!(

@@ -1,4 +1,4 @@
-use crate::Rank;
+use crate::{Rank, Role};
 use codec::{FullCodec, FullEncode};
 use frame_support::{pallet_prelude::*, weights::Weight};
 use sp_runtime::DispatchError;
@@ -19,7 +19,7 @@ pub trait FellowshipHandle<AccountId> {
     fn revoke_fellowship(who: &AccountId, slash_deposit: bool) -> Result<(), DispatchError>;
 }
 
-pub trait EnsureRole<AccountId, Role> {
+pub trait EnsureRole<AccountId> {
     type Success;
     fn ensure_role(
         acc: &AccountId,
