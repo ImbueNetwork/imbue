@@ -247,10 +247,10 @@ impl pallet_disputes::traits::DisputeRaiser<AccountId> for MockDisputeRaiser {
     type MaxJurySize = MaxJuryMembers;
     type MaxSpecifics = MaxMilestonesPerProject;
     fn raise_dispute(
-        dispute_key: Self::DisputeKey,
-        raised_by: AccountId,
-        jury: BoundedVec<AccountId, Self::MaxJurySize>,
-        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+        _dispute_key: Self::DisputeKey,
+        _raised_by: AccountId,
+        _jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        _specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
     ) -> Result<(), DispatchError> {
         Ok(())
     }

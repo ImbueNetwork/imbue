@@ -103,6 +103,7 @@ pub mod v0 {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 1));
             } else {
                 log::warn!("Skipping v1, should be removed from Executive");
+                log::warn!("on_chain = {:?}, current = {:?}", onchain, current);
                 weight = weight.saturating_add(T::DbWeight::get().reads(1));
             }
 

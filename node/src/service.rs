@@ -253,7 +253,7 @@ async fn start_node_impl(
         config: parachain_config,
         keystore: params.keystore_container.keystore(),
         backend,
-        network: network.clone(),
+        network,
         sync_service: sync_service.clone(),
         system_rpc_tx,
         tx_handler_controller,
@@ -318,7 +318,7 @@ async fn start_node_impl(
             &task_manager,
             relay_chain_interface.clone(),
             transaction_pool,
-            sync_service.clone(),
+            sync_service,
             params.keystore_container.keystore(),
             relay_chain_slot_duration,
             para_id,
@@ -395,7 +395,7 @@ fn start_consensus(
         client.clone(),
         transaction_pool,
         prometheus_registry,
-        telemetry.clone(),
+        telemetry,
     );
 
     let proposer = Proposer::new(proposer_factory);

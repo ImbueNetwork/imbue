@@ -1,8 +1,8 @@
 use crate::*;
 use common_types::CurrencyId;
-use frame_support::{assert_ok, BoundedVec};
+use frame_support::BoundedVec;
 use frame_system::EventRecord;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::MultiReservableCurrency;
 
 use pallet_disputes::traits::DisputeHooks;
 use sp_arithmetic::per_things::Percent;
@@ -13,6 +13,7 @@ use sp_std::convert::TryInto;
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::account;
+use frame_support::assert_ok;
 #[cfg(feature = "runtime-benchmarks")]
 use sp_std::vec::Vec;
 
