@@ -18,6 +18,8 @@ use sp_runtime::{
 };
 
 use pallet_deposits::traits::DepositHandler;
+use pallet_fellowship::traits::FellowshipHandle;
+use pallet_fellowship::Role;
 use sp_std::{
     convert::{TryFrom, TryInto},
     str,
@@ -57,6 +59,7 @@ frame_support::construct_runtime!(
         BriefsMod: pallet_briefs::{Pallet, Call, Storage, Event<T>},
         Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
+        Fellowship: pallet_fellowship::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -209,6 +212,7 @@ impl pallet_briefs::Config for Test {
     type DepositHandler = MockDepositHandler;
     type WeightInfo = pallet_briefs::WeightInfo<Self>;
     type JurySelector = MockJurySelector;
+    type EnsureRole = pallet_fellowship::impls::EnsureFellowshipRole<Self>;
 }
 
 parameter_types! {
@@ -274,12 +278,35 @@ impl pallet_identity::Config for Test {
 }
 
 parameter_types! {
+    pub MaxCandidatesPerShortlist: u32 = 100;
+    pub ShortlistPeriod: BlockNumber = 100;
+    pub MembershipDeposit: Balance = 50_000_000;
+    pub SlashAccount: AccountId = 1;
+    pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
+}
+
+impl pallet_fellowship::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type MultiCurrency = Tokens;
+    type ForceAuthority = EnsureRoot<AccountId>;
+    type MaxCandidatesPerShortlist = MaxCandidatesPerShortlist;
+    type ShortlistPeriod = ShortlistPeriod;
+    type MembershipDeposit = MembershipDeposit;
+    type DepositCurrencyId = DepositCurrencyId;
+    type SlashAccount = SlashAccount;
+    type Permissions = pallet_fellowship::impls::VetterAndFreelancerAllPermissions;
+    type WeightInfo = pallet_fellowship::weights::WeightInfo<Test>;
+}
+
+parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
+
 pub static ALICE: AccountId = 125;
 pub static BOB: AccountId = 126;
 pub static CHARLIE: AccountId = 127;
+pub static FREELANCER: AccountId = 1270;
 pub static TREASURY: AccountId = 200;
 pub static JURY_1: AccountId = 1002;
 pub static JURY_2: AccountId = 1001;
@@ -294,7 +321,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
         .unwrap();
     orml_tokens::GenesisConfig::<Test> {
         balances: {
-            vec![ALICE, BOB, CHARLIE]
+            vec![ALICE, BOB, CHARLIE, FREELANCER]
                 .into_iter()
                 .map(|id| (id, CurrencyId::Native, 1000000))
                 .collect::<Vec<_>>()
@@ -305,6 +332,7 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
+        pallet_fellowship::Roles::<Test>::insert(&FREELANCER, (Role::Freelancer, 10));
         System::set_block_number(1);
     });
     ext
