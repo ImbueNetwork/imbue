@@ -858,6 +858,8 @@ pub struct Project<T: Config> {
     pub on_creation_funding: FundingPath,
     /// The amount of funds refunded.
     pub refunded_funds: BalanceOf<T>,
+    /// The payment address used when the currency_id is of type foreign. 
+    pub exter
 }
 
 /// For deriving the location of an account.

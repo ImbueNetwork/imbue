@@ -31,6 +31,15 @@ pub enum CurrencyId {
     ForeignAsset(ForeignAssetId),
 }
 
+enum ForeignAssetId {
+    ETH,
+    USDT,
+}
+
+enum ForeignOwnedAccount {
+    ETH([u8;20])
+}
+
 pub mod currency_decimals {
     pub const NATIVE: u32 = 12;
     pub const AUSD: u32 = 12;
@@ -38,16 +47,6 @@ pub mod currency_decimals {
     pub const KSM: u32 = 12;
     pub const MGX: u32 = 18;
 }
-
-// A way to generate different currencies from a number.
-// Can be used in tests/benchmarks to generate different currencies.
-impl From<u32> for CurrencyId {
-    fn from(value: u32) -> Self {
-        CurrencyId::ForeignAsset(value)
-    }
-}
-
-pub type ForeignAssetId = u32;
 
 #[derive(
     Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
