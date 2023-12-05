@@ -14,7 +14,7 @@ on:
 
 jobs: 
   cargo-fmt:
-    runs-on: ${{ needs.create-runner.outputs.label }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
