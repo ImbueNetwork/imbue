@@ -14,7 +14,6 @@ on:
       - "**.md"
 env:
   CARGO_TERM_COLOR: always
-  GCP_ZONE: europe-west3-a
 
 jobs:
   check_branch:
