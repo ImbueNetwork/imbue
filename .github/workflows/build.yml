@@ -1,4 +1,4 @@
-name: build-on-self-hosted-runner
+name: test-features
 on:
   workflow_dispatch:
   push:
@@ -33,30 +33,6 @@ jobs:
           disk_size: 100
           machine_zone: ${{ env.GCP_ZONE }}
           ephemeral: true
-
-  cargo-fmt:
-    needs: create-runner
-    runs-on: ${{ needs.create-runner.outputs.label }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set HOME
-        run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
-
-      - name: Install minimal nightly Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly-2023-05-22
-          target: wasm32-unknown-unknown
-          override: true
-          components: rustfmt, clippy
-      
-      - name: 🫠 rustfmt 🫠
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --check
 
   test-features:
     needs: [create-runner, cargo-fmt]
