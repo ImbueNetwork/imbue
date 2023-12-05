@@ -41,8 +41,8 @@ pub mod currency_decimals {
 
 // A way to generate different currencies from a number.
 // Can be used in tests/benchmarks to generate different currencies.
-impl From<u32> for CurrencyId {
-    fn from(value: u32) -> Self {
+impl From<ForeignAssetId> for CurrencyId {
+    fn from(value: ForeignAssetId) -> Self {
         CurrencyId::ForeignAsset(value)
     }
 }
