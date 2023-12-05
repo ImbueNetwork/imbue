@@ -101,7 +101,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 1_000_000,
+    spec_version: 1_000_001,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -181,12 +181,13 @@ pub mod migrations {
     use super::*;
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
-        pallet_proposals::migration::v7::MigrateToV7<Runtime>,
+        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
         pallet_balances::migration::MigrateToTrackInactive<Runtime, xcm_config::CheckingAccount>,
         pallet_collator_selection::migration::v1::MigrateToV1<Runtime>,
         pallet_xcm::migration::v1::VersionUncheckedMigrateToV1<Runtime>,
-        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
         orml_unknown_tokens::Migration<Runtime>,
+        // PROPOSALS MIGRATION MUST BE RUN AFTER FELLOWSHIP MIGRATION
+        pallet_proposals::migration::v7::MigrateToV7<Runtime>,
     );
 }
 
@@ -1209,15 +1210,31 @@ impl_runtime_apis! {
             ImbueProposals::project_account_id(project_id)
         }
 
-        /// (Project<T>, ImmutableindividualVotes<T>)
-        fn get_all_project_data(project_key: u32) -> Option<(Vec<u8>, Vec<u8>)> {
-            use pallet_proposals::{Project, Projects, ImmutableIndividualVotes, IndividualVoteStore};
+        /// (Project<T>, ImmutableindividualVotes<T>, DisputeVotes<T>, MilestonesInVotingRound)
+        fn get_all_project_data(project_key: u32) -> (Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>, Vec<u32>) {
+            use pallet_proposals::{Project, Projects, ImmutableIndividualVotes, IndividualVoteStore, ProjectInVoting, MilestoneKey};
+            use pallet_disputes::{Disputes, DisputeVotes, BoundedVotes};
 
-            if let Some(project) = Projects::<Runtime>::get(project_key) {
-                IndividualVoteStore::<Runtime>::get(project_key).map(|individual_votes| (<Project<Runtime> as Encode>::encode(&project), <ImmutableIndividualVotes<Runtime> as Encode>::encode(&individual_votes)))
-            } else {
-                None
-            }
+            let project_encoded = Projects::<Runtime>::get(project_key).map(|p| <Project<Runtime> as Encode>::encode(&p));
+
+            let project_votes_encoded = IndividualVoteStore::<Runtime>::get(project_key).map(|i| <ImmutableIndividualVotes<Runtime> as Encode>::encode(&i));
+
+            let dispute_votes_encoded = match  Disputes::<Runtime>::get(project_key) {
+                Some(d) => {
+                    let dispute_votes: DisputeVotes<BoundedVotes<Runtime>> = DisputeVotes {
+                        votes: d.votes
+                    };
+                    Some(<DisputeVotes<BoundedVotes<Runtime>> as Encode>::encode(&dispute_votes))
+                },
+                None => {None}
+            };
+
+            let milestones_in_voting = ProjectInVoting::<Runtime>::iter_prefix(project_key).map(|(milestone_key, _)|{
+                milestone_key
+            }).collect::<Vec<MilestoneKey>>();
+
+
+            (project_encoded, project_votes_encoded, dispute_votes_encoded, milestones_in_voting)
         }
     }
 
@@ -1326,7 +1343,7 @@ impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<Account
                 if index < keys.len() {
                     let key = &keys[index];
                     // Here weve gone in a circle! break.
-                    if out.contains(&key) {
+                    if out.contains(key) {
                         break;
                     }
                     if let Err(_) = out.try_push(key.clone()) {
