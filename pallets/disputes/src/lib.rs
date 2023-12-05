@@ -1,20 +1,3 @@
-//FELIX REVIEW: Eventually it will be nice to have a short introduction here explaining what this pallet does and the
-// avaliable methods etc.
-
-// 1: Raise dispute using DisputeRaiser from pallet_proposals
-// - It takes the raiser_id,project_id as dispute_key, list of jury(randomly selected upto 7 to 9 count), reason, fund_account
-// - Exisiting implementation looks good, need to update the votes while inserting the new dispute
-
-// 2: Vote on dispute.
-// Get the vote as single yes or no and divide based on the number of the voters
-// Need to come up with a way to change the votes that might require the storing the votes of each voter
-
-// 3: finalise it in the on_initialize hook.
-// Signal that this is ready for continuation. pallet-refund/pallet-proposals.
-// Refund, Everythings ok.
-
-// 4: an extrinsic is called claim_back(parameter: who, where.)
-
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
 pub mod impls;
@@ -38,9 +21,10 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::{AtLeast32BitUnsigned, Saturating, Zero};
     use sp_std::fmt::Debug;
-    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub type BoundedVotes<T> =
-        BoundedBTreeMap<<T as frame_system::Config>::AccountId, bool, <T as Config>::MaxJurySize>;
+
+    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+
+    pub type BoundedVotes<T> = BoundedBTreeMap<AccountIdOf<T>, bool, <T as Config>::MaxJurySize>;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -67,8 +51,6 @@ pub mod pallet {
             + TypeInfo
             + Debug
             + Copy;
-        /// The max length for specifying the reason while raising the dispute
-        type MaxReasonLength: Get<u32>;
         /// The number of juries that can be assigned to a given dispute
         type MaxJurySize: Get<u32>;
         /// The number of specifics that can be assigned to a given dispute.
@@ -80,7 +62,7 @@ pub mod pallet {
         /// The origin used to force cancel and pass disputes.
         type ForceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// External hooks to handle the completion of a dispute.
-        type DisputeHooks: DisputeHooks<Self::DisputeKey>;
+        type DisputeHooks: DisputeHooks<Self::DisputeKey, Self::SpecificId>;
     }
 
     /// Used to store the disputes that is being raised, given the dispute key it returns the Dispute
@@ -157,11 +139,12 @@ pub mod pallet {
                     weight = weight.saturating_add(T::WeightInfo::calculate_winner());
                     let result = dispute.calculate_winner();
                     // TODO: actually benchmark.
-                    let hook_weight =
-                        <T::DisputeHooks as DisputeHooks<T::DisputeKey>>::on_dispute_complete(
-                            *dispute_id,
-                            result,
-                        );
+                    let hook_weight = <T::DisputeHooks as DisputeHooks<
+                        T::DisputeKey,
+                        T::SpecificId,
+                    >>::on_dispute_complete(
+                        *dispute_id, dispute.specifiers.into_inner(), result
+                    );
 
                     weight = weight.saturating_add(hook_weight);
                     Self::deposit_event(Event::<T>::DisputeCompleted {
@@ -229,7 +212,11 @@ pub mod pallet {
                 }
                 // Dont mind if this fails as the autofinalise will skip.
             });
-            T::DisputeHooks::on_dispute_complete(dispute_key, DisputeResult::Failure);
+            T::DisputeHooks::on_dispute_complete(
+                dispute_key,
+                dispute.specifiers.into_inner(),
+                DisputeResult::Failure,
+            );
             Self::deposit_event(Event::<T>::DisputeCompleted {
                 dispute_key,
                 dispute_result: DisputeResult::Failure,
@@ -257,7 +244,11 @@ pub mod pallet {
                 }
                 // Dont mind if this fails as the autofinalise will skip.
             });
-            T::DisputeHooks::on_dispute_complete(dispute_key, DisputeResult::Success);
+            T::DisputeHooks::on_dispute_complete(
+                dispute_key,
+                dispute.specifiers.into_inner(),
+                DisputeResult::Success,
+            );
             Self::deposit_event(Event::<T>::DisputeCompleted {
                 dispute_key,
                 dispute_result: DisputeResult::Success,
@@ -415,7 +406,11 @@ pub mod pallet {
             });
 
             // Dont need to return the weight here.
-            let _ = T::DisputeHooks::on_dispute_complete(dispute_key, result);
+            let _ = T::DisputeHooks::on_dispute_complete(
+                dispute_key,
+                dispute.specifiers.into_inner(),
+                result,
+            );
             Ok(())
         }
 
@@ -445,6 +440,11 @@ pub mod pallet {
             //TODO: This is kinda messy, ideally we dont want to clone such a big data set.
             Ok::<BoundedVotes<T>, DispatchError>(self.votes.clone())
         }
+    }
+
+    #[derive(Clone, Copy, PartialEq, Debug, Encode, Decode, TypeInfo)]
+    pub struct DisputeVotes<T> {
+        pub votes: T,
     }
 
     #[derive(Clone, Copy, PartialEq, Debug, Encode, Decode, TypeInfo)]

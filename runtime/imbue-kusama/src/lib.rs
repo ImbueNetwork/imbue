@@ -101,7 +101,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 1_000_000,
+    spec_version: 1_000_001,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -181,11 +181,13 @@ pub mod migrations {
     use super::*;
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
+        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
         pallet_balances::migration::MigrateToTrackInactive<Runtime, xcm_config::CheckingAccount>,
         pallet_collator_selection::migration::v1::MigrateToV1<Runtime>,
         pallet_xcm::migration::v1::VersionUncheckedMigrateToV1<Runtime>,
-        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
         orml_unknown_tokens::Migration<Runtime>,
+        // PROPOSALS MIGRATION MUST BE RUN AFTER FELLOWSHIP MIGRATION
+        pallet_proposals::migration::v7::MigrateToV7<Runtime>,
     );
 }
 
@@ -802,8 +804,6 @@ impl pallet_treasury::Config for Runtime {
 parameter_types! {
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
     pub const MaxProjectsPerRound: u32 = 256;
-    pub const MaxWithdrawalExpiration: BlockNumber = 180 * DAYS;
-    pub const NoConfidenceTimeLimit: BlockNumber = 14 * DAYS;
     pub const PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub const MaximumContributorsPerProject: u32 = 50;
     pub const IsIdentityRequired: bool = false;
@@ -813,28 +813,27 @@ parameter_types! {
     pub const ProjectStorageItem: StorageDepositItems = StorageDepositItems::Project;
     pub const MaxMilestonesPerProject: u32 = 10;
     pub const MaxProjectsPerAccount: u16 = u16::MAX;
-    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
 }
 
 impl pallet_proposals::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
     type MultiCurrency = Currencies;
-    type AuthorityOrigin = AdminOrigin;
-    type MaxWithdrawalExpiration = MaxWithdrawalExpiration;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type WeightInfo = pallet_proposals::weights::WeightInfo<Self>;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
+    type ExternalRefundHandler = pallet_proposals::traits::XcmRefundHandler<Runtime, XTokens>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
     type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = Deposits;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
+    type JurySelector = PointerBasedJurySelector<Runtime>;
+    type ImbueFeeAccount = TreasuryAccount;
+    type DisputeRaiser = pallet_disputes::Pallet<Runtime>;
+    type AssetSignerOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -862,13 +861,13 @@ parameter_types! {
 impl pallet_briefs::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RMultiCurrency = Currencies;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
     type IntoProposal = pallet_proposals::Pallet<Runtime>;
     type MaxBriefOwners = MaxBriefOwners;
     type MaxMilestonesPerBrief = MaxMilestonesPerProject;
     type WeightInfo = pallet_briefs::weights::WeightInfo<Self>;
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = Deposits;
+    type JurySelector = PointerBasedJurySelector<Runtime>;
 }
 
 parameter_types! {
@@ -918,6 +917,27 @@ impl pallet_deposits::Config for Runtime {
     type DepositId = DepositId;
     type DepositCalculator = ImbueDepositCalculator;
     type DepositSlashAccount = TreasuryAccount;
+}
+
+parameter_types! {
+    pub MaxJurySize: u32 = 100;
+    pub MaxDisputesPerBlock: u32 = 50;
+    pub VotingTimeLimit: BlockNumber = DAYS * 14;
+}
+
+impl pallet_disputes::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type DisputeKey = pallet_proposals::ProjectKey;
+    type SpecificId = pallet_proposals::MilestoneKey;
+    type MaxJurySize = MaxJurySize;
+    // TODO: this syntax for each max milestones per brief grant and projet.
+    // it binds automatically.
+    type MaxSpecifics = <Runtime as pallet_proposals::Config>::MaxMilestonesPerProject;
+    type MaxDisputesPerBlock = MaxDisputesPerBlock;
+    type VotingTimeLimit = VotingTimeLimit;
+    type ForceOrigin = EnsureRootOr<HalfOfCouncil>;
+    type DisputeHooks = pallet_proposals::Pallet<Runtime>;
+    type WeightInfo = pallet_disputes::weights::WeightInfo<Runtime>;
 }
 
 construct_runtime! {
@@ -974,6 +994,7 @@ construct_runtime! {
         ImbueGrants: pallet_grants::{Pallet, Call, Storage, Event<T>} = 102,
         Deposits: pallet_deposits::{Pallet, Storage, Event<T>} = 103,
         ImbueFellowship: pallet_fellowship::{Pallet, Call, Storage, Event<T>} = 104,
+        ImbueDisputes: pallet_disputes::{Pallet, Call, Storage, Event<T>} = 105,
     }
 }
 
@@ -1012,6 +1033,7 @@ mod benches {
         [pallet_briefs, ImbueBriefs]
         [pallet_grants, ImbueGrants]
         [pallet_fellowship, ImbueFellowship]
+        [pallet_disputes, ImbueDisputes]
     );
 }
 
@@ -1074,6 +1096,7 @@ impl_runtime_apis! {
         fn initialize_block(header: &<Block as BlockT>::Header) {
             Executive::initialize_block(header)
         }
+
     }
 
    impl sp_api::Metadata<Block> for Runtime {
@@ -1186,15 +1209,31 @@ impl_runtime_apis! {
             ImbueProposals::project_account_id(project_id)
         }
 
-        /// (Project<T>, ImmutableindividualVotes<T>)
-        fn get_all_project_data(project_key: u32) -> Option<(Vec<u8>, Vec<u8>)> {
-            use pallet_proposals::{Project, Projects, ImmutableIndividualVotes, IndividualVoteStore};
+        /// (Project<T>, ImmutableindividualVotes<T>, DisputeVotes<T>, MilestonesInVotingRound)
+        fn get_all_project_data(project_key: u32) -> (Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>, Vec<u32>) {
+            use pallet_proposals::{Project, Projects, ImmutableIndividualVotes, IndividualVoteStore, ProjectInVoting, MilestoneKey};
+            use pallet_disputes::{Disputes, DisputeVotes, BoundedVotes};
 
-            if let Some(project) = Projects::<Runtime>::get(project_key) {
-                IndividualVoteStore::<Runtime>::get(project_key).map(|individual_votes| (<Project<Runtime> as Encode>::encode(&project), <ImmutableIndividualVotes<Runtime> as Encode>::encode(&individual_votes)))
-            } else {
-                None
-            }
+            let project_encoded = Projects::<Runtime>::get(project_key).map(|p| <Project<Runtime> as Encode>::encode(&p));
+
+            let project_votes_encoded = IndividualVoteStore::<Runtime>::get(project_key).map(|i| <ImmutableIndividualVotes<Runtime> as Encode>::encode(&i));
+
+            let dispute_votes_encoded = match  Disputes::<Runtime>::get(project_key) {
+                Some(d) => {
+                    let dispute_votes: DisputeVotes<BoundedVotes<Runtime>> = DisputeVotes {
+                        votes: d.votes
+                    };
+                    Some(<DisputeVotes<BoundedVotes<Runtime>> as Encode>::encode(&dispute_votes))
+                },
+                None => {None}
+            };
+
+            let milestones_in_voting = ProjectInVoting::<Runtime>::iter_prefix(project_key).map(|(milestone_key, _)|{
+                milestone_key
+            }).collect::<Vec<MilestoneKey>>();
+
+
+            (project_encoded, project_votes_encoded, dispute_votes_encoded, milestones_in_voting)
         }
     }
 
@@ -1280,4 +1319,39 @@ cumulus_pallet_parachain_system::register_validate_block! {
     Runtime = Runtime,
     BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
     CheckInherents = CheckInherents,
+}
+
+type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+pub struct PointerBasedJurySelector<T: pallet_fellowship::Config>(T);
+impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>>
+    for PointerBasedJurySelector<T>
+{
+    type JurySize = MaxJurySize;
+    fn select_jury() -> frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> {
+        let mut out: frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> =
+            frame_support::BoundedVec::new();
+        let amount = Self::JurySize::get();
+        let keys = pallet_fellowship::Roles::<T>::iter_keys().collect::<Vec<AccountIdOf<T>>>();
+        let keys_len = keys.len();
+        let pointer = pallet_fellowship::JuryPointer::<T>::get();
+        let pointer_with_bound = pointer.saturating_add(amount.into());
+        for i in pointer..pointer_with_bound {
+            if keys_len > 0 {
+                let index = i as usize % keys_len;
+                // shouldnt be an issue due to mod.
+                if index < keys.len() {
+                    let key = &keys[index];
+                    // Here weve gone in a circle! break.
+                    if out.contains(key) {
+                        break;
+                    }
+                    if let Err(_) = out.try_push(key.clone()) {
+                        break;
+                    }
+                }
+            }
+        }
+        pallet_fellowship::JuryPointer::<T>::put(pointer_with_bound);
+        out
+    }
 }

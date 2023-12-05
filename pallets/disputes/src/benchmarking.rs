@@ -2,11 +2,11 @@
 
 use super::*;
 use crate::traits::DisputeRaiser;
-use crate::Pallet as PalletDisputes;
+use crate::Pallet as DisputesPallet;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get, BoundedVec};
 use frame_system::Pallet as System;
-use sp_std::vec::Vec;
+use sp_std::{vec, vec::Vec};
 
 #[benchmarks(where Event::<T>: Into<<T as frame_system::Config>::RuntimeEvent>)]
 mod benchmarks {
@@ -154,14 +154,14 @@ mod benchmarks {
     }
 
     impl_benchmark_test_suite!(
-        PalletDisputes,
+        DisputesPallet,
         crate::mock::new_test_ext(),
         crate::mock::Test
     );
 }
 
 pub fn get_jury<T: Config>(
-    accounts: Vec<<T as frame_system::Config>::AccountId>,
+    accounts: Vec<AccountIdOf<T>>,
 ) -> BoundedVec<AccountIdOf<T>, <T as Config>::MaxJurySize> {
     accounts.try_into().expect("too many jury members")
 }

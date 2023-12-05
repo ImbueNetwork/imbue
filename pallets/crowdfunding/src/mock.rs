@@ -161,7 +161,6 @@ impl pallet_balances::Config for Test {
 parameter_types! {
     pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 50;
     pub RefundsPerBlock: u8 = 2;
@@ -173,28 +172,28 @@ parameter_types! {
     pub ExpiringProjectRoundsPerBlock: u32 = 10;
     pub ProjectStorageItem: StorageItem = StorageItem::Project;
     pub MaxProjectsPerAccount: u16 = 100;
-    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
+    pub FeeAccount: AccountId = TREASURY;
+    pub MaxJuryMembers: u32 = 100;
 }
 
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
     type WeightInfo = pallet_proposals::WeightInfo<Self>;
-    type MaxWithdrawalExpiration = TwoWeekBlockUnit;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
+    type ImbueFeeAccount = FeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
-    type ProjectStorageItem = ProjectStorageItem;
     type DepositHandler = MockDepositHandler;
+    type ProjectStorageItem = ProjectStorageItem;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
+    type DisputeRaiser = MockDisputeRaiser;
+    type JurySelector = MockJurySelector;
 }
 
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo, Copy)]
@@ -224,9 +223,16 @@ impl DepositHandler<Balance, AccountId> for MockDepositHandler {
     }
 }
 
+<<<<<<< HEAD
+pub static ALICE: Lazy<Public> = Lazy::new(|| Public::from_raw([125u8; 32]));
+pub static BOB: Lazy<Public> = Lazy::new(|| Public::from_raw([126u8; 32]));
+pub static CHARLIE: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
+pub static TREASURY: Lazy<Public> = Lazy::new(|| Public::from_raw([127u8; 32]));
+=======
 pub static ALICE: AccountId = 125;
 pub static BOB: AccountId = 126;
 pub static CHARLIE: AccountId = 127;
+>>>>>>> 691fff9d503ce4e6ba20c8cc81f451649c04c07e
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::<Test>::default()
@@ -242,4 +248,29 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
     });
     ext
+}
+
+pub struct MockDisputeRaiser;
+impl pallet_disputes::traits::DisputeRaiser<AccountId> for MockDisputeRaiser {
+type DisputeKey = u32;
+type SpecificId = u32;
+type MaxJurySize = MaxJuryMembers;
+type MaxSpecifics = MaxMilestonesPerProject;
+    fn raise_dispute(
+        dispute_key: Self::DisputeKey,
+        raised_by: AccountId,
+        jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+    ) -> Result<(), DispatchError> {
+        Ok(())
+    }
+}
+
+
+pub struct MockJurySelector;
+impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
+    type JurySize = MaxJuryMembers;
+    fn select_jury() -> BoundedVec<AccountId, Self::JurySize> {
+        BoundedVec::new()
+    }
 }

@@ -1,5 +1,5 @@
 use crate::*;
-use common_types::milestone_origin::FundingType;
+use pallet_disputes::{traits::DisputeHooks, DisputeResult};
 use scale_info::prelude::format;
 use sp_runtime::traits::{Saturating, Zero};
 
@@ -8,10 +8,6 @@ impl<T: Config> Pallet<T> {
     ///
     /// This actually does computation. If you need to keep using it, then make sure you cache the
     /// value and only call this once.
-    pub fn account_id() -> T::AccountId {
-        T::PalletId::get().into_account_truncating()
-    }
-
     pub fn project_account_id(key: ProjectKey) -> AccountIdOf<T> {
         T::PalletId::get().into_sub_account_truncating(format!("//{key}"))
     }
@@ -61,6 +57,8 @@ impl<T: Config> Pallet<T> {
             Ok::<(), DispatchError>(())
         })?;
 
+        ProjectInVoting::<T>::insert(project_key, milestone_key, ());
+
         Self::deposit_event(Event::MilestoneSubmitted(who, project_key, milestone_key));
         Self::deposit_event(Event::VotingRoundCreated(project_key));
         Ok(().into())
@@ -77,6 +75,7 @@ impl<T: Config> Pallet<T> {
             Rounds::<T>::contains_key((project_key, milestone_key), RoundType::VotingRound),
             Error::<T>::VotingRoundNotStarted
         );
+
         let contribution_amount = project
             .contributions
             .get(&who)
@@ -103,34 +102,29 @@ impl<T: Config> Pallet<T> {
                     } else {
                         vote.nay = vote.nay.saturating_add(contribution_amount);
                     }
-
-                    //check if the everyone has voted and its still less than the
-                    // funding threshold just reject it
-                    if vote.yay + vote.nay == project.raised_funds && vote.yay < funding_threshold {
-                        Self::close_voting_round(project_key, user_has_voted_key)?;
-                        Self::deposit_event(Event::MilestoneRejected(project_key, milestone_key));
-                    }
                     Ok::<Vote<BalanceOf<T>>, DispatchError>(vote.clone())
                 } else {
                     Err(Error::<T>::VotingRoundNotStarted.into())
                 }
             })?;
 
-        Self::try_auto_finalise_milestone_voting(
-            project_key,
-            &vote,
-            funding_threshold,
-            user_has_voted_key,
-            who.clone(),
-        )?;
-
         Self::deposit_event(Event::VoteSubmitted(
-            who,
+            who.clone(),
             project_key,
             milestone_key,
             approve_milestone,
             now,
         ));
+
+        Self::try_auto_finalise_milestone_voting(
+            project_key,
+            &vote,
+            funding_threshold,
+            user_has_voted_key,
+            who,
+            project.raised_funds,
+        )?;
+
         Ok(().into())
     }
 
@@ -143,43 +137,59 @@ impl<T: Config> Pallet<T> {
         ensure!(!project.cancelled, Error::<T>::ProjectWithdrawn);
         ensure!(who == project.initiator, Error::<T>::UserIsNotInitiator);
 
-        let mut unlocked_funds: BalanceOf<T> = Zero::zero();
-        for (_, ms) in project.milestones.iter() {
-            if ms.is_approved {
-                let per_milestone = ms.percentage_to_unlock.mul_floor(project.raised_funds);
-                unlocked_funds = unlocked_funds.saturating_add(per_milestone);
-            }
-        }
+        let withdrawable = Projects::<T>::try_mutate_exists(project_key, |maybe_project| {
+            if let Some(project) = maybe_project {
+                let withdrawable_percent: Percent = project
+                    .milestones
+                    .iter_mut()
+                    .map(|(_key, ms)| {
+                        if ms.is_approved && ms.transfer_status.is_none() {
+                            ms.transfer_status = Some(TransferStatus::Withdrawn {
+                                on: frame_system::Pallet::<T>::block_number(),
+                            });
+                            ms.percentage_to_unlock
+                        } else {
+                            <Percent as Zero>::zero()
+                        }
+                    })
+                    .fold(<Percent as Zero>::zero(), |acc, item| acc + item);
 
-        let withdrawable: BalanceOf<T> = unlocked_funds.saturating_sub(project.withdrawn_funds);
-        ensure!(
-            withdrawable != Zero::zero(),
-            Error::<T>::NoAvailableFundsToWithdraw
-        );
+                ensure!(
+                    withdrawable_percent != Zero::zero(),
+                    Error::<T>::NoAvailableFundsToWithdraw
+                );
 
-        let fee = <T as Config>::ImbueFee::get().mul_floor(withdrawable);
-        let withdrawn = withdrawable.saturating_sub(fee);
+                let withdrawable = withdrawable_percent.mul_floor(project.raised_funds);
+                let fee = <T as Config>::ImbueFee::get().mul_floor(withdrawable);
+                let initiator_payment = withdrawable.saturating_sub(fee);
+                let project_account = Self::project_account_id(project_key);
 
-        let project_account = Self::project_account_id(project_key);
-        let pallet_account = Self::account_id();
+                // Take the fee and send to ImbueFeeAccount
+                T::MultiCurrency::transfer(
+                    project.currency_id,
+                    &project_account,
+                    &<T as Config>::ImbueFeeAccount::get(),
+                    fee,
+                )?;
 
-        // Take the fee
-        T::MultiCurrency::transfer(project.currency_id, &project_account, &pallet_account, fee)?;
+                // Transfer to initiator
+                T::MultiCurrency::transfer(
+                    project.currency_id,
+                    &project_account,
+                    &project.initiator,
+                    initiator_payment,
+                )?;
 
-        T::MultiCurrency::transfer(
-            project.currency_id,
-            &project_account,
-            &project.initiator,
-            withdrawn,
-        )?;
+                project.withdrawn_funds = project.withdrawn_funds.saturating_add(withdrawable);
 
-        Projects::<T>::mutate_exists(project_key, |project| -> DispatchResult {
-            if let Some(p) = project {
-                p.withdrawn_funds = p.withdrawn_funds.saturating_add(withdrawable);
-                if p.withdrawn_funds == p.raised_funds {
-                    <T as Config>::DepositHandler::return_deposit(p.deposit_id)?;
+                if project
+                    .withdrawn_funds
+                    .saturating_add(project.refunded_funds)
+                    == project.raised_funds
+                {
+                    <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
                     CompletedProjects::<T>::try_mutate(
-                        &p.initiator,
+                        &project.initiator,
                         |completed_projects| -> DispatchResult {
                             completed_projects
                                 .try_push(project_key)
@@ -187,248 +197,74 @@ impl<T: Config> Pallet<T> {
                             Ok(())
                         },
                     )?;
-                    *project = None;
+                    *maybe_project = None;
                 }
+                Ok::<BalanceOf<T>, DispatchError>(withdrawable)
+            } else {
+                Ok::<BalanceOf<T>, DispatchError>(<BalanceOf<T> as Zero>::zero())
             }
-            Ok(())
         })?;
 
         Self::deposit_event(Event::ProjectFundsWithdrawn(
             who,
             project_key,
-            withdrawn,
+            withdrawable,
             project.currency_id,
         ));
 
         Ok(().into())
     }
 
-    /// This function raises a vote of no confidence.
-    /// This round can only be called once and there after can only be voted on.
-    pub(crate) fn raise_no_confidence_round(
-        who: T::AccountId,
-        project_key: ProjectKey,
-    ) -> DispatchResult {
-        //ensure that who is a contributor or root
-        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let contribution = project
-            .contributions
-            .get(&who)
-            .ok_or(Error::<T>::OnlyContributorsCanVote)?;
-
-        // Also ensure that a vote has not already been raised.
-        ensure!(
-            !NoConfidenceVotes::<T>::contains_key(project_key),
-            Error::<T>::RoundStarted
-        );
-
-        let vote = Vote {
-            yay: Zero::zero(),
-            nay: contribution.value,
-            is_approved: false,
-        };
-
-        let expiry_block = frame_system::Pallet::<T>::block_number()
-            .saturating_add(<T as Config>::NoConfidenceTimeLimit::get());
-
-        Rounds::<T>::insert(
-            (project_key, 0),
-            RoundType::VoteOfNoConfidence,
-            expiry_block,
-        );
-        RoundsExpiring::<T>::try_mutate(expiry_block, |keys| {
-            // The milestone key does not matter here as we are voting on the entire project.
-            keys.try_push((project_key, RoundType::VoteOfNoConfidence, 0))
-                .map_err(|_| Error::<T>::Overflow)?;
-            Ok::<(), DispatchError>(())
-        })?;
-        UserHasVoted::<T>::try_mutate((project_key, RoundType::VoteOfNoConfidence, 0), |votes| {
-            ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
-            votes
-                .try_insert(who.clone(), false)
-                .map_err(|_| Error::<T>::Overflow)?;
-            Ok::<(), DispatchError>(())
-        })?;
-
-        NoConfidenceVotes::<T>::insert(project_key, vote);
-        Self::deposit_event(Event::NoConfidenceRoundCreated(who, project_key));
-        Ok(())
-    }
-
-    /// Allows a contributer to agree or disagree with a vote of no confidence.
-    pub(crate) fn add_vote_no_confidence(
-        who: T::AccountId,
-        project_key: ProjectKey,
-        is_yay: bool,
-    ) -> DispatchResult {
-        ensure!(
-            Rounds::<T>::contains_key((project_key, 0), RoundType::VoteOfNoConfidence),
-            Error::<T>::ProjectNotInRound
-        );
-        let project = Self::projects(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        let contribution = project
-            .contributions
-            .get(&who)
-            .ok_or(Error::<T>::OnlyContributorsCanVote)?;
-
-        let nay_vote = NoConfidenceVotes::<T>::try_mutate(project_key, |maybe_vote| {
-            if let Some(v) = maybe_vote {
-                if is_yay {
-                    v.yay = v.yay.saturating_add(contribution.value);
-                } else {
-                    v.nay = v.nay.saturating_add(contribution.value);
-                }
-                Ok::<BalanceOf<T>, DispatchError>(v.nay)
-            } else {
-                Err(Error::<T>::VotingRoundNotStarted.into())
-            }
-        })?;
-
-        UserHasVoted::<T>::try_mutate((project_key, RoundType::VoteOfNoConfidence, 0), |votes| {
-            ensure!(!votes.contains_key(&who), Error::<T>::VotesAreImmutable);
-            votes
-                .try_insert(who.clone(), false)
-                .map_err(|_| Error::<T>::Overflow)?;
-            Ok::<(), DispatchError>(())
-        })?;
-
-        Self::deposit_event(Event::NoConfidenceRoundVotedUpon(who.clone(), project_key));
-
-        //once the voting is complete check if the confidence vote could be auto finalized
-        //getting the total threshold required for the total confidence
-        let voting_no_confidence_threshold: BalanceOf<T> =
-            T::PercentRequiredForVoteNoConfidenceToPass::get().mul_floor(project.raised_funds);
-
-        //verifying whether the no confidence vote has passed the threshold if so then auto finalize it
-        if nay_vote >= voting_no_confidence_threshold {
-            let locked_milestone_percentage =
-                project.milestones.iter().fold(Percent::zero(), |acc, ms| {
-                    if !ms.1.is_approved {
-                        acc.saturating_add(ms.1.percentage_to_unlock)
-                    } else {
-                        acc
-                    }
-                });
-
-            let project_account_id = Self::project_account_id(project_key);
-
-            match project.funding_type {
-                FundingType::Proposal => {
-                    // Handle refunds on native chain, there is no need to deal with xcm here.
-                    for (acc_id, contribution) in project.contributions.iter() {
-                        let refund_amount =
-                            locked_milestone_percentage.mul_floor(contribution.value);
-                        <T as Config>::MultiCurrency::transfer(
-                            project.currency_id,
-                            &project_account_id,
-                            acc_id,
-                            refund_amount,
-                        )?;
-                    }
-                }
-
-                FundingType::Brief => {
-                    //Have to handle it in the dispute pallet
-                }
-
-                // Must a grant be treasury funded?
-                FundingType::Grant(_) => {
-                    let mut refund_amount: BalanceOf<T> = Zero::zero();
-                    // Sum the contributions and send a single xcm.
-                    for (_acc_id, contribution) in project.contributions.iter() {
-                        let per_contributor =
-                            locked_milestone_percentage.mul_floor(contribution.value);
-                        refund_amount = refund_amount.saturating_add(per_contributor);
-                    }
-                    <T as Config>::RefundHandler::send_refund_message_to_treasury(
+    /// Try and fund a project based on its FundingPath.
+    /// Will error is the
+    /// If the funds have actually been transferred this will return and Ok(true)
+    /// If the funds have not been transferred (i.e awaiting funding) then it will return Ok(false)
+    pub(crate) fn fund_project<'a>(
+        funding_path: &'a FundingPath,
+        contributions: &'a ContributionsFor<T>,
+        project_account_id: &'a T::AccountId,
+        currency_id: CurrencyId,
+    ) -> Result<bool, DispatchError> {
+        match *funding_path {
+            FundingPath::TakeFromReserved => {
+                for (acc, cont) in contributions.iter() {
+                    <<T as Config>::MultiCurrency as MultiReservableCurrency<
+                        AccountIdOf<T>,
+                    >>::unreserve(currency_id, acc, cont.value);
+                    <T as Config>::MultiCurrency::transfer(
+                        currency_id,
+                        acc,
                         project_account_id,
-                        refund_amount,
-                        project.currency_id,
-                        project.funding_type,
+                        cont.value,
                     )?;
                 }
+                Ok(true)
             }
-            Projects::<T>::remove(project_key);
-            Rounds::<T>::remove((project_key, 0), RoundType::VoteOfNoConfidence);
-            <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
-            Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
+            FundingPath::WaitForFunding => Ok(false),
         }
-        Ok(())
     }
 
-    #[deprecated(since = "3.1.0", note = "autofinalisation has been implemented.")]
-    pub(crate) fn _call_finalise_no_confidence_vote(
-        who: T::AccountId,
+    /// Try and convert some proposed milestones to milestones.
+    /// Will never fail so long as proposed_milestones and BoundedBTreeMilestones<T> have the same bound.
+    pub(crate) fn try_convert_to_milestones(
+        proposed_milestones: BoundedVec<ProposedMilestone, T::MaxMilestonesPerProject>,
         project_key: ProjectKey,
-        majority_required: Percent,
-    ) -> DispatchResultWithPostInfo {
-        let project = Projects::<T>::get(project_key).ok_or(Error::<T>::ProjectDoesNotExist)?;
-        ensure!(
-            Rounds::<T>::contains_key((project_key, 0), RoundType::VoteOfNoConfidence),
-            Error::<T>::ProjectNotInRound
-        );
-        ensure!(
-            project.contributions.contains_key(&who),
-            Error::<T>::OnlyContributorsCanVote
-        );
+    ) -> Result<BoundedBTreeMilestones<T>, DispatchError> {
+        let mut milestone_key: u32 = 0;
+        let mut milestones: BoundedBTreeMilestones<T> = BoundedBTreeMap::new();
+        for proposed_milestone in proposed_milestones {
+            let milestone = Milestone::new(
+                project_key,
+                milestone_key,
+                proposed_milestone.percentage_to_unlock,
+            );
 
-        let vote = NoConfidenceVotes::<T>::get(project_key).ok_or(Error::<T>::NoActiveRound)?;
-        let threshold_votes: BalanceOf<T> = majority_required.mul_floor(project.raised_funds);
-
-        if vote.nay >= threshold_votes {
-            let locked_milestone_percentage =
-                project.milestones.iter().fold(Percent::zero(), |acc, ms| {
-                    if !ms.1.is_approved {
-                        acc.saturating_add(ms.1.percentage_to_unlock)
-                    } else {
-                        acc
-                    }
-                });
-
-            let project_account_id = Self::project_account_id(project_key);
-
-            // TODO: this should be generic and not bound to funding type..
-            match project.funding_type {
-                FundingType::Brief | FundingType::Proposal => {
-                    //
-                    // Handle refunds on native chain, there is no need to deal with xcm here.
-                    // Todo: Batch call using pallet-utility?
-                    for (acc_id, contribution) in project.contributions.iter() {
-                        let refund_amount =
-                            locked_milestone_percentage.mul_floor(contribution.value);
-                        <T as Config>::MultiCurrency::transfer(
-                            project.currency_id,
-                            &project_account_id,
-                            acc_id,
-                            refund_amount,
-                        )?;
-                    }
-                }
-                // Must a grant be treasury funded?
-                FundingType::Grant(_) => {
-                    let mut refund_amount: BalanceOf<T> = Zero::zero();
-                    // Sum the contributions and send a single xcm.
-                    for (_acc_id, contribution) in project.contributions.iter() {
-                        let per_contributor =
-                            locked_milestone_percentage.mul_floor(contribution.value);
-                        refund_amount = refund_amount.saturating_add(per_contributor);
-                    }
-                    <T as Config>::RefundHandler::send_refund_message_to_treasury(
-                        project_account_id,
-                        refund_amount,
-                        project.currency_id,
-                        project.funding_type,
-                    )?;
-                }
-            }
-
-            Projects::<T>::remove(project_key);
-            <T as Config>::DepositHandler::return_deposit(project.deposit_id)?;
-            Self::deposit_event(Event::NoConfidenceRoundFinalised(who, project_key));
-        } else {
-            return Err(Error::<T>::VoteThresholdNotMet.into());
+            milestones
+                .try_insert(milestone_key, milestone)
+                .map_err(|_| Error::<T>::TooManyMilestones)?;
+            milestone_key = milestone_key.saturating_add(1);
         }
-        Ok(().into())
+        Ok(milestones)
     }
 
     pub(crate) fn try_auto_finalise_milestone_voting(
@@ -437,6 +273,7 @@ impl<T: Config> Pallet<T> {
         funding_threshold: BalanceOf<T>,
         user_has_voted_key: (ProjectKey, RoundType, MilestoneKey),
         who: AccountIdOf<T>,
+        raised_funds: BalanceOf<T>,
     ) -> Result<(), DispatchError> {
         // If the yay votes is over the funding threshold then the milestone is approved.
         if vote.yay >= funding_threshold {
@@ -458,7 +295,9 @@ impl<T: Config> Pallet<T> {
             ));
         }
 
-        if vote.nay >= funding_threshold {
+        if vote.nay >= funding_threshold
+            || (vote.yay.saturating_add(vote.nay) == raised_funds && vote.yay < funding_threshold)
+        {
             Self::close_voting_round(project_key, user_has_voted_key)?;
             Self::deposit_event(Event::MilestoneRejected(
                 user_has_voted_key.0,
@@ -469,25 +308,65 @@ impl<T: Config> Pallet<T> {
     }
 
     pub(crate) fn close_voting_round(
-        project_key: ProjectKey,
+        _project_key: ProjectKey,
         user_has_voted_key: (ProjectKey, RoundType, MilestoneKey),
     ) -> Result<(), DispatchError> {
+        let (project_key, _round_type, milestone_key) = user_has_voted_key;
         // Prevent further voting.
-        let exp_block =
-            Rounds::<T>::take((project_key, user_has_voted_key.2), RoundType::VotingRound)
-                .ok_or(Error::<T>::VotingRoundNotStarted)?;
+        let exp_block = Rounds::<T>::take((project_key, milestone_key), RoundType::VotingRound)
+            .ok_or(Error::<T>::VotingRoundNotStarted)?;
         // Prevent hook from calling.
         RoundsExpiring::<T>::remove(exp_block);
         // Allow future votes to occur on this milestone
         IndividualVoteStore::<T>::try_mutate(project_key, |maybe_individual_votes| {
             if let Some(individual_votes) = maybe_individual_votes {
-                individual_votes.clear_milestone_votes(user_has_voted_key.2);
+                individual_votes.clear_milestone_votes(milestone_key);
             } else {
                 return Err(Error::<T>::IndividualVoteNotFound.into());
             }
             Ok::<(), DispatchError>(())
         })?;
-
+        ProjectInVoting::<T>::remove(project_key, milestone_key);
         Ok(())
+    }
+}
+
+impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
+    fn on_dispute_complete(
+        project_key: ProjectKey,
+        specifics: Vec<MilestoneKey>,
+        dispute_result: pallet_disputes::pallet::DisputeResult,
+    ) -> Weight {
+        ProjectsInDispute::<T>::remove(project_key);
+        Projects::<T>::mutate(project_key, |maybe_project| {
+            match maybe_project {
+                Some(project) => {
+                    match dispute_result {
+                        DisputeResult::Success => {
+                            for milestone_key in specifics.iter() {
+                                if let Some(milestone) = project.milestones.get_mut(milestone_key) {
+                                    // Shouldnt be needed but nice to have this check.
+                                    // Will prevent someone calling both refund and withdraw on the same milestone.
+                                    if milestone.transfer_status.is_none() {
+                                        milestone.can_refund = true;
+                                    }
+                                }
+                            }
+                        }
+                        DisputeResult::Failure => {
+                            // I Guess do nothing.. ProjectsInDispute gets cleared regardless allowing further disputes.
+                        }
+                    };
+                }
+                // Looks like the project was deleted somehow during the dispute.
+                // The only way this is possible is through a refund or final withdraw.
+                // Not a massive issue as either way the project has been finalised.
+                // Just ignore and return weight.
+                None => {}
+            }
+        });
+        // ProjectsInDispute::remove
+        // Projects::mutate
+        T::DbWeight::get().reads_writes(2, 2)
     }
 }

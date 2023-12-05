@@ -33,6 +33,12 @@ pub trait EnsureRole<AccountId, Role> {
     ) -> Result<Self::Success, DispatchError>;
 }
 
+/// Select a pseudo-random jury of a specified amount.
+pub trait SelectJury<AccountId> {
+    type JurySize: Get<u32>;
+    fn select_jury() -> BoundedVec<AccountId, Self::JurySize>;
+}
+
 /// Custom definition for permissions for each role.
 pub trait FellowshipPermissions<Role, Permission> {
     fn has_permission(role: Role, permission: Permission) -> bool;

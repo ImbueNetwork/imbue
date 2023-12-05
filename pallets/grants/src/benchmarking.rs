@@ -8,6 +8,7 @@ use crate::{BoundedApprovers, BoundedPMilestones, Config};
 use common_types::{CurrencyId, TreasuryOrigin};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get};
+use frame_system::pallet_prelude::BlockNumberFor;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use pallet_proposals::ProposedMilestone;

@@ -20,7 +20,7 @@ pub(crate) fn revoke_fellowship(
     <Fellowship as FellowshipHandle<AccountIdOf<Test>>>::revoke_fellowship(who, slash_deposit)
 }
 
-pub fn run_to_block<T: Config>(n: BlockNumber) {
+pub fn run_to_block(n: BlockNumber) {
     while System::block_number() < n {
         Tokens::on_finalize(System::block_number());
         Fellowship::on_finalize(System::block_number());

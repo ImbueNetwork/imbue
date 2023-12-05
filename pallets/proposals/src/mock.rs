@@ -2,7 +2,6 @@ use crate as pallet_proposals;
 use frame_support::{
     parameter_types,
     traits::{ConstU32, Nothing},
-    weights::{ConstantMultiplier, IdentityFee},
     PalletId,
 };
 
@@ -27,7 +26,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
-pub type Balance = u64;
+pub type Balance = u128;
 pub type Moment = u64;
 pub type AccountId = u128;
 
@@ -53,7 +52,6 @@ frame_support::construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Tokens: orml_tokens::{Pallet, Storage, Event<T>},
         Currencies: orml_currencies::{Pallet, Call, Storage},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
         Proposals: pallet_proposals::{Pallet, Call, Storage, Event<T>},
         IdentityPallet: pallet_identity::{Pallet, Call, Storage, Event<T>},
     }
@@ -82,19 +80,6 @@ impl orml_tokens::Config for Test {
     type DustRemovalWhitelist = Nothing;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-}
-
-parameter_types! {
-    pub const TransactionByteFee: u64 = 1;
-    pub const OperationalFeeMultiplier: u8 = 5;
-}
-impl pallet_transaction_payment::Config for Test {
-    type RuntimeEvent = RuntimeEvent;
-    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
-    type WeightToFee = IdentityFee<u64>;
-    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-    type FeeMultiplierUpdate = ();
-    type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
 parameter_types! {
@@ -134,14 +119,14 @@ parameter_types! {
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: u64 = 5;
+    pub const ExistentialDeposit: Balance = 5;
     pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type AccountStore = System;
-    type Balance = u64;
+    type Balance = Balance;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
@@ -165,9 +150,7 @@ impl pallet_timestamp::Config for Test {
 }
 
 parameter_types! {
-    pub const TwoWeekBlockUnit: u32 = 100800u32;
     pub const ProposalsPalletId: PalletId = PalletId(*b"imbgrant");
-    pub NoConfidenceTimeLimit: BlockNumber = 100800u32.into();
     pub PercentRequiredForVoteToPass: Percent = Percent::from_percent(75u8);
     pub MaximumContributorsPerProject: u32 = 50;
     pub RefundsPerBlock: u8 = 2;
@@ -178,35 +161,35 @@ parameter_types! {
     pub ExpiringProjectRoundsPerBlock: u32 = 10;
     pub ProjectStorageItem: StorageItems = StorageItems::Project;
     pub MaxProjectsPerAccount: u16 = 50;
-    pub PercentRequiredForVoteNoConfidenceToPass: Percent = Percent::from_percent(75u8);
+    pub MaxJuryMembers: u32 = 100;
+    pub ImbueFeeAccount: AccountId = TREASURY;
 }
 
 impl pallet_proposals::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type PalletId = ProposalsPalletId;
-    type AuthorityOrigin = EnsureRoot<AccountId>;
     type MultiCurrency = Tokens;
-    type WeightInfo = crate::WeightInfo<Self>;
-    // Adding 2 weeks as th expiration time
-    type MaxWithdrawalExpiration = TwoWeekBlockUnit;
-    type NoConfidenceTimeLimit = NoConfidenceTimeLimit;
+    type WeightInfo = pallet_proposals::WeightInfo<Self>;
     type PercentRequiredForVoteToPass = PercentRequiredForVoteToPass;
     type MaximumContributorsPerProject = MaximumContributorsPerProject;
     type MilestoneVotingWindow = MilestoneVotingWindow;
-    type RefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
+    type ExternalRefundHandler = pallet_proposals::traits::MockRefundHandler<Test>;
     type MaxMilestonesPerProject = MaxMilestonesPerProject;
     type ImbueFee = ImbueFee;
+    type ImbueFeeAccount = ImbueFeeAccount;
     type ExpiringProjectRoundsPerBlock = ExpiringProjectRoundsPerBlock;
+    type DepositHandler = MockDepositHandler;
     type ProjectStorageItem = ProjectStorageItem;
-    type DepositHandler = MockDepositHandler<Test>;
     type MaxProjectsPerAccount = MaxProjectsPerAccount;
-    type PercentRequiredForVoteNoConfidenceToPass = PercentRequiredForVoteNoConfidenceToPass;
+    type DisputeRaiser = MockDisputeRaiser;
+    type JurySelector = MockJurySelector;
+    type AssetSignerOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
-    pub const BasicDeposit: u64 = 10;
-    pub const FieldDeposit: u64 = 10;
-    pub const SubAccountDeposit: u64 = 10;
+    pub const BasicDeposit: Balance = 10;
+    pub const FieldDeposit: Balance = 10;
+    pub const SubAccountDeposit: Balance = 10;
     pub const MaxSubAccounts: u32 = 2;
     pub const MaxAdditionalFields: u32 = 2;
     pub const MaxRegistrars: u32 = 20;
@@ -228,6 +211,14 @@ impl pallet_identity::Config for Test {
 }
 
 parameter_types! {
+    pub MaxCandidatesPerShortlist: u32 = 100;
+    pub ShortlistPeriod: BlockNumber = 100;
+    pub MembershipDeposit: Balance = 50_000_000;
+    pub SlashAccount: AccountId = TREASURY;
+    pub DepositCurrencyId: CurrencyId = CurrencyId::Native;
+}
+
+parameter_types! {
     pub const UnitWeightCost: u64 = 10;
     pub const MaxInstructions: u32 = 100;
 }
@@ -235,6 +226,7 @@ pub static ALICE: AccountId = 125;
 pub static BOB: AccountId = 126;
 pub static CHARLIE: AccountId = 127;
 pub static DAVE: AccountId = 128;
+pub static TREASURY: AccountId = 222;
 pub static JOHN: AccountId = 255;
 
 pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
@@ -244,13 +236,14 @@ pub(crate) fn build_test_externality() -> sp_io::TestExternalities {
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| {
-        let initial_balance = 100_000_000u64;
+        let initial_balance = 100_000_000_000u128;
         System::set_block_number(1);
         let _ = Tokens::deposit(CurrencyId::Native, &ALICE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &BOB, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &CHARLIE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &DAVE, initial_balance);
         let _ = Tokens::deposit(CurrencyId::Native, &JOHN, initial_balance);
+        let _ = Tokens::deposit(CurrencyId::Native, &TREASURY, initial_balance);
     });
     ext
 }
@@ -260,14 +253,12 @@ pub enum StorageItems {
     Project,
 }
 
-pub struct MockDepositHandler<T>(T);
-impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>>
-    for MockDepositHandler<T>
-{
+pub struct MockDepositHandler;
+impl DepositHandler<Balance, AccountId> for MockDepositHandler {
     type DepositId = u64;
     type StorageItem = StorageItems;
     fn take_deposit(
-        _who: crate::AccountIdOf<T>,
+        _who: AccountId,
         _storage_item: Self::StorageItem,
         _currency_id: CurrencyId,
     ) -> Result<Self::DepositId, DispatchError> {
@@ -278,5 +269,29 @@ impl<T: crate::Config> DepositHandler<crate::BalanceOf<T>, crate::AccountIdOf<T>
     }
     fn slash_reserve_deposit(_deposit_id: Self::DepositId) -> DispatchResult {
         Ok(())
+    }
+}
+
+pub struct MockDisputeRaiser;
+impl DisputeRaiser<AccountId> for MockDisputeRaiser {
+    type DisputeKey = ProjectKey;
+    type SpecificId = MilestoneKey;
+    type MaxJurySize = MaxJuryMembers;
+    type MaxSpecifics = MaxMilestonesPerProject;
+    fn raise_dispute(
+        _dispute_key: Self::DisputeKey,
+        _raised_by: AccountId,
+        _jury: BoundedVec<AccountId, Self::MaxJurySize>,
+        _specific_ids: BoundedVec<Self::SpecificId, Self::MaxSpecifics>,
+    ) -> Result<(), DispatchError> {
+        Ok(())
+    }
+}
+
+pub struct MockJurySelector;
+impl pallet_fellowship::traits::SelectJury<AccountId> for MockJurySelector {
+    type JurySize = MaxJuryMembers;
+    fn select_jury() -> BoundedVec<AccountId, Self::JurySize> {
+        BoundedVec::new()
     }
 }

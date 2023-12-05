@@ -25,6 +25,7 @@ pub mod pallet {
         Saturating,
     };
     use sp_std::fmt::Debug;
+
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;

@@ -36,6 +36,7 @@ cumulus-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branc
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
@@ -45,19 +46,21 @@ common-traits = { path = "../../libs/common-traits", default-features = false }
 common-types = { path = "../../libs/common-types", default-features = false }
 common-runtime = { path = "../../runtime/common", default-features = false }
 pallet-deposits = { path = "../deposits", default-features = false }
+pallet-fellowship = { path = "../fellowship", default-features = false }
+pallet-disputes = { path = "../disputes", default-features = false}
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
 sp-keystore = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
-pallet-transaction-payment = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0" }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0" }
 common-runtime = { path = "../../runtime/common"}
+pallet-fellowship = { path = "../fellowship"}
+pallet-disputes = { path = "../disputes"}
 
 [features]
 default = [ 'std' ]
@@ -82,6 +85,7 @@ std = [
 	"pallet-deposits/std",
 	"pallet-identity/std",
 	"pallet-timestamp/std",
+	"orml-currencies/std",
 	"scale-info/std",
 	"serde/std",
 	"sp-api/std",
@@ -96,7 +100,7 @@ runtime-benchmarks = [
 	"common-runtime/runtime-benchmarks",
 	"frame-benchmarking/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
-	"pallet-deposits/runtime-benchmarks"
+	"pallet-deposits/runtime-benchmarks",
 ]
 try-runtime = [
 	"common-runtime/try-runtime",
@@ -113,7 +117,6 @@ try-runtime = [
 	"pallet-deposits/try-runtime",
 	"pallet-identity/try-runtime",
 	"pallet-timestamp/try-runtime",
-	"pallet-transaction-payment/try-runtime",
 	"pallet-xcm/try-runtime",
 	"sp-runtime/try-runtime",
 ]

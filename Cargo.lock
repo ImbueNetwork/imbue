@@ -1611,10 +1611,8 @@ dependencies = [
  "common-traits",
  "common-types",
  "cumulus-primitives-core",
- "frame-benchmarking",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking",
  "hex",
  "hex-literal 0.3.4",
  "orml-traits",
@@ -4688,6 +4686,7 @@ dependencies = [
  "pallet-collective",
  "pallet-democracy",
  "pallet-deposits",
+ "pallet-disputes",
  "pallet-fellowship",
  "pallet-grants",
  "pallet-identity",
@@ -7029,6 +7028,8 @@ dependencies = [
  "orml-traits",
  "pallet-balances",
  "pallet-deposits",
+ "pallet-disputes",
+ "pallet-fellowship",
  "pallet-identity",
  "pallet-proposals",
  "pallet-timestamp",
@@ -7118,32 +7119,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-crowdfunding"
-version = "0.1.0"
-dependencies = [
- "common-runtime",
- "common-types",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-deposits",
- "pallet-identity",
- "pallet-proposals",
- "pallet-timestamp",
- "pallet-xcm",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-democracy"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#f60318f68687e601c47de5ad5ca88e2c3f8139a7"
@@ -7172,7 +7147,6 @@ dependencies = [
  "frame-system",
  "orml-tokens",
  "orml-traits",
- "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -7337,6 +7311,8 @@ dependencies = [
  "orml-traits",
  "pallet-balances",
  "pallet-deposits",
+ "pallet-disputes",
+ "pallet-fellowship",
  "pallet-identity",
  "pallet-proposals",
  "pallet-timestamp",
@@ -7620,9 +7596,10 @@ dependencies = [
  "orml-xtokens",
  "pallet-balances",
  "pallet-deposits",
+ "pallet-disputes",
+ "pallet-fellowship",
  "pallet-identity",
  "pallet-timestamp",
- "pallet-transaction-payment",
  "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
