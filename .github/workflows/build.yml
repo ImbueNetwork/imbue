@@ -14,7 +14,6 @@ on:
       - "**.md"
 env:
   CARGO_TERM_COLOR: always
-  GCP_ZONE: europe-west3-b
 
 jobs:
   create-runner:
@@ -32,7 +31,6 @@ jobs:
           image_family: ubuntu-2004-lts
           machine_type: e2-highcpu-32
           disk_size: 100
-          machine_zone: ${{ env.GCP_ZONE }}
           ephemeral: true
 
   test-features:
