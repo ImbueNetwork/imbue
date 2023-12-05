@@ -8,7 +8,7 @@ use sp_std::{vec, vec::Vec};
 /// Ensure that a account is of a given role.
 /// Used in other pallets like an ensure origin.
 pub struct EnsureFellowshipRole<T>(T);
-impl<T: Config> EnsureRole<AccountIdOf<T>, Role> for EnsureFellowshipRole<T> {
+impl<T: Config> EnsureRole<AccountIdOf<T>> for EnsureFellowshipRole<T> {
     type Success = ();
 
     fn ensure_role(
