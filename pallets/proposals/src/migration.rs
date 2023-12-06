@@ -776,7 +776,7 @@ pub mod v7 {
             });
 
             ensure!(
-                Pallet::<T>::current_storage_version() == 7,
+                Pallet::<T>::on_chain_storage_version() == 7,
                 "Storage version should be v7 after the migration"
             );
 

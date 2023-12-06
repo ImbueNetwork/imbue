@@ -5,6 +5,8 @@ pub use pallet::*;
 pub mod weights;
 pub use weights::*;
 
+pub mod migrations;
+
 #[cfg(test)]
 mod mock;
 
@@ -57,12 +59,12 @@ pub mod pallet {
         BalanceOf<T>,
         AccountIdOf<T>,
     >>::StorageItem;
-    type DepositIdOf<T> =
+    pub(crate) type DepositIdOf<T> =
         <<T as Config>::DepositHandler as DepositHandler<BalanceOf<T>, AccountIdOf<T>>>::DepositId;
 
     pub type BriefHash = H256;
 
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
