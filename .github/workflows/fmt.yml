@@ -1,0 +1,37 @@
+name: cargo-fmt
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+
+jobs: 
+  cargo-fmt:
+    runs-on: ${{ needs.create-runner.outputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set HOME
+        run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
+
+      - name: Install minimal nightly Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2023-05-22
+          target: wasm32-unknown-unknown
+          override: true
+          components: rustfmt, clippy
+      
+      - name: 🫠 rustfmt 🫠
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --check

@@ -101,7 +101,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("imbue"),
     impl_name: create_runtime_str!("imbue"),
     authoring_version: 2,
-    spec_version: 1_000_000,
+    spec_version: 1_000_001,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 2,
@@ -182,12 +182,13 @@ pub mod migrations {
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
         pallet_briefs::migration::v3::MigrateToV3<Runtime>,
-        pallet_proposals::migration::v7::MigrateToV7<Runtime>,
+        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
         pallet_balances::migration::MigrateToTrackInactive<Runtime, xcm_config::CheckingAccount>,
         pallet_collator_selection::migration::v1::MigrateToV1<Runtime>,
         pallet_xcm::migration::v1::VersionUncheckedMigrateToV1<Runtime>,
-        pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
         orml_unknown_tokens::Migration<Runtime>,
+        // PROPOSALS MIGRATION MUST BE RUN AFTER FELLOWSHIP MIGRATION
+        pallet_proposals::migration::v7::MigrateToV7<Runtime>,
     );
 }
 

@@ -1,4 +1,4 @@
-name: build-on-self-hosted-runner
+name: test-features
 on:
   workflow_dispatch:
   push:
@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - main
+      - staging
     paths-ignore:
       - "**.md"
 env:
@@ -16,6 +17,15 @@ env:
   GCP_ZONE: europe-west3-a
 
 jobs:
+  check_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch
+        if: github.base_ref == 'main' && github.head_ref != 'staging'
+        run: |
+          echo "ERROR: You can only merge to main from staging."
+          exit 1
+
   create-runner:
     runs-on: ubuntu-latest
     outputs:
@@ -35,9 +45,9 @@ jobs:
           ephemeral: true
 
   test-features:
-      needs: create-runner
-      runs-on: ${{ needs.create-runner.outputs.label }}
-      steps:
+    needs: create-runner
+    runs-on: ${{ needs.create-runner.outputs.label }}
+    steps:
       - uses: actions/checkout@v4
 
       - name: Set HOME
@@ -50,16 +60,9 @@ jobs:
           toolchain: nightly-2023-05-22
           target: wasm32-unknown-unknown
           override: true
-          components: rustfmt, clippy
 
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler clang build-essential -y
-
-      - name: 🫠 rustfmt 🫠
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --check
 
       - name: Run tests with benchmarks
         run: cargo test --features runtime-benchmarks
