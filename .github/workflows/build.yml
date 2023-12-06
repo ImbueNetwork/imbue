@@ -42,7 +42,7 @@ jobs:
           image_family: ubuntu-2004-lts
           machine_type: e2-highcpu-16
           disk_size: 100
-          machine_zone: ${{ env.GCP_ZONE }}
+          machine_region: europe-west3
           ephemeral: true
 
   test-features:
