@@ -31,7 +31,6 @@ pub enum CurrencyId {
     ForeignAsset(ForeignAssetId),
 }
 
-
 #[derive(
     Clone,
     Copy,
@@ -52,7 +51,6 @@ pub enum ForeignAssetId {
     USDT,
 }
 
-
 #[derive(
     Clone,
     Copy,
@@ -68,7 +66,7 @@ pub enum ForeignAssetId {
     Serialize,
     Deserialize,
 )]
-/// The foreign owned account describes the chain 
+/// The foreign owned account describes the chain
 pub enum ForeignOwnedAccount {
     TRON([u8; 22]),
     ETH([u8; 20]),
@@ -85,23 +83,15 @@ impl ForeignOwnedAccount {
             CurrencyId::AUSD => false,
             CurrencyId::KAR => false,
             CurrencyId::MGX => false,
-            CurrencyId::ForeignAsset(asset) => {
-                 
-                match &self {
-                     ForeignOwnedAccount::TRON(_) => {
-                        match asset {
-                            ForeignAssetId::ETH => false,
-                            ForeignAssetId::USDT => true
-                        }
-                     },
-                     ForeignOwnedAccount::ETH(_) => {
-                          match asset {
-                              ForeignAssetId::ETH => true,
-                              ForeignAssetId::USDT => true
-                          }
-                     }
-                 }
-
+            CurrencyId::ForeignAsset(asset) => match &self {
+                ForeignOwnedAccount::TRON(_) => match asset {
+                    ForeignAssetId::ETH => false,
+                    ForeignAssetId::USDT => true,
+                },
+                ForeignOwnedAccount::ETH(_) => match asset {
+                    ForeignAssetId::ETH => true,
+                    ForeignAssetId::USDT => true,
+                },
             },
         }
     }

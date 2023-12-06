@@ -46,7 +46,6 @@ mod v0 {
 pub(crate) mod v1 {
     use super::*;
 
-    
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
         if v2::StorageVersion::<T>::get() == v2::Release::V0 {
             v2::BriefsV2::<T>::translate(|_, brief: v0::BriefDataV0<T>| {
@@ -97,7 +96,6 @@ pub mod v2 {
     pub type BriefsV2<T: Config> =
         CountedStorageMap<Pallet<T>, Blake2_128Concat, BriefHash, BriefDataV2<T>, OptionQuery>;
 
-
     #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
     pub struct BriefDataV2<T: Config> {
@@ -109,7 +107,6 @@ pub mod v2 {
         pub milestones: BoundedProposedMilestones<T>,
         pub deposit_id: crate::DepositIdOf<T>,
     }
-    
 
     #[storage_alias]
     pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
@@ -175,7 +172,10 @@ pub mod v3 {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
             let onchain = Pallet::<T>::on_chain_storage_version();
-            ensure!(onchain == 2, "onchain must be version 2 to run the migration.");
+            ensure!(
+                onchain == 2,
+                "onchain must be version 2 to run the migration."
+            );
             Ok(<Vec<u8> as Default>::default())
         }
 
@@ -184,7 +184,6 @@ pub mod v3 {
             let onchain = Pallet::<T>::on_chain_storage_version();
             let mut weight: Weight = Default::default();
             if current == 3 && onchain == 2 {
-
                 Briefs::<T>::drain().for_each(|(key, brief)| {
                     let migrated_brief = BriefData {
                         created_at: brief.created_at,
@@ -223,7 +222,6 @@ pub mod v3 {
         }
     }
 }
-
 
 #[cfg(test)]
 mod test {

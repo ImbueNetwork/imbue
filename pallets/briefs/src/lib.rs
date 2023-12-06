@@ -186,10 +186,16 @@ pub mod pallet {
             );
 
             if let CurrencyId::ForeignAsset(_) = currency_id {
-                ensure!(external_owned_address.is_some(), Error::<T>::EoaRequiredForForeignCurrencies);
+                ensure!(
+                    external_owned_address.is_some(),
+                    Error::<T>::EoaRequiredForForeignCurrencies
+                );
             }
             if let Some(eoa) = external_owned_address {
-                ensure!(eoa.ensure_supported_currency(currency_id), Error::<T>::CurrencyAccountComboNotSupported);
+                ensure!(
+                    eoa.ensure_supported_currency(currency_id),
+                    Error::<T>::CurrencyAccountComboNotSupported
+                );
             }
 
             let total_percentage = milestones
@@ -414,7 +420,7 @@ pub mod pallet {
             applicant: AccountIdOf<T>,
             milestones: BoundedProposedMilestones<T>,
             deposit_id: DepositIdOf<T>,
-            eoa: Option<common_types::ForeignOwnedAccount>
+            eoa: Option<common_types::ForeignOwnedAccount>,
         ) -> Self {
             Self {
                 created_at,

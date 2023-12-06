@@ -30,7 +30,7 @@ pub trait IntoProposal<AccountId, Balance: AtLeast32BitUnsigned, BlockNumber> {
         >,
         jury: BoundedVec<AccountId, Self::MaxJuryMembers>,
         on_creation_funding: FundingPath,
-        eoa: Option<common_types::ForeignOwnedAccount>
+        eoa: Option<common_types::ForeignOwnedAccount>,
     ) -> Result<(), DispatchError>;
 
     /// Use when the contributors are the refund locations.

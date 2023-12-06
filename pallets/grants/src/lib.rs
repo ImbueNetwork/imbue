@@ -120,15 +120,21 @@ pub mod pallet {
             amount_requested: BalanceOf<T>,
             treasury_origin: TreasuryOrigin,
             grant_id: GrantId,
-            external_owned_address: Option<common_types::ForeignOwnedAccount>
+            external_owned_address: Option<common_types::ForeignOwnedAccount>,
         ) -> DispatchResultWithPostInfo {
             let submitter = ensure_signed(origin)?;
 
             if let CurrencyId::ForeignAsset(_) = currency_id {
-                ensure!(external_owned_address.is_some(), Error::<T>::EoaRequiredForForeignCurrencies);
+                ensure!(
+                    external_owned_address.is_some(),
+                    Error::<T>::EoaRequiredForForeignCurrencies
+                );
             }
             if let Some(eoa) = external_owned_address {
-                ensure!(eoa.ensure_supported_currency(currency_id), Error::<T>::CurrencyAccountComboNotSupported);
+                ensure!(
+                    eoa.ensure_supported_currency(currency_id),
+                    Error::<T>::CurrencyAccountComboNotSupported
+                );
             }
 
             let percentage_sum = proposed_milestones

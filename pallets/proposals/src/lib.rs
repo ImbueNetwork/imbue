@@ -860,7 +860,7 @@ pub struct Project<T: Config> {
     pub on_creation_funding: FundingPath,
     /// The amount of funds refunded.
     pub refunded_funds: BalanceOf<T>,
-    /// The payment address used when the currency_id is of type foreign. 
+    /// The payment address used when the currency_id is of type foreign.
     pub external_owned_address: Option<common_types::ForeignOwnedAccount>,
 }
 
