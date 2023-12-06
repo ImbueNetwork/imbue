@@ -31,13 +31,45 @@ pub enum CurrencyId {
     ForeignAsset(ForeignAssetId),
 }
 
-enum ForeignAssetId {
+
+#[derive(
+    Clone,
+    Copy,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Debug,
+    Encode,
+    Decode,
+    TypeInfo,
+    MaxEncodedLen,
+    Serialize,
+    Deserialize,
+)]
+pub enum ForeignAssetId {
     ETH,
     USDT,
 }
 
+
+#[derive(
+    Clone,
+    Copy,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Debug,
+    Encode,
+    Decode,
+    TypeInfo,
+    MaxEncodedLen,
+    Serialize,
+    Deserialize,
+)]
 /// The foreign owned account describes the chain 
-enum ForeignOwnedAccount {
+pub enum ForeignOwnedAccount {
     TRON([u8; 22]),
     ETH([u8; 20]),
 }
@@ -46,28 +78,30 @@ impl ForeignOwnedAccount {
     /// Here we can define which currencies per network we support
     /// For example when given a TRON account we can use this to see if the account
     /// and the currency are compatible.
-    fn ensure_supported_currency(&self, currency: CurrencyId) -> bool {
+    pub fn ensure_supported_currency(&self, currency: CurrencyId) -> bool {
         match currency {
-            Native => false,
-            KSM => false,
-            AUSD => false,
-            KAR => false,
-            MGX => false,
-            ForeignAsset(asset) => {
-                match self {
-                    ForeignOwnedAccount::TRON(_) => {
-                        match asset => {
+            CurrencyId::Native => false,
+            CurrencyId::KSM => false,
+            CurrencyId::AUSD => false,
+            CurrencyId::KAR => false,
+            CurrencyId::MGX => false,
+            CurrencyId::ForeignAsset(asset) => {
+                 
+                match &self {
+                     ForeignOwnedAccount::TRON(_) => {
+                        match asset {
                             ForeignAssetId::ETH => false,
                             ForeignAssetId::USDT => true
                         }
-                    },
-                    ForeignOwnedAccount::ETH(_) => {
-                        match asset => {
-                            ForeignAssetId::ETH => true,
-                            ForeignAssetId::USDT => true
-                        }
-                    }
-                }
+                     },
+                     ForeignOwnedAccount::ETH(_) => {
+                          match asset {
+                              ForeignAssetId::ETH => true,
+                              ForeignAssetId::USDT => true
+                          }
+                     }
+                 }
+
             },
         }
     }

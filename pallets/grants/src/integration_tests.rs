@@ -19,6 +19,7 @@ fn create_proposal_from_grant() {
             contribution_value,
             TreasuryOrigin::Imbue,
             grant_id,
+            None,
         ));
         assert!(Projects::<Test>::get(1).is_some());
     });

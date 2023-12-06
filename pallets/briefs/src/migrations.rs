@@ -147,6 +147,64 @@ pub mod v2 {
     }
 }
 
+pub mod v3 {
+    use super::*;
+
+    pub struct MigrateToV3<T: Config>(T);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV2<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+            let onchain = StorageVersion::<T>::on_chain_storage_version();
+            ensure!(onchain == 2, "onchain must be version 2 to run the migration.")
+            Ok(<Vec<u8> as Default>::default())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let current = Pallet::<T>::current_storage_version();
+            let onchain = StorageVersion::<T>::on_chain_storage_version();
+            let mut weight: Weight = Default::default();
+            if current == 3 && onchain == 2 {
+
+                Briefs::<T>::drain().for_each(|(key, brief)| {
+                    let migrated_brief = BriefData {
+                        created_at: brief.created_at,
+                        brief_owners: brief.brief_owners,
+                        budget: brief.budget,
+                        currency_id: brief.currency_id,
+                        applicant: brief.applicant,
+                        milestones: brief.milestones,
+                        deposit_id: brief.deposit_id,
+                        eoa: None,
+                    };
+
+                    T::DbWeight::get().reads_writes(2, 2)
+                    Briefs::<T>::insert(key, migrated_brief);
+                })
+
+                current.put::<Pallet<T>>();
+
+                log::warn!("v3 has been successfully applied");
+                weight = weight + T::DbWeight::get().reads_writes(2, 1);
+            } else {
+                log::warn!("Skipping v3, should be removed");
+                weight = weight + T::DbWeight::get().reads(1);
+            }
+            weight
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+            frame_support::ensure!(
+                Pallet::<T>::on_chain_storage_version() == 3,
+                "v3 has not been applied"
+            );
+
+            Ok(())
+        }
+    }
+}
+
+
 #[cfg(test)]
 mod test {
     use super::*;

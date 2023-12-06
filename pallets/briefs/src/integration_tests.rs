@@ -22,6 +22,7 @@ fn create_proposal_from_brief() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
         );
 
         assert_ok!(BriefsMod::commence_work(

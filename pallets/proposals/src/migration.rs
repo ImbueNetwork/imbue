@@ -847,9 +847,10 @@ pub mod v7 {
                 jury,
                 on_creation_funding,
                 refunded_funds: Zero::zero(),
+                external_owned_address: None,
             };
 
-            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
             crate::Projects::<T>::insert(key, migrated_project);
         });
     }

@@ -640,6 +640,7 @@ pub mod pallet {
             >,
             jury: BoundedVec<AccountIdOf<T>, Self::MaxJuryMembers>,
             on_creation_funding: FundingPath,
+            eoa: Option<common_types::ForeignOwnedAccount>,
         ) -> Result<(), DispatchError> {
             let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
 
@@ -696,6 +697,7 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::TooManyJuryMembers)?,
                 on_creation_funding,
                 refunded_funds: Zero::zero(),
+                external_owned_address: eoa,
             };
 
             let individual_votes = ImmutableIndividualVotes::new(bounded_milestone_keys);
@@ -859,7 +861,7 @@ pub struct Project<T: Config> {
     /// The amount of funds refunded.
     pub refunded_funds: BalanceOf<T>,
     /// The payment address used when the currency_id is of type foreign. 
-    pub exter
+    pub external_owned_address: Option<common_types::ForeignOwnedAccount>,
 }
 
 /// For deriving the location of an account.

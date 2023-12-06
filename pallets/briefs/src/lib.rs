@@ -152,6 +152,10 @@ pub mod pallet {
         MilestonesTotalPercentageMustEqual100,
         /// too many milestones here mate fixed with https://github.com/ImbueNetwork/imbue/issues/267
         TooManyMilestones,
+        /// If youre using a foreign currency then you need an external_owned_address.
+        EoaRequiredForForeignCurrencies,
+        /// Currency is not supported for this external address.
+        CurrencyAccountComboNotSupported,
     }
 
     #[pallet::call]
@@ -170,6 +174,7 @@ pub mod pallet {
             brief_id: BriefHash,
             currency_id: CurrencyId,
             milestones: BoundedProposedMilestones<T>,
+            external_owned_address: Option<common_types::ForeignOwnedAccount>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -177,6 +182,13 @@ pub mod pallet {
                 Briefs::<T>::get(brief_id).is_none(),
                 Error::<T>::BriefAlreadyExists
             );
+
+            if let CurrencyId::ForeignAsset(_) = currency_id {
+                ensure!(external_owned_address.is_some(), Error::<T>::EoaRequiredForForeignCurrencies);
+            }
+            if let Some(eoa) = external_owned_address {
+                ensure!(eoa.ensure_supported_currency(currency_id), Error::<T>::CurrencyAccountComboNotSupported);
+            }
 
             let total_percentage = milestones
                 .iter()
@@ -230,6 +242,7 @@ pub mod pallet {
                 applicant,
                 milestones,
                 deposit_id,
+                external_owned_address,
             );
 
             Briefs::<T>::insert(brief_id, brief);
@@ -325,6 +338,7 @@ pub mod pallet {
                     .try_into()
                     .map_err(|_| Error::<T>::TooManyMilestones)?,
                 FundingPath::TakeFromReserved,
+                brief.eoa,
             )?;
 
             BriefContributions::<T>::remove(brief_id);
@@ -371,6 +385,7 @@ pub mod pallet {
         pub applicant: AccountIdOf<T>,
         pub milestones: BoundedProposedMilestones<T>,
         pub deposit_id: DepositIdOf<T>,
+        pub eoa: Option<common_types::ForeignOwnedAccount>,
     }
 
     impl<T: Config> Pallet<T> {
@@ -397,6 +412,7 @@ pub mod pallet {
             applicant: AccountIdOf<T>,
             milestones: BoundedProposedMilestones<T>,
             deposit_id: DepositIdOf<T>,
+            eoa: Option<common_types::ForeignOwnedAccount>
         ) -> Self {
             Self {
                 created_at,
@@ -406,6 +422,7 @@ pub mod pallet {
                 applicant,
                 milestones,
                 deposit_id,
+                eoa,
             }
         }
     }
