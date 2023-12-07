@@ -35,7 +35,7 @@ jobs:
           disk_size: 100
           ephemeral: true
 
-  test-features:
+  try-runtime:
     needs: create-runner
     runs-on: ${{ needs.create-runner.outputs.label }}
     steps:
