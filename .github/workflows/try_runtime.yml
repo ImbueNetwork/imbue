@@ -56,7 +56,7 @@ jobs:
         run: sudo apt install protobuf-compiler clang build-essential -y
 
       - name: Install try-runtime
-        run: cargo install --git https://github.com/paritytech/try-runtime-cli
+        run: cargo install --git https://github.com/paritytech/try-runtime-cli --locked
 
       - name: Build binary with try-runtime
         run: cargo build --features try-runtime
