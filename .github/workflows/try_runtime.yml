@@ -50,7 +50,6 @@ jobs:
           profile: minimal
           toolchain: nightly-2023-05-22
           target: wasm32-unknown-unknown
-          componants: 
           override: true
 
       - name: Install Dependencies
