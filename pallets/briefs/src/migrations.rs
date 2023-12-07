@@ -35,7 +35,7 @@ mod v0 {
     }
 
     #[storage_alias]
-    pub type Briefs<T: Config> =
+    pub type BriefsV0<T: Config> =
         CountedStorageMap<Pallet<T>, Blake2_128Concat, BriefHash, v0::BriefDataV0<T>, OptionQuery>;
 }
 
@@ -45,9 +45,10 @@ mod v0 {
 #[allow(dead_code)]
 pub(crate) mod v1 {
     use super::*;
+
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
         if v2::StorageVersion::<T>::get() == v2::Release::V0 {
-            crate::Briefs::<T>::translate(|_, brief: v0::BriefDataV0<T>| {
+            v0::BriefsV0::<T>::drain().for_each(|(key, brief)| {
                 *weight += T::DbWeight::get().reads_writes(2, 1);
                 let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief
                     .milestones
@@ -67,9 +68,9 @@ pub(crate) mod v1 {
 
                 if let Ok(milestones) = maybe_milestones {
                     if milestones.len() != brief.milestones.len() {
-                        return None;
+                        return ();
                     }
-                    Some(crate::BriefData {
+                    let migrated = v2::BriefDataV2 {
                         brief_owners: brief.brief_owners,
                         budget: brief.budget,
                         currency_id: brief.currency_id,
@@ -78,9 +79,10 @@ pub(crate) mod v1 {
                         milestones,
                         // A deposit_id of U32::Max is skipped and not returned.
                         deposit_id: u32::MAX.into(),
-                    })
-                } else {
-                    None
+                    };
+
+                    v2::BriefsV2::<T>::insert(key, migrated);
+
                 }
             })
         }
@@ -92,13 +94,29 @@ pub mod v2 {
     use super::*;
 
     #[storage_alias]
+    pub type BriefsV2<T: Config> =
+        CountedStorageMap<Pallet<T>, Blake2_128Concat, BriefHash, BriefDataV2<T>, OptionQuery>;
+
+    #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, MaxEncodedLen, TypeInfo)]
+    #[scale_info(skip_type_params(T))]
+    pub struct BriefDataV2<T: Config> {
+        pub brief_owners: BoundedBriefOwners<T>,
+        pub budget: BalanceOf<T>,
+        pub currency_id: CurrencyId,
+        pub created_at: BlockNumberFor<T>,
+        pub applicant: AccountIdOf<T>,
+        pub milestones: BoundedProposedMilestones<T>,
+        pub deposit_id: crate::DepositIdOf<T>,
+    }
+
+    #[storage_alias]
     pub type StorageVersion<T: Config> = StorageValue<Pallet<T>, Release, ValueQuery>;
 
     #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
     #[repr(u32)]
     pub enum Release {
-        V0,
         #[default]
+        V0,
         V1,
     }
 
@@ -147,6 +165,65 @@ pub mod v2 {
     }
 }
 
+pub mod v3 {
+    use super::*;
+
+    pub struct MigrateToV3<T: Config>(T);
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV3<T> {
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+            let onchain = Pallet::<T>::on_chain_storage_version();
+            ensure!(
+                onchain == 2,
+                "onchain must be version 2 to run the migration."
+            );
+            Ok(<Vec<u8> as Default>::default())
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let current = Pallet::<T>::current_storage_version();
+            let onchain = Pallet::<T>::on_chain_storage_version();
+            let mut weight: Weight = Default::default();
+            if current == 3 && onchain == 2 {
+                v2::BriefsV2::<T>::drain().for_each(|(key, brief)| {
+                    let migrated_brief = BriefData {
+                        created_at: brief.created_at,
+                        brief_owners: brief.brief_owners,
+                        budget: brief.budget,
+                        currency_id: brief.currency_id,
+                        applicant: brief.applicant,
+                        milestones: brief.milestones,
+                        deposit_id: brief.deposit_id,
+                        eoa: None,
+                    };
+
+                    T::DbWeight::get().reads_writes(2, 2);
+                    crate::Briefs::<T>::insert(key, migrated_brief);
+                });
+
+                current.put::<Pallet<T>>();
+
+                log::warn!("v3 has been successfully applied");
+                weight = weight + T::DbWeight::get().reads_writes(2, 1);
+            } else {
+                log::warn!("Skipping v3, should be removed");
+                weight = weight + T::DbWeight::get().reads(1);
+            }
+            weight
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+            frame_support::ensure!(
+                Pallet::<T>::on_chain_storage_version() == 3,
+                "v3 has not been applied"
+            );
+
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -183,11 +260,11 @@ mod test {
                 milestones,
             };
             let key: H256 = [1; 32].into();
-            v0::Briefs::<Test>::insert(key, &old_brief);
+            v0::BriefsV0::<Test>::insert(key, &old_brief);
             let mut weight: Weight = Default::default();
             v1::migrate_to_v1::<Test>(&mut weight);
 
-            let new_brief = crate::Briefs::<Test>::get(key).expect("should exist.");
+            let new_brief = v2::BriefsV2::<Test>::get(key).expect("should exist.");
             assert_eq!(new_brief.deposit_id, u32::MAX as u64);
             assert_eq!(
                 new_brief.milestones[0].percentage_to_unlock,

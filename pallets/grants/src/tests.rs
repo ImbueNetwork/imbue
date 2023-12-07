@@ -24,7 +24,8 @@ fn ensure_milestone_percent_equal_100() {
                 CurrencyId::Native,
                 10_000u32.into(),
                 TreasuryOrigin::Kusama,
-                Default::default()
+                Default::default(),
+                None,
             ),
             Error::<Test>::MustSumTo100
         );
@@ -48,6 +49,7 @@ fn create_grant_already_exists() {
             10_000u32.into(),
             TreasuryOrigin::Kusama,
             grant_id,
+            None,
         );
         assert_noop!(
             Grant::create_and_convert(
@@ -57,7 +59,8 @@ fn create_grant_already_exists() {
                 CurrencyId::Native,
                 10_000u32.into(),
                 TreasuryOrigin::Kusama,
-                grant_id
+                grant_id,
+                None,
             ),
             Error::<Test>::GrantAlreadyExists
         );

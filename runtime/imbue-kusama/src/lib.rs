@@ -181,6 +181,7 @@ pub mod migrations {
     use super::*;
     /// Unreleased migrations. Add new ones here:
     pub type Unreleased = (
+        pallet_briefs::migrations::v3::MigrateToV3<Runtime>,
         pallet_fellowship::migration::v0::MigrateInitial<Runtime>,
         pallet_balances::migration::MigrateToTrackInactive<Runtime, xcm_config::CheckingAccount>,
         pallet_collator_selection::migration::v1::MigrateToV1<Runtime>,

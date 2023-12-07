@@ -31,6 +31,76 @@ pub enum CurrencyId {
     ForeignAsset(ForeignAssetId),
 }
 
+#[derive(
+    Clone,
+    Copy,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Debug,
+    Encode,
+    Decode,
+    TypeInfo,
+    MaxEncodedLen,
+    Serialize,
+    Deserialize,
+)]
+pub enum ForeignAssetId {
+    ETH,
+    USDT,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Debug,
+    Encode,
+    Decode,
+    TypeInfo,
+    MaxEncodedLen,
+    Serialize,
+    Deserialize,
+)]
+/// The foreign owned account describes the chain
+pub enum ForeignOwnedAccount {
+    TRON([u8; 22]),
+    ETH([u8; 20]),
+}
+
+impl ForeignOwnedAccount {
+    /// Here we can define which currencies per network we support
+    /// For example when given a TRON account we can use this to see if the account
+    /// and the currency are compatible.
+    pub fn ensure_supported_currency(&self, currency: CurrencyId) -> bool {
+        match currency {
+            CurrencyId::Native => false,
+            CurrencyId::KSM => false,
+            CurrencyId::AUSD => false,
+            CurrencyId::KAR => false,
+            CurrencyId::MGX => false,
+            CurrencyId::ForeignAsset(asset) => match &self {
+                ForeignOwnedAccount::TRON(_) => match asset {
+                    ForeignAssetId::ETH => false,
+                    ForeignAssetId::USDT => true,
+                },
+                ForeignOwnedAccount::ETH(_) => match asset {
+                    ForeignAssetId::ETH => true,
+                    ForeignAssetId::USDT => true,
+                },
+            },
+        }
+    }
+    #[cfg(feature = "runtime-benchmarks")]
+    pub fn get_supported_currency_eoa_combo() -> (ForeignOwnedAccount, CurrencyId) {
+        (ForeignOwnedAccount::ETH(Default::default()), CurrencyId::ForeignAsset(ForeignAssetId::ETH))
+    }
+}
+
 pub mod currency_decimals {
     pub const NATIVE: u32 = 12;
     pub const AUSD: u32 = 12;
@@ -38,16 +108,6 @@ pub mod currency_decimals {
     pub const KSM: u32 = 12;
     pub const MGX: u32 = 18;
 }
-
-// A way to generate different currencies from a number.
-// Can be used in tests/benchmarks to generate different currencies.
-impl From<u32> for CurrencyId {
-    fn from(value: u32) -> Self {
-        CurrencyId::ForeignAsset(value)
-    }
-}
-
-pub type ForeignAssetId = u32;
 
 #[derive(
     Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
