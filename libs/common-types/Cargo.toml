@@ -41,6 +41,9 @@ std = [
 	'sp-std/std',
 	'xcm/std',
 ]
+
+runtime-benchmarks = []
+
 try-runtime = [
 	"common-traits/try-runtime",
 	"frame-support/try-runtime",

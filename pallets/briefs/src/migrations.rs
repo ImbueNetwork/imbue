@@ -35,7 +35,7 @@ mod v0 {
     }
 
     #[storage_alias]
-    pub type Briefs<T: Config> =
+    pub type BriefsV0<T: Config> =
         CountedStorageMap<Pallet<T>, Blake2_128Concat, BriefHash, v0::BriefDataV0<T>, OptionQuery>;
 }
 
@@ -114,8 +114,8 @@ pub mod v2 {
     #[derive(Encode, Decode, TypeInfo, PartialEq, MaxEncodedLen, Default)]
     #[repr(u32)]
     pub enum Release {
-        V0,
         #[default]
+        V0,
         V1,
     }
 
@@ -259,11 +259,11 @@ mod test {
                 milestones,
             };
             let key: H256 = [1; 32].into();
-            v0::Briefs::<Test>::insert(key, &old_brief);
+            v0::BriefsV0::<Test>::insert(key, &old_brief);
             let mut weight: Weight = Default::default();
             v1::migrate_to_v1::<Test>(&mut weight);
 
-            let new_brief = crate::Briefs::<Test>::get(key).expect("should exist.");
+            let new_brief = v2::BriefsV2::<Test>::get(key).expect("should exist.");
             assert_eq!(new_brief.deposit_id, u32::MAX as u64);
             assert_eq!(
                 new_brief.milestones[0].percentage_to_unlock,

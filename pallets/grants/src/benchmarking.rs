@@ -5,7 +5,7 @@ use super::*;
 use crate::test_utils::gen_grant_id;
 use crate::Pallet as Grants;
 use crate::{BoundedApprovers, BoundedPMilestones, Config};
-use common_types::{CurrencyId, TreasuryOrigin};
+use common_types::{CurrencyId, TreasuryOrigin, ForeignOwnedAccount};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
@@ -27,6 +27,7 @@ mod benchmarks {
     fn create_and_convert() {
         let submitter: T::AccountId = create_account_id::<T>("submitter", 1);
         let grant_id = gen_grant_id(1);
+        let (eoa, currency_id) = ForeignOwnedAccount::get_supported_currency_eoa_combo();
         let approvers = get_approvers::<T>(<T as Config>::MaxApprovers::get());
         let milestones = get_milestones::<T>(<T as Config>::MaxMilestonesPerGrant::get());
         let amount_requested = 1_000_000u32.into();
@@ -36,10 +37,11 @@ mod benchmarks {
             RawOrigin::Signed(submitter),
             milestones,
             approvers,
-            CurrencyId::Native,
+            currency_id,
             amount_requested,
             TreasuryOrigin::Kusama,
             grant_id,
+            Some(eoa),
         );
     }
     impl_benchmark_test_suite!(Grants, crate::mock::new_test_ext(), crate::mock::Test);

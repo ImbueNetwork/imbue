@@ -95,6 +95,10 @@ impl ForeignOwnedAccount {
             },
         }
     }
+    #[cfg(feature = "runtime-benchmarks")]
+    pub fn get_supported_currency_eoa_combo() -> (ForeignOwnedAccount, CurrencyId) {
+        (ForeignOwnedAccount::ETH(Default::default()), CurrencyId::ForeignAsset(ForeignAssetId::ETH))
+    }
 }
 
 pub mod currency_decimals {
