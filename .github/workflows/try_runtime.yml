@@ -1,4 +1,4 @@
-name: test-features
+name: try-runtime
 on:
   workflow_dispatch:
   push:
@@ -14,7 +14,7 @@ on:
       - "**.md"
 env:
   CARGO_TERM_COLOR: always
-  GCP_ZONE: europe-west3-a
+  GCP_ZONE: europe-west3-b
 
 jobs:
   create-runner:
@@ -50,10 +50,22 @@ jobs:
           profile: minimal
           toolchain: nightly-2023-05-22
           target: wasm32-unknown-unknown
+          componants: 
           override: true
 
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler clang build-essential -y
 
-      - name: Run tests with benchmarks
-        run: cargo test --features runtime-benchmarks
+      - name: Install try-runtime
+        run: cargo install --git https://github.com/paritytech/try-runtime-cli
+
+      - name: Build binary with try-runtime
+        run: cargo build --features try-runtime
+
+      - name: run imbue kusama try-runtime
+        run: try-runtime --runtime ./target/debug/wbuild/imbue-kusama-runtime/imbue_kusama_runtime.wasm on-runtime-upgrade live --uri ws://34.123.139.91:9942
+
+      - name: run imbue rococo try-runtime
+        run: try-runtime --runtime ./target/debug/wbuild/imbue-kusama-runtime/imbue_kusama_runtime.wasm on-runtime-upgrade live --uri ws://35.202.116.137:9942
+
+
