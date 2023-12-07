@@ -48,7 +48,7 @@ pub(crate) mod v1 {
 
     pub fn migrate_to_v1<T: Config>(weight: &mut Weight) {
         if v2::StorageVersion::<T>::get() == v2::Release::V0 {
-            v2::BriefsV2::<T>::translate(|_, brief: v0::BriefDataV0<T>| {
+            v0::BriefsV0::<T>::drain().for_each(|(key, brief)| {
                 *weight += T::DbWeight::get().reads_writes(2, 1);
                 let maybe_milestones: Result<BoundedProposedMilestones<T>, _> = brief
                     .milestones
@@ -68,9 +68,9 @@ pub(crate) mod v1 {
 
                 if let Ok(milestones) = maybe_milestones {
                     if milestones.len() != brief.milestones.len() {
-                        return None;
+                        return ();
                     }
-                    Some(v2::BriefDataV2 {
+                    let migrated = v2::BriefDataV2 {
                         brief_owners: brief.brief_owners,
                         budget: brief.budget,
                         currency_id: brief.currency_id,
@@ -79,9 +79,10 @@ pub(crate) mod v1 {
                         milestones,
                         // A deposit_id of U32::Max is skipped and not returned.
                         deposit_id: u32::MAX.into(),
-                    })
-                } else {
-                    None
+                    };
+
+                    v2::BriefsV2::<T>::insert(key, migrated);
+
                 }
             })
         }
@@ -184,7 +185,7 @@ pub mod v3 {
             let onchain = Pallet::<T>::on_chain_storage_version();
             let mut weight: Weight = Default::default();
             if current == 3 && onchain == 2 {
-                Briefs::<T>::drain().for_each(|(key, brief)| {
+                v2::BriefsV2::<T>::drain().for_each(|(key, brief)| {
                     let migrated_brief = BriefData {
                         created_at: brief.created_at,
                         brief_owners: brief.brief_owners,
@@ -197,7 +198,7 @@ pub mod v3 {
                     };
 
                     T::DbWeight::get().reads_writes(2, 2);
-                    Briefs::<T>::insert(key, migrated_brief);
+                    crate::Briefs::<T>::insert(key, migrated_brief);
                 });
 
                 current.put::<Pallet<T>>();
