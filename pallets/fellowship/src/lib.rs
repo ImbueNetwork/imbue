@@ -27,7 +27,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
     use common_types::CurrencyId;
-    use frame_support::{pallet_prelude::*, BoundedBTreeMap, weights::Weight};
+    use frame_support::{pallet_prelude::*, weights::Weight, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_runtime::traits::Zero;
@@ -417,4 +417,3 @@ pub mod pallet {
         fn pay_deposit_to_remove_pending_status() -> Weight;
     }
 }
-

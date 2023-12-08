@@ -120,4 +120,4 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         let _ = Tokens::deposit(CurrencyId::Native, &TREASURY, initial_balance);
     });
     ext
-} 
+}

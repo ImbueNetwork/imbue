@@ -1326,7 +1326,8 @@ type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub struct PointerBasedJurySelector<T: pallet_fellowship::Config>(T);
 impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>>
     for PointerBasedJurySelector<T>
-where T: frame_system::Config<AccountId = sp_runtime::AccountId32>,
+where
+    T: frame_system::Config<AccountId = sp_runtime::AccountId32>,
 {
     type JurySize = MaxJurySize;
     fn select_jury() -> frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> {
@@ -1372,7 +1373,9 @@ where T: frame_system::Config<AccountId = sp_runtime::AccountId32>,
                 sp_runtime::AccountId32::new(hex_literal::hex![
                     "5a1616831e4508abf2eced2670199ab7a00e9e2bbcfc04655ba7ed138af8787d"
                 ]),
-            ].try_into().unwrap_or_default()
+            ]
+            .try_into()
+            .unwrap_or_default()
         } else {
             out
         }
