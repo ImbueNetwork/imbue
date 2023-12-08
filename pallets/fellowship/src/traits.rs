@@ -1,6 +1,6 @@
 use crate::{Rank, Role};
 use codec::{FullCodec, FullEncode};
-use frame_support::{pallet_prelude::*, weights::Weight};
+use frame_support::pallet_prelude::*;
 use sp_runtime::DispatchError;
 use sp_std::vec::Vec;
 
