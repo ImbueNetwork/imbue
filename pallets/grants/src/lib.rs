@@ -101,6 +101,10 @@ pub mod pallet {
         InvalidTreasuryOrigin,
         /// Too many approvers
         TooManyApprovers,
+        /// If youre using a foreign currency then you need an external_owned_address.
+        EoaRequiredForForeignCurrencies,
+        /// Currency is not supported for this external address.
+        CurrencyAccountComboNotSupported,
     }
 
     #[pallet::call]
@@ -116,8 +120,22 @@ pub mod pallet {
             amount_requested: BalanceOf<T>,
             treasury_origin: TreasuryOrigin,
             grant_id: GrantId,
+            external_owned_address: Option<common_types::ForeignOwnedAccount>,
         ) -> DispatchResultWithPostInfo {
             let submitter = ensure_signed(origin)?;
+
+            if let CurrencyId::ForeignAsset(_) = currency_id {
+                ensure!(
+                    external_owned_address.is_some(),
+                    Error::<T>::EoaRequiredForForeignCurrencies
+                );
+            }
+            if let Some(eoa) = external_owned_address {
+                ensure!(
+                    eoa.ensure_supported_currency(currency_id),
+                    Error::<T>::CurrencyAccountComboNotSupported
+                );
+            }
 
             let percentage_sum = proposed_milestones
                 .iter()
@@ -168,6 +186,7 @@ pub mod pallet {
                     .try_into()
                     .map_err(|_| Error::<T>::TooManyApprovers)?,
                 pallet_proposals::FundingPath::WaitForFunding,
+                external_owned_address,
             )?;
 
             GrantsSubmittedBy::<T>::insert(&submitter, grant_id, ());
