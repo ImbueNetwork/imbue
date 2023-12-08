@@ -33,6 +33,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use pallet_deposits::traits::DepositHandler;
+    use pallet_fellowship::traits::EnsureRole;
     use pallet_fellowship::traits::SelectJury;
     use pallet_proposals::traits::IntoProposal;
     use pallet_proposals::{Contribution, FundingPath, ProposedMilestone};
@@ -84,9 +85,12 @@ pub mod pallet {
         type MaxMilestonesPerBrief: Get<u32>;
         /// Storage deposits.
         type BriefStorageItem: Get<StorageItemOf<Self>>;
+        /// Handler for deposits.
         type DepositHandler: DepositHandler<BalanceOf<Self>, AccountIdOf<Self>>;
         /// The type that selects a list of jury members.
         type JurySelector: SelectJury<AccountIdOf<Self>>;
+        /// Type for ensuring an account is of a given fellowship role.
+        type EnsureRole: pallet_fellowship::traits::EnsureRole<AccountIdOf<Self>>;
         /// The weight info for the extrinsics.
         type WeightInfo: WeightInfoT;
     }
@@ -177,8 +181,13 @@ pub mod pallet {
             currency_id: CurrencyId,
             milestones: BoundedProposedMilestones<T>,
             external_owned_address: Option<common_types::ForeignOwnedAccount>,
+            require_fellowship: bool,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+
+            if require_fellowship {
+                T::EnsureRole::ensure_role(&applicant, pallet_fellowship::Role::Freelancer, None)?;
+            }
 
             ensure!(
                 Briefs::<T>::get(brief_id).is_none(),

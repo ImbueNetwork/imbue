@@ -869,6 +869,7 @@ impl pallet_briefs::Config for Runtime {
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = Deposits;
     type JurySelector = PointerBasedJurySelector<Runtime>;
+    type EnsureRole = pallet_fellowship::impls::EnsureFellowshipRole<Runtime>;
 }
 
 parameter_types! {

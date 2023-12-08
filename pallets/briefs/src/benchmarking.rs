@@ -42,7 +42,11 @@ mod benchmarks {
             brief_id,
             currency_id,
             milestones,
+<<<<<<< HEAD
             Some(eoa)
+=======
+            false,
+>>>>>>> staging
         );
         assert_last_event::<T>(Event::<T>::BriefSubmitted(caller, brief_id).into());
     }
@@ -68,6 +72,7 @@ mod benchmarks {
             currency_id,
             milestones,
             None,
+            false,
         ));
         let brief_owner: T::AccountId = brief_owners[0].clone();
         // (brief_owner, brief_id, contribution)
@@ -102,6 +107,7 @@ mod benchmarks {
             currency_id,
             milestones,
             None,
+            false,
         ));
         // (origin, brief_id)
         #[extrinsic_call]
@@ -129,6 +135,7 @@ mod benchmarks {
             currency_id,
             milestones,
             None,
+            false,
         ));
         // (origin, brief_id)
         #[extrinsic_call]
