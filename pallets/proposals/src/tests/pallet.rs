@@ -654,8 +654,9 @@ fn vote_struct_removed_on_autofinalisation_success() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
+        let jury = vec![JURY_1, JURY_2];
         let project_key =
-            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native, jury)
                 .unwrap();
         let milestone_key = 5;
         assert_ok!(Proposals::submit_milestone(
@@ -690,8 +691,9 @@ fn vote_struct_removed_on_autofinalisation_failure() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
         let prop_milestones = get_milestones(10);
+        let jury = vec![JURY_1, JURY_2];
         let project_key =
-            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native, jury)
                 .unwrap();
         let milestone_key = 5;
         assert_ok!(Proposals::submit_milestone(
