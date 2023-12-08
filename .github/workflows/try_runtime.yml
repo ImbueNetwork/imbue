@@ -44,10 +44,10 @@ jobs:
       - name: Set HOME
         run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
 
-      - name: Install minimal nightly Rust
+      - name: Install nightly Rust
         uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
+          profile: default
           toolchain: nightly-2023-05-22
           target: wasm32-unknown-unknown
           override: true
