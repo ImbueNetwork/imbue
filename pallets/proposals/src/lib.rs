@@ -354,6 +354,8 @@ pub mod pallet {
         OnlyContributorsCanInitiateRefund,
         /// Only the ForeignAssetSigner can mint tokens
         RequireForeignAssetSigner,
+        /// A Jury is required to create a project.
+        JuryRequired,
     }
 
     #[pallet::hooks]
@@ -468,13 +470,18 @@ pub mod pallet {
                 Error::<T>::CannotRaiseDisputeOnApprovedMilestone
             );
 
-            <T as Config>::DisputeRaiser::raise_dispute(
-                project_key,
-                who,
-                project.jury,
-                milestone_keys.clone(),
-            )?;
-            ProjectsInDispute::<T>::insert(project_key, milestone_keys);
+            if project.jury.len() == 1 {
+                // https://github.com/ImbueNetwork/imbue/issues/270
+                let _ = <Self as pallet_disputes::traits::DisputeHooks<ProjectKey, MilestoneKey>>::on_dispute_complete(project_key, milestone_keys.to_vec(), pallet_disputes::DisputeResult::Success);
+            } else {
+                <T as Config>::DisputeRaiser::raise_dispute(
+                    project_key,
+                    who,
+                    project.jury,
+                    milestone_keys.clone(),
+                )?;
+                ProjectsInDispute::<T>::insert(project_key, milestone_keys);
+            }
 
             Ok(())
         }
@@ -641,6 +648,7 @@ pub mod pallet {
             jury: BoundedVec<AccountIdOf<T>, Self::MaxJuryMembers>,
             on_creation_funding: FundingPath,
         ) -> Result<(), DispatchError> {
+            ensure!(jury.len() > 0, Error::<T>::JuryRequired);
             let project_key = crate::ProjectCount::<T>::get().saturating_add(1);
 
             // Take storage deposit only for a Project.

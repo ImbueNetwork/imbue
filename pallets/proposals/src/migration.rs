@@ -1161,9 +1161,15 @@ mod test {
         build_test_externality().execute_with(|| {
             let cont = get_contributions::<Test>(vec![BOB, DAVE], 100_000);
             let prop_milestones = get_milestones(10);
-            let project_key =
-                create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
-                    .expect("project wasnt created!");
+            let jury = vec![JURY_1, JURY_2];
+            let project_key = create_and_fund_project::<Test>(
+                ALICE,
+                cont,
+                prop_milestones,
+                CurrencyId::Native,
+                jury,
+            )
+            .expect("project wasnt created!");
             let milestone_key: MilestoneKey = 0;
             let expiry_block: BlockNumber = 10;
             let rounds_expiring: BoundedProjectKeysPerBlock<Test> =
