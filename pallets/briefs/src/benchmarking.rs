@@ -42,11 +42,8 @@ mod benchmarks {
             brief_id,
             currency_id,
             milestones,
-<<<<<<< HEAD
             Some(eoa)
-=======
             false,
->>>>>>> staging
         );
         assert_last_event::<T>(Event::<T>::BriefSubmitted(caller, brief_id).into());
     }
