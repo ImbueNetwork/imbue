@@ -42,7 +42,7 @@ mod benchmarks {
             brief_id,
             currency_id,
             milestones,
-            Some(eoa)
+            Some(eoa),
             false,
         );
         assert_last_event::<T>(Event::<T>::BriefSubmitted(caller, brief_id).into());

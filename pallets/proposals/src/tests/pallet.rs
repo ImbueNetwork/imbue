@@ -615,6 +615,7 @@ fn vote_on_milestone_autofinalises_on_all_voted_and_fail() {
     });
 }
 
+#[test]
 fn vote_struct_removed_on_autofinalisation_success() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
@@ -646,6 +647,7 @@ fn vote_struct_removed_on_autofinalisation_success() {
     });
 }
 
+#[test]
 fn vote_struct_removed_on_autofinalisation_failure() {
     build_test_externality().execute_with(|| {
         let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
