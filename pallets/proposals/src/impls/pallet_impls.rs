@@ -318,9 +318,9 @@ impl<T: Config> Pallet<T> {
         // Prevent hook from calling.
         // TODO: only remove project key????
         RoundsExpiring::<T>::remove(exp_block);
-        
-        MilestoneVotes::<T>::mutate(project_key, |btree_votes|{
-          let _val = btree_votes.remove(&milestone_key);
+
+        MilestoneVotes::<T>::mutate(project_key, |btree_votes| {
+            let _val = btree_votes.remove(&milestone_key);
         });
 
         // Allow future votes to occur on this milestone

@@ -93,7 +93,6 @@ mod benchmarks {
         let brief_id = gen_hash(1);
         let milestones = get_max_milestones::<T>();
 
-
         assert_ok!(Briefs::<T>::create_brief(
             RawOrigin::Signed(caller).into(),
             brief_owners,
@@ -147,7 +146,11 @@ mod benchmarks {
     );
 }
 
-fn create_account_id<T: Config>(suri: &'static str, n: u32, currency_id: CurrencyId) -> T::AccountId {
+fn create_account_id<T: Config>(
+    suri: &'static str,
+    n: u32,
+    currency_id: CurrencyId,
+) -> T::AccountId {
     let user = account(suri, n, SEED);
     let initial_balance = 1_000_000_000_000_000u128;
     assert_ok!(T::RMultiCurrency::deposit(

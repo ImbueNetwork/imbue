@@ -635,15 +635,19 @@ fn vote_struct_removed_on_autofinalisation_success() {
             milestone_key,
             true
         ));
-        assert!(MilestoneVotes::<Test>::get(project_key).get(&milestone_key).is_some());
-        
+        assert!(MilestoneVotes::<Test>::get(project_key)
+            .get(&milestone_key)
+            .is_some());
+
         assert_ok!(Proposals::vote_on_milestone(
             RuntimeOrigin::signed(CHARLIE),
             project_key,
             milestone_key,
             true
         ));
-        assert!(MilestoneVotes::<Test>::get(project_key).get(&milestone_key).is_none());
+        assert!(MilestoneVotes::<Test>::get(project_key)
+            .get(&milestone_key)
+            .is_none());
     });
 }
 
@@ -667,7 +671,9 @@ fn vote_struct_removed_on_autofinalisation_failure() {
             milestone_key,
             false
         ));
-        assert!(MilestoneVotes::<Test>::get(project_key).get(&milestone_key).is_some());
+        assert!(MilestoneVotes::<Test>::get(project_key)
+            .get(&milestone_key)
+            .is_some());
         assert_ok!(Proposals::vote_on_milestone(
             RuntimeOrigin::signed(CHARLIE),
             project_key,
@@ -675,10 +681,11 @@ fn vote_struct_removed_on_autofinalisation_failure() {
             false
         ));
 
-        assert!(MilestoneVotes::<Test>::get(project_key).get(&milestone_key).is_none());
+        assert!(MilestoneVotes::<Test>::get(project_key)
+            .get(&milestone_key)
+            .is_none());
     });
 }
-
 
 #[test]
 fn withdraw_not_initiator() {
