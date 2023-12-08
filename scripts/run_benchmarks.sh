@@ -2,9 +2,9 @@
 set -eou pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 cd ../
-cargo build --locked --features runtime-benchmarks
+cargo build --release --locked --features runtime-benchmarks
 
-IMBUE=./target/debug/imbue
+IMBUE=./target/release/imbue
 
 EXCLUDED_PALLETS=( 
     "frame_benchmarking"
