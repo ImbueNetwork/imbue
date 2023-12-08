@@ -541,7 +541,7 @@ fn vote_on_milestone_not_contributor() {
 #[test]
 fn vote_on_milestone_actually_adds_to_vote() {
     build_test_externality().execute_with(|| {
-        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE, DAVE], 100_000);
         let prop_milestones = get_milestones(10);
         let project_key =
             create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
@@ -614,6 +614,69 @@ fn vote_on_milestone_autofinalises_on_all_voted_and_fail() {
         )
     });
 }
+
+fn vote_struct_removed_on_autofinalisation_success() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
+                .unwrap();
+        let milestone_key = 5;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(ALICE),
+            project_key,
+            milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(BOB),
+            project_key,
+            milestone_key,
+            true
+        ));
+        assert!(MilestoneVotes::<Test>::get(project_key).get(&milestone_key).is_some());
+        
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(CHARLIE),
+            project_key,
+            milestone_key,
+            true
+        ));
+        assert!(MilestoneVotes::<Test>::get(project_key).get(&milestone_key).is_none());
+    });
+}
+
+fn vote_struct_removed_on_autofinalisation_failure() {
+    build_test_externality().execute_with(|| {
+        let cont = get_contributions::<Test>(vec![BOB, CHARLIE], 100_000);
+        let prop_milestones = get_milestones(10);
+        let project_key =
+            create_and_fund_project::<Test>(ALICE, cont, prop_milestones, CurrencyId::Native)
+                .unwrap();
+        let milestone_key = 5;
+        assert_ok!(Proposals::submit_milestone(
+            RuntimeOrigin::signed(ALICE),
+            project_key,
+            milestone_key
+        ));
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(BOB),
+            project_key,
+            milestone_key,
+            false
+        ));
+        assert!(MilestoneVotes::<Test>::get(project_key).get(&milestone_key).is_some());
+        assert_ok!(Proposals::vote_on_milestone(
+            RuntimeOrigin::signed(CHARLIE),
+            project_key,
+            milestone_key,
+            false
+        ));
+
+        assert!(MilestoneVotes::<Test>::get(project_key).get(&milestone_key).is_none());
+    });
+}
+
 
 #[test]
 fn withdraw_not_initiator() {

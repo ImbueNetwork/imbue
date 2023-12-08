@@ -316,7 +316,13 @@ impl<T: Config> Pallet<T> {
         let exp_block = Rounds::<T>::take((project_key, milestone_key), RoundType::VotingRound)
             .ok_or(Error::<T>::VotingRoundNotStarted)?;
         // Prevent hook from calling.
+        // TODO: only remove project key????
         RoundsExpiring::<T>::remove(exp_block);
+        
+        MilestoneVotes::<T>::mutate(project_key, |btree_votes|{
+          let _val = btree_votes.remove(&milestone_key);
+        });
+
         // Allow future votes to occur on this milestone
         IndividualVoteStore::<T>::try_mutate(project_key, |maybe_individual_votes| {
             if let Some(individual_votes) = maybe_individual_votes {
