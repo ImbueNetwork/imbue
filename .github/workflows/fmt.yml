@@ -9,17 +9,15 @@ on:
   pull_request:
     branches:
       - main
+      - staging
     paths-ignore:
       - "**.md"
 
 jobs: 
   cargo-fmt:
-    runs-on: ${{ needs.create-runner.outputs.label }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set HOME
-        run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
 
       - name: Install minimal nightly Rust
         uses: actions-rs/toolchain@v1
