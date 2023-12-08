@@ -89,6 +89,7 @@ pub fn create_and_fund_project<T: Config>(
         refund_locations,
         jury.try_into().expect("Too many Jury members."),
         FundingPath::TakeFromReserved,
+        None,
     )?;
 
     Ok(ProjectCount::<T>::get())
@@ -114,6 +115,7 @@ pub fn _create_project_awaiting_funding<T: Config>(
         vec![(Locality::Foreign(treasury_account), Percent::from_parts(100u8))].try_into().map_err(|_|Error::<T>::TooManyRefundLocations)?,
         BoundedVec::new(),
         FundingPath::WaitForFunding,
+        None,
     )?;
 
     Ok(ProjectCount::<T>::get())

@@ -4,7 +4,7 @@ use super::*;
 use crate::test_utils::gen_hash;
 use crate::Pallet as Briefs;
 use crate::{BoundedBriefOwners, BoundedProposedMilestones};
-use common_types::CurrencyId;
+use common_types::{CurrencyId, ForeignOwnedAccount};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get};
 use frame_system::{EventRecord, RawOrigin};
@@ -22,14 +22,15 @@ mod benchmarks {
 
     #[benchmark]
     fn create_brief() {
-        let brief_owners = get_max_brief_owners::<T>();
+        let (eoa, currency_id) = ForeignOwnedAccount::get_supported_currency_eoa_combo();
+        let brief_owners = get_max_brief_owners::<T>(currency_id);
         let caller: T::AccountId = brief_owners[0].clone();
-        let applicant = create_account_id::<T>("applicant", 1);
+        let applicant = create_account_id::<T>("applicant", 1, currency_id);
         let budget = 10_000u32.into();
         let initial_contribution = 5_000u32.into();
         let brief_id = gen_hash(1);
         let milestones = get_max_milestones::<T>();
-        // (origin, brief_owners, applicant, budget, initial_contribution, brief_id, currency_id, milestones)
+        // (origin, brief_owners, applicant, budget, initial_contribution, brief_id, currency_id, milestones, Option<eoa>)
 
         #[extrinsic_call]
         create_brief(
@@ -39,8 +40,9 @@ mod benchmarks {
             budget,
             initial_contribution,
             brief_id,
-            CurrencyId::Native,
+            currency_id,
             milestones,
+            Some(eoa),
             false,
         );
         assert_last_event::<T>(Event::<T>::BriefSubmitted(caller, brief_id).into());
@@ -48,9 +50,10 @@ mod benchmarks {
 
     #[benchmark]
     fn contribute_to_brief() {
-        let brief_owners = get_max_brief_owners::<T>();
+        let currency_id = CurrencyId::Native;
+        let brief_owners = get_max_brief_owners::<T>(currency_id);
         let caller: T::AccountId = brief_owners[0].clone();
-        let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
+        let applicant: T::AccountId = create_account_id::<T>("applicant", 1, currency_id);
         let budget = 10_000_000_000_000u128.saturated_into();
         let initial_contribution = 5_000_000_000_000u128.saturated_into();
         let contribution = 5_000_000_000_000u128.saturated_into();
@@ -63,8 +66,9 @@ mod benchmarks {
             budget,
             initial_contribution,
             brief_id,
-            CurrencyId::Native,
+            currency_id,
             milestones,
+            None,
             false,
         ));
         let brief_owner: T::AccountId = brief_owners[0].clone();
@@ -80,13 +84,15 @@ mod benchmarks {
 
     #[benchmark]
     fn commence_work() {
-        let brief_owners = get_max_brief_owners::<T>();
+        let currency_id = CurrencyId::Native;
+        let brief_owners = get_max_brief_owners::<T>(currency_id);
         let caller: T::AccountId = brief_owners[0].clone();
-        let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
+        let applicant: T::AccountId = create_account_id::<T>("applicant", 1, currency_id);
         let budget = 10_000_000_000_000u128.saturated_into();
         let initial_contribution = 5_000_000_000_000u128.saturated_into();
         let brief_id = gen_hash(1);
         let milestones = get_max_milestones::<T>();
+
         assert_ok!(Briefs::<T>::create_brief(
             RawOrigin::Signed(caller).into(),
             brief_owners,
@@ -94,8 +100,9 @@ mod benchmarks {
             budget,
             initial_contribution,
             brief_id,
-            CurrencyId::Native,
+            currency_id,
             milestones,
+            None,
             false,
         ));
         // (origin, brief_id)
@@ -106,9 +113,10 @@ mod benchmarks {
 
     #[benchmark]
     fn cancel_brief() {
-        let brief_owners = get_max_brief_owners::<T>();
+        let currency_id = CurrencyId::Native;
+        let brief_owners = get_max_brief_owners::<T>(currency_id);
         let caller: T::AccountId = brief_owners[0].clone();
-        let applicant: T::AccountId = create_account_id::<T>("applicant", 1);
+        let applicant: T::AccountId = create_account_id::<T>("applicant", 1, currency_id);
         let budget = 10_000_000_000_000u128.saturated_into();
         let initial_contribution = 5_000_000_000_000u128.saturated_into();
         let brief_id = gen_hash(1);
@@ -120,8 +128,9 @@ mod benchmarks {
             budget,
             initial_contribution,
             brief_id,
-            CurrencyId::Native,
+            currency_id,
             milestones,
+            None,
             false,
         ));
         // (origin, brief_id)
@@ -137,11 +146,15 @@ mod benchmarks {
     );
 }
 
-fn create_account_id<T: Config>(suri: &'static str, n: u32) -> T::AccountId {
+fn create_account_id<T: Config>(
+    suri: &'static str,
+    n: u32,
+    currency_id: CurrencyId,
+) -> T::AccountId {
     let user = account(suri, n, SEED);
     let initial_balance = 1_000_000_000_000_000u128;
     assert_ok!(T::RMultiCurrency::deposit(
-        CurrencyId::Native,
+        currency_id,
         &user,
         initial_balance.saturated_into()
     ));
@@ -156,21 +169,21 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     assert_eq!(event, &system_event);
 }
 
-fn get_brief_owners<T: Config>(mut n: u32) -> BoundedBriefOwners<T> {
+fn get_brief_owners<T: Config>(mut n: u32, currency: CurrencyId) -> BoundedBriefOwners<T> {
     let max = <T as Config>::MaxBriefOwners::get();
     if n > max {
         n = max;
     }
     (0..n)
-        .map(|i| create_account_id::<T>("brief_owner", i))
+        .map(|i| create_account_id::<T>("brief_owner", i, currency))
         .collect::<Vec<T::AccountId>>()
         .try_into()
         .expect("qed")
 }
 
-fn get_max_brief_owners<T: Config>() -> BoundedBriefOwners<T> {
+fn get_max_brief_owners<T: Config>(currency_id: CurrencyId) -> BoundedBriefOwners<T> {
     let max_brief_owners: u32 = <T as Config>::MaxBriefOwners::get();
-    get_brief_owners::<T>(max_brief_owners)
+    get_brief_owners::<T>(max_brief_owners, currency_id)
 }
 
 fn get_milestones<T: Config>(mut n: u32) -> BoundedProposedMilestones<T> {

@@ -776,7 +776,7 @@ pub mod v7 {
             });
 
             ensure!(
-                Pallet::<T>::current_storage_version() == 7,
+                Pallet::<T>::on_chain_storage_version() == 7,
                 "Storage version should be v7 after the migration"
             );
 
@@ -855,9 +855,10 @@ pub mod v7 {
                 jury: jury.try_into().expect("contributions bound is larger than jury bound, reduce contribution bound or increase jury bound."),
                 on_creation_funding,
                 refunded_funds: Zero::zero(),
+                external_owned_address: None,
             };
 
-            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            *weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 2));
             crate::Projects::<T>::insert(key, migrated_project);
         });
     }

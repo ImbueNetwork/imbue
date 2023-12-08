@@ -26,6 +26,7 @@ fn create_brief_not_approved_applicant() {
                 gen_hash(1),
                 CurrencyId::Native,
                 get_milestones(10),
+                None,
                 true,
             ),
             BadOrigin
@@ -51,6 +52,7 @@ fn create_brief_approved_applicant() {
             gen_hash(1),
             CurrencyId::Native,
             get_milestones(10),
+            None,
             true,
         ));
     });
@@ -69,6 +71,7 @@ fn create_brief_brief_owner_overflow() {
                 gen_hash(1),
                 CurrencyId::Native,
                 get_milestones(10),
+                None,
                 false,
             ),
             Error::<Test>::TooManyBriefOwners
@@ -88,6 +91,7 @@ fn create_brief_with_no_contribution_ok() {
             gen_hash(1),
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         ));
     });
@@ -109,6 +113,7 @@ fn create_brief_no_contribution_and_contribute() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         ));
 
@@ -151,6 +156,7 @@ fn contribute_to_brief_not_brief_owner() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         ));
 
@@ -180,6 +186,7 @@ fn contribute_to_brief_more_than_total_ok() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         ));
         assert_ok!(BriefsMod::contribute_to_brief(
@@ -205,6 +212,7 @@ fn create_brief_already_exists() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         ));
 
@@ -218,6 +226,7 @@ fn create_brief_already_exists() {
                 brief_id,
                 CurrencyId::Native,
                 get_milestones(10),
+                None,
                 false,
             ),
             Error::<Test>::BriefAlreadyExists
@@ -240,6 +249,7 @@ fn only_applicant_can_start_work() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         ));
 
@@ -270,6 +280,7 @@ fn initial_contribution_and_extra_contribution_aggregates() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         ));
 
@@ -307,6 +318,7 @@ fn reserved_funds_are_transferred_to_project_kitty() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         );
 
@@ -340,6 +352,7 @@ fn cancel_brief_works() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         ));
 
@@ -407,6 +420,7 @@ fn cancel_brief_not_brief_owner() {
             brief_id,
             CurrencyId::Native,
             get_milestones(10),
+            None,
             false,
         ));
 
