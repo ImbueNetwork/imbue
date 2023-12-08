@@ -26,6 +26,7 @@ fn create_brief_not_approved_applicant() {
                 gen_hash(1),
                 CurrencyId::Native,
                 get_milestones(10),
+                None,
                 true,
             ),
             BadOrigin
@@ -51,6 +52,7 @@ fn create_brief_approved_applicant() {
             gen_hash(1),
             CurrencyId::Native,
             get_milestones(10),
+            None,
             true,
         ));
     });
