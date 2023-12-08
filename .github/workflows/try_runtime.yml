@@ -29,7 +29,7 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           image_project: ubuntu-os-cloud
-          image_family: ubuntu-2004-lts
+          image_family: ubuntu-2004
           machine_type: e2-highcpu-32
           machine_zone: ${{ env.GCP_ZONE }}
           disk_size: 100
@@ -44,11 +44,11 @@ jobs:
       - name: Set HOME
         run: echo "HOME=/home/ubuntu" >> ${GITHUB_ENV}
 
-      - name: Install nightly Rust
+      - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: default
-          toolchain: nightly-2023-05-22
+          toolchain: stable
           target: wasm32-unknown-unknown
           override: true
 
