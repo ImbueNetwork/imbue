@@ -408,3 +408,13 @@ pub mod pallet {
         None,
     }
 }
+
+pub trait WeightInfoT {
+    fn add_to_fellowship() -> Weight;
+    fn force_add_fellowship() -> Weight;
+    fn leave_fellowship() -> Weight;
+    fn force_remove_and_slash_fellowship() -> Weight;
+    fn add_candidate_to_shortlist() -> Weight;
+    fn remove_candidate_from_shortlist() -> Weight;
+    fn pay_deposit_to_remove_pending_status() -> Weight;
+}

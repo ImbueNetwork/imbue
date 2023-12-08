@@ -193,26 +193,6 @@ fn endowed_accounts_local() -> Vec<AccountId> {
     ]
 }
 
-let initial_fellows() -> Vec<AccountId> {
-    vec![
-                AccountId32::new(hex![
-                    "4294eb45758b4b92b01ceffe209bbcfeb26c973d5c0e21ac6c9cfbb99201b334"
-                ]),
-                AccountId32::new(hex![
-                    "328d9a97c6f7f0fbbc60be2faba4c36cd4e5d3cfcb316393b384ee1a45433034"
-                ]),
-                AccountId32::new(hex![
-                    "3e064fcfd9f02b99dda26226d3d6b2d68032b1c990e7a350cd01747271356f4c"
-                ]),
-                AccountId32::new(hex![
-                    "82bf733f44a840f0a5c1935a002d4e541d81298fad6d1da8124073485983860e"
-                ]),
-                AccountId32::new(hex![
-                    "5a1616831e4508abf2eced2670199ab7a00e9e2bbcfc04655ba7ed138af8787d"
-                ]),
-            ];
-}
-
 pub fn get_dev_session_keys(
     keys: imbue_kusama_runtime::AuraId,
 ) -> imbue_kusama_runtime::SessionKeys {
