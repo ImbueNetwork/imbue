@@ -71,7 +71,7 @@ impl pallet_fellowship::Config for Test {
     type DepositCurrencyId = DepositCurrencyId;
     type SlashAccount = SlashAccount;
     type Permissions = crate::impls::VetterAndFreelancerAllPermissions;
-    type WeightInfo = ();
+    type WeightInfo = crate::weights::WeightInfo<Test>;
 }
 
 orml_traits::parameter_type_with_key! {

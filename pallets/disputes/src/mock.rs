@@ -127,24 +127,3 @@ impl crate::traits::DisputeHooks<u32, u32> for Test {
         <Weight as Default>::default()
     }
 }
-
-impl crate::WeightInfoT for () {
-    fn vote_on_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn extend_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn raise_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn force_succeed_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn force_fail_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn calculate_winner() -> Weight {
-        <Weight as Default>::default()
-    }
-}
