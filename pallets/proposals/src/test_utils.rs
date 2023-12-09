@@ -67,6 +67,7 @@ pub fn create_and_fund_project<T: Config>(
     contributions: ContributionsFor<T>,
     proposed_milestones: Vec<ProposedMilestone>,
     currency_id: CurrencyId,
+    jury: Vec<AccountIdOf<T>>,
 ) -> Result<ProjectKey, DispatchError> {
     contributions.iter().for_each(|(acc, c)| {
         <T as Config>::MultiCurrency::reserve(currency_id, acc, c.value).unwrap();
@@ -86,7 +87,7 @@ pub fn create_and_fund_project<T: Config>(
         beneficiary,
         proposed_milestones.try_into().map_err(|_|Error::<T>::TooManyMilestones)?,
         refund_locations,
-        BoundedVec::new(),
+        jury.try_into().expect("Too many Jury members."),
         FundingPath::TakeFromReserved,
         None,
     )?;
