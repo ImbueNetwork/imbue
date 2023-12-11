@@ -89,11 +89,14 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A dispute has been raised.
-        DisputeRaised { dispute_key: T::DisputeKey },
+        DisputeRaised {
+            who: AccountIdOf<T>,
+            dispute_key: T::DisputeKey,
+        },
         /// A disute has been voted on
         DisputeVotedOn {
-            dispute_key: T::DisputeKey,
             who: AccountIdOf<T>,
+            dispute_key: T::DisputeKey,
             vote: bool,
         },
         /// A dispute has been completed.
@@ -339,7 +342,7 @@ pub mod pallet {
             let expiration_block =
                 frame_system::Pallet::<T>::block_number().saturating_add(T::VotingTimeLimit::get());
             let dispute = Self {
-                raised_by,
+                raised_by: raised_by.clone(),
                 jury,
                 votes: Default::default(),
                 specifiers,
@@ -356,7 +359,10 @@ pub mod pallet {
                 Ok::<(), DispatchError>(())
             })?;
 
-            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeRaised { dispute_key });
+            crate::Pallet::<T>::deposit_event(Event::<T>::DisputeRaised {
+                who: raised_by,
+                dispute_key,
+            });
             Ok(())
         }
 

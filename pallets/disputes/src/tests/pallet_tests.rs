@@ -33,6 +33,7 @@ fn raise_dispute_assert_event() {
             specifics,
         ));
         System::assert_last_event(RuntimeEvent::PalletDisputes(Event::<Test>::DisputeRaised {
+            who: ALICE,
             dispute_key,
         }));
     });
@@ -51,7 +52,10 @@ fn raise_dispute_assert_event_too_many_disputes() {
                     i, ALICE, jury, specifics,
                 ));
                 System::assert_last_event(RuntimeEvent::PalletDisputes(
-                    Event::<Test>::DisputeRaised { dispute_key: i },
+                    Event::<Test>::DisputeRaised {
+                        who: ALICE,
+                        dispute_key: i,
+                    },
                 ));
             } else {
                 let actual_result = <PalletDisputes as DisputeRaiser<AccountId>>::raise_dispute(
