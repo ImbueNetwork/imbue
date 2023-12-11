@@ -869,6 +869,7 @@ impl pallet_briefs::Config for Runtime {
     type BriefStorageItem = BriefStorageItem;
     type DepositHandler = Deposits;
     type JurySelector = PointerBasedJurySelector<Runtime>;
+    type EnsureRole = pallet_fellowship::impls::EnsureFellowshipRole<Runtime>;
 }
 
 parameter_types! {
@@ -1326,6 +1327,8 @@ type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub struct PointerBasedJurySelector<T: pallet_fellowship::Config>(T);
 impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<AccountIdOf<T>>
     for PointerBasedJurySelector<T>
+where
+    T: frame_system::Config<AccountId = sp_runtime::AccountId32>,
 {
     type JurySize = MaxJurySize;
     fn select_jury() -> frame_support::BoundedVec<AccountIdOf<T>, Self::JurySize> {
@@ -1353,6 +1356,29 @@ impl<T: pallet_fellowship::Config> pallet_fellowship::traits::SelectJury<Account
             }
         }
         pallet_fellowship::JuryPointer::<T>::put(pointer_with_bound);
-        out
+
+        if out.len() == 0 {
+            vec![
+                sp_runtime::AccountId32::new(hex_literal::hex![
+                    "4294eb45758b4b92b01ceffe209bbcfeb26c973d5c0e21ac6c9cfbb99201b334"
+                ]),
+                sp_runtime::AccountId32::new(hex_literal::hex![
+                    "328d9a97c6f7f0fbbc60be2faba4c36cd4e5d3cfcb316393b384ee1a45433034"
+                ]),
+                sp_runtime::AccountId32::new(hex_literal::hex![
+                    "3e064fcfd9f02b99dda26226d3d6b2d68032b1c990e7a350cd01747271356f4c"
+                ]),
+                sp_runtime::AccountId32::new(hex_literal::hex![
+                    "82bf733f44a840f0a5c1935a002d4e541d81298fad6d1da8124073485983860e"
+                ]),
+                sp_runtime::AccountId32::new(hex_literal::hex![
+                    "5a1616831e4508abf2eced2670199ab7a00e9e2bbcfc04655ba7ed138af8787d"
+                ]),
+            ]
+            .try_into()
+            .unwrap_or_default()
+        } else {
+            out
+        }
     }
 }

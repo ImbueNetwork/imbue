@@ -82,7 +82,6 @@ pub(crate) mod v1 {
                     };
 
                     v2::BriefsV2::<T>::insert(key, migrated);
-
                 }
             })
         }

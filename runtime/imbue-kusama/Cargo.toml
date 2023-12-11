@@ -91,7 +91,7 @@ orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-m
 # Used for runtime benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
 frame-system-benchmarking = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", optional = true }
-hex-literal = { version = "0.3.4", optional = true }
+hex-literal = { version = "0.3.4"}
 
 # Local Dependencies
 common-traits = { path = "../../libs/common-traits", default-features = false }
@@ -275,7 +275,6 @@ runtime-benchmarks = [
 	'frame-benchmarking/runtime-benchmarks',
 	'frame-support/runtime-benchmarks',
 	'frame-system-benchmarking/runtime-benchmarks',
-	"hex-literal",
 	'pallet-balances/runtime-benchmarks',
 	'pallet-briefs/runtime-benchmarks',
 	'pallet-collective/runtime-benchmarks',

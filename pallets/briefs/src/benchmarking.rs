@@ -42,7 +42,8 @@ mod benchmarks {
             brief_id,
             currency_id,
             milestones,
-            Some(eoa)
+            Some(eoa),
+            false,
         );
         assert_last_event::<T>(Event::<T>::BriefSubmitted(caller, brief_id).into());
     }
@@ -68,6 +69,7 @@ mod benchmarks {
             currency_id,
             milestones,
             None,
+            false,
         ));
         let brief_owner: T::AccountId = brief_owners[0].clone();
         // (brief_owner, brief_id, contribution)
@@ -91,7 +93,6 @@ mod benchmarks {
         let brief_id = gen_hash(1);
         let milestones = get_max_milestones::<T>();
 
-
         assert_ok!(Briefs::<T>::create_brief(
             RawOrigin::Signed(caller).into(),
             brief_owners,
@@ -102,6 +103,7 @@ mod benchmarks {
             currency_id,
             milestones,
             None,
+            false,
         ));
         // (origin, brief_id)
         #[extrinsic_call]
@@ -129,6 +131,7 @@ mod benchmarks {
             currency_id,
             milestones,
             None,
+            false,
         ));
         // (origin, brief_id)
         #[extrinsic_call]
@@ -143,7 +146,11 @@ mod benchmarks {
     );
 }
 
-fn create_account_id<T: Config>(suri: &'static str, n: u32, currency_id: CurrencyId) -> T::AccountId {
+fn create_account_id<T: Config>(
+    suri: &'static str,
+    n: u32,
+    currency_id: CurrencyId,
+) -> T::AccountId {
     let user = account(suri, n, SEED);
     let initial_balance = 1_000_000_000_000_000u128;
     assert_ok!(T::RMultiCurrency::deposit(
