@@ -29,6 +29,7 @@ fn you_can_actually_refund_after_dispute_success() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -63,6 +64,7 @@ fn refund_assert_milestone_state_change() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -116,6 +118,7 @@ fn refund_not_contributor() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -153,6 +156,7 @@ fn refund_deletes_project_when_all_funds_are_refunded() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -198,6 +202,7 @@ fn withdraw_then_refund_no_double_spend() {
             milestone_keys.clone(),
         );
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -268,6 +273,7 @@ fn refund_then_withdraw_no_double_spend() {
             milestone_keys.clone(),
         );
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -322,6 +328,7 @@ fn refund_check_refund_amount() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -383,6 +390,7 @@ fn refund_takes_imbue_fee() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -419,3 +427,4 @@ fn refund_takes_imbue_fee() {
         );
     })
 }
+

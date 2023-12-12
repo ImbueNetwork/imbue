@@ -206,6 +206,7 @@ fn on_dispute_complete_success_removes_dispute_status() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -240,6 +241,7 @@ fn on_dispute_complete_failure_removes_dispute_status() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Failure,
@@ -275,6 +277,7 @@ fn dispute_success_does_not_cancel_project() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -312,6 +315,7 @@ fn dispute_success_approves_milestone_for_refund_but_only_ones_specified() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -485,6 +489,7 @@ fn failed_dispute_tests() {
             dispute_milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             dispute_milestone_keys.into_inner(),
             DisputeResult::Failure,
@@ -525,6 +530,7 @@ fn assert_can_recall_dispute_after_success() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,
@@ -564,6 +570,7 @@ fn assert_can_recall_dispute_after_failure() {
             milestone_keys.clone()
         ));
         let _ = complete_dispute::<Test>(
+            BOB,
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Failure,
@@ -633,7 +640,6 @@ fn raise_dispute_as_initiator_success() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let milestone_key = 0;
         let jury = vec![JURY_1, JURY_2];
 
         let project_key = create_and_fund_project::<Test>(
@@ -663,7 +669,6 @@ fn raise_dispute_as_contributor_success() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
-        let milestone_key = 0;
         let jury = vec![JURY_1, JURY_2];
 
         let project_key = create_and_fund_project::<Test>(

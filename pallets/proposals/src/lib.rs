@@ -344,8 +344,8 @@ pub mod pallet {
         TooManyMilestoneVotes,
         /// An internal error, a collection of votes for a milestone has been lost.s
         IndividualVoteNotFound,
-        /// Only a contributor can raise a dispute.
-        OnlyContributorsCanRaiseDispute,
+        /// Only a contributor can initiate a refund.
+        OnlyContributorsCanInitiateRefund,
         /// One of these milestones is already in a dispute.
         MilestonesAlreadyInDispute,
         /// You cannot raise a dispute on an approved milestone.
@@ -456,10 +456,10 @@ pub mod pallet {
                 Error::<T>::MilestoneDoesNotExist
             );
             ensure!(
-                project.contributions.contains_key(&who) || &who == project.initiator,
+                project.contributions.contains_key(&who) || &who == &project.initiator,
                 Error::<T>::NotPermittedToRaiseDispute
             );
-            
+
             ensure!(
                 !ProjectsInDispute::<T>::contains_key(project_key),
                 Error::<T>::MilestonesAlreadyInDispute
@@ -473,7 +473,7 @@ pub mod pallet {
 
             if project.jury.len() == 1 {
                 // https://github.com/ImbueNetwork/imbue/issues/270
-                let _ = <Self as pallet_disputes::traits::DisputeHooks<ProjectKey, MilestoneKey>>::on_dispute_complete(project_key, milestone_keys.to_vec(), pallet_disputes::DisputeResult::Success);
+                let _ = <Self as pallet_disputes::traits::DisputeHooks<ProjectKey, MilestoneKey, AccountIdOf<T>>>::on_dispute_complete(who, project_key, milestone_keys.to_vec(), pallet_disputes::DisputeResult::Success);
             } else {
                 <T as Config>::DisputeRaiser::raise_dispute(
                     project_key,

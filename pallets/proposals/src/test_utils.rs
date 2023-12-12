@@ -140,11 +140,12 @@ pub fn create_funded_user<T: Config>(
 
 /// Manually call the hook OnDisputeCompleteWith a predefined result for testing>
 pub fn complete_dispute<T: Config>(
+    dispute_raised_by: T::AccountId,
     project_key: ProjectKey,
     milestone_keys: Vec<MilestoneKey>,
     result: pallet_disputes::DisputeResult,
 ) -> crate::Weight {
-    <crate::Pallet<T>>::on_dispute_complete(project_key, milestone_keys, result)
+    <crate::Pallet<T>>::on_dispute_complete(dispute_raised_by, project_key, milestone_keys, result)
 }
 
 pub fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
