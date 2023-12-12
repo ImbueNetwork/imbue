@@ -118,8 +118,9 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     ext
 }
 
-impl crate::traits::DisputeHooks<u32, u32> for Test {
+impl crate::traits::DisputeHooks<u32, u32, AccountId> for Test {
     fn on_dispute_complete(
+        _account_id: AccountId,
         _dispute_key: u32,
         _specifics: Vec<u32>,
         _dispute_result: crate::pallet::DisputeResult,
