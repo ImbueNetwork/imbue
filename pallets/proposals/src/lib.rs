@@ -473,7 +473,16 @@ pub mod pallet {
 
             if project.jury.len() == 1 {
                 // https://github.com/ImbueNetwork/imbue/issues/270
-                let _ = <Self as pallet_disputes::traits::DisputeHooks<ProjectKey, MilestoneKey, AccountIdOf<T>>>::on_dispute_complete(who, project_key, milestone_keys.to_vec(), pallet_disputes::DisputeResult::Success);
+                let _ = <Self as pallet_disputes::traits::DisputeHooks<
+                    ProjectKey,
+                    MilestoneKey,
+                    AccountIdOf<T>,
+                >>::on_dispute_complete(
+                    who,
+                    project_key,
+                    milestone_keys.to_vec(),
+                    pallet_disputes::DisputeResult::Success,
+                );
             } else {
                 <T as Config>::DisputeRaiser::raise_dispute(
                     project_key,

@@ -692,4 +692,3 @@ fn raise_dispute_as_contributor_success() {
         ));
     })
 }
-

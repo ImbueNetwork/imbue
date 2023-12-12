@@ -147,7 +147,10 @@ pub mod pallet {
                         T::SpecificId,
                         T::AccountId,
                     >>::on_dispute_complete(
-                        dispute.raised_by, *dispute_id, dispute.specifiers.into_inner(), result
+                        dispute.raised_by,
+                        *dispute_id,
+                        dispute.specifiers.into_inner(),
+                        result,
                     );
 
                     weight = weight.saturating_add(hook_weight);
