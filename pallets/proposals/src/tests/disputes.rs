@@ -5,7 +5,7 @@ use pallet_disputes::DisputeResult;
 use test_utils::*;
 
 #[test]
-fn raise_dispute_not_contributor() {
+fn raise_dispute_not_contributor_or_initiator() {
     build_test_externality().execute_with(|| {
         let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
         let milestones = get_milestones(10);
@@ -27,7 +27,7 @@ fn raise_dispute_not_contributor() {
 
         assert_noop!(
             Proposals::raise_dispute(RuntimeOrigin::signed(JOHN), project_key, milestone_keys),
-            Error::<Test>::OnlyContributorsCanRaiseDispute
+            Error::<Test>::NotPermittedToRaiseDispute
         );
     })
 }
@@ -627,3 +627,64 @@ fn raise_dispute_with_single_jury_auto_completes() {
         });
     })
 }
+
+#[test]
+fn raise_dispute_as_initiator_success() {
+    build_test_externality().execute_with(|| {
+        let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let milestone_key = 0;
+        let jury = vec![JURY_1, JURY_2];
+
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
+        .unwrap();
+
+        let dispute_milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
+            (0u32..milestones.len() as u32)
+                .collect::<Vec<u32>>()
+                .try_into()
+                .unwrap();
+        assert_ok!(Proposals::raise_dispute(
+            RuntimeOrigin::signed(ALICE),
+            project_key,
+            dispute_milestone_keys
+        ));
+    })
+}
+
+#[test]
+fn raise_dispute_as_contributor_success() {
+    build_test_externality().execute_with(|| {
+        let contributions = get_contributions::<Test>(vec![BOB, CHARLIE], 1_000_000u128);
+        let milestones = get_milestones(10);
+        let milestone_key = 0;
+        let jury = vec![JURY_1, JURY_2];
+
+        let project_key = create_and_fund_project::<Test>(
+            ALICE,
+            contributions,
+            milestones.clone(),
+            CurrencyId::Native,
+            jury,
+        )
+        .unwrap();
+
+        let dispute_milestone_keys: BoundedVec<u32, <Test as Config>::MaxMilestonesPerProject> =
+            (0u32..milestones.len() as u32)
+                .collect::<Vec<u32>>()
+                .try_into()
+                .unwrap();
+        assert_ok!(Proposals::raise_dispute(
+            RuntimeOrigin::signed(BOB),
+            project_key,
+            dispute_milestone_keys
+        ));
+    })
+}
+

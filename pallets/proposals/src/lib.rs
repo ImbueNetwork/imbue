@@ -350,8 +350,8 @@ pub mod pallet {
         MilestonesAlreadyInDispute,
         /// You cannot raise a dispute on an approved milestone.
         CannotRaiseDisputeOnApprovedMilestone,
-        /// Only a contributor can initiate a refund.
-        OnlyContributorsCanInitiateRefund,
+        /// Only a contributor or initiator can initiate a refund.
+        NotPermittedToRaiseDispute,
         /// Only the ForeignAssetSigner can mint tokens
         RequireForeignAssetSigner,
         /// A Jury is required to create a project.
@@ -456,9 +456,10 @@ pub mod pallet {
                 Error::<T>::MilestoneDoesNotExist
             );
             ensure!(
-                project.contributions.contains_key(&who),
-                Error::<T>::OnlyContributorsCanRaiseDispute
+                project.contributions.contains_key(&who) || &who == project.initiator,
+                Error::<T>::NotPermittedToRaiseDispute
             );
+            
             ensure!(
                 !ProjectsInDispute::<T>::contains_key(project_key),
                 Error::<T>::MilestonesAlreadyInDispute
