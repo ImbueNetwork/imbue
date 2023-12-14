@@ -220,7 +220,8 @@ mod benchmarks {
             project_key,
             milestone_keys.clone()
         ));
-        let _ = <crate::Pallet<T> as DisputeHooks<ProjectKey, MilestoneKey>>::on_dispute_complete(
+        let _ = <crate::Pallet<T> as DisputeHooks<ProjectKey, MilestoneKey, AccountIdOf<T>>>::on_dispute_complete(
+            bob.clone(),
             project_key,
             milestone_keys.into_inner(),
             DisputeResult::Success,

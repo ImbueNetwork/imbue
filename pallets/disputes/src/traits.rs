@@ -18,10 +18,11 @@ pub trait DisputeRaiser<AccountId> {
     ) -> Result<(), DispatchError>;
 }
 
-pub trait DisputeHooks<DisputeKey, SpecificId> {
+pub trait DisputeHooks<DisputeKey, SpecificId, AccountId> {
     /// On the completion of a dispute, this hooks is called.
     /// Returning only the key that has been handled and the result of the dispute.
     fn on_dispute_complete(
+        raised_by: AccountId,
         dispute_key: DisputeKey,
         specifics: Vec<SpecificId>,
         dispute_result: crate::pallet::DisputeResult,

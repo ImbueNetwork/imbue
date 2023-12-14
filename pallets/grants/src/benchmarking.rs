@@ -5,7 +5,7 @@ use super::*;
 use crate::test_utils::gen_grant_id;
 use crate::Pallet as Grants;
 use crate::{BoundedApprovers, BoundedPMilestones, Config};
-use common_types::{CurrencyId, TreasuryOrigin, ForeignOwnedAccount};
+use common_types::{CurrencyId, ForeignOwnedAccount, TreasuryOrigin};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;

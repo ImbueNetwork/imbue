@@ -337,8 +337,9 @@ impl<T: Config> Pallet<T> {
     }
 }
 
-impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
+impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey, AccountIdOf<T>> for Pallet<T> {
     fn on_dispute_complete(
+        raised_by: AccountIdOf<T>,
         project_key: ProjectKey,
         specifics: Vec<MilestoneKey>,
         dispute_result: pallet_disputes::pallet::DisputeResult,
@@ -354,7 +355,11 @@ impl<T: Config> DisputeHooks<ProjectKey, MilestoneKey> for Pallet<T> {
                                     // Shouldnt be needed but nice to have this check.
                                     // Will prevent someone calling both refund and withdraw on the same milestone.
                                     if milestone.transfer_status.is_none() {
-                                        milestone.can_refund = true;
+                                        if project.initiator == raised_by {
+                                            milestone.is_approved = true;
+                                        } else {
+                                            milestone.can_refund = true;
+                                        }
                                     }
                                 }
                             }
