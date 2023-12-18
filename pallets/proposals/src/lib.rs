@@ -18,8 +18,24 @@
 //! - Creating projects through the IntoProposal trait.
 //! - An temporary multitoken system for minting foreign tokens to use on projects.
 //!
+//! ### Implementations
+//! - ['IntoProposals'](crate::traits::IntoProposals): Provides the functionality to setup a configurable project.
+//! - ['DisputeHooks'](pallet_disputes::traits::DisputeHooks): When a dispute ends this deals with the completion of the dispute, changing the state of the project.
+//! 
+//! ### Assumptions
+//! 
+//! * When the type `FundingType::TakeFromReserved` is used then IntoProposals expects that the funds are reserved in the `contributors` account.
+//! * When the type `FundingType::WaitForFunding` is used then IntoProposals expects funds will arrive from an external source.
+//! * An Imbue fee, set in the config as `ImbueFee`, is taken when a milestone is either refunded or withdrawn.
 //!
-
+//! ### Milestone Voting
+//! 
+//! - Votes are stored in the `IndividualVoteStore` and `MilestoneVotes` storage types.
+//! - Votes on a submitted milestone are immutable. The `ImmutableIndividualVotes` store ensures this.
+//! - A milestone will auto finalise if the `PercentRequiredForVoteToPass` is exceeded. This will then set the milestone to approved.
+//! - If the threshold is not reached and the expiry block is reached the `on_initialise` hook will reset the milestone and clean the storage.
+//! - Once a milestone is approved the `withdraw` extrinsic can be called.
+//!
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, EncodeLike};
@@ -154,6 +170,7 @@ pub mod pallet {
         type AssetSignerOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
+    /// The pallet storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(7);
 
     #[pallet::pallet]
@@ -165,7 +182,7 @@ pub mod pallet {
     #[pallet::getter(fn projects)]
     pub type Projects<T: Config> = StorageMap<_, Identity, ProjectKey, Project<T>, OptionQuery>;
 
-    /// The `AccountId` of the multichain signer
+    /// The `AccountId` of the multichain signer.
     #[pallet::storage]
     #[pallet::getter(fn key)]
     pub type ForeignCurrencySigner<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
@@ -180,11 +197,12 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    /// Stores the individuals votes on a given milestone key
+    /// Stores the individual's vote on a given milestone key.
     #[pallet::storage]
     pub type IndividualVoteStore<T: Config> =
         StorageMap<_, Blake2_128Concat, ProjectKey, ImmutableIndividualVotes<T>, OptionQuery>;
 
+    /// Stores to cumilative milestone votes in a single struct.
     #[pallet::storage]
     #[pallet::getter(fn milestone_votes)]
     pub(super) type MilestoneVotes<T: Config> = StorageMap<
@@ -206,6 +224,7 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    /// Used for the id of the project.
     #[pallet::storage]
     #[pallet::getter(fn project_count)]
     pub type ProjectCount<T> = StorageValue<_, ProjectKey, ValueQuery>;
@@ -232,7 +251,6 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    // TODO: Check if this is in use.
     /// A helper to find what projects / milestones are in a dispute.
     #[pallet::storage]
     pub type ProjectsInDispute<T> = StorageMap<
@@ -382,7 +400,9 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        // SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
+        /// SAFETY: ExpiringProjectRoundsPerBlock has to be sane to prevent overweight blocks.
+        ///
+        /// Clean the data for milestone that have not reached their `PercentRequiredForVoteToPass`.
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             let key_type_vec = RoundsExpiring::<T>::take(n);
@@ -426,6 +446,8 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Submit a milestones to be voted on.
+        ///
+        /// The caller must be the initiator of the Project.
         #[pallet::call_index(8)]
         #[pallet::weight(<T as Config>::WeightInfo::submit_milestone())]
         pub fn submit_milestone(
@@ -437,7 +459,9 @@ pub mod pallet {
             Self::new_milestone_submission(who, project_key, milestone_key)
         }
 
-        /// The contributors call this to vote on a milestone submission.
+        /// Vote on a submitted milestone.
+        ///
+        /// The caller must be a contributor to vote on a milestone.
         #[pallet::call_index(9)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_on_milestone())]
         pub fn vote_on_milestone(
@@ -451,6 +475,9 @@ pub mod pallet {
         }
 
         /// Withdraw some avaliable funds from the project.
+        /// 
+        /// It will attempt to transfer funds from the project account to the initiators account.
+        /// Only transferring those milestones which have `is_approved` as true and `transfer_status` as `None`.
         #[pallet::call_index(11)]
         #[pallet::weight(<T as Config>::WeightInfo::withdraw())]
         pub fn withdraw(
@@ -461,7 +488,10 @@ pub mod pallet {
             Self::new_withdrawal(who, project_key)
         }
 
-        /// Raise a dispute using the handle DisputeRaiser in the Config.
+        /// Try and raise a dispute on a set of milestones using the DisputeRaiser trait.
+        ///
+        /// The dispute is then handled externally by the implementor of the trait.
+        /// The Dispute will auto finalise if the jury length == 1.
         #[pallet::call_index(14)]
         #[pallet::weight(<T as Config>::WeightInfo::raise_dispute())]
         pub fn raise_dispute(
@@ -508,8 +538,10 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Attempt a refund of milestones.
-        /// Will only refund milestones that have can_refund set to true.
+        /// Attempt to transfer to `refund_locations` all the milestones which have the can_refund field set.
+        /// 
+        /// The transfer status must also be None to ensure we dont try and withdraw and refund the same milestone.
+        /// Or refund twice.
         #[pallet::call_index(15)]
         #[pallet::weight(<T as Config>::WeightInfo::refund())]
         pub fn refund(origin: OriginFor<T>, project_key: ProjectKey) -> DispatchResult {
@@ -646,6 +678,7 @@ pub mod pallet {
             Ok(())
         }
     }
+
 
     impl<T: crate::Config> IntoProposal<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
         for crate::Pallet<T>
@@ -858,7 +891,6 @@ impl<Balance: Zero> Default for Vote<Balance> {
     }
 }
 
-// TODO MILESTONE MIGRATIONS
 /// The struct which contain milestones that can be submitted.
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
@@ -911,7 +943,6 @@ impl<AccountId> Locality<AccountId> {
 }
 
 /// The contribution users made to a proposal project.
-/// TODO: Move to a common repo (common_types will do)
 #[derive(Encode, Decode, PartialEq, Eq, Clone, Debug, TypeInfo, MaxEncodedLen)]
 pub struct Contribution<Balance, BlockNumber> {
     /// Contribution value.

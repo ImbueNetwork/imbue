@@ -1,11 +1,41 @@
-// The Imbue fellowship pallet is used as a way of creating a community of internally approved members.
-// One must be of a specific role to add accounts to a shortlist, anyone with the correct authority can remove them from the shortlist.
-// After T::ShortlistPeriod blocks the shortlist will attempt to take the membership deposit from the accounts on the list.
-// If the deposit is taken they are successfully added to the fellowship with a default rank.
-// If the deposit is not taken they are added to PendingFellows where they can pay the deposit later to claim their fellowship.
+//! Fellowship Pallet
+//! 
+//! The fellowship pallet provides a way of managing a collective which has elevated permissions.
+//! In Imbue the fellowship provides a collective of individuals which have been approved by other fellows.
+//! These individuals can then be used in `pallet-briefs` to create a `Project` which requires approved accounts.
+//! 
+//! ## Overview
+//!
+//! The Fellowship pallet provides extrinsics for:
+//! 
+//! - Force adding to an account to the fellowship.
+//! - Force removing an account to the fellowship and slashing the account deposit. 
+//! - Leaving the fellowship and retain the deposit (GAME ISSUE: If a fellow thinks they will be force removed they can just leave and retain deposit).
+//! - Adding a fellow to the fellowship shortlist. 
+//! - Removing a fellow fro the fellowship shortlist.
+//! - Paying the fellowship deposit and remove pending status. 
+//!
+//! This also provides functionality for:
+//! 
+//! - Ensuring a fellow has a given permission.
+//! - Ensuring a fellow has a given rank/role. (`struct EnsureFellowshipRole`).
+//!
+//! ### Implementations
+//! - ['FellowshipHandle'](crate::traits::FellowshipHandle): Provides access to externally add a fellow.
+//!
+//! ### Assumptions
+//! 
+//! * When an account is added to the fellowship it is assumed that the account added has enough funds to cover the deposit, if this isnt the case pay_deposit_to_remove_pending_status can be called.
+//!
+//! ### The Process
+//! 
+//! - Only a current fellow with the correct permissions can add a candidate to the shortlist (See `trait FellowshipPermissions`).
+//! - This is when another fellow can veto an account in the shortlist.
+//! - Once `ShortlistPeriod` has passed (and with it time to deliberate) the on_initialize will attempt to add the accounts to the fellowship.
+//! - The way this can fail is if the account does not have enough imbue to cover the fees.
+//! - The extrinsic `pay_deposit_to_remove_pending_status` can be called to remove the deposit and claim fellowship status.
 
-// Future development: How to deal with ranks + promotions.
-
+//! ?? Future development: How to deal with ranks + promotions. ??
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
 
@@ -152,6 +182,8 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+
+        /// Try and add the members of the shortlist to the fellowship.
         fn on_initialize(n: BlockNumberFor<T>) -> Weight {
             let mut weight = Weight::default();
             if n % T::ShortlistPeriod::get() == Zero::zero() {
@@ -323,7 +355,7 @@ pub mod pallet {
         /// enough native token for the deposit, this candidate is then added to PendingFellows where they
         /// can pay the deposit later to accept the membership.
         /// The deposit amount + currency is defined in the Config.
-        /// To pay the deposit, call pay_deposit_to_remove_pending_status
+        /// To pay the deposit, call pay_deposit_to_remove_pending_status.
         fn add_to_fellowship(
             who: &AccountIdOf<T>,
             role: Role,
@@ -394,12 +426,14 @@ pub mod pallet {
         }
     }
 
+    /// The roles of the fellowship
     #[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, MaxEncodedLen, TypeInfo)]
     pub enum Role {
         Vetter,
         Freelancer,
     }
 
+    /// The permissions a fellow can have internally on pallet-fellowship.
     #[derive(Encode, Decode, PartialEq, Eq, Copy, Clone, Debug, MaxEncodedLen, TypeInfo)]
     pub enum Permission {
         AddToShortlist,
