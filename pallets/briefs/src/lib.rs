@@ -188,7 +188,8 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             if require_fellowship {
-                T::EnsureRole::ensure_role(&applicant, pallet_fellowship::Role::Freelancer, None).map_err(|_|Error::<T>::FellowshipRequired)?;
+                T::EnsureRole::ensure_role(&applicant, pallet_fellowship::Role::Freelancer, None)
+                    .map_err(|_| Error::<T>::FellowshipRequired)?;
             }
 
             ensure!(
