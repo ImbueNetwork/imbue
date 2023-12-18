@@ -1,3 +1,25 @@
+
+//! Proposals Pallet
+//! 
+//! The Proposals pallet provides functionality for managing projects and milestones.
+//!
+//! ## Overview
+//!
+//! The Proposals pallet provides extrinsics for:
+//! 
+//! - Submitting a milestone. 
+//! - Voting on a milestone's approval. 
+//! - Withdrawing funds from a project.
+//! - Initiating a dispute on a set of milestones.
+//! - Refunding funds from a project.
+//!
+//! This also provides functionality for:
+//! 
+//! - Creating projects through the IntoProposal trait.
+//! - An temporary multitoken system for minting foreign tokens to use on projects.
+//!
+//!
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, EncodeLike};
