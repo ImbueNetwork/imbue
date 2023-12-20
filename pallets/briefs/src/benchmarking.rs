@@ -25,6 +25,11 @@ mod benchmarks {
         let (eoa, currency_id) = ForeignOwnedAccount::get_supported_currency_eoa_combo();
         let brief_owners = get_max_brief_owners::<T>(currency_id);
         let caller = create_account_id::<T>("caller", 1, currency_id);
+        assert_ok!(T::RMultiCurrency::deposit(
+            CurrencyId::Native,
+            &caller,
+            1_000_000_000_000_000u128.saturated_into()
+        ));
         let applicant = create_account_id::<T>("applicant", 1, currency_id);
         let budget = 10_000u32.into();
         let initial_contribution = 5_000u32.into();
@@ -182,7 +187,7 @@ fn get_brief_owners<T: Config>(mut n: u32, currency: CurrencyId) -> BoundedBrief
 }
 
 fn get_max_brief_owners<T: Config>(currency_id: CurrencyId) -> BoundedBriefOwners<T> {
-    let max_brief_owners: u32 = <T as Config>::MaxBriefOwners::get();
+    let max_brief_owners: u32 = <T as Config>::MaxBriefOwners::get() - 1;
     get_brief_owners::<T>(max_brief_owners, currency_id)
 }
 
