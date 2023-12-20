@@ -24,7 +24,7 @@ mod benchmarks {
     fn create_brief() {
         let (eoa, currency_id) = ForeignOwnedAccount::get_supported_currency_eoa_combo();
         let brief_owners = get_max_brief_owners::<T>(currency_id);
-        let caller: T::AccountId = brief_owners[0].clone();
+        let caller = create_account_id::<T>("caller", 1, currency_id);
         let applicant = create_account_id::<T>("applicant", 1, currency_id);
         let budget = 10_000u32.into();
         let initial_contribution = 5_000u32.into();
