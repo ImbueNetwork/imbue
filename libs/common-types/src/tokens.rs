@@ -1,8 +1,10 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_std::vec::Vec;
 
+use frame_support::traits::ConstU32;
 use serde::{Deserialize, Serialize};
-
+use sp_runtime::BoundedVec;
 #[derive(
     Clone,
     Copy,
@@ -49,11 +51,12 @@ pub enum CurrencyId {
 pub enum ForeignAssetId {
     ETH,
     USDT,
+    ADA,
 }
 
 #[derive(
     Clone,
-    Copy,
+    // Copy,
     PartialOrd,
     Ord,
     PartialEq,
@@ -70,6 +73,7 @@ pub enum ForeignAssetId {
 pub enum ForeignOwnedAccount {
     TRON([u8; 22]),
     ETH([u8; 20]),
+    ADA(BoundedVec<u8, ConstU32<104>>),
 }
 
 impl ForeignOwnedAccount {
@@ -85,12 +89,17 @@ impl ForeignOwnedAccount {
             CurrencyId::MGX => false,
             CurrencyId::ForeignAsset(asset) => match &self {
                 ForeignOwnedAccount::TRON(_) => match asset {
-                    ForeignAssetId::ETH => false,
                     ForeignAssetId::USDT => true,
+                    default => false,
                 },
                 ForeignOwnedAccount::ETH(_) => match asset {
                     ForeignAssetId::ETH => true,
                     ForeignAssetId::USDT => true,
+                    default => false,
+                },
+                ForeignOwnedAccount::ADA(_) => match asset {
+                    ForeignAssetId::ADA => true,
+                    default => false,
                 },
             },
         }

@@ -200,7 +200,7 @@ pub mod pallet {
                     Error::<T>::EoaRequiredForForeignCurrencies
                 );
             }
-            if let Some(eoa) = external_owned_address {
+            if let Some(eoa) = external_owned_address.clone() {
                 ensure!(
                     eoa.ensure_supported_currency(currency_id),
                     Error::<T>::CurrencyAccountComboNotSupported
