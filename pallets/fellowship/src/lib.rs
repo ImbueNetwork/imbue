@@ -21,13 +21,14 @@
 //! - Ensuring a fellow has a given rank/role. (`struct EnsureFellowshipRole`).
 //!
 //! ### Implementations
+//!
 //! - ['FellowshipHandle'](crate::traits::FellowshipHandle): Provides access to externally add a fellow.
 //!
 //! ### Assumptions
 //! 
 //! * When an account is added to the fellowship it is assumed that the account added has enough funds to cover the deposit, if this isnt the case pay_deposit_to_remove_pending_status can be called.
 //!
-//! ### The Process
+//! ### The Fellowship Process
 //! 
 //! - Only a current fellow with the correct permissions can add a candidate to the shortlist (See `trait FellowshipPermissions`).
 //! - This is when another fellow can veto an account in the shortlist.

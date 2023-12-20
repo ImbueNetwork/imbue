@@ -1,3 +1,41 @@
+//! Briefs Pallet
+//! 
+//! pallet-briefs provides functionality for setting up Project state ready for milestone submission where where are applicants and funds avaliable.
+//!
+//! ## Overview
+//!
+//! pallet-briefs provides extrinsics for:
+//! 
+//! - Submitting a milestone. 
+//! - Voting on a milestone's approval. 
+//! - Withdrawing funds from a project.
+//! - Initiating a dispute on a set of milestones.
+//! - Refunding funds from a project.
+//!
+//! This also provides functionality for:
+//! 
+//! - Creating projects through the IntoProposal trait.
+//! - An temporary multitoken system for minting foreign tokens to use on projects.
+//!
+//! ### Implementations
+//! - ['IntoProposals'](crate::traits::IntoProposals): Provides the functionality to setup a configurable project.
+//! - ['DisputeHooks'](pallet_disputes::traits::DisputeHooks): When a dispute ends this deals with the completion of the dispute, changing the state of the project.
+//! 
+//! ### Assumptions
+//! 
+//! * When the type `FundingType::TakeFromReserved` is used then IntoProposals expects that the funds are reserved in the `contributors` account.
+//! * When the type `FundingType::WaitForFunding` is used then IntoProposals expects funds will arrive from an external source.
+//! * An Imbue fee, set in the config as `ImbueFee`, is taken when a milestone is either refunded or withdrawn.
+//!
+//! ### Milestone Voting
+//! 
+//! - Votes are stored in the `IndividualVoteStore` and `MilestoneVotes` storage types.
+//! - Votes on a submitted milestone are immutable. The `ImmutableIndividualVotes` store ensures this.
+//! - A milestone will auto finalise if the `PercentRequiredForVoteToPass` is exceeded. This will then set the milestone to approved.
+//! - If the threshold is not reached and the expiry block is reached the `on_initialise` hook will reset the milestone and clean the storage.
+//! - Once a milestone is approved the `withdraw` extrinsic can be called.
+//!
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;

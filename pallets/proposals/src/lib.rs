@@ -1,4 +1,3 @@
-
 //! Proposals Pallet
 //! 
 //! The Proposals pallet provides functionality for managing projects and milestones.
