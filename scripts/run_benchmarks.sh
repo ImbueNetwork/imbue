@@ -2,6 +2,7 @@
 set -eou pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 cd ../
+cargo clean
 cargo build --release --locked --features runtime-benchmarks
 
 IMBUE=./target/release/imbue
