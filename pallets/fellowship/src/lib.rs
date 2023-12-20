@@ -27,13 +27,12 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
     use common_types::CurrencyId;
-    use frame_support::{pallet_prelude::*, BoundedBTreeMap};
+    use frame_support::{pallet_prelude::*, weights::Weight, BoundedBTreeMap};
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_runtime::traits::Zero;
     use sp_std::{convert::TryInto, vec};
 
-    use crate::traits::WeightInfoT;
     use crate::traits::{FellowshipHandle, FellowshipPermissions};
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -406,5 +405,15 @@ pub mod pallet {
         AddToShortlist,
         RemoveFromShortlist,
         None,
+    }
+
+    pub trait WeightInfoT {
+        fn add_to_fellowship() -> Weight;
+        fn force_add_fellowship() -> Weight;
+        fn leave_fellowship() -> Weight;
+        fn force_remove_and_slash_fellowship() -> Weight;
+        fn add_candidate_to_shortlist() -> Weight;
+        fn remove_candidate_from_shortlist() -> Weight;
+        fn pay_deposit_to_remove_pending_status() -> Weight;
     }
 }

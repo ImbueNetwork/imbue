@@ -1,6 +1,6 @@
 use crate::{Rank, Role};
 use codec::{FullCodec, FullEncode};
-use frame_support::{pallet_prelude::*, weights::Weight};
+use frame_support::pallet_prelude::*;
 use sp_runtime::DispatchError;
 use sp_std::vec::Vec;
 
@@ -43,14 +43,4 @@ pub trait SelectJury<AccountId> {
 pub trait FellowshipPermissions<Role, Permission> {
     fn has_permission(role: Role, permission: Permission) -> bool;
     fn get_permissions(role: Role) -> Vec<Permission>;
-}
-
-pub trait WeightInfoT {
-    fn add_to_fellowship() -> Weight;
-    fn force_add_fellowship() -> Weight;
-    fn leave_fellowship() -> Weight;
-    fn force_remove_and_slash_fellowship() -> Weight;
-    fn add_candidate_to_shortlist() -> Weight;
-    fn remove_candidate_from_shortlist() -> Weight;
-    fn pay_deposit_to_remove_pending_status() -> Weight;
 }

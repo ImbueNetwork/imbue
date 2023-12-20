@@ -162,6 +162,8 @@ pub mod pallet {
         EoaRequiredForForeignCurrencies,
         /// Currency is not supported for this external address.
         CurrencyAccountComboNotSupported,
+        /// You must be a fellow to start this work.
+        FellowshipRequired,
     }
 
     #[pallet::call]
@@ -186,7 +188,8 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
 
             if require_fellowship {
-                T::EnsureRole::ensure_role(&applicant, pallet_fellowship::Role::Freelancer, None)?;
+                T::EnsureRole::ensure_role(&applicant, pallet_fellowship::Role::Freelancer, None)
+                    .map_err(|_| Error::<T>::FellowshipRequired)?;
             }
 
             ensure!(
@@ -200,7 +203,7 @@ pub mod pallet {
                     Error::<T>::EoaRequiredForForeignCurrencies
                 );
             }
-            if let Some(eoa) = external_owned_address {
+            if let Some(eoa) = external_owned_address.clone() {
                 ensure!(
                     eoa.ensure_supported_currency(currency_id),
                     Error::<T>::CurrencyAccountComboNotSupported

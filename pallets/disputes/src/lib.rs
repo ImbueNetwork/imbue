@@ -62,7 +62,7 @@ pub mod pallet {
         /// The origin used to force cancel and pass disputes.
         type ForceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// External hooks to handle the completion of a dispute.
-        type DisputeHooks: DisputeHooks<Self::DisputeKey, Self::SpecificId>;
+        type DisputeHooks: DisputeHooks<Self::DisputeKey, Self::SpecificId, AccountIdOf<Self>>;
     }
 
     /// Used to store the disputes that is being raised, given the dispute key it returns the Dispute
@@ -145,8 +145,12 @@ pub mod pallet {
                     let hook_weight = <T::DisputeHooks as DisputeHooks<
                         T::DisputeKey,
                         T::SpecificId,
+                        T::AccountId,
                     >>::on_dispute_complete(
-                        *dispute_id, dispute.specifiers.into_inner(), result
+                        dispute.raised_by,
+                        *dispute_id,
+                        dispute.specifiers.into_inner(),
+                        result,
                     );
 
                     weight = weight.saturating_add(hook_weight);
@@ -216,6 +220,7 @@ pub mod pallet {
                 // Dont mind if this fails as the autofinalise will skip.
             });
             T::DisputeHooks::on_dispute_complete(
+                dispute.raised_by,
                 dispute_key,
                 dispute.specifiers.into_inner(),
                 DisputeResult::Failure,
@@ -248,6 +253,7 @@ pub mod pallet {
                 // Dont mind if this fails as the autofinalise will skip.
             });
             T::DisputeHooks::on_dispute_complete(
+                dispute.raised_by,
                 dispute_key,
                 dispute.specifiers.into_inner(),
                 DisputeResult::Success,
@@ -413,6 +419,7 @@ pub mod pallet {
 
             // Dont need to return the weight here.
             let _ = T::DisputeHooks::on_dispute_complete(
+                dispute.raised_by,
                 dispute_key,
                 dispute.specifiers.into_inner(),
                 result,

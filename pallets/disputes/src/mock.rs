@@ -118,33 +118,13 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     ext
 }
 
-impl crate::traits::DisputeHooks<u32, u32> for Test {
+impl crate::traits::DisputeHooks<u32, u32, AccountId> for Test {
     fn on_dispute_complete(
+        _account_id: AccountId,
         _dispute_key: u32,
         _specifics: Vec<u32>,
         _dispute_result: crate::pallet::DisputeResult,
     ) -> Weight {
-        <Weight as Default>::default()
-    }
-}
-
-impl crate::WeightInfoT for () {
-    fn vote_on_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn extend_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn raise_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn force_succeed_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn force_fail_dispute() -> Weight {
-        <Weight as Default>::default()
-    }
-    fn calculate_winner() -> Weight {
         <Weight as Default>::default()
     }
 }
