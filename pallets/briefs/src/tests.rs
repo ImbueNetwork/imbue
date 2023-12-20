@@ -29,7 +29,7 @@ fn create_brief_not_approved_applicant() {
                 None,
                 true,
             ),
-            BadOrigin
+            Error::<Test>::FellowshipRequired
         );
     });
 }
